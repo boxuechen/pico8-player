@@ -503,19 +503,23 @@ Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 
 ### 12.1 必测 workload
 
-在 Chromium、Firefox、Safari 的最低支持版本上分别测 p50/p95/p99：
+Phase 0C browser harness 在 Chromium、Firefox、Safari 使用同一 contract；缺失
+browser 必须记录 `not-run`/`unavailable`，不能生成替代值。bridge-only matrix 为：
 
 | Case | 规模 | 要回答的问题 |
 | --- | ---: | --- |
-| no-op raw host call | 1K / 16K / 64K calls/frame | 纯 WASM→JS 边界成本 |
+| no-op scalar / raw Q16.16×3 | 1K / 16K / 64K calls/frame | 纯边界与 raw 多参数成本 |
 | `pset(rawX, rawY, color)` | 16,384/frame | pixel hot path 是否需 typed import/下沉 |
-| `peek/poke` | 1K / 16K / 64K pairs | generic frame 与 shared RAM 成本 |
-| direct `@/%/$` | 同量级 + remap | patched translator 的正确性/成本 |
-| `spr` | 256 个 8×8 sprite/frame | block op 边界与 TS raster 成本 |
-| byte string | 16 B / 1 KiB / embedded NUL | copy、encoding 与 allocation 成本 |
-| nested coroutine | root / depth 1 / depth 2 | yield/request 是否正确 bubble |
+| `peek_poke` | 1K / 16K / 64K pairs | per-call import 与 shared RAM 成本 |
+| `spr_8x8` | 1K / 4K / 16K / 64K | block operation 边界与 total pixel work |
+| byte string | 1024 calls × 0/8/64/1024 B | pointer + length、embedded NUL 与 payload cost |
 
-每轮记录 VM instruction count、总 host call、per-op call、WASM time、TS host time、allocation 和 output hash。benchmark cart 与 harness 必须进仓库。
+四条路径分别是 JS→WASM export、WASM→JS import、pure-WASM control 和
+canonical-mapped JS shared memory。每轮记录 calls、calibration、p50/p95/p99、
+calls/s、ns/call、allocation availability、result checksum、完整 RAM hash 和 buffer
+identity。Phase 0C 刻意不运行 Lua parser/VM，因此不记录伪造的 VM instruction
+count；direct `@/%/$` correctness 属于 Phase 0B，nested HostRequest/coroutine 属于
+Phase 0E。
 
 ### 12.2 初始 Go gate
 
@@ -527,6 +531,13 @@ Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 - steady state 不得 memory grow，不得随帧数线性增长 heap、message 或 buffer。
 
 若失败，必须按 [全局 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder) 从第 1 级逐级评估。某一级对当前 workload 不适用时，也必须记录 profile 与 `not-applicable` 理由后才能继续；不得用本节的 bridge 局部视角跳过 raw buffer、批量输出或 audio 层级，直接宣布 full-core WASM。每次升级只移动被 profile 证明的热点。
+
+Phase 0C 的已测 Chrome 结论为 conditional Go：16K `pset`、65,536
+`peek_poke`、4K `spr_8x8` import p95 为 0.090/0.599/0.442 ms；80/80
+cross-path hash 与 fixed-buffer 门禁通过，未触发下沉。Firefox/Safari 尚无实测，
+因此 portability condition 和 representative-cart 8 ms gate 仍开放。见
+[ADR-006](./adr/006-interop-hot-path-boundary.md) 与
+[Phase 0C 证据](./14-phase-0c-evidence.md)。
 
 ## 13. 验收标准
 

@@ -22,7 +22,7 @@
 
 ## 3. Phase 0 — 架构 Spike
 
-状态：**进行中**（Phase 0S、Phase 0A、Phase 0B 已完成；下一阶段为 Phase 0C）
+状态：**进行中**（Phase 0S、Phase 0A、Phase 0B、Phase 0C 已完成；下一阶段为 Phase 0D）
 
 目标：用最小实验验证混合架构成立，并锁定 ABI。Spike 代码可以被重写，不得被未经审查地升级为生产代码。
 
@@ -98,6 +98,10 @@ zero-copy TS lease、fixed memory/OOM 和 lifecycle 证据见
 
 ### 0C. Interop Microbenchmark
 
+状态：**Complete（2026-08-05）**。contract、80-case Chromium 实测、浏览器
+缺失状态、fallback 逐级结论与可复现命令见 [Phase 0C 完成证据](./14-phase-0c-evidence.md)
+及 [ADR-006](./adr/006-interop-hot-path-boundary.md)。
+
 任务：
 
 - 建立 `pset`、`peek/poke`、`spr` 代表性 JS imported API。
@@ -111,6 +115,10 @@ Go 条件：
 - Safari 不出现数量级退化。
 
 若失败，严格执行 [全局 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder)。每一级必须产出 benchmark/profile，或记录为什么对该 workload `not-applicable`；不能从去 allocation 直接跳到 full-core WASM，也不能省略 raw ABI、批量输出、局部 memory/pixel/block/audio 下沉的评估。
+
+阶段结论：已测 Chrome 上 raw primitive/pointer-length hybrid boundary 为 Go，
+没有触发 pixel/block 下沉；benchmark ABI 不升格。Firefox 未安装、Safari Remote
+Automation 未启用，portability condition 保持开放，不能宣称三浏览器发布门禁完成。
 
 ### 0D. Lossless `.p8.png`
 

@@ -11,7 +11,7 @@
 | ADR-003 | Accepted | Pico RAM 分配在 WASM memory，TS 使用零复制 view | z8lua `@/%/$` 与 TS hardware 必须观察同一内存 |
 | ADR-004 | Accepted | Runtime 在 Worker，Window 只负责 host/UI | 隔离死循环和不可信 cart，保护交互线程 |
 | ADR-005 | Accepted | `.p8.png` 从原始 bytes 无损解码 | Canvas 色彩/alpha 处理可能破坏 payload low bits |
-| ADR-006 | Accepted | interop 热点以 benchmark 决定是否下沉 WASM | 避免无证据地把 TS Runtime 演化为 full-core WASM |
+| ADR-006 | [Accepted（portability condition open）](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length 为初始 hybrid ABI；interop 热点以 benchmark 决定是否下沉 | Chrome 实测未触发下沉；Firefox/Safari 仍须同 harness 实测，禁止无证据 full-core WASM |
 | ADR-007 | Accepted | 首版只接受 caller-provided/local cart bytes | BBS 自动访问受当前服务条款和作者权利约束 |
 | ADR-008 | Proposed | API schema 生成 C wrapper 与 TS binding | 减少手写 bridge 的参数/返回值不一致 |
 | ADR-009 | Proposed | 首个 renderer 使用 Canvas2D，保留 WebGL adapter | 128 × 128 输出足够小；先优化正确性和可移植性 |
@@ -29,7 +29,7 @@
 
 | ID | 风险 | 概率 | 影响 | 触发信号 | 缓解与 fallback |
 | --- | --- | --- | --- | --- | --- |
-| R-01 | WASM→JS 高频 API 调用耗尽帧预算 | 高 | 高 | 16K `pset` 或 sprite stress p95 超预算 | 优化 binding；下沉 memory/pixel/block hot paths；最后才评估 full core WASM |
+| R-01 | WASM→JS 高频 API 调用耗尽帧预算 | 中（Chrome low；portability open） | 高 | 16K `pset` 或 sprite stress p95 超预算 | ADR-006 raw ABI；同 harness 补 Firefox/Safari；按 ladder 下沉 memory/pixel/block hot paths，最后才评估 full core WASM |
 | R-02 | z8lua 与 v0.2.7 仍有语义差异 | 中 | 高 | arithmetic/language conformance 与官方结果不同 | Pin patch set；向上游贡献；维护最小本地 patch 和对应测试 |
 | R-03 | 错误构建配置启用 WASM memory growth，使 TS views 失效 | 低中 | 高 | artifact flags 漂移、随机 RAM corruption 或 detached/stale view | v1 固定 `initial === maximum`；CI 检查 flags/buffer identity；未来 growth 必须另立 ADR |
 | R-04 | PNG decoder 破坏 low bits 或接受 bomb | 中 | 高 | cart hash 不一致、超大分配、decode hang | 原始 bytes parser、维度/长度上限、fuzz、fixture hash |
@@ -50,6 +50,13 @@
 ## 3. Phase 0 必须回答的未决问题
 
 ### Q-01：interop 性能边界在哪里？
+
+状态：**Phase 0C 已回答已测 Chromium；跨浏览器 portability condition 开放**。
+Chrome 150 / Apple M4 Pro 的 16K `pset`、65,536 `peek_poke`、4K `spr_8x8`
+import p95 分别为 0.090/0.599/0.442 ms；80/80 correctness 与 fixed-buffer 门禁
+通过。Firefox 不可用，Safari 未启用 Remote Automation，未伪造数据。完整结果、
+raw ABI 规则和 fallback 见 [ADR-006](./adr/006-interop-hot-path-boundary.md) 与
+[Phase 0C 证据](./14-phase-0c-evidence.md)。
 
 必须测：
 
@@ -130,7 +137,8 @@ Q-09 中的 upper RAM、wrap、multi-byte 和 remap 子项已由 Phase 0B 回答
 [ADR-013](./adr/013-shared-pico-ram-boundary.md) 与
 [Phase 0B 证据](./13-phase-0b-evidence.md)：ordered patch 0002 只改 `lvm.c`，让
 `@/%/$` 与项目唯一 mapper 收敛；lower/upper、negative、`0x7fff/0xffff`、
-little-endian 和全部文档 video bases 回归通过。interop cost 仍属于 Phase 0C。
+little-endian 和全部文档 video bases 回归通过。interop cost 后续已由
+[Phase 0C](./14-phase-0c-evidence.md) 与 ADR-006 回答，不回填或扩张 Phase 0B ABI。
 
 必须分别核对 `pico8` 与 `zepto8` branch，而不是只写仓库 URL。输出至少包括：
 

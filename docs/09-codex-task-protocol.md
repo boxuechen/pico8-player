@@ -152,21 +152,21 @@ Spike 输出必须包括：
 
 ## 10. 当前推荐任务
 
-**Phase 0S、Phase 0A 与 Phase 0B 已于 2026-08-05 完成**，证据见
+**Phase 0S、Phase 0A、Phase 0B 与 Phase 0C 已于 2026-08-05 完成**，证据见
 [11-phase-0s-evidence.md](./11-phase-0s-evidence.md) 和
 [12-phase-0a-evidence.md](./12-phase-0a-evidence.md)、
-[13-phase-0b-evidence.md](./13-phase-0b-evidence.md)。不得继续向 scaffold、
-`p8w0a_*` 或 `p8w0b_*` spike 填入无验收归属的 placeholder behavior。
+[13-phase-0b-evidence.md](./13-phase-0b-evidence.md)、
+[14-phase-0c-evidence.md](./14-phase-0c-evidence.md)。不得继续向 scaffold、
+`p8w0a_*`、`p8w0b_*` 或 `p8w0c_bench_*` spike 填入无验收归属的 placeholder behavior。
 
-下一个独立任务是 **Phase 0C：Interop Microbenchmark**。它只回答 z8lua/WASM ↔
-JS 的调用成本与是否需要最小 hot-path 下沉，不扩张成完整 Runtime 实现。
+下一个独立任务是 **Phase 0D：Lossless `.p8.png`**。它只回答 cart PNG bytes 的
+无损解析、解压上限与 Cart ROM/source 提取，不扩张成 Runtime/Player 实现。
 
-Phase 0C 必须从 ADR-012/013 的 vendored source、ordered patches、fixed memory 和
-canonical mapper 继续；不得通过复制 mapper、开启 memory growth 或把 bounded
-`p8w0b_*` 直接升级为 production ABI 来取得好看的数字。bounded 交付包括：
+Phase 0D 必须遵守 cart-codec package boundary，禁止 Canvas/image decoder 改写
+payload low bits，禁止从 BBS/网络抓 fixture。bounded 交付包括：
 
-- 建立 no-op/raw fixed/byte-string 与 `pset/peek/poke/spr` 代表 workload。
-- 分别测 1K/16K/64K calls/frame，报告 p50/p95/p99 和测试环境。
-- Chromium、Firefox、Safari 使用同一 harness；缺失设备结果不得伪造。
-- 对 fallback ladder 每一级给出数据或明确 `not-applicable` 依据。
-- 输出 ADR-006 的 go/no-go 与后续 raw ABI/host schema 约束，不实现 frame lifecycle。
+- 原始 bytes 解析 PNG signature/IHDR/IDAT/IEND、CRC 与 scanline filter 0–4。
+- 只接受明确支持的 dimensions/color type/bit depth，并在 inflate 前后执行硬上限。
+- 从 RGBA channel low bits 逐位提取 cart payload，覆盖 legacy/current code block。
+- 使用项目可分发 fixture 比较 Cart ROM、Lua source 的 byte length 与 SHA-256。
+- malformed/truncated/CRC/filter/decompression bomb 受控失败并进入 fuzz regression。

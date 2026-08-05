@@ -374,6 +374,15 @@ Fuzz 的目标不是“接受一切”，而是保证 parser/VM 有清晰上限�
 
 每项先 warm-up 100 轮，再测至少 30 轮，报告 median、p95、p99、calls/s 和 allocation。单次样本短于 100 ms 时在内部循环放大，避免计时器噪声。
 
+Phase 0C 已把 bridge-only 子集锁定在
+`benchmarks/interop/case-manifest.json`：四路径必须先通过 result checksum、完整
+64 KiB RAM hash 与 fixed-buffer identity，再允许 timing；统计使用 R-7 quantile。
+Chrome DedicatedWorker 不暴露 `performance.memory` 时 allocation 必须记为
+`unavailable`，不能填 0。实测与浏览器缺失状态见
+[Phase 0C 证据](./14-phase-0c-evidence.md)。后续 framebuffer copy、完整
+`pget/sspr/map`、audio 和 representative cart benchmark 是增量场景，不得改写
+Phase 0C 原始 contract 或结果。
+
 ### 10.2 场景预算
 
 固定桌面性能 runner 上的初始门禁：
