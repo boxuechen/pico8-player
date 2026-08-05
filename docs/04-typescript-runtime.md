@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 1B** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；shared `CartIdentity` / `ParsedCart`；bounded section packing 与 byte-offset diagnostics |
+| **Implemented through Phase 1C** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；shared `CartIdentity` / `ParsedCart`；generation-owned `CartSession`、cold-run replacement 与 stale HostRequest containment |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -68,7 +68,8 @@ TypeScript 负责：
 |---|---|---|
 | PICO Base RAM allocation/pointer lifetime | z8lua bridge context | `PicoMemoryLease`；固定 typed views |
 | PICO Base RAM runtime 语义与 hardware writes | `PicoRam`（Worker 内） | 对同一 lease 的同步 typed views；不另分配 RAM |
-| 当前 cart 原始 source bytes 与 Cart ROM | `CartSession`（Worker 内） | immutable source 用于无 payload `reset`；ROM 为只读 view，`cstore` 走显式事务 |
+| 当前 normalized Cart ROM/code snapshot | RuntimeCore `CartSession` | session-private byte copies 用于无 payload `reset`；只暴露 frozen identity/format/version metadata |
+| 当前 cart 原始 source bytes | Worker loader/repository（1E+） | 用于 Worker watchdog 重建、重新 decode 与 future resolver；不进入逐帧 core state |
 | Lua/协程/GC | z8lua WASM | ABI 命令，不直接读内部结构 |
 | 图形 draw state | RAM `0x5f00..` | `Graphics` 每次从 RAM 读取/写回 |
 | SFX/Music 播放状态 | `AudioSynth` | 只由逻辑 tick/采样推进 |
@@ -91,7 +92,7 @@ TypeScript 负责：
 | `P0-RT-02` | Accepted / Phase 0D passed（ADR-005） | `.p8.png` 不经 Canvas；项目自有 bounded TS PNG/zlib/DEFLATE/code decoder | raw/legacy/PXA ROM/source hash、malformed/limit、architecture、manifest 与许可证证据已通过 |
 | `P0-RT-03` | Accepted / Phase 0F passed（ADR-010） | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM；不实现 relay/SAB fallback | Chrome/Chromium transferable `MessagePort`、44.1/48 kHz 并发 10 分钟 bounded-queue soak 已通过 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
-| `P0-RT-05` | Proposed（Phase 1） | cold boot/cart run 的 RAM reset matrix | 依赖 Cart ROM/Runtime lifecycle 与官方 golden；fake-08 只能作为候选行为 |
+| `P0-RT-05` | L1 policy Implemented（Phase 1C）；完整兼容仍 Proposed | fresh VM graph；64 KiB clear + `0x5f54/0x5f55` defaults + Cart ROM `0..0x42ff` copy；input/frame clock reset | fake + real z8lua lifecycle/RAM tests 已通过；未来 `run/reload/cartdata` 仍需官方 golden |
 | `P0-RT-06` | Accepted with constraints（ADR-017；Phase 0E） | root host-call 可恢复；nested guest coroutine 固定 unsupported，L3 外部数据只用预供给/同步 cache | root byte-string continuation 与 nested sentinel tests 已通过；一般 bubbling 需新 ADR |
 | `P0-RT-07` | Mechanism Accepted / thresholds Proposed（ADR-017） | Window command watchdog terminate/recreate + generation；各命令 deadline 后续校准 | fake stale-generation test 与 Chrome JS-stall recovery 已通过；250ms/2s/8ms 尚不作为最终 release threshold |
 | `P0-RT-08` | Accepted（ADR-013；Phase 0B passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 已通过；interop cost 留给 Phase 0C |
@@ -207,8 +208,9 @@ identity。`ParsedCart` 和 format-specific metadata 由 `@pico8-web/cart-codec`
 字段 `cartVersion`/`luaSource` 暂作为 `version`/`code` 的兼容 alias。
 
 record、identity 和 warning records 在运行时 freeze；typed-array 元素受 JavaScript 限制不能
-freeze。每次 decode 返回无内部 alias 的 caller-owned snapshot，交给 `CartSession` 后必须
-只读对待；需要 `cstore` 时创建 copy-on-write overlay。
+freeze。每次 decode 返回无内部 alias 的 caller-owned snapshot；Phase 1C `CartSession.load`
+会再次复制 ROM/code 并且每次 boot 只把 generation-local copy 交给 runtime，因此 caller 后续
+修改 decoder snapshot 不影响 reset。需要 `cstore` 时仍须创建 copy-on-write overlay。
 
 ### 5.2 `.p8` 文本 cart
 
@@ -382,7 +384,12 @@ v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值�
 - Host 内部方法必须严格验证范围，失败返回结构化 internal error；Guest 地址归一化只能发生在 API adapter。
 - `resetForColdBoot()` 必须产生可复现的全零初态，再应用硬件默认寄存器。
 - `resetForCartRun()` 必须集中实现“哪些区清零、哪些区保留、何时把 ROM `0..0x42ff` reload 到 RAM”的矩阵。禁止各模块自行 `fill(0)`。
-- cart-run reset policy 应在 Phase 1 与官方 golden 校准；fake-08 的“保留 work/user RAM、重置 cart-backed 与 `0x5f00..0x7fff`”只能作为初始参考，未验证前不得标记完全兼容。Phase 0B 的 context reset 仅是全零加 `0x5f54/0x5f55` video mapping defaults。
+- Phase 1C 的 L1 cold-run policy 已固定为：每次 load/reset 创建全新 VM/router/runtime/RAM
+  object graph；64 KiB 全零后设置 `0x5f54=0x00`、`0x5f55=0x60`，再复制 Cart ROM
+  `0x0000..0x42ff`。input 固定从六键全零开始，frame clock/frame id 由新 runtime 重建。
+- 上述 policy 已由真实 z8lua RAM/lifecycle 测试覆盖，但不是完整官方 `run()` compatibility
+  声明。fake-08 的 warm preservation 行为仍只作参考；未来 `reload()`、`cartdata()`、GPIO、
+  AudioSynth 和完整 hardware defaults 必须由对应 phase 与官方 golden 扩展矩阵。
 - `0x5e00..0x5eff` 在新 cart 执行时必须先处于未映射/零状态；成功 `cartdata(id)` 后才加载对应持久化镜像。
 
 不能只依赖高层 Graphics/API hook 做 dirty tracking：cart 可以通过 `poke`、`memcpy` 或 VM 的低层 memory path 改 screen/cartdata。首版每个呈现帧解码固定 8KiB screen，并在逻辑 tick 后比较 256-byte cartdata；这是正确性优先的有界成本。
@@ -602,10 +609,15 @@ type RuntimeEvent =
 ```
 
 - 这是 [02-system-architecture.md](./02-system-architecture.md) 中方向性协议的 Runtime 实施命名：`loadCart` 只完成 load transaction 并进入 `ready`，Window 随后用 `start` 进入 `running`；guest `load()` 因官方语义在事务成功后自动 start。禁止再引入 `boot`/`host-response` 等同义命令。
-- `reset` 无 payload：Worker 必须使用当前 `CartSession` 保留的 immutable 原始 source bytes 创建全新 generation，执行同一 load transaction，并在成功后自动进入 `running`。每次 `loadCart`/guest `load` commit 都必须保留自己的 source copy；`reset` 不得依赖主线程临时回传，也不得在原 VM/RAM 上就地清零后继续。
+- `reset` 无 payload：Worker 必须调用当前 `CartSession`，使用其 private normalized
+  ROM/code snapshot 创建全新 generation；`reset` 不得依赖主线程临时回传，也不得在原
+  VM/RAM 上就地清零后继续。Worker 若被 watchdog 整体终止，则由 loader/repository 或主线程
+  保留的原始 bytes 重建，不依赖已销毁 session。
 - 未知 `v` 必须 fail closed。`requestId` 在未完成请求中唯一；每次 load/swap/restart 有单调 `sessionGeneration`，`frameId`、vsync/input/audio sequence 各自在所属通道单调。主线程/Worklet 必须丢弃旧 generation 的 frame、audio 和 reply。
 - bridge 的 request ID 是 handle-local `uint32`；Worker 协议必须将其编码为包含 `sessionGeneration` 的 opaque string（例如 `<generation>:<bridge-id>`），只通过映射表还原，禁止让旧 session 的同号 ID 命中新 handle。
-- `loadCart` 输入 bytes 应 transferable；Worker 接管后把 immutable source bytes 纳入 `CartSession`，主线程还必须独立保留可在 Worker 被 watchdog 终止后重新发送的来源或缓存副本。两份 copy 用途不同，不作为逐帧同步机制。
+- `loadCart` 输入 bytes 应 transferable；Worker decode 后把 normalized `ParsedCart` 交给
+  `CartSession` 复制，主线程或 Worker repository 还必须独立保留可在 watchdog 终止后重新发送
+  的原始来源/缓存副本。两类 copy 用途不同，不作为逐帧同步机制。
 - `attachAudioPort` 的 port 在发送时必须列入 transfer list；PCM 只走该 port 定义的 `AudioTransportMessage`，不出现在 `RuntimeEvent`。
 - VM 内的确定性 instruction budget 是第一道防线；主线程 wall-clock watchdog 是第二道防线。二者必须分开记录。
 - 主线程发出 step/vsync 后若超过配置 deadline 无 heartbeat/响应，必须 `worker.terminate()`，转入 `faulted`，错误码 `E_VM_WATCHDOG`。Worker 内 `setTimeout` 无法中断卡在 WASM 的调用，不能作为唯一 watchdog。

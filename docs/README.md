@@ -7,8 +7,8 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 当前 active phase 是
 [`Phase 1：L1 最小可玩闭环`](./phases/1-l1-minimal-playable-loop.md)。Phase 1A Host API
-Boundary 与 1B Text `.p8` / ParsedCart 已完成，下一 work unit 是 1C CartSession；后续开发
-以该 phase 文档为唯一任务入口。
+Boundary、1B Text `.p8` / ParsedCart 与 1C CartSession lifecycle 已完成，下一 work unit 是
+1D L1 graphics/input；后续开发以该 phase 文档为唯一任务入口。
 
 查看当前实现基线时按顺序阅读：
 

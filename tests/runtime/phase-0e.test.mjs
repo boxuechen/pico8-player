@@ -43,7 +43,7 @@ function syntheticP8Png(source) {
 function sourceCart(source) {
   return {
     rom: new Uint8Array(0x8000),
-    luaSource: encoder.encode(source),
+    code: encoder.encode(source),
   };
 }
 

@@ -17,8 +17,11 @@ import {
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
 import {
+  CartSession,
   FrameSliceRuntime,
   logicalTimeRaw,
+  type CartSessionRuntimeContext,
+  type CartSessionRuntimePort,
   type FrameVmPort,
 } from "@pico8-web/runtime-core";
 import {
@@ -50,6 +53,10 @@ const frameVm: FrameVmPort = new Z8LuaFrameVm(
   createPicoApiHostRouter(frameModule),
 );
 const frameRuntime = new FrameSliceRuntime(frameVm);
+declare const runtimeFactory: (
+  context: CartSessionRuntimeContext,
+) => CartSessionRuntimePort;
+const cartSession = new CartSession({ createRuntime: runtimeFactory });
 const input: PicoInputSnapshot = { buttons: 0 };
 declare const serializedError: SerializedRuntimeError;
 const oneSecondRaw = logicalTimeRaw(60n, 60);
@@ -62,6 +69,7 @@ void parsedCart;
 void cartIdentity;
 void codecErrorConstructor;
 void frameRuntime;
+void cartSession;
 void input;
 void serializedError;
 void oneSecondRaw;

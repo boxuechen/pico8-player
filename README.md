@@ -5,8 +5,10 @@ TypeScript runtime. Phase 0S–0F are complete, including shared Pico RAM,
 interop evidence, a bounded lossless `.p8.png` codec, a host-driven
 callback/custom-loop frame slice, Worker fault containment, a Canvas2D frame
 presenter, and a bounded Worker→AudioWorklet PCM transport. Browser support and
-release testing target Chrome/Chromium only. Full cart hardware, Graphics,
-AudioSynth, input, scheduling, persistence, and the player UI are not implemented yet.
+release testing target Chrome/Chromium only. Phase 1 also includes the host API
+boundary, text `.p8` decoding, and generation-owned CartSession cold reset. Full
+cart hardware, Graphics, AudioSynth, input, scheduling, persistence, and the
+player UI are not implemented yet.
 
 Start with [the engineering documentation](./docs/README.md). Phase 0F's decision
 and browser evidence live in the

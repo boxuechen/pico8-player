@@ -1,8 +1,9 @@
 # Phase 1：L1 最小可玩闭环
 
 - 状态：**Active**
-- 当前 checkpoint：**1B Text `.p8` decode and ParsedCart normalization complete**
-- 下一 work unit：**1C CartSession lifecycle**
+- 当前 checkpoint：**1C CartSession lifecycle complete**
+- 当前 work unit：**None**
+- 下一 work unit：**1D L1 graphics/input**
 - 机器契约：[`spec/phase-1-l1-contract.json`](../../spec/phase-1-l1-contract.json)
 - 浏览器范围：Chrome / Chromium only
 
@@ -31,7 +32,7 @@ Phase 1 从已通过的 Phase 0 exit gate 开始，并保持以下边界：
 | --- | --- | --- |
 | 1A Host API Boundary | **Complete** | exactly-once synchronous WASM→TS binding；`cls/pset/btn` 迁入 RuntimeCore；ADR-008 关闭 |
 | 1B Text `.p8` / ParsedCart | **Complete** | bytes-only `.p8` decode，统一 cart identity/diagnostic，不接网络 |
-| 1C CartSession lifecycle | Not started | cold reset、reload/fault dispose、RAM/input/placeholder-audio reset matrix |
+| 1C CartSession lifecycle | **Complete** | cold reset、reload/fault dispose、RAM/input/placeholder-audio reset matrix |
 | 1D L1 graphics/input | Not started | `line/rect/circ`、keyboard held/edge 与 `btnp` 最小闭环 |
 | 1E Scheduler/player shell | Not started | Worker tick、load/reset/fault UI 与 Phase 0F adapters 接通 |
 | 1F L1 exit | Not started | 30/60/custom original carts、Chrome gate、兼容矩阵和 phase evidence |
@@ -170,3 +171,135 @@ warning/error inventory、project-authored LF/CRLF vectors 和 source/provenance
 codec 不含 browser、I/O、RuntimeCore 或 `ref/` capability；label presentation、include
 resolver 与 CartSession 保持 deferred。下一 work unit 启动前必须在本文件展开 1C 的
 reset matrix、ownership、files 和 exit gate。
+
+## 5. 1C 执行契约
+
+### 5.1 目标与范围
+
+1C 在 `@pico8-web/runtime-core` 内增加 browser-neutral `CartSession`。它只拥有当前 cart
+snapshot、单调递增 generation、当前 frame runtime object graph 和生命周期状态；不拥有
+Worker timer、MessagePort、Canvas presenter、DOM、AudioContext 或 AudioWorklet。
+
+本 unit 交付：
+
+1. `ParsedCart` 进入 session 时复制 `rom`/`code`，保存 immutable identity/format/version；
+   caller 后续修改 decoder 返回的 typed array 不得改变 reset 输入。
+2. 首次 `load`、同 cart `reset` 和换 cart `load` 都分配新 generation，创建全新的
+   `FrameSliceRuntime`/VM/router/RAM object graph，并以六键全零输入 cold boot。
+3. boot/step/host-completion 的 VM fault 立即 dispose 当前 runtime；session 保留 cart snapshot，
+   进入 `faulted`，只能通过新 generation reset/load 或终态 dispose 离开。
+4. host request 带 generation；completion 必须同时匹配 active generation 和 request id。
+   stale generation 返回 `E_INVALID_STATE`，不得调用 VM、改变 state 或覆盖 `lastError`。
+5. `stop` 释放当前 runtime、保留 cart 供 reset；`dispose` 幂等释放 runtime 并丢弃 cart，之后
+   所有 load/reset/step/completion 都拒绝。
+
+1C 不实现 in-place VM reset、warm reload、`reload()`/`cstore()` guest API、cartdata persistence、
+input edge/repeat、audio synthesis、Worker scheduler、player UI、BBS resolver 或网络获取。
+
+### 5.2 Ownership 与 dependency boundary
+
+`CartSession` 只依赖 RuntimeCore 内部定义的 `CartSessionRuntimePort` 和同步 factory；factory
+由 `apps/web-player/src/worker/compose-runtime.ts` 在 1E 接入 concrete z8lua adapter。RuntimeCore
+不得 import `@pico8-web/z8lua-bridge`，factory 不得返回共享 singleton。
+
+每个成功创建过的 runtime object 只能属于一个 generation。即使旧 runtime 已 dispose，factory
+再次返回相同 object 也属于 `E_INVARIANT`。session 不回滚或恢复旧 object graph：load/reset 一旦
+开始，旧 runtime 就被冻结并释放；candidate boot 失败后 session 进入 `faulted`，防止“旧 VM +
+新 RAM/cart”混合状态。
+
+cart snapshot 是 session-private，不暴露可写 `rom`/`code` view。对外只暴露 frozen identity 和
+metadata。frame/screen snapshot 继续沿用 `FrameSliceRuntime` 的复制边界。
+
+### 5.3 状态机与 generation
+
+```text
+empty --load--> loading --boot ok--------> ready
+                     \--host request-----> waiting-host
+                     \--failure----------> faulted
+
+ready --step/frame-----------------------> ready
+ready --step/host request----------------> waiting-host
+waiting-host --matching completion-------> ready | waiting-host | stopped
+ready|waiting-host --VM fault------------> faulted (runtime disposed)
+ready|waiting-host|faulted|stopped --reset/load--> loading (new generation)
+ready|waiting-host --stop----------------> stopped (runtime disposed, cart retained)
+any non-disposed --dispose---------------> disposed (terminal)
+```
+
+generation 从 1 开始，只有已开始的 load/reset transaction 才递增。参数校验在 transaction 前
+失败时不得 teardown 当前 session。`loading` 是同步 transaction 的内部可观察状态，不允许重入
+控制调用。`FrameSliceRuntime` 的 `ready/waiting-host/stopped/faulted` 由 `CartSession` 映射，
+Worker 的 `running/paused` 和 wall-clock scheduling 仍属于 1E。
+
+### 5.4 Cold-run reset matrix
+
+| State/resource | load/reset policy | 1C verification |
+| --- | --- | --- |
+| z8lua state、coroutine、host router | 全新 factory result；旧 graph dispose，不原地复用 | fake-runtime ownership + real WASM integration |
+| Base RAM 64 KiB | 全零后恢复 `0x5f54=0x00`、`0x5f55=0x60`，再复制 Cart ROM `0x0000..0x42ff` | real WASM RAM assertions |
+| Cart ROM/code | session-owned byte copies；reset 复用该 immutable snapshot | caller-mutation/reset test |
+| Lua globals/stack/pending request | 随旧 VM 销毁；pending completion 由 generation 失效 | stale completion test |
+| input | boot 固定 `buttons=0`；held/edge/repeat 后续状态不得跨 generation | boot input spy；1D 扩展 |
+| frame clock/output | `frameId=0`、startup epoch 和 completed slices 从新 runtime 开始；screen 由新 RAM/cart boot 产生 | reset clock/frame test |
+| `0x5e00..0x5eff` persistence | 1C 未映射 persistence，cold run 为零；未来 hydrate 必须在 boot transaction 显式加入 | RAM assertion；Phase 2 扩展 |
+| placeholder audio | 1C 没有 audio simulation state；新 generation 是未来 PCM/event queue 的失效 token | public contract + no browser/audio import |
+
+官方手册说明 cart 在 run 时把 Cart ROM 数据区复制到 Base RAM；本表额外规定当前 L1 player 的
+deterministic cold-run policy。它不是对未来 `run()`、`reload()`、`cartdata()` 兼容性的声明。
+
+### 5.5 Errors 与 teardown
+
+- public lifecycle misuse、stale generation、无 cart reset、terminal dispose 后调用返回
+  non-recoverable `E_INVALID_STATE`，但不把健康 session poison。
+- factory throw、runtime object reuse、teardown/port invariant failure 转为 non-recoverable
+  `E_INVARIANT`；不得让异常跨 Worker-facing RuntimeCore API 泄漏。
+- VM syntax/runtime/budget/host fault 保留原 code/phase/line/trace；`CartSession.lastError` 保存最近
+  一次真正使 generation fault 的序列化错误。stale/misuse 不覆盖它。
+- fault、stop、replacement 和 dispose 都必须 exactly-once teardown 当前 runtime；dispose 本身
+  对重复调用幂等。
+
+### 5.6 文件边界
+
+- Production：把现有 frame-slice implementation 从 public barrel 移到
+  `packages/runtime-core/src/frame-runtime.ts`；新增
+  `packages/runtime-core/src/session/cart-session.ts`；`src/public.ts` 只导出稳定入口。
+- Runtime integration：`FrameSliceRuntime.boot` 消费 normalized `ParsedCart` 的 `rom`/`code`
+  字段，不再把 `.p8.png` compatibility alias 写进新 lifecycle contract。
+- Machine contract：展开 `spec/phase-1-l1-contract.json#workUnits.1C`。
+- Tests：新增 `tests/runtime/phase-1c-cart-session.test.mjs`，使用 project-authored synthetic cart、
+  fake runtime ownership probes 和真实 z8lua WASM；不得引用 `ref/` 或第三方 cart fixture。
+- Documentation：本文件、`04` 的 CartSession/reset implementation status、`08` 的 RuntimeCore
+  source status、README/roadmap checkpoint。
+
+1C 不修改 Worker command protocol 或 player composition；该接线属于 1E。`compose-runtime.ts`
+当前 Phase 0E probe 继续直接构造单个 runtime，不得被误标为已使用 CartSession。
+
+### 5.7 Exit gate
+
+专项测试必须覆盖：首次 load、same-cart reset、cart swap、snapshot ownership、cold RAM defaults、
+zero input、frame clock restart、host request generation、stale completion、factory reuse/throw、
+compile/runtime fault teardown、stop/reset、idempotent dispose、invalid-state non-poisoning、public
+exports、package dependency/browser-capability negative checks。
+
+完成命令：
+
+```text
+pnpm run test:phase-1c
+pnpm run test:phase-0e
+pnpm run test:phase-1a
+pnpm run test:architecture
+pnpm run verify
+```
+
+完成后把 1C 标记 Complete、checkpoint 更新为 1C complete、next work unit 更新为 1D；Phase 1
+保持 Active。最终提交后 `git status --short` 必须为空。
+
+### 5.8 完成结论
+
+Phase 1C 已交付 browser-neutral `CartSession`、normalized cart private snapshot、fresh
+generation runtime factory、cold load/reset、generation-tagged HostRequest、stale completion
+拒绝与 fault/stop/dispose teardown。真实 z8lua 集成测试锁定 64 KiB clear、video mapping defaults、
+Cart ROM `0..0x42ff` copy、zero input 和 frame clock restart；fake runtime tests 锁定 ownership、
+object reuse、factory failure 与 exactly-once dispose。Worker/player 接线、audio simulation、
+input edge/repeat、persistence 和完整 `run/reload` compatibility 保持 deferred。下一 work unit 是
+1D L1 graphics/input。

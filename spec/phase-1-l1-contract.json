@@ -4,9 +4,9 @@
   "name": "L1 minimal playable loop",
   "status": "active",
   "browserGate": ["chrome", "chromium"],
-  "completedWorkUnits": ["1A", "1B"],
+  "completedWorkUnits": ["1A", "1B", "1C"],
   "activeWorkUnit": null,
-  "nextWorkUnit": "1C",
+  "nextWorkUnit": "1D",
   "workUnits": {
     "1A": {
       "name": "Host API Boundary",
@@ -66,7 +66,58 @@
         "pnpm run verify"
       ]
     },
-    "1C": { "name": "CartSession reset and lifecycle", "status": "not-started" },
+    "1C": {
+      "name": "CartSession reset and lifecycle",
+      "status": "complete",
+      "owner": "RuntimeCore:CartSession",
+      "states": ["empty", "loading", "ready", "waiting-host", "faulted", "stopped", "disposed"],
+      "generationPolicy": {
+        "first": 1,
+        "incrementsOn": ["load-transaction", "reset-transaction"],
+        "freshRuntimeObjectGraph": "required",
+        "runtimeObjectReuse": "E_INVARIANT",
+        "staleHostCompletion": "E_INVALID_STATE:non-poisoning"
+      },
+      "cartSnapshot": {
+        "ownedCopies": ["rom", "code"],
+        "immutableMetadata": ["identity", "format", "version"],
+        "mutableBytesExposed": false
+      },
+      "coldRunReset": {
+        "vm": "new-object-graph",
+        "baseRam": "zero-64k-then-hardware-defaults-then-cart-rom-0x0000..0x42ff",
+        "hardwareDefaults": { "0x5f54": 0, "0x5f55": 96 },
+        "inputButtons": 0,
+        "frameClock": "new-runtime-startup-epoch",
+        "persistence0x5e00": "zero-unmapped",
+        "placeholderAudio": "no-simulation-state-generation-is-future-invalidation-token"
+      },
+      "faultPolicy": {
+        "vmFault": "dispose-current-runtime-and-enter-faulted",
+        "factoryOrInvariantFailure": "E_INVARIANT-and-enter-faulted",
+        "oldRuntimeRollback": false,
+        "cartSnapshotRetainedForReset": true
+      },
+      "forbiddenCapabilities": [
+        "Worker",
+        "MessagePort",
+        "DOM",
+        "Canvas",
+        "AudioContext",
+        "AudioWorklet",
+        "network",
+        "filesystem",
+        "z8lua-bridge-runtime-import",
+        "ref-import"
+      ],
+      "verification": [
+        "pnpm run test:phase-1c",
+        "pnpm run test:phase-0e",
+        "pnpm run test:phase-1a",
+        "pnpm run test:architecture",
+        "pnpm run verify"
+      ]
+    },
     "1D": { "name": "L1 graphics and input completion", "status": "not-started" },
     "1E": { "name": "Worker scheduling and minimal player shell", "status": "not-started" },
     "1F": { "name": "L1 conformance and phase exit", "status": "not-started" }
