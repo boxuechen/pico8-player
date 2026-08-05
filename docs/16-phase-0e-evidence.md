@@ -1,6 +1,7 @@
 # Phase 0E 完成证据
 
 > 日期：2026-08-05
+> 实现基线：`033dabb6d766a35ec29a65826a391fc5938006f6`
 > 决策：[ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md)
 > ABI：[`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)
 > Runtime contract：[`spec/phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)
@@ -103,4 +104,8 @@ pnpm run verify
 
 Phase 0E Node suite 为 10/10，通过真实 Chrome 60-step + watchdog/recovery gate；
 architecture consumer fixture 已只经 package exports 编译新 public API。完整 clean
-checkout 结果在本 phase 最终提交后补入本节。
+checkout 从实现基线执行 `git clone --no-local`，在无 `node_modules`/`dist` 的副本中
+完成 `pnpm install --frozen-lockfile` 和 `pnpm run verify`：12/12 cart-codec、16/16
+architecture、23/23 Phase 0A/0B、4/4 Phase 0C、10/10 Phase 0E、两组 Wasm 双 clean
+reproducibility、两个 artifact manifest 与真实 Chrome gate 全部通过；验证后 clone
+的 `git status --porcelain` 为空。临时 clone 已移入 macOS Trash，可恢复后清理。
