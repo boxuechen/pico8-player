@@ -119,6 +119,10 @@ node tools/benchmark/run-node.mjs --output /tmp/p8w-phase0c-node-smoke.json
 
 `pnpm run verify` 包含 TypeScript/architecture、Phase 0A/0B regression、Phase 0C
 benchmark tests、双构建 reproducibility 与 manifest/artifact hash verification。
+从提交 `3fd607e` 执行 `git clone --no-local` 后，使用 Node 22.22.2、pnpm
+10.8.0 运行 frozen install 与统一 `pnpm run verify`：16/16 architecture、23/23
+Phase 0A/0B、4/4 Phase 0C、双构建 reproducibility 和 6-file manifest 全部通过；
+验证后的 clean checkout `git status --porcelain` 为空。
 
 ## 7. Fallback 与下一阶段
 
