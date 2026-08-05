@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "phase": "2",
+  "name": "Graphics, Memory and Text",
+  "status": "active",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase1Contract": "spec/phase-1-l1-contract.json",
+    "phase1Evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
+    "baselineCommit": "916de2a"
+  },
+  "completedWorkUnits": [],
+  "activeWorkUnit": "2A",
+  "nextWorkUnit": "2B",
+  "workUnits": {
+    "2A": {
+      "name": "Canonical Memory and Host ABI",
+      "status": "active",
+      "memoryApis": ["peek", "peek2", "peek4", "poke", "poke2", "poke4", "memcpy", "memset"],
+      "canonicalMapper": "wasm/bridge/p8w_pico_memory.*",
+      "runtimeCapability": "logical-memory-port-over-stable-lease",
+      "hostCallFrame": {
+        "minimumScalarSlots": 12,
+        "argumentEncoding": "signed-q16.16-raw-int32",
+        "optionalEncoding": "uint32-presence-mask",
+        "byteStringEncoding": "wasm-pointer-plus-byte-length",
+        "resultEncoding": "signed-int32-out-parameter",
+        "failureEncoding": "nonzero-status"
+      },
+      "exit": [
+        "one-canonical-address-mapper",
+        "base-ram-api-conformance",
+        "phase2-capable-generated-host-call-frame",
+        "real-wasm-and-regression-tests-pass",
+        "independent-commit-and-clean-worktree"
+      ]
+    },
+    "2B": { "name": "Draw State and Primitive Completion", "status": "planned" },
+    "2C": { "name": "Sprite Sheet and Blitter", "status": "planned" },
+    "2D": { "name": "Map, Flags and tline", "status": "planned" },
+    "2E": { "name": "P8SCII and Custom Font", "status": "planned" },
+    "2F": { "name": "Conformance and Phase Exit", "status": "planned" }
+  },
+  "scope": [
+    "base-ram-memory-api",
+    "draw-state-and-standard-4bpp-graphics",
+    "sprites-maps-and-tline",
+    "p8scii-and-custom-font",
+    "framebuffer-ram-and-chrome-production-gates"
+  ],
+  "nonGoals": [
+    "audio-synthesis",
+    "complete-device-input",
+    "persistence-cartdata-reload-cstore",
+    "bbs-or-network-cart-resolution",
+    "third-party-cart-corpus",
+    "firefox-webkit-safari",
+    "official-full-or-bit-exact-compatibility"
+  ]
+}

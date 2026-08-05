@@ -16,8 +16,9 @@
 
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
-[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；当前
-Phase 1 已完成且当前没有 active phase；下一步必须先创建 Phase 2 phase 文档并明确路由。
+[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1
+已完成，当前 active work unit 是 Phase 2A，入口位于
+[`phases/2-graphics-memory-text.md`](./phases/2-graphics-memory-text.md)。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 

@@ -64,22 +64,127 @@ apis:
     phase: 0E
     note: root top-level continuation implemented; guest-nested suspension unsupported
   - name: peek
-    status: implemented
+    status: partial
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 0E
-    note: canonical Phase 0B logical mapper
+    note: canonical mapper and scalar read implemented; bounded variadic results activate in 2A
+  - name: peek2
+    status: unimplemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 2A
+    note: production registration and bounded variadic results required
   - name: peek4
-    status: implemented
+    status: partial
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 0E
-    note: signed Q16.16 raw bits over canonical byte-wise mapper
+    note: signed Q16.16 raw bits over canonical byte-wise mapper; bounded variadic results required
   - name: poke
-    status: implemented
+    status: partial
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 0E
-    note: canonical Phase 0B logical mapper
+    note: canonical scalar write implemented; bounded variadic values activate in 2A
+  - name: poke2
+    status: unimplemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 2A
+    note: production registration and bounded variadic values required
   - name: poke4
-    status: implemented
+    status: partial
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 0E
-    note: raw Q16.16 bits over canonical byte-wise mapper
+    note: raw Q16.16 bits over canonical byte-wise mapper; bounded variadic values required
+  - name: memcpy
+    status: unimplemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 2A
+    note: canonical logical mapping and overlap-safe copy required
+  - name: memset
+    status: unimplemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 2A
+    note: canonical logical mapping and bounded length required
+  - name: color
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: camera
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: clip
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: pal
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: palt
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: fillp
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: pget
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: oval
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: ovalfill
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2B
+  - name: sget
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2C
+  - name: sset
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2C
+  - name: spr
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2C
+  - name: sspr
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2C
+  - name: mget
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2D
+  - name: mset
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2D
+  - name: fget
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2D
+  - name: fset
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2D
+  - name: map
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2D
+  - name: tline
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2D
+  - name: print
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2E
+    note: current WASM quiet placeholder has no text behavior
+  - name: cursor
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 2E

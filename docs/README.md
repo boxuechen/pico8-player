@@ -5,21 +5,16 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前没有 active phase，也没有已授权的 production work unit。Phase 1A–1F 已完成；下一项
-工作是 **Phase 2 activation**，不是直接实现 Graphics API。
+当前 active phase 是 [Phase 2 — Graphics、Memory 与 Text](./phases/2-graphics-memory-text.md)，
+active work unit 为 **2A Canonical Memory 与 Host ABI**。Phase 1A–1F 已完成。
 
-激活 Phase 2 时只读取以下基线，不通读已完成阶段的执行过程：
+日常实现只读取以下入口，不通读已完成阶段的执行过程：
 
-1. [roadmap 的 Phase 2 headline](./05-delivery-plan.md#phase-2-activation-baseline)：目标和
-   exit headline；它本身不授权实现。
-2. [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) 的“完成结论”和
-   “Known Differences”：确认已实现边界与不得外推的兼容声明。
-3. [`phase-1-l1-contract.json`](../spec/phase-1-l1-contract.json)：机器可读的完成状态、公开
-   case 和 deferred 范围。
-4. [`docs/phases/README.md`](./phases/README.md)：创建新的 Phase 2 文档和首个 work unit；
-   该文档再用精确 anchor 路由 03/04/06/08 的必要章节。
+1. 本页。
+2. [active Phase 2 文档](./phases/2-graphics-memory-text.md) 展开的当前 work unit。
+3. 它明确链接的 machine contract、owner 章节和 ADR。
 
-在 active phase 建立后，日常实现默认只读：本页 → active phase → 它明确链接的 contract
+日常实现默认只读：本页 → active phase → 它明确链接的 contract
 小节。不要把 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务
