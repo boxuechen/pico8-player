@@ -5,20 +5,19 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前 active phase 是
-[`Phase 1：L1 最小可玩闭环`](./phases/1-l1-minimal-playable-loop.md)。Phase 1A Host API
-Boundary、1B Text `.p8` / ParsedCart、1C CartSession lifecycle、1D L1 graphics/input 与
-1E Scheduler/player shell 已完成，下一 work unit 是 1F L1 exit；后续开发以该 phase 文档为
-唯一任务入口。
+当前没有 active phase。[`Phase 1：L1 最小可玩闭环`](./phases/1-l1-minimal-playable-loop.md)
+的 1A–1F 已完成，退出证据见
+[`Phase 1 evidence`](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。下一步是根据 roadmap
+和 Phase 1 完成基线创建独立 Phase 2 文档、展开首个 work unit 后再修改 production code。
 
 查看当前实现基线时按顺序阅读：
 
-1. [Phase 1 active phase](./phases/1-l1-minimal-playable-loop.md)：当前 checkpoint、
-   下一 work unit、文件边界和验收门禁。
+1. [Phase 1 completion record](./phases/1-l1-minimal-playable-loop.md)：已完成的 L1 边界、
+   文件和退出门禁；不得继续向其中追加 Phase 2 任务。
 2. [源码目录与边界契约](./08-source-layout-and-boundaries.md)：package DAG、execution
    domains、composition roots 和 import 门禁。
-3. 未来 active phase 文档明确路由的 owner 章节；不要默认通读所有历史
-   evidence。
+3. [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) 与 roadmap 的
+   Phase 2 headline；据此创建新的 active phase，再读取其明确路由的 owner 章节。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务
 细节不得复制回 AGENTS、README、roadmap 和 Codex 协议。

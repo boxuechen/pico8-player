@@ -26,7 +26,7 @@
 | 0D Lossless `.p8.png` | Complete | [Evidence](./evidence/phase-0/15-phase-0d-evidence.md) / [ADR-005](./adr/005-lossless-p8png.md) |
 | 0E Coroutine Frame Slice | Complete | [Evidence](./evidence/phase-0/16-phase-0e-evidence.md) / [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md) |
 | 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
-| 1 L1 最小可玩闭环 | **Active；1A–1E complete** | [Phase document](./phases/1-l1-minimal-playable-loop.md)；next 1F |
+| 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | 2 Graphics、Memory、Text | Not started | Phase 1 exit 后激活 |
 | 3 Audio、完整 Input、Persistence | Not started | Phase 2 exit 后激活 |
 | 4 L2 / MVP 兼容加固 | Not started | Phase 3 exit 后激活 |
@@ -78,6 +78,11 @@ Chrome device-run、Accepted ADR 和归档 evidence 覆盖：
 
 Exit headline：30/60/custom-loop carts 可逐帧复现；reset/fault 后 session、RAM、input
 和 placeholder audio 状态正确；UI 能重新加载。
+
+**Status: Passed by Phase 1F.** 三个项目原创 cart 的 Node real-WASM/Chrome production Worker
+trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload 和 ordinary 60Hz p95
+门禁通过。兼容声明严格限于 L1 bounded profile，详见
+[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
 
 ### Phase 2 — Graphics、Memory 与 Text
 

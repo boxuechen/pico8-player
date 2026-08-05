@@ -2,11 +2,12 @@
   "schemaVersion": 1,
   "phase": "1",
   "name": "L1 minimal playable loop",
-  "status": "active",
+  "status": "complete",
   "browserGate": ["chrome", "chromium"],
-  "completedWorkUnits": ["1A", "1B", "1C", "1D", "1E"],
+  "completedWorkUnits": ["1A", "1B", "1C", "1D", "1E", "1F"],
   "activeWorkUnit": null,
-  "nextWorkUnit": "1F",
+  "nextWorkUnit": null,
+  "nextPhase": "2",
   "workUnits": {
     "1A": {
       "name": "Host API Boundary",
@@ -235,7 +236,62 @@
         "pnpm run verify"
       ]
     },
-    "1F": { "name": "L1 conformance and phase exit", "status": "not-started" }
+    "1F": {
+      "name": "L1 conformance and phase exit",
+      "status": "complete",
+      "addsProductionPicoApis": false,
+      "caseIds": [
+        "l1/callback-30-input",
+        "l1/callback-60-p8png",
+        "l1/custom-flip-30"
+      ],
+      "assetPolicy": {
+        "ownership": "project-authored",
+        "networkAccess": false,
+        "bbsAccess": false,
+        "thirdPartyCartDependency": false,
+        "p8png": "generated-from-tracked-project-source"
+      },
+      "deterministicObservations": [
+        "mode",
+        "targetFps",
+        "frameId",
+        "completedSlices",
+        "timeRawBeforeStep",
+        "input-trace",
+        "packed-screen-sha256",
+        "cold-reset",
+        "fresh-replay-digest"
+      ],
+      "chromeGate": [
+        "production-module-worker-and-wasm",
+        "real-raf-30-vs-60-pacing",
+        "keyboard-next-visible-frame",
+        "fault-ui-and-retained-cart-recovery",
+        "dispose",
+        "ordinary-60hz-worker-roundtrip-p95-lte-8ms"
+      ],
+      "claimBoundary": {
+        "officialBitExact": false,
+        "thirdPartyCartCompatibility": false,
+        "l1ProjectCorpusOnly": true
+      },
+      "exitResult": {
+        "result": "pass",
+        "projectCartCases": 3,
+        "projectCartCasesPassed": 3,
+        "openP0P1": 0,
+        "evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
+        "rawChromeResult": "benchmarks/phase-1/results/chromium-macos-arm64-l1-exit.json",
+        "rawChromeResultSha256": "6445da0c97254c147df6eef3b4fbb9071d9f4214d72225474ba5add2d6974821"
+      },
+      "verification": [
+        "pnpm run test:phase-1f",
+        "pnpm run test:browser:chromium",
+        "pnpm run evidence:phase-1f",
+        "pnpm run verify"
+      ]
+    }
   },
   "phase1AExcluded": [
     "text-.p8-parser",

@@ -11,9 +11,10 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E 和 aggregate verify scripts；已归档的 Phase 0 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
-| **Target** | 第 3 节完整测试资产布局、尚未落地的 unit/conformance/fuzz/differential/CI 命令与 release matrix |
+| **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
+| **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
 执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本；历史结果只在
@@ -696,10 +697,37 @@ matrix，也不声明 audio synthesis、resolver 或完整 device input 已完�
 
 | 行为 | Phase 1E 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
-| wall-clock pacing | fake clock 30/60Hz、zero-tick、5-tick cap、backlog drop、pause/resume/non-monotonic anchor passed | `implemented-l1` | 1F rAF jitter 与 custom-loop matrix |
-| Worker/session freshness | distinct Worker/session generation、stale input、in-flight pulse supersession、watchdog byte recovery passed | `implemented-l1` | 1F watchdog/UI recovery scenarios |
-| production composition | text cart decode → CartSession fresh VM → frame event；cold reset/frame id restart passed | `implemented-l1` | 1F `.p8.png` original-cart matrix |
-| Chrome player path | real Worker+WASM+rAF、Canvas、keyboard aliases、blur pause、reset/stop/fault UI passed | `implemented-l1` | 1F 30/60/custom carts and exit evidence |
+| wall-clock pacing | fake clock 30/60Hz、zero-tick、5-tick cap、backlog drop、pause/resume/non-monotonic anchor passed | `implemented-l1` | 1F real-rAF/custom result见 15.10 |
+| Worker/session freshness | distinct Worker/session generation、stale input、in-flight pulse supersession、watchdog byte recovery passed | `implemented-l1` | 1F fault/reset/reload result见 15.10 |
+| production composition | text cart decode → CartSession fresh VM → frame event；cold reset/frame id restart passed | `implemented-l1` | 1F generated `.p8.png` matrix passed |
+| Chrome player path | real Worker+WASM+rAF、Canvas、keyboard aliases、blur pause、reset/stop/fault UI passed | `implemented-l1` | Phase 1 exit evidence archived |
+
+### 15.10 Phase 1F L1 Exit 矩阵
+
+本表关闭 Phase 1 的 **L1 bounded profile**。三个 cart 和所有像素/code 均为项目原创；Node
+real-WASM 与 Chrome production Worker 使用同一 manifest/input trace，完整 8,192-byte screen、
+logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与环境见
+[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
+
+| Cart / behavior | Phase 1F result | 功能/Cart 状态 | Claim boundary / 后续动作 |
+| --- | --- | --- | --- |
+| `l1/callback-30-input` | text `.p8`；30Hz callback；held + `btnp`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | 完整 graphics/device input 仍 Phase 2/3；无 official-exact 声明 |
+| `l1/callback-60-p8png` | generated project `.p8.png`；60Hz `_update60`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | 压缩/codec 广度由 parser suite；代表游戏 corpus 属于 Phase 4 |
+| `l1/custom-flip-30` | text `.p8`；top-level `flip()`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | custom slow-frame/host suspension 未扩大 |
+| Chrome real-rAF pacing | callback/custom 30Hz median `33.40/33.20ms`；60Hz `16.00ms`；frame/slice continuous | `compatible`（Chrome desktop L1） | background/slow-frame policy保持 ADR-011；release soak deferred |
+| Chrome keyboard visible response | Player 0 position `8→11`；O `btnp` edge visible；无 browser repeat dependence | `compatible`（bounded six-button） | multiplayer/gamepad/touch/devkit input deferred |
+| fault/reload | instruction budget fault structured；main responsive；generation `4→5`；valid cart reloaded | `compatible` host-safety path | CPU cost calibration Phase 4；hard Worker hang由 0F/1E gate继续覆盖 |
+| ordinary 60Hz performance | 120 measured Worker round-trips；p95 `0.1001ms`；`>16.67ms` `0/120` | gate passed | 只适用于 ordinary L1 cart；Phase 2/4 stress corpus 必须另测 |
+
+三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
+corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
+
+- 完整 Graphics（palette/clip/camera/sprite/map/text 等）仍 `partial`，Phase 2 owner。
+- AudioSynth、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
+- 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
+  official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
+
+以上均为已声明后续范围，不是开放 P0/P1；Phase 1 exit 时开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

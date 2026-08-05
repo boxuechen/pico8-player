@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 1E** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；generation-owned `CartSession`；RAM-backed L1 graphics/input；bounded interactive scheduler、stable Worker protocol 和 minimal player shell |
+| **Implemented through Phase 1 exit** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；generation-owned `CartSession`；RAM-backed L1 graphics/input；bounded interactive scheduler、stable Worker protocol、minimal player shell 与 project-owned 30/60/custom Chrome conformance |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -530,6 +530,11 @@ blur/visibility/device lifecycle、多玩家与 devkit input 仍由后续 work u
 > 状态：Phase 1E 已实现 `FrameScheduler` 的 browser-neutral interactive decision 子集：
 > 30/60Hz accumulator、首 pulse anchor、0..5 ticks、overflow drop/diagnostic 与 pause/resume
 > re-anchor。下方 `deterministic/stepExact`、slow-frame update/draw 合并仍是 Target。
+
+Phase 1F 已从 production Worker 外部用 fixed synthetic pulses 重放 30/60/custom carts，并在
+真实 Chrome rAF 中观察约 `33.40/16.00/33.20ms` median frame interval；ordinary 60Hz
+Worker round-trip 120-tick p95 为 `0.1001ms`。这些是当前 bounded profile evidence，不表示
+下方 target `stepExact` API 已实现，也不替代 Phase 2/4 stress corpus。
 
 ### 10.1 双模式
 

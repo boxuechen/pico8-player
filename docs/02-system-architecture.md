@@ -1,14 +1,14 @@
 # 系统架构
 
 > 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码和
-> [Phase 0F 完成证据](./evidence/phase-0/17-phase-0f-evidence.md)为准。
+> [Phase 1 完成证据](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)为准。
 
 ## 状态路由
 
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 1E** | Phase 0F browser boundary；text/PNG decode、CartSession/L1 graphics/input；versioned player protocol、双 generation/watchdog、bounded wall-clock scheduler、keyboard/DOM shell 和 Worker bundle |
+| **Implemented through Phase 1 exit** | Phase 0F browser boundary；text/PNG decode、CartSession/L1 graphics/input；versioned player protocol、双 generation/watchdog、bounded wall-clock scheduler、keyboard/DOM shell、Worker bundle 与 30/60/custom L1 Chrome conformance |
 | **Target** | 完整 boot/frame transaction、cart resolver 与完整 Graphics/AudioSynth/Input/Persistence |
 | **Deferred** | persistence、完整 cart swap、BBS resolver 和完整 L3 host integration |
 

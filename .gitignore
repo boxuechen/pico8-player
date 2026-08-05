@@ -14,3 +14,4 @@
 /benchmarks/interop/results/node-full.json
 /benchmarks/phase-0f/results/*-smoke.json
 /benchmarks/phase-0f/results/*-smoke.png
+/benchmarks/phase-1/results/*-smoke.json

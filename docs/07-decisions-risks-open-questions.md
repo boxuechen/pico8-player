@@ -1,7 +1,8 @@
 # 架构决定、风险与未决问题
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义；当前 active phase 是 Phase 1。
+如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1 已完成，当前没有 active
+phase；下一步须先展开并激活 Phase 2。
 
 ## 1. ADR registry
 
@@ -32,8 +33,9 @@
 
 ### Active blockers
 
-当前没有 active phase blocker。Phase 1A–1E 已完成；下一 work unit 1F 需先由
-[`Phase 1`](./phases/1-l1-minimal-playable-loop.md) 展开后再激活。
+当前没有 active phase blocker。Phase 1A–1F 已通过 L1 bounded-profile exit，见
+[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。Phase 2 的首个 work
+unit 尚未展开，因此不能依据 roadmap headline 直接实现。
 
 ### Deferred open questions
 

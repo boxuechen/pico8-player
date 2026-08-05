@@ -79,6 +79,11 @@
 | L2 Playable | 主流单 cart 游戏可完整游玩 | audio、gamepad/touch、persistence、常用 draw/audio state、pause/reset |
 | L3 Extended | 复杂和多 cart 内容可运行 | `load/reload/cstore`、cart swap、custom font、advanced registers、兼容数据库 |
 
+Phase 1 已通过 **L1 bounded profile**：项目原创 30Hz callback、60Hz `.p8.png` callback 和
+30Hz custom-loop cart 在固定 trace 下可重复，Chrome keyboard/player/fault path 通过。该结论只
+覆盖 Phase 1 机器契约列出的基础 API，不等于完整 L1 API 面、官方 bit-exact 或第三方 cart
+兼容声明；具体边界见 [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
+
 首个对外 MVP 的目标是 L2。L3 是后续兼容阶段，不阻塞核心架构稳定。
 
 ## 6. MVP 成功标准

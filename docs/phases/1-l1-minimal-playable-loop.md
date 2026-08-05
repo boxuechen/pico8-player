@@ -1,9 +1,10 @@
 # Phase 1：L1 最小可玩闭环
 
-- 状态：**Active**
-- 当前 checkpoint：**1E Scheduler/player shell complete**
+- 状态：**Complete**
+- 当前 checkpoint：**Phase 1 L1 bounded profile complete**
 - 当前 work unit：**None**
-- 下一 work unit：**1F L1 exit**
+- 下一 work unit：**None**
+- 下一 phase：**Phase 2 activation（尚未展开）**
 - 机器契约：[`spec/phase-1-l1-contract.json`](../../spec/phase-1-l1-contract.json)
 - 浏览器范围：Chrome / Chromium only
 
@@ -35,7 +36,7 @@ Phase 1 从已通过的 Phase 0 exit gate 开始，并保持以下边界：
 | 1C CartSession lifecycle | **Complete** | cold reset、reload/fault dispose、RAM/input/placeholder-audio reset matrix |
 | 1D L1 graphics/input | **Complete** | `line/rect/circ`、normalized held/edge 与 `btnp` 最小闭环 |
 | 1E Scheduler/player shell | **Complete** | Worker tick、load/reset/fault UI 与 Phase 0F adapters 接通 |
-| 1F L1 exit | Not started | 30/60/custom original carts、Chrome gate、兼容矩阵和 phase evidence |
+| 1F L1 exit | **Complete** | 30/60/custom original carts、Chrome gate、兼容矩阵和 phase evidence |
 
 后续 unit 启动前必须在本文件展开其 inputs、files、tests 和 exit gate；不得仅依据上表直接
 实现。任一 unit 不得顺带加入 BBS resolver、第三方 cart、完整 graphics/audio 或
@@ -553,3 +554,125 @@ protocol freshness、cold reset 和 bootstrap queue；Chrome gate 锁定真实 W
 `ZX/NM/CV` aliases、blur clear/pause、frame presentation、stop 与 parse-fault UI。audio synthesis、
 BBS/resolver、persistence、gamepad/touch/multiplayer 和完整 conformance 仍未声明支持。下一 work
 unit 是 1F L1 exit。
+
+## 8. 1F 执行契约
+
+### 8.1 目标、判定范围与明确排除
+
+1F 是 Phase 1 的退出鉴定，不增加新的 PICO-8 API。它把 1A–1E 已实现的 ingestion、
+VM/session、L1 graphics/input、scheduler、Worker transport 和 player shell 放进同一套可重复
+compatibility matrix，回答“当前明确声明的 L1 子集能否作为一个整体退出”。
+
+本 unit 交付：
+
+1. 三个项目原创、可随仓库分发的 representative carts：30Hz callback text `.p8`、60Hz
+   callback generated `.p8.png` 和 30Hz custom `flip()` text `.p8`。每个 case 都绑定 source/cart
+   SHA-256、固定 input trace、目标 mode/fps、logical frame/checkpoint 和 packed framebuffer oracle。
+2. 真实 z8lua/WASM deterministic conformance runner：使用 synthetic monotonic pulse，不读取
+   wall clock；逐 case 验证 callback/custom lifecycle、`completedSlices`、`timeRawBeforeStep`、
+   input held/edge、完整 8,192-byte screen、cold reset 和两次 replay 一致性。
+3. 真实 Chrome/Chromium exit runner：使用 production Module Worker/WASM 和 player protocol，
+   验证三类 cart、`.p8.png` bytes path、rAF 30/60 pacing、keyboard→next visible frame、fault 后
+   retained-cart reset/reload、资源 dispose，以及 ordinary 60Hz Worker round-trip tick p95。
+4. Phase 1 compatibility matrix、Known Differences、reviewed raw Chrome artifact 和 immutable
+   Phase 1 evidence；机器契约关闭 1F/Phase 1，并把后续路由指向 Phase 2 activation。
+
+本阶段不下载、提交或自动访问 BBS/官方/第三方 cart。没有本地正版 PICO-8 differential 时，
+项目自有完整 replay 只能证明 L1 implementation compatibility，不能升级为官方 bit-exact/C3
+声明。Phase 2 graphics/memory/text、AudioSynth、persistence、gamepad/touch、完整 API corpus、
+slow-frame draw coalescing、release/nightly/mobile gate 和 Firefox/WebKit 全部范围外。
+
+### 8.2 Conformance cases 与 oracle
+
+| Case ID | 输入 | 主要行为 | 必须观察 |
+| --- | --- | --- | --- |
+| `l1/callback-30-input` | project-owned text `.p8` | `_init/_update/_draw`、30Hz、held + `btnp` edge | mode/fps、frame/slice/time、input trace、screen bytes、cold reset |
+| `l1/callback-60-p8png` | 同仓 source 生成的 project-owned `.p8.png` | `_update60` 优先、60Hz、PNG decode→session | raw cart hash、frame/slice/time、screen bytes、replay |
+| `l1/custom-flip-30` | project-owned text `.p8` | top-level custom loop、每次 `flip()` boundary | mode/fps、无 callback 注入、frame/slice/time、screen bytes、replay |
+
+manifest 的 input event 以 logical frame 为单位，在对应 tick 前更新 normalized six-button snapshot；
+browser physical-key case 单独验证 DOM event mapping。自动 oracle 使用经人工按 cart 源码审阅的
+完整 packed-screen SHA-256，并同时断言少量语义像素/计数，禁止只用实现当前输出自动批准 hash。
+同一 case 在 fresh controller/WASM session 中运行两次必须得到相同 frame trace digest。
+
+`.p8.png` 在测试启动时从同一份 tracked project source 生成；生成器、源 SHA 和结果 cart SHA
+进入 manifest/result。二进制无需成为仓库 fixture，Chrome runner 通过受控测试 bootstrap 注入
+bytes；production 仍只接收 caller-provided bytes，不获得 filesystem/network capability。
+
+### 8.3 Chrome、性能与恢复门禁
+
+- Chrome gate 只使用 production `player-worker.mjs`、真实 z8lua WASM 和 v1 player protocol。
+  deterministic browser probe 直接提交 monotonic `vsync` pulse；UI probe 另外保留真实 rAF，
+  不用一次 rAF=一次 tick 的假设替代 scheduler。
+- 30/60Hz real-rAF trace 至少采集 12 个 visible frames；各自 frame interval median 允许 Chrome
+  调度 jitter，但 30Hz interval 必须显著高于 60Hz，且 logical frame/time trace 必须连续。
+- ordinary 60Hz cart warm-up 后至少采集 120 个 Worker pulse round-trip；p95 必须 `<=8ms`，
+  `>16.67ms` 的比例单独记录。该数值只校准当前 L1 ordinary cart，不替代 Phase 2/4 stress
+  corpus，也不把 device refresh latency 混为 core tick 时间。
+- fault case 使用项目原创 instruction-budget cart；必须进入结构化
+  `E_VM_INSTRUCTION_BUDGET`/fault UI，
+  主线程保持可操作，随后 reset 或重新 load retained valid cart 能创建新 session 并再次出帧。
+  Phase 0F 的 Worker hard-hang/recreate gate 继续复用，不在 1F 复制一套 test-only protocol。
+- browser result 记录 Chrome version/user agent、OS/arch、baseline commit、case/cart hashes、
+  frame/timing/perf counters 和 session/Worker generations；default smoke artifact gitignored，只有
+  显式 `--evidence` 生成的 reviewed result 进入 Phase 1 evidence。
+
+### 8.4 Source、测试资产与文档边界
+
+- Conformance source：`tests/conformance/carts/l1/`；只含项目原创 `.p8` source。
+- Manifest/trace：`tests/conformance/manifests/phase-1f-l1-exit.json`；它是 case/oracle owner，
+  `spec/phase-1-l1-contract.json#workUnits.1F` 只锁定阶段范围和退出条件，不复制逐帧数据。
+- Deterministic test：`tests/conformance/phase-1f-l1-exit.test.mjs`；可复用纯 fixture builder，
+  但不得读取 `ref/`、浏览器 global 或网络。
+- Browser：`tests/browser/phase-1f.*` 与 `tools/browser/run-phase-1f.mjs`；test bootstrap 可以生成
+  project `.p8.png` bytes，production bundle 不得 import Node-only fixture code。
+- Evidence：reviewed raw JSON 位于 `benchmarks/phase-1/results/`，完成摘要位于
+  `docs/evidence/phase-1/`。既有 evidence 不修改；新 evidence 在 Phase 1 关闭后成为 immutable。
+- Documentation：本文件关闭 Phase 1；`01/02/04/05/06/07/08` 只更新各自拥有的 status、
+  compatibility、risk 或 source-layout 事实。下一阶段细节不得提前复制进 Phase 1。
+
+web-game architecture boundary 保持不变：simulation/cart/input latch 的事实在 Worker/core，
+Canvas/DOM 只展示和映射物理输入；测试 runner 只能观察 protocol/frame 输出，不能读取或修补
+production VM/RAM 来制造通过结果。
+
+### 8.5 Exit gate
+
+专项门禁必须覆盖：
+
+- 三个 case 的 source/cart provenance hash、mode/fps、frame/slice/time、input trace、screen
+  oracle、fresh replay 和 cold reset；
+- `.p8` / generated `.p8.png` production decode、30/60/custom scheduling 和 stale generation；
+- Chrome production Worker/WASM、real rAF pacing、keyboard visible response、fault UI/recovery、
+  dispose，以及 60Hz p95/missed-frame metrics；
+- compatibility status 只在证据允许范围内更新；完整 draw/input/audio/persistence 和未做官方
+  differential 的行为继续 `partial`/`unknown`，不得以三 cart 通过宣称通用 PICO-8 兼容；
+- 所有资产 project-owned，architecture/provenance gate 证明没有 `ref/`、BBS/network 或
+  third-party cart dependency；没有开放 P0/P1 Phase 1 blocker。
+
+完成命令：
+
+```text
+pnpm run test:phase-1f
+pnpm run test:browser:chromium
+pnpm run evidence:phase-1f
+pnpm run verify
+```
+
+完成后把 1F 与 Phase 1 标记 Complete，`activeWorkUnit`/`nextWorkUnit` 清空，并设置
+`nextPhase=2`；Phase 2 在独立 phase 文档展开前保持 Not started。README/roadmap/01/02/04/06/
+07/08 与 evidence index 同步。最终提交后 `git status --short` 必须为空。
+
+### 8.6 完成结论
+
+Phase 1F 已建立三个 project-owned cart 的 deterministic manifest：30Hz callback + held/edge、
+60Hz generated `.p8.png` callback 和 30Hz custom `flip()`。Node real-WASM 与 Chrome production
+Worker 对 mode/fps、frame/slice/time、input trace、完整 packed screen、cold reset 和 fresh replay
+hash 一致。Chrome real-rAF median 分别为 `33.40ms`、`16.00ms`、`33.20ms`；keyboard visible
+response、instruction-budget fault containment/reload 和 dispose 通过；ordinary 60Hz Worker
+round-trip 120-tick p95 为 `0.1001ms`，无 `>16.67ms` sample。
+
+Phase 1 的 L1 bounded profile 因此通过 exit。完成证据见
+[`21-phase-1-l1-exit-evidence.md`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)；它明确
+不声明 official bit-exact、第三方 cart compatibility、完整 Graphics、AudioSynth、persistence
+或 L2 MVP。Phase 2 必须在独立 phase 文档重新展开 graphics/memory/text 的首个 work unit，
+不得继续向本完成记录追加任务。
