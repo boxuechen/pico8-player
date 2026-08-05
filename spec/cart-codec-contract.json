@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "target": {
+    "pico8Version": "0.2.7",
+    "maximumCartVersion": 42
+  },
+  "png": {
+    "width": 160,
+    "height": 205,
+    "bitDepth": 8,
+    "colorType": 6,
+    "compressionMethod": 0,
+    "filterMethod": 0,
+    "interlaceMethod": 0,
+    "filters": [0, 1, 2, 3, 4]
+  },
+  "payload": {
+    "totalBytes": 32800,
+    "usedBytes": 32769,
+    "romBytes": 32768,
+    "codeOffset": 17152,
+    "codeBlockBytes": 15616,
+    "versionOffset": 32768,
+    "reservedBytes": 31,
+    "channelOrder": "ARGB significance from RGBA byte input",
+    "extraction": "((a & 3) << 6) | ((r & 3) << 4) | ((g & 3) << 2) | (b & 3)"
+  },
+  "codeCompression": ["raw", "legacy", "pxa"],
+  "defaultLimits": {
+    "maximumInputBytes": 1048576,
+    "maximumChunks": 128,
+    "maximumIdatBytes": 262144,
+    "maximumInflatedBytes": 131405,
+    "maximumCodeBytes": 65535,
+    "maximumCartVersion": 42
+  },
+  "errorCodes": [
+    "E_CART_ARGUMENT",
+    "E_CART_LIMITS",
+    "E_CART_INPUT_TOO_LARGE",
+    "E_CART_PNG_SIGNATURE",
+    "E_CART_PNG_TRUNCATED",
+    "E_CART_PNG_CHUNK_LIMIT",
+    "E_CART_PNG_CHUNK_LENGTH",
+    "E_CART_PNG_CRC",
+    "E_CART_PNG_ORDER",
+    "E_CART_PNG_CRITICAL_CHUNK",
+    "E_CART_PNG_IHDR",
+    "E_CART_PNG_DIMENSIONS",
+    "E_CART_PNG_FORMAT",
+    "E_CART_PNG_IDAT_LIMIT",
+    "E_CART_PNG_ZLIB",
+    "E_CART_PNG_DEFLATE",
+    "E_CART_PNG_INFLATE_LIMIT",
+    "E_CART_PNG_FILTER",
+    "E_CART_PAYLOAD",
+    "E_CART_FUTURE_VERSION",
+    "E_CART_CODE_CORRUPT",
+    "E_CART_CODE_TOO_LARGE"
+  ]
+}

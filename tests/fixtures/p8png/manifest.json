@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "ownership": "Project-authored synthetic byte vectors; no third-party cart content",
+  "target": "PICO-8 0.2.7 cart version 42",
+  "vectors": [
+    {
+      "id": "raw-stored-filter-cycle",
+      "compression": "raw",
+      "codeHex": "72657475726e2034320a",
+      "cartVersion": 42,
+      "romPatternSeed": 17,
+      "zlibMode": "stored",
+      "filterMode": "cycle",
+      "splitIdat": true,
+      "romSha256": "9eacb718d32a931fb7f9084176ae15588668cd9bdf2232ada0c74c0b2020d793",
+      "luaSha256": "bc7b993416ebaa9652a671c902ce5eab66e06d981e074ab7f9a7af217dd3e207"
+    },
+    {
+      "id": "legacy-fixed-backref",
+      "compression": "legacy",
+      "codeHex": "616263616263616263",
+      "cartVersion": 41,
+      "romPatternSeed": 29,
+      "zlibMode": "fixed",
+      "filterMode": "paeth",
+      "splitIdat": false,
+      "romSha256": "fda649e66212903db1249ec3e870bbb1a27bde43582303be119efdca4141e9a7",
+      "luaSha256": "76b99ab4be8521d78b19bcff7d1078aabeb477bd134f404094c92cd39f051c3e"
+    },
+    {
+      "id": "pxa-dynamic-mtf-backref",
+      "compression": "pxa",
+      "codeHex": "616263616263",
+      "cartVersion": 42,
+      "romPatternSeed": 43,
+      "zlibMode": "dynamic",
+      "filterMode": "sub",
+      "splitIdat": true,
+      "romSha256": "414972145ca71cdc455766d01532f1aaf5bcb2c12081997c5b68941a4d85988d",
+      "luaSha256": "bbb59da3af939f7af5f360f2ceb80a496e3bae1cd87dde426db0ae40677e1c2c"
+    }
+  ]
+}

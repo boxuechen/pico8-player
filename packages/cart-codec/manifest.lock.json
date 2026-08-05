@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "phase": "0D",
+  "target": {
+    "pico8Version": "0.2.7",
+    "maximumCartVersion": 42,
+    "format": ".p8.png"
+  },
+  "publicEntry": "packages/cart-codec/src/public.ts",
+  "contract": {
+    "path": "spec/cart-codec-contract.json",
+    "sha256": "f1bb765c8c2c1402c34be622aac7c75227b7c26dade65ee16d49d3752266be94"
+  },
+  "productionSources": [
+    {
+      "path": "packages/cart-codec/src/code.ts",
+      "sha256": "22b70df39e1f1f45e458d64b17c3d7cb37bd7e2141565fc3e30d144921b86c13"
+    },
+    {
+      "path": "packages/cart-codec/src/errors.ts",
+      "sha256": "186f3cbaaa5e70188ef21ba3e7c4674a37804f09f204efe8cd38c5a2ddac6c11"
+    },
+    {
+      "path": "packages/cart-codec/src/inflate.ts",
+      "sha256": "9a07fe739d718a4a096e9f496adf65fe68f69828d48836d86d63a4c24cf9e56f"
+    },
+    {
+      "path": "packages/cart-codec/src/png.ts",
+      "sha256": "9347db8ceb75d74d6877f6927faa05bb9f40c133d60ce00210db9fd062e323fa"
+    },
+    {
+      "path": "packages/cart-codec/src/public.ts",
+      "sha256": "da9796b83a0eaf7a757fdea32f5e7dd327534665da2947d55bc1d8c7eaeca1fd"
+    }
+  ],
+  "runtimeDependencies": ["@pico8-web/contracts"],
+  "thirdPartyCodeIncorporated": false,
+  "fixtures": {
+    "ownership": "Project-authored synthetic byte vectors; no third-party cart content",
+    "manifest": "tests/fixtures/p8png/manifest.json",
+    "manifestSha256": "8429a60c2ce95bc9372fceefc892f1a7188ae1bd00f61de0ffef1da030ccf249",
+    "generator": "tests/fixtures/p8png/fixture-builder.mjs"
+  },
+  "normativeSources": [
+    "https://www.lexaloffle.com/dl/docs/pico-8_manual.html",
+    "https://www.lexaloffle.com/bbs/?pid=41282",
+    "https://www.w3.org/TR/png-3/",
+    "https://www.rfc-editor.org/rfc/rfc1950.html",
+    "https://www.rfc-editor.org/rfc/rfc1951.html"
+  ],
+  "referenceCrossChecks": [
+    {
+      "repository": "https://github.com/jtothebell/fake-08",
+      "commit": "814991a2571ad3970e386cef48f3b148aa1c27b9",
+      "paths": ["source/cart.cpp"],
+      "license": "MIT at repository component level; transitive components require separate review",
+      "use": "format and decompression behavior cross-check only; no source copied or imported"
+    },
+    {
+      "repository": "https://github.com/samhocevar/zepto8",
+      "commit": "b2929a4fe31e5765ef66d7794edd11086b9638b4",
+      "paths": ["src/pico8/cart.cpp", "src/pico8/code.cpp"],
+      "license": "WTFPL-2.0 for the inspected files",
+      "use": "format and decompression behavior cross-check only; no source copied or imported"
+    }
+  ],
+  "forbiddenProductionCapabilities": [
+    "DOM",
+    "Canvas",
+    "ImageBitmap",
+    "DecompressionStream",
+    "network",
+    "filesystem",
+    "ref imports",
+    "unbounded allocation or decompression"
+  ],
+  "deferred": [
+    ".p8 text carts",
+    "label image presentation",
+    "CartLoader and Runtime lifecycle",
+    "BBS or network resolution",
+    "VM execution and Player UI"
+  ]
+}

@@ -20,8 +20,6 @@ export async function startBenchmarkServer({ availability } = {}) {
     machine: machineMetadata(),
     availability: availability ?? [
       { engine: "chromium", status: "not-run", reason: "Manual benchmark server" },
-      { engine: "firefox", status: "not-run", reason: "Manual benchmark server" },
-      { engine: "webkit", status: "not-run", reason: "Manual benchmark server" },
       { engine: "node", status: "not-run", reason: "Browser benchmark run" },
     ],
   };

@@ -29,15 +29,6 @@ async function firstAvailable(paths) {
   throw new Error("Chromium executable not found; set P8W_CHROMIUM");
 }
 
-async function installed(path) {
-  try {
-    await access(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function waitForDevToolsPort(path, processHandle) {
   for (let attempt = 0; attempt < 200; attempt += 1) {
     if (processHandle.exitCode !== null) throw new Error(`Chromium exited before CDP was ready (${processHandle.exitCode})`);
@@ -112,22 +103,8 @@ const outputPath = outputIndex === -1
   : resolve(projectRoot, process.argv[outputIndex + 1]);
 const chromium = await firstAvailable(CHROMIUM_CANDIDATES);
 const version = spawnSync(chromium, ["--version"], { encoding: "utf8" }).stdout.trim();
-const firefoxInstalled = await installed("/Applications/Firefox.app/Contents/MacOS/firefox");
-const safariInstalled = await installed("/Applications/Safari.app/Contents/MacOS/Safari");
 const availability = [
   { engine: "chromium", status: "measured" },
-  {
-    engine: "firefox",
-    status: firefoxInstalled ? "not-run" : "unavailable",
-    reason: firefoxInstalled ? "Firefox was not automated in this run" : "Firefox executable was not installed on this runner",
-  },
-  {
-    engine: "webkit",
-    status: "not-run",
-    reason: safariInstalled
-      ? "Safari is installed, but Safari Remote Automation was not enabled or changed by this benchmark"
-      : "Safari executable was not installed on this runner",
-  },
   { engine: "node", status: "not-run", reason: "DedicatedWorker Chromium measurement" },
 ];
 const benchmarkServer = await startBenchmarkServer({ availability });

@@ -36,6 +36,9 @@ const NEUTRAL_GLOBALS = new Set([
   "HTMLCanvasElement",
   "CanvasRenderingContext2D",
   "OffscreenCanvas",
+  "ImageBitmap",
+  "createImageBitmap",
+  "DecompressionStream",
   "indexedDB",
   "IDBDatabase",
   "File",
@@ -52,6 +55,9 @@ const BRIDGE_FORBIDDEN_GLOBALS = new Set([
   "HTMLCanvasElement",
   "CanvasRenderingContext2D",
   "OffscreenCanvas",
+  "ImageBitmap",
+  "createImageBitmap",
+  "DecompressionStream",
   "indexedDB",
   "IDBDatabase",
   "File",
@@ -100,7 +106,9 @@ const REQUIRED_FILES = [
   "apps/web-player/src/worker/compose-runtime.ts",
   "apps/web-player/src/worklet/pico8-audio-processor.ts",
   "spec/pico-api-inventory.yaml",
+  "spec/cart-codec-contract.json",
   "spec/abi/generated-bindings.manifest.json",
+  "packages/cart-codec/manifest.lock.json",
   "wasm/manifest.lock.json",
 ];
 
@@ -421,6 +429,27 @@ export function auditSourceText({ repoRoot, logicalPath, sourceText }) {
   const forbiddenGlobals = forbiddenGlobalsFor(sourceLayer);
   function visitIdentifiers(node, parent = null) {
     if (!node || typeof node !== "object") return;
+    if (
+      ["MemberExpression", "OptionalMemberExpression"].includes(node.type) &&
+      node.object?.type === "Identifier" &&
+      node.object.name === "globalThis"
+    ) {
+      const propertyName = !node.computed && node.property?.type === "Identifier"
+        ? node.property.name
+        : node.computed && node.property?.type === "StringLiteral"
+          ? node.property.value
+          : null;
+      if (propertyName !== null && forbiddenGlobals.has(propertyName)) {
+        violations.push(
+          violation(
+            "platform-global-leak",
+            relativePath,
+            `globalThis.${propertyName} is not available in ${sourceLayer.name}`,
+            lineOf(sourceFile, node),
+          ),
+        );
+      }
+    }
     if (
       node.type === "Identifier" &&
       forbiddenGlobals.has(node.name) &&

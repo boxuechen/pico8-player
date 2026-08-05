@@ -40,8 +40,6 @@ const result = await runInteropBenchmark({
   availability: [
     { engine: "node", status: "measured" },
     { engine: "chromium", status: "not-run", reason: "Node correctness/smoke run" },
-    { engine: "firefox", status: "not-run", reason: "Node correctness/smoke run" },
-    { engine: "webkit", status: "not-run", reason: "Node correctness/smoke run" },
   ],
   protocolOverrides,
   onProgress(progress) {

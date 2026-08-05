@@ -42,8 +42,6 @@ test("all four paths produce equal checksums and RAM hashes before timing", asyn
     availability: [
       { engine: "node", status: "measured" },
       { engine: "chromium", status: "not-run", reason: "unit test" },
-      { engine: "firefox", status: "not-run", reason: "unit test" },
-      { engine: "webkit", status: "not-run", reason: "unit test" },
     ],
     protocolOverrides: {
       warmupFrames: 1,

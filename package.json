@@ -13,8 +13,9 @@
     "build": "tsc -b --pretty false",
     "build:wasm": "node tools/wasm/build.mjs",
     "typecheck": "tsc -b --pretty false",
-    "test": "pnpm run test:architecture && pnpm run test:wasm && pnpm run test:benchmark",
+    "test": "pnpm run test:architecture && pnpm run test:cart-codec && pnpm run test:wasm && pnpm run test:benchmark",
     "test:architecture": "pnpm run build && node --test tests/architecture/architecture.test.mjs",
+    "test:cart-codec": "pnpm run build && node --test tests/cart-codec/p8png.test.mjs && node tools/cart-codec/verify-manifest.mjs",
     "test:wasm": "pnpm run build && pnpm run build:wasm && node --test tests/wasm/phase-0a.test.mjs tests/wasm/phase-0b.test.mjs",
     "test:benchmark": "node --test tests/benchmark/phase-0c.test.mjs",
     "test:wasm:repro": "node tools/wasm/reproducibility.mjs",
@@ -24,7 +25,7 @@
     "benchmark:interop:compare": "node benchmarks/interop/compare.mjs",
     "test:public-exports": "pnpm run build && tsc -p tests/architecture/consumer/tsconfig.json --pretty false",
     "verify:wasm": "pnpm run test:wasm && pnpm run test:benchmark && pnpm run test:wasm:repro && node tools/wasm/verify-manifest.mjs",
-    "verify": "pnpm run typecheck && pnpm run build && pnpm run test:architecture && pnpm run verify:wasm"
+    "verify": "pnpm run typecheck && pnpm run build && pnpm run test:architecture && pnpm run test:cart-codec && pnpm run verify:wasm"
   },
   "devDependencies": {
     "@babel/parser": "8.0.4",
