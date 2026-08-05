@@ -80,7 +80,12 @@ export class Canvas2DFramePresenter {
       throw new RangeError("frameId must be a non-negative safe integer");
     }
     if (frame.frameId <= this.#lastFrameId) return false;
-    decodePackedPicoFrame(frame.packedScreen, this.#imageData.data);
+    decodePackedPicoFrame(
+      frame.packedScreen,
+      this.#imageData.data,
+      undefined,
+      frame.displayPalette,
+    );
     this.#context.imageSmoothingEnabled = false;
     this.#context.putImageData(this.#imageData, 0, 0);
     this.#lastFrameId = frame.frameId;

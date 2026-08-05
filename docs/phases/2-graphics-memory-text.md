@@ -1,6 +1,6 @@
 # Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit：2B
+> 状态：Active；当前 work unit：2C
 > 机器合同：[`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
 > 前置证据：[`Phase 1 L1 exit`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -30,8 +30,8 @@ Non-goals：
 | Unit | 名称 | 状态 | 主要可观察结果 |
 | --- | --- | --- | --- |
 | 2A | Canonical Memory 与 Host ABI | Complete | Base RAM API 与所有 runtime access 共用唯一 mapper；ABI 可承载 Phase 2 参数和 byte strings |
-| 2B | Draw State 与基础图元 | **Active** | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
-| 2C | Sprite Sheet 与 Blitter | Planned | `sget/sset/spr/sspr` 产生确定 framebuffer |
+| 2B | Draw State 与基础图元 | Complete | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
+| 2C | Sprite Sheet 与 Blitter | **Active** | `sget/sset/spr/sspr` 产生确定 framebuffer |
 | 2D | Map、Flags 与 `tline` | Planned | map remap、layer flags 和 fixed-point texture sampling 可复现 |
 | 2E | P8SCII 与 Custom Font | Planned | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
 | 2F | Conformance 与 Phase Exit | Planned | Node real-WASM 和 Chrome production 路径通过 golden、性能与恢复门禁 |
@@ -43,22 +43,32 @@ Non-goals：
 `wasm/runtime-v1.manifest.lock.json` 锁定。`pnpm run test:phase-2a` 与 aggregate verify 通过；
 后续阶段不得重新引入 TypeScript video-base switch 或固定六参数 import。
 
-## Active work unit：2B
+## Completed work unit：2B
+
+结果由 [`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
+的 2B record、`tests/runtime/phase-2b-draw-state.test.mjs`、`tests/browser/phase-2b.*`、generated
+binding manifest 和 runtime manifest 锁定。standard packed-4bpp 下的 RAM-backed draw state、基础
+图元、display palette Worker DTO 与 Chrome Canvas 路径均已通过；advanced screen/bitplane mode
+仍不在兼容声明内。
+
+## Active work unit：2C
 
 ### Observable behavior
 
-1. 注册并实现 `color/camera/clip/pal/palt/fillp/pget/oval/ovalfill`；production schema 只在
-   typed host method 与 conformance test 同时存在时加入对应 binding。
-2. `cls/pset/line/rect/rectfill/circ/circfill/oval/ovalfill` 统一应用 RAM-backed camera、clip、
-   draw palette 和 fill pattern；explicit/default color 继续正确更新 pen state。
-3. draw/display palette、transparency、clip、camera、fill pattern 与 secondary-palette state
-   可以由 API 和 direct RAM writes 双向观察；cold reset 恢复官方标准模式默认值。
-4. `pget` 返回 logical screen pixel index，不应用 draw/display palette；out-of-bounds 行为由
-   project conformance vector 锁定。
-5. `RuntimeFrame` 与 production Player frame DTO 携带 16-entry display-palette snapshot；main
-   Canvas presenter 只执行 index→RGBA 映射，不读取 RAM、camera、clip 或其他 draw state。
-6. standard 128×128 packed 4bpp mode 是本 unit 的兼容声明；advanced bitplane/screen modes
-   未经独立激活不得以不完整实现混入。
+1. 注册并实现 `sget/sset/spr/sspr`；binding id 只 append，不重排 1–18，boolean flip 参数继续
+   使用 2B 已验证的 fixed call frame lowering。
+2. sprite sheet 的 logical `0x0000..0x1fff` 通过 `PicoRam` 和 adapter canonical mapper 访问；
+   GFX remap 到 screen/upper RAM 后，API、direct memory 与 blitter 必须看到同一像素。
+3. `sget/sset` 锁定 negative/fractional/out-of-bounds、packed nibble、default/explicit color 与 draw
+   palette 行为；不得缓存一份独立 sprite sheet。
+4. `spr` 支持 sprite id、fractional `w/h`、camera、clip、flip、draw palette 与 `palt`；sprite
+   source rectangle 跨 16-column row 的行为由 project vector 锁定。
+5. `sspr` 支持 source rectangle、default/explicit destination size、positive/negative scaling 与
+   flip；source sampling 和 destination raster 均为 deterministic integer/fixed-point 规则。
+6. 当 fillp 的 apply-to-sprites flag 生效时，sprite pixel 先应用 draw palette，再以 secondary
+   palette 取得 pattern pair；global-secondary primitive 行为不得回归。
+7. standard 128×128 packed 4bpp 是本 unit 的兼容声明；bitplane/screen mode 不随 sprite API
+   偷渡进入 scope，Canvas/Worker frame boundary 不变。
 
 ### 允许修改的范围
 
@@ -68,16 +78,16 @@ Non-goals：
 - `wasm/bridge/p8w_frame_runtime.*` 与 generated header
 - `packages/runtime-core/src/{graphics,memory,frame-runtime.ts,pico-api,public.ts}`
 - `packages/z8lua-bridge/src/**`
-- `apps/web-player/src/{transport,worker,main/render}/**`
-- `tests/{runtime,phase-0f,browser,architecture}/**`、`tools/browser/**`、`package.json`
+- `tests/{runtime,browser,architecture}/**`、`tools/browser/**`、`package.json`
 - 本 work unit 直接拥有的文档状态和 compatibility matrix
 
-不得修改 `docs/evidence/**`；不得实现 sprite/map/text；不得让 Canvas 成为 draw-state owner。
+不得修改 `docs/evidence/**`；不得实现 map/tline/text；不得让 Canvas 知道 sprite sheet 或 blit。
 
 ### Routed contracts
 
 - [Shared Pico RAM 与 raw fixed encoding](../03-z8lua-wasm-bridge.md#5-shared-pico-ram)
 - [Graphics layering 与必须保持的行为](../04-typescript-runtime.md#7-graphics)
+- [PicoRam layout 与 remap](../04-typescript-runtime.md#6-picoram64kib-共享地址空间)
 - [所有权与 frame transaction](../02-system-architecture.md#2-所有权与共享内存)
 - [Composition roots 与 render ownership](../08-source-layout-and-boundaries.md#4-composition-roots-与实例生命周期)
 - [确定性模型](../04-typescript-runtime.md#14-确定性契约)
@@ -88,30 +98,30 @@ Non-goals：
 
 ### Verification
 
-2B 必须新增 `pnpm run test:phase-2b`，覆盖：
+2C 必须新增 `pnpm run test:phase-2c`，覆盖：
 
-- API/default/direct-poke 的 draw-state RAM readback 与 cold reset。
-- camera→clip→palette/fillp ordering、fractional/reversed/off-screen shape vectors。
-- `pal/palt` reset、draw/display palette distinction、secondary palette 与 pattern inversion。
-- existing primitives 与 `oval/ovalfill` framebuffer/RAM golden；`pget` boundaries。
-- Worker frame DTO palette snapshot、validator/transfer ownership 和 Canvas pixel result。
-- real Chrome production Worker/Canvas smoke、ordinary tick/present performance 与 Phase 1 regressions。
+- `sget/sset` logical GFX、nibble order、boundary、fractional coordinate 与 draw-palette vectors。
+- direct poke/API/blitter equality；GFX↔SCREEN 与 upper-RAM remap/alias，不读取 `ref/`。
+- `spr` multi-sprite row crossing、fractional size、flip、camera/clip、palette/transparency golden。
+- `sspr` up/down scale、negative destination dimensions、source clipping 与 deterministic sampling。
+- fillp apply-to-sprites、secondary palette pair 和 global-secondary primitive regression。
+- real Chrome production Worker/Canvas sprite smoke、ordinary performance 与 Phase 0C/1/2B regressions。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-2b
-pnpm run test:browser:chromium
+pnpm run test:phase-2c
+pnpm run test:phase-2c:chrome
 pnpm run verify
 git status --short
 ```
 
-### 2B exit gate
+### 2C exit gate
 
-- standard 4bpp 下的 draw state、基础图元和 display palette 全链路有 deterministic evidence。
-- presenter 仍无 RuntimeCore/WASM/RAM dependency，transport validator 拒绝 malformed palette。
-- API inventory/compatibility matrix 不把未覆盖 advanced modes 标为 compatible。
-- 2B 独立提交后 worktree 干净；随后才折叠本节并激活 2C。
+- standard 4bpp 下的 sprite source、blit result 与 remap alias 有 deterministic evidence。
+- `spr/sspr` 只消费 shared `PicoRam`，presenter/transport 没有新增 sprite-specific dependency。
+- API inventory/compatibility matrix 不把 bitplane/advanced screen mode 标为 compatible。
+- 2C 独立提交后 worktree 干净；随后才折叠本节并激活 2D。
 
 ## Phase exit gate
 

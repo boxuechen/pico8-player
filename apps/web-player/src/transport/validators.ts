@@ -153,7 +153,9 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
       Number(value.timeRawBeforeStep) <= 0x7fff_ffff &&
       (value.targetFps === 30 || value.targetFps === 60) &&
       value.packedScreen instanceof ArrayBuffer &&
-      value.packedScreen.byteLength === 0x2000
+      value.packedScreen.byteLength === 0x2000 &&
+      value.displayPalette instanceof ArrayBuffer &&
+      value.displayPalette.byteLength === 16
     );
   }
   if (value.type === "heartbeat") {

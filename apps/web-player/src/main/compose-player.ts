@@ -173,6 +173,7 @@ export class PlayerComposition {
         sessionGeneration: event.sessionGeneration,
         frameId: event.frameId,
         packedScreen: new Uint8Array(event.packedScreen),
+        displayPalette: new Uint8Array(event.displayPalette),
       });
     });
     this.#removeGenerationListener = runtime.onSessionGenerationChange(

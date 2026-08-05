@@ -26,6 +26,8 @@
     { "id": 107, "guestName": "probe_boolean", "hostMethod": "probeBoolean", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }], "result": "boolean" },
     { "id": 108, "guestName": "probe_six", "hostMethod": "probeSix", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }, { "name": "c", "type": "q16.16-raw-i32" }, { "name": "d", "type": "q16.16-raw-i32" }, { "name": "e", "type": "q16.16-raw-i32" }, { "name": "f", "type": "q16.16-raw-i32" }], "result": "integer" },
     { "id": 109, "guestName": "probe_twelve", "hostMethod": "probeTwelve", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }, { "name": "c", "type": "q16.16-raw-i32" }, { "name": "d", "type": "q16.16-raw-i32" }, { "name": "e", "type": "q16.16-raw-i32" }, { "name": "f", "type": "q16.16-raw-i32" }, { "name": "g", "type": "q16.16-raw-i32" }, { "name": "h", "type": "q16.16-raw-i32" }, { "name": "i", "type": "q16.16-raw-i32" }, { "name": "j", "type": "q16.16-raw-i32" }, { "name": "k", "type": "q16.16-raw-i32" }, { "name": "l", "type": "q16.16-raw-i32" }], "result": "integer" },
-    { "id": 110, "guestName": "probe_bytes", "hostMethod": "probeBytes", "parameters": [{ "name": "bytes", "type": "byte-string" }, { "name": "x", "type": "q16.16-raw-i32", "optional": true }], "result": "integer" }
+    { "id": 110, "guestName": "probe_bytes", "hostMethod": "probeBytes", "parameters": [{ "name": "bytes", "type": "byte-string" }, { "name": "x", "type": "q16.16-raw-i32", "optional": true }], "result": "integer" },
+    { "id": 111, "guestName": "probe_boolean_argument", "hostMethod": "probeBooleanArgument", "parameters": [{ "name": "value", "type": "boolean-i32" }], "result": "boolean" },
+    { "id": 112, "guestName": "probe_q16_result", "hostMethod": "probeQ16Result", "parameters": [], "result": "q16.16-raw-i32" }
   ]
 }

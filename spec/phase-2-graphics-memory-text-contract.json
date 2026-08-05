@@ -9,9 +9,9 @@
     "phase1Evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
     "baselineCommit": "916de2a"
   },
-  "completedWorkUnits": ["2A"],
-  "activeWorkUnit": "2B",
-  "nextWorkUnit": "2C",
+  "completedWorkUnits": ["2A", "2B"],
+  "activeWorkUnit": "2C",
+  "nextWorkUnit": "2D",
   "workUnits": {
     "2A": {
       "name": "Canonical Memory and Host ABI",
@@ -51,7 +51,7 @@
     },
     "2B": {
       "name": "Draw State and Primitive Completion",
-      "status": "active",
+      "status": "complete",
       "graphicsApis": [
         "color",
         "camera",
@@ -84,9 +84,48 @@
         "display-palette-worker-to-canvas",
         "chrome-production-gate",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingIds": "10..18",
+        "drawStateRange": "0x5f00..0x5f3f",
+        "secondaryPaletteRange": "0x5f60..0x5f6f",
+        "displayPaletteBytes": 16,
+        "primitiveGoldenSha256": "0f5af6e7bd5f26fd1f9c25fd864af6b8d987dc267d3e0cb418b0a7be9ad39dcc",
+        "verification": [
+          "pnpm run test:phase-2b",
+          "pnpm run test:phase-1d",
+          "pnpm run test:phase-1e",
+          "pnpm run test:phase-1f",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "2C": {
+      "name": "Sprite Sheet and Blitter",
+      "status": "active",
+      "graphicsApis": ["sget", "sset", "spr", "sspr"],
+      "sourceBoundary": {
+        "logicalRange": "0x0000..0x1fff",
+        "format": "128x128-packed-4bpp",
+        "mapper": "PicoRam-over-adapter-canonical-mapper"
+      },
+      "blitterState": [
+        "camera",
+        "clip",
+        "draw-palette",
+        "transparency",
+        "fill-pattern-apply-to-sprites",
+        "secondary-palette"
+      ],
+      "compatibilityMode": "standard-128x128-packed-4bpp",
+      "exit": [
+        "mapped-sprite-sheet-api-conformance",
+        "sprite-scaling-flip-and-clipping-golden",
+        "screen-gfx-remap-alias-vectors",
+        "chrome-production-gate",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "2C": { "name": "Sprite Sheet and Blitter", "status": "planned" },
     "2D": { "name": "Map, Flags and tline", "status": "planned" },
     "2E": { "name": "P8SCII and Custom Font", "status": "planned" },
     "2F": { "name": "Conformance and Phase Exit", "status": "planned" }

@@ -17,6 +17,19 @@ export interface PicoApiHost {
   reset(): void;
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void;
   cls(colorRaw?: number): void;
+  color(colorRaw?: number): number;
+  camera(xRaw?: number, yRaw?: number): void;
+  clip(
+    xRaw?: number,
+    yRaw?: number,
+    widthRaw?: number,
+    heightRaw?: number,
+    clipPrevious?: boolean,
+  ): void;
+  pal(sourceRaw?: number, targetRaw?: number, paletteRaw?: number): number;
+  palt(colorOrMaskRaw?: number, transparent?: boolean): number;
+  fillp(patternRaw?: number): number;
+  pget(xRaw: number, yRaw: number): number;
   pset(xRaw: number, yRaw: number, colorRaw?: number): void;
   line(
     x0Raw?: number,
@@ -29,6 +42,14 @@ export interface PicoApiHost {
   rectfill(x0Raw: number, y0Raw: number, x1Raw: number, y1Raw: number, colorRaw?: number): void;
   circ(xRaw: number, yRaw: number, radiusRaw?: number, colorRaw?: number): void;
   circfill(xRaw: number, yRaw: number, radiusRaw?: number, colorRaw?: number): void;
+  oval(x0Raw: number, y0Raw: number, x1Raw: number, y1Raw: number, colorRaw?: number): void;
+  ovalfill(
+    x0Raw: number,
+    y0Raw: number,
+    x1Raw: number,
+    y1Raw: number,
+    colorRaw?: number,
+  ): void;
   /** Returns a held-button mask when omitted, otherwise a boolean encoded as 0/1. */
   btn(buttonRaw?: number, playerRaw?: number): number;
   /** Returns the current tick's edge/repeat state as a boolean encoded as 0/1. */
@@ -69,6 +90,40 @@ class RuntimePicoApiHost implements PicoApiHost {
     this.#graphics.cls(colorRaw);
   }
 
+  color(colorRaw?: number): number {
+    return this.#graphics.color(colorRaw);
+  }
+
+  camera(xRaw?: number, yRaw?: number): void {
+    this.#graphics.camera(xRaw, yRaw);
+  }
+
+  clip(
+    xRaw?: number,
+    yRaw?: number,
+    widthRaw?: number,
+    heightRaw?: number,
+    clipPrevious?: boolean,
+  ): void {
+    this.#graphics.clip(xRaw, yRaw, widthRaw, heightRaw, clipPrevious);
+  }
+
+  pal(sourceRaw?: number, targetRaw?: number, paletteRaw?: number): number {
+    return this.#graphics.pal(sourceRaw, targetRaw, paletteRaw);
+  }
+
+  palt(colorOrMaskRaw?: number, transparent?: boolean): number {
+    return this.#graphics.palt(colorOrMaskRaw, transparent);
+  }
+
+  fillp(patternRaw?: number): number {
+    return this.#graphics.fillp(patternRaw);
+  }
+
+  pget(xRaw: number, yRaw: number): number {
+    return this.#graphics.pget(xRaw, yRaw);
+  }
+
   pset(xRaw: number, yRaw: number, colorRaw?: number): void {
     this.#graphics.pset(xRaw, yRaw, colorRaw);
   }
@@ -103,6 +158,20 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   circfill(xRaw: number, yRaw: number, radiusRaw?: number, colorRaw?: number): void {
     this.#graphics.circfill(xRaw, yRaw, radiusRaw, colorRaw);
+  }
+
+  oval(x0Raw: number, y0Raw: number, x1Raw: number, y1Raw: number, colorRaw?: number): void {
+    this.#graphics.oval(x0Raw, y0Raw, x1Raw, y1Raw, colorRaw);
+  }
+
+  ovalfill(
+    x0Raw: number,
+    y0Raw: number,
+    x1Raw: number,
+    y1Raw: number,
+    colorRaw?: number,
+  ): void {
+    this.#graphics.ovalfill(x0Raw, y0Raw, x1Raw, y1Raw, colorRaw);
   }
 
   btn(buttonRaw?: number, playerRaw?: number): number {

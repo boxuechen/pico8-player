@@ -107,6 +107,8 @@ export interface RuntimeFrame {
   readonly targetFps: 30 | 60;
   /** Packed 4bpp screen bytes copied from Base RAM 0x6000..0x7fff. */
   readonly screen: Uint8Array;
+  /** 16-entry display-palette map snapshotted from Base RAM 0x5f10..0x5f1f. */
+  readonly displayPalette: Uint8Array;
 }
 
 export interface RuntimeHostRequest {
@@ -148,6 +150,8 @@ const DEFAULT_INSTRUCTION_BUDGET = 1_000_000;
 const CART_ROM_BYTES = 0x8000;
 const SCREEN_OFFSET = 0x6000;
 const SCREEN_BYTES = 0x2000;
+const DISPLAY_PALETTE_OFFSET = 0x5f10;
+const DISPLAY_PALETTE_BYTES = 16;
 const STARTUP_TIME_RAW = Math.floor(65_536 / 30);
 
 function invalidState(message: string): SerializedRuntimeError {
@@ -428,6 +432,7 @@ export class FrameSliceRuntime {
       timeRawBeforeStep: timeRaw,
       targetFps: this.#targetFps as 30 | 60,
       screen: this.#ram.copy(SCREEN_OFFSET, SCREEN_BYTES),
+      displayPalette: this.#ram.copy(DISPLAY_PALETTE_OFFSET, DISPLAY_PALETTE_BYTES),
     };
     this.#state = "ready";
     return { ok: true, value: { kind: "frame", frame } };

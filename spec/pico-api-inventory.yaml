@@ -8,45 +8,45 @@ status_values:
   - unsupported
 apis:
   - name: cls
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1A
-    note: synchronous generated binding to TS; clears mapped packed screen; clip/draw-state conformance deferred
+    note: standard-4bpp mapped screen clear with clip/cursor reset; advanced screen modes excluded
   - name: pset
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1A
-    note: synchronous generated binding to TS; Phase 1D stores explicit/default pen in RAM; camera/clip/fillp deferred
+    note: RAM-backed pen, camera, clip, draw palette, fill pattern and secondary-global mapping in standard 4bpp
   - name: btn
     status: partial
     owner: packages/runtime-core
     phase: 1D
     note: synchronous generated binding to TS; player 0 six-button held snapshot and 0x5f4c register only; multi-player deferred
   - name: line
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1D
-    note: integer L1 raster, optional colour and RAM-backed continuation; camera/clip/palette/fillp deferred
+    note: integer raster with optional colour, RAM-backed continuation and full Phase 2B draw state
   - name: rect
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1D
-    note: reversed inclusive integer L1 outline; camera/clip/palette/fillp deferred
+    note: reversed inclusive standard-4bpp outline with camera, clip, palette and fill pattern
   - name: rectfill
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1D
-    note: reversed inclusive integer L1 fill bounded to physical screen; camera/clip/palette/fillp deferred
+    note: reversed inclusive standard-4bpp fill with camera, clip, palette, fill pattern and inversion
   - name: circ
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1D
-    note: integer L1 outline with default and negative radius behavior; camera/clip/palette/fillp deferred
+    note: integer outline with default/negative radius and full Phase 2B draw state
   - name: circfill
-    status: partial
+    status: implemented
     owner: packages/runtime-core
     phase: 1D
-    note: integer L1 fill with default and negative radius behavior; camera/clip/palette/fillp deferred
+    note: integer fill with default/negative radius, Phase 2B draw state and inversion
   - name: btnp
     status: partial
     owner: packages/runtime-core
@@ -104,41 +104,50 @@ apis:
     phase: 2A
     note: canonical logical mapping and bounded deterministic fill
   - name: color
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: RAM-backed 8-bit primary/alternate pen with previous-value result
   - name: camera
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: RAM-backed signed int16 offset observed by standard-4bpp draw/read operations
   - name: clip
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: RAM-backed exclusive rectangle with reset and intersect mode
   - name: pal
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: scalar/table reset and draw/display/secondary mappings; display supports 0x80..0x8f
   - name: palt
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: scalar boolean and 16-bit mask forms share draw-palette transparency bits
   - name: fillp
-    status: unimplemented
+    status: partial
     owner: packages/runtime-core
     phase: 2B
+    note: primitives, transparency, global secondary and colour override/inversion implemented; apply-to-sprites activates in 2C
   - name: pget
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: mapped logical screen index with camera/clip and documented custom out-of-bounds register
   - name: oval
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: deterministic reversed/fractional standard-4bpp ellipse with Phase 2B draw state
   - name: ovalfill
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2B
+    note: deterministic standard-4bpp fill with Phase 2B draw state and inversion
   - name: sget
     status: unimplemented
     owner: packages/runtime-core

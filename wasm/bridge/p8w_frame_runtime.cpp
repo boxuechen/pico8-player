@@ -376,6 +376,8 @@ int p8_host_call(lua_State *state) {
       if (index < descriptor->minimum_arguments) {
         if ((descriptor->byte_string_mask & (1u << index)) != 0) {
           luaL_checklstring(state, stack_index, nullptr);
+        } else if ((descriptor->boolean_mask & (1u << index)) != 0) {
+          luaL_checkany(state, stack_index);
         } else {
           luaL_checknumber(state, stack_index);
         }
@@ -393,7 +395,10 @@ int p8_host_call(lua_State *state) {
           static_cast<uint32_t>(reinterpret_cast<uintptr_t>(bytes));
       frame.byte_buffer_len = static_cast<uint32_t>(length);
     } else {
-      frame.scalar_slots[index] = luaL_checknumber(state, stack_index).bits();
+      frame.scalar_slots[index] =
+          (descriptor->boolean_mask & (1u << index)) != 0
+              ? (lua_toboolean(state, stack_index) ? 1 : 0)
+              : luaL_checknumber(state, stack_index).bits();
       frame.scalar_count += 1u;
     }
   }
@@ -412,12 +417,55 @@ int p8_host_call(lua_State *state) {
   if (descriptor->result_kind == P8W_HOST_RESULT_VOID) return 0;
   if (descriptor->result_kind == P8W_HOST_RESULT_BOOLEAN ||
       (descriptor->result_kind == P8W_HOST_RESULT_INTEGER_OR_BOOLEAN &&
-       (frame.presence_bits & 1u) != 0)) {
+       (frame.presence_bits & 1u) != 0) ||
+      (descriptor->result_kind == P8W_HOST_RESULT_INTEGER_OR_BOOLEAN_SECOND &&
+       (frame.presence_bits & 2u) != 0)) {
     lua_pushboolean(state, frame.result != 0);
+    return 1;
+  }
+  if (descriptor->result_kind == P8W_HOST_RESULT_Q16) {
+    lua_pushnumber(state, lua_Number::frombits(frame.result));
     return 1;
   }
   lua_pushinteger(state, static_cast<int16_t>(frame.result));
   return 1;
+}
+
+int p8_pal(lua_State *state) {
+  if (!lua_istable(state, 1)) return p8_host_call(state);
+  auto *descriptor = static_cast<const P8wHostBindingDescriptor *>(
+      lua_touserdata(state, lua_upvalueindex(1)));
+  Context *context = context_from_lua(state);
+  if (descriptor == nullptr || context == nullptr || !context->host_bound) {
+    if (context != nullptr) context->host_api_failed = true;
+    return luaL_error(state, "host binding is not active");
+  }
+  const bool has_palette = !lua_isnoneornil(state, 2);
+  const int32_t palette =
+      has_palette ? luaL_checknumber(state, 2).bits() : 0;
+  const P8wPhase previous_phase = context->phase;
+  context->phase = P8W_PHASE_HOST_CALL;
+  for (int table_index = 1; table_index <= 16; ++table_index) {
+    lua_rawgeti(state, 1, table_index);
+    if (!lua_isnil(state, -1)) {
+      const int source = table_index == 16 ? 0 : table_index;
+      P8wHostCallFrame frame = {};
+      frame.byte_size = sizeof(frame);
+      frame.operation_id = descriptor->operation_id;
+      frame.presence_bits = has_palette ? 0x7u : 0x3u;
+      frame.scalar_count = has_palette ? 3u : 2u;
+      frame.scalar_slots[0] = source << 16;
+      frame.scalar_slots[1] = luaL_checknumber(state, -1).bits();
+      frame.scalar_slots[2] = palette;
+      if (dispatch_host_call(context->host_binding_id, &frame) != 0) {
+        context->host_api_failed = true;
+        return luaL_error(state, "synchronous PicoApiHost call failed");
+      }
+    }
+    lua_pop(state, 1);
+  }
+  context->phase = previous_phase;
+  return 0;
 }
 
 int p8_time(lua_State *state) {
@@ -497,7 +545,10 @@ void register_host_functions(lua_State *state) {
   for (const auto &binding : kP8wHostBindings) {
     lua_pushlightuserdata(
         state, const_cast<P8wHostBindingDescriptor *>(&binding));
-    lua_pushcclosure(state, p8_host_call, 1);
+    lua_pushcclosure(
+        state,
+        std::strcmp(binding.guest_name, "pal") == 0 ? p8_pal : p8_host_call,
+        1);
     lua_setglobal(state, binding.guest_name);
   }
 }

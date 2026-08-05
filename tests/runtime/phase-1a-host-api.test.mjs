@@ -65,12 +65,12 @@ test("binding generator proves Phase 2 scalar and byte-string frames without exp
     new URL("../../spec/abi/pico-host-binding-prototype.json", import.meta.url),
     "utf8",
   )), { runtimeExposed: false });
-  assert.equal(prototype.bindings.length, 10);
+  assert.equal(prototype.bindings.length, 12);
   const production = validateBindingContract(JSON.parse(await readFile(
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   )));
-  assert.deepEqual(production.bindings.map(({ guestName }) => guestName), [
+  assert.deepEqual(production.bindings.slice(0, 9).map(({ guestName }) => guestName), [
     "cls", "pset", "btn", "line", "rect", "rectfill", "circ", "circfill", "btnp",
   ]);
   assert.match(renderTypeScript(production), /argumentMask & 4/u);
@@ -78,7 +78,9 @@ test("binding generator proves Phase 2 scalar and byte-string frames without exp
   assert.match(renderCpp(production), /P8W_HOST_RESULT_INTEGER_OR_BOOLEAN/u);
   assert.equal(renderCpp(prototype).includes("probe_six"), true);
   assert.equal(renderCpp(prototype).includes("probe_twelve"), true);
-  assert.match(renderCpp(prototype), /probe_bytes", 1u, 2u, 1u/u);
+  assert.match(renderCpp(prototype), /probe_bytes", 1u, 2u, 1u, 0u/u);
+  assert.match(renderCpp(prototype), /probe_boolean_argument", 1u, 1u, 0u, 1u/u);
+  assert.match(renderCpp(prototype), /P8W_HOST_RESULT_Q16/u);
 });
 
 function writeScalarCallFrame(pointer, operationId, argumentMask, args) {

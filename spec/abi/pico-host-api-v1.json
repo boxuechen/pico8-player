@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "contractName": "pico-host-api-v1",
   "dispatchAbi": {
-    "argumentEncoding": "signed-q16.16-raw-int32",
+    "argumentEncoding": "signed-q16.16-raw-int32-or-boolean-int32",
     "presenceEncoding": "uint32-bit-mask",
     "maximumArguments": 12,
     "callFrame": {
@@ -117,6 +117,104 @@
         { "name": "playerRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "boolean"
+    },
+    {
+      "id": 10,
+      "guestName": "color",
+      "hostMethod": "color",
+      "parameters": [
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "integer"
+    },
+    {
+      "id": 11,
+      "guestName": "camera",
+      "hostMethod": "camera",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "yRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 12,
+      "guestName": "clip",
+      "hostMethod": "clip",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "yRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "widthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "heightRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "clipPrevious", "type": "boolean-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 13,
+      "guestName": "pal",
+      "hostMethod": "pal",
+      "parameters": [
+        { "name": "sourceRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "targetRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "paletteRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "integer"
+    },
+    {
+      "id": 14,
+      "guestName": "palt",
+      "hostMethod": "palt",
+      "parameters": [
+        { "name": "colorOrMaskRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "transparent", "type": "boolean-i32", "optional": true }
+      ],
+      "result": "integer-unless-second-present-then-boolean"
+    },
+    {
+      "id": 15,
+      "guestName": "fillp",
+      "hostMethod": "fillp",
+      "parameters": [
+        { "name": "patternRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "q16.16-raw-i32"
+    },
+    {
+      "id": 16,
+      "guestName": "pget",
+      "hostMethod": "pget",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" }
+      ],
+      "result": "integer"
+    },
+    {
+      "id": 17,
+      "guestName": "oval",
+      "hostMethod": "oval",
+      "parameters": [
+        { "name": "x0Raw", "type": "q16.16-raw-i32" },
+        { "name": "y0Raw", "type": "q16.16-raw-i32" },
+        { "name": "x1Raw", "type": "q16.16-raw-i32" },
+        { "name": "y1Raw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 18,
+      "guestName": "ovalfill",
+      "hostMethod": "ovalfill",
+      "parameters": [
+        { "name": "x0Raw", "type": "q16.16-raw-i32" },
+        { "name": "y0Raw", "type": "q16.16-raw-i32" },
+        { "name": "x1Raw", "type": "q16.16-raw-i32" },
+        { "name": "y1Raw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

@@ -92,9 +92,11 @@ test("Phase 1E protocol validators fail closed", () => {
     timeRawBeforeStep: 3276,
     targetFps: 60,
     packedScreen: new ArrayBuffer(0x2000),
+    displayPalette: new ArrayBuffer(16),
   };
   assert.equal(isPlayerRuntimeToHost(frame), true);
   assert.equal(isPlayerRuntimeToHost({ ...frame, packedScreen: new ArrayBuffer(1) }), false);
+  assert.equal(isPlayerRuntimeToHost({ ...frame, displayPalette: new ArrayBuffer(15) }), false);
 });
 
 test("Worker controller composes decodeCart, CartSession and scheduler", async () => {

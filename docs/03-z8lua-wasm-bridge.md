@@ -9,7 +9,7 @@
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
 实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary、Phase 1D scalar API
-expansion 与 Phase 2A memory/call-frame 已完成；Phase 0 历史证据见
+expansion、Phase 2A memory/call-frame 与 Phase 2B typed graphics bindings 已完成；Phase 0 历史证据见
 [Phase 0 evidence](./evidence/phase-0/README.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
@@ -17,7 +17,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；generated scalar APIs；Phase 2A 80-byte call frame、byte-string argument view 与完整 in-session Base RAM API |
+| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；Phase 2A 80-byte call frame/Base RAM API；Phase 2B append-only graphics bindings、boolean scalar lowering 与 fixed-point result |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -380,6 +380,11 @@ offset、descriptor、operation 到参数的映射由 machine-readable API schem
 和 TS dispatcher，并由 hash manifest 锁定。一个 operation layout 进入 ABI v1 后不能静默改变。
 byte-string view 只在同步调用期间有效；embedded NUL 不改变 `byte_buffer_len`。
 
+Phase 2B 不改变 frame byte layout 或 ABI minor：boolean 参数仍占一个 scalar slot，descriptor 的
+boolean mask 决定 C 侧 Lua truthiness lowering；`q16.16-raw-i32` result 直接以 raw bits 返回。
+`pal(table,[p])` 是 bounded dedicated wrapper：最多读取 16 个 table entry，再同步复用 operation
+`13` 的 typed host method；它不在 bridge 实现 palette mapping。
+
 `scalar_slots[12]` 不是 PICO-8 vararg/multi-return 上限。Phase 2A 的 `peek(addr,n)` 和
 `poke(addr,val...)` 使用 dedicated C wrapper，因此不会穿过 host frame：
 
@@ -512,7 +517,7 @@ Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 1. **Baseline VM（Phase 0A Complete）**：pin source、tracked allocator、白名单 libs、compile/execute shorthand/fixed/coroutine fixture、instruction budget、NOTICE。
 2. **Shared RAM（Phase 0B Complete）**：64 KiB stable allocation、`lua_setpico8memory` alias、TS 双向读写、upper/wrap/remap conformance、fixed memory/OOM。
 3. **Raw ABI**：`p8w_*` lifecycle、Q16.16、byte string、structured error 和 stack tests。
-4. **Host schema prototype**：选择 5–10 个不同签名 API，生成 generic call frame wrapper/binding。
+4. **Host schema prototype**：保持最多 12 个异构签名，生成 generic call frame wrapper/binding。
 5. **Frame control**：callback loop、root custom `flip()`、instruction error、Window watchdog。
 6. **Nested control flow**：nested `flip/load/reload/cstore`；决定可靠 bubble、同步-cache 降级或 unsupported contract。
 7. **Interop benchmark**：依据结果接受 generic ABI 或增加最小 typed fast paths。
@@ -616,7 +621,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 | callback 动态替换及 custom loop fps | 未定 | 30/60/custom conformance |
 | nested coroutine HostRequest | 不宣称通用支持 | root bubbling + resume tests；否则显式降级 |
 | count quantum/default budget | 未定 | Chrome/Chromium determinism + representative corpus |
-| generated binding（ADR-008） | Accepted；production 9 bindings + isolated 8-signature prototype | 新增 string/vector/multi-return shape 时扩 schema/prototype/lifetime tests |
+| generated binding（ADR-008） | Accepted；production 18 bindings + isolated 12-signature prototype | 新增 vector/multi-return/general-table shape 时扩 schema/prototype/lifetime tests |
 | Emscripten exception/longjmp mode | Phase 0A 为 Wasm EH + `SUPPORT_LONGJMP=wasm` | browser matrix 后接受或替换 production mode |
 
 实现者不得自行“顺手解决”这些问题并静默改变契约。每项必须以 fixture、benchmark 或官方依据关闭，并同步 [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md)。

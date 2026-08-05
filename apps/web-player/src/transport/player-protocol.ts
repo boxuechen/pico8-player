@@ -70,6 +70,7 @@ export type PlayerRuntimeToHost =
       readonly timeRawBeforeStep: number;
       readonly targetFps: 30 | 60;
       readonly packedScreen: ArrayBuffer;
+      readonly displayPalette: ArrayBuffer;
     })
   | (PlayerEventEnvelope & {
       readonly type: "heartbeat";

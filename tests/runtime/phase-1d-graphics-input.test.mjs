@@ -108,7 +108,7 @@ test("Phase 1D appends stable generated host operations and preserves raw option
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.map(({ id, guestName }) => [id, guestName]), [
+  assert.deepEqual(contract.bindings.slice(0, 9).map(({ id, guestName }) => [id, guestName]), [
     [1, "cls"],
     [2, "pset"],
     [3, "btn"],

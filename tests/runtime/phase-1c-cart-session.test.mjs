@@ -50,6 +50,7 @@ function frame(frameId = 0) {
         timeRawBeforeStep: 0,
         targetFps: 30,
         screen: new Uint8Array(0x2000),
+        displayPalette: Uint8Array.from({ length: 16 }, (_, index) => index),
       },
     },
   };

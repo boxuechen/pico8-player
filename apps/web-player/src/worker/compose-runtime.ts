@@ -299,6 +299,7 @@ export function createPlayerWorkerController(
     result: Extract<CartSessionStepResult, { readonly kind: "frame" }>,
   ): PlayerRuntimeToHost {
     const packedScreen = result.frame.screen.slice().buffer;
+    const displayPalette = result.frame.displayPalette.slice().buffer;
     return {
       ...playerBase(command),
       type: "frame",
@@ -307,6 +308,7 @@ export function createPlayerWorkerController(
       timeRawBeforeStep: result.frame.timeRawBeforeStep,
       targetFps: result.frame.targetFps,
       packedScreen,
+      displayPalette,
     };
   }
 

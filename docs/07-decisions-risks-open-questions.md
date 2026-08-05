@@ -1,8 +1,8 @@
 # 架构决定、风险与未决问题
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1 已完成，当前没有 active
-phase；下一步须先展开并激活 Phase 2。
+如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1 已完成；Phase 2 已激活，
+当前 work unit 为 2C。
 
 ## 1. ADR registry
 
@@ -34,8 +34,8 @@ phase；下一步须先展开并激活 Phase 2。
 ### Active blockers
 
 当前没有 active phase blocker。Phase 1A–1F 已通过 L1 bounded-profile exit，见
-[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。Phase 2 的首个 work
-unit 尚未展开，因此不能依据 roadmap headline 直接实现。
+[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。Phase 2A–2B 已完成，
+当前 2C 的授权范围与门禁由 [active phase 文档](./phases/2-graphics-memory-text.md) 定义。
 
 ### Deferred open questions
 
@@ -56,7 +56,7 @@ unit 尚未展开，因此不能依据 roadmap headline 直接实现。
 | Q-07 | dedicated MessagePort 双速率 10 分钟 soak 通过；不需要 SAB/relay | [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | Q-09 | z8lua pin/patch、upper RAM mapper 和 benchmark boundary 已锁定 | [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
-| Q-04 | 采用 schema 单向生成；production 只列已实现 API，8-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
+| Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
 
 ## 3. Risk register
 

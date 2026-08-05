@@ -29,7 +29,9 @@ function postPlayerResponse(
   scope: RuntimeWorkerScope,
   response: PlayerRuntimeToHost,
 ): void {
-  const transfer = response.type === "frame" ? [response.packedScreen] : [];
+  const transfer = response.type === "frame"
+    ? [response.packedScreen, response.displayPalette]
+    : [];
   scope.postMessage(response, transfer);
 }
 
