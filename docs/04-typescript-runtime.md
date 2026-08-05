@@ -50,7 +50,8 @@ TypeScript 负责：
 
 | 状态 | 唯一所有者 | 其他模块如何访问 |
 |---|---|---|
-| PICO Base RAM | `PicoRam`（Worker 内） | 同步 typed views |
+| PICO Base RAM allocation/pointer lifetime | z8lua bridge context | `PicoMemoryLease`；固定 typed views |
+| PICO Base RAM runtime 语义与 hardware writes | `PicoRam`（Worker 内） | 对同一 lease 的同步 typed views；不另分配 RAM |
 | 当前 cart 原始 source bytes 与 Cart ROM | `CartSession`（Worker 内） | immutable source 用于无 payload `reset`；ROM 为只读 view，`cstore` 走显式事务 |
 | Lua/协程/GC | z8lua WASM | ABI 命令，不直接读内部结构 |
 | 图形 draw state | RAM `0x5f00..` | `Graphics` 每次从 RAM 读取/写回 |
@@ -70,14 +71,14 @@ TypeScript 负责：
 
 | ID | 状态 | 方向 | Phase 0 所需证据 |
 |---|---|---|---|
-| `P0-RT-01` | Accepted（ADR-013） | WASM memory 固定 `initial === maximum`，不增长；仅容量/heap cap 未定 | z8lua heap/cart stress、OOM 与 typed-view alias 测试 |
+| `P0-RT-01` | Accepted（ADR-013；Phase 0B passed） | WASM memory 固定 `initial === maximum`，不增长；Phase 0B artifact 为 16 MiB / 默认 1 MiB Lua cap | binary descriptor、heap/OOM、64-context 与 typed-view identity 已通过；production corpus sizing 后续继续测 |
 | `P0-RT-02` | Accepted raw-byte invariant（ADR-005）/ Proposed TS implementation | `.p8.png` 不经 Canvas；原始 RGBA8 decoder 暂定在 TS/JS | raw/legacy/PXA hash、Safari、fuzz 和许可证证据 |
 | `P0-RT-03` | Proposed | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM | 目标 Chrome/Firefox/Safari 的 transferable `MessagePort` 与 10 分钟队列测试 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
-| `P0-RT-05` | Proposed | cold boot/cart run 的 RAM reset matrix | 官方 golden；fake-08 只能作为候选行为 |
+| `P0-RT-05` | Proposed（Phase 1） | cold boot/cart run 的 RAM reset matrix | 依赖 Cart ROM/Runtime lifecycle 与官方 golden；fake-08 只能作为候选行为 |
 | `P0-RT-06` | Proposed | 外部 `reload/cstore` 使用 z8lua 可恢复 host-call suspension | 最小 coroutine prototype 能在资源返回后从 API 调用点继续 |
 | `P0-RT-07` | Proposed | 前台 tick watchdog 250ms、boot 2s、ordinary 60Hz core p95 8ms | 三浏览器 benchmark、missed-frame 数据；最终阈值写入 CI 配置 |
-| `P0-RT-08` | Accepted semantic invariant / Proposed patch | z8lua `@/%/$` 与 TS memory API 必须共用 upper-RAM/video-remap 规则 | 桥接 hook prototype、alias/remap conformance 与 interop cost |
+| `P0-RT-08` | Accepted（ADR-013；Phase 0B passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 已通过；interop cost 留给 Phase 0C |
 | `P0-RT-09` | Accepted（ADR-015） | 四 package DAG + main/worker/worklet execution domains | Phase 0S exports/project references、architecture tests 与 negative fixtures |
 
 其中 `P0-RT-03` 是与系统架构图一致的目标数据路径。若目标浏览器不能可靠转交 port，允许的 fallback 是 Worker → Window → `AudioWorkletNode.port`，但必须先更新 ADR、背压测试和本文；两条路径不得同时作为无规则的运行时分支。
@@ -324,9 +325,14 @@ interface PicoRam {
 }
 ```
 
+Phase 0B 已在 `@pico8-web/contracts` 落地 `PICO_RAM_SIZE` / `PicoMemoryLease`，
+并在 `@pico8-web/z8lua-bridge` 落地 bounded `Phase0BMemoryBinding`。该 binding
+只证明 adapter 内 zero-copy views、lease freshness 与 canonical mapper，不是完整
+`PicoRam`、`VmPort` 或 production `p8w_*` lifecycle。
+
 v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值，并对 z8lua heap 设置经 Phase 0 校准的上限，避免 `memory.grow()` 使 JS typed views 失效。真实 `WebAssembly.Memory` 只由 z8lua bridge 持有；RuntimeCore 只接收 runtime-neutral `PicoMemoryLease`，验证固定长度、范围和 session-local `leaseId`。Bridge 可以在 debug/test build 比较 `memory.buffer` identity 并在变化时立即触发 `E_INVARIANT`，但不能把 view 重建当成 production growth 支持；不满足固定内存的 artifact 不得发布。
 
-`PicoRam` 只提供物理 64KiB view，不单独宣称已经实现 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还可能绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。Phase 0 必须用 `P0-RT-08` 证明 upper RAM、`0x5f54..0x5f57` 和 direct operators 不会分裂为两套语义；在此之前不得把 raw `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
+`PicoRam` 的 layout views 是物理 64KiB，不把 raw `DataView` 连续访问伪装成 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还会绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。Phase 0B 已用 `P0-RT-08` 证明 upper RAM、`0x5f54/0x5f55` 与 direct operators 收敛；未来实现不得把 raw physical `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
 
 所有多 byte PICO 数据 **MUST** 显式使用 little-endian。不得依赖宿主 CPU endian，也不得用 JS `number` 先转换 Q16.16 再写回。ABI 层传 `int32` raw bits。
 
@@ -336,7 +342,7 @@ v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值�
 - Host 内部方法必须严格验证范围，失败返回结构化 internal error；Guest 地址归一化只能发生在 API adapter。
 - `resetForColdBoot()` 必须产生可复现的全零初态，再应用硬件默认寄存器。
 - `resetForCartRun()` 必须集中实现“哪些区清零、哪些区保留、何时把 ROM `0..0x42ff` reload 到 RAM”的矩阵。禁止各模块自行 `fill(0)`。
-- 第一版 reset policy 应与官方 golden 校准；fake-08 的“保留 work/user RAM、重置 cart-backed 与 `0x5f00..0x7fff`”只能作为初始参考，未验证前不得标记完全兼容。
+- cart-run reset policy 应在 Phase 1 与官方 golden 校准；fake-08 的“保留 work/user RAM、重置 cart-backed 与 `0x5f00..0x7fff`”只能作为初始参考，未验证前不得标记完全兼容。Phase 0B 的 context reset 仅是全零加 `0x5f54/0x5f55` video mapping defaults。
 - `0x5e00..0x5eff` 在新 cart 执行时必须先处于未映射/零状态；成功 `cartdata(id)` 后才加载对应持久化镜像。
 
 不能只依赖高层 Graphics/API hook 做 dirty tracking：cart 可以通过 `poke`、`memcpy` 或 VM 的低层 memory path 改 screen/cartdata。首版每个呈现帧解码固定 8KiB screen，并在逻辑 tick 后比较 256-byte cartdata；这是正确性优先的有界成本。

@@ -4,6 +4,7 @@
 **/node_modules/
 **/dist/
 *.tsbuildinfo
+.DS_Store
 
 # Local reference source checkouts
 /ref/

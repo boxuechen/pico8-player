@@ -6,6 +6,10 @@
 
 ADR：[ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md)
 
+> 历史记录：本页 hash 对应 Phase 0A commit `df6159376ab59792743f87387a2a48e1f37da3f4`。
+> 当前 `wasm/source.lock.json`、artifact 名称与 manifest 已由 Phase 0B 的 ordered
+> patch/artifact 取代；Phase 0A 的 14 项 regression 仍在统一 suite 中执行。
+
 ## 1. 结论
 
 Phase 0A 已完成。仓库现在能从 tracked vendored source 构建 Worker-loadable ES
@@ -42,7 +46,8 @@ Eris/Oua 作为隐式 guest surface。
   返回受控 budget error。
 
 `p8w0a_*` 是 bounded spike ABI，不改变 Proposed production `p8w_*` lifecycle。
-Phase 0B 不能直接把它当公共 adapter contract 扩展。
+后续阶段不能直接把它当公共 adapter contract 扩展；Phase 0B 已使用独立
+`p8w0b_*` bounded ABI。
 
 ## 4. 语言与生命周期结果
 
@@ -101,8 +106,9 @@ pnpm run verify
   浏览器矩阵尚未运行，不得据此宣称浏览器全面兼容。
 - 未运行正版 PICO-8 differential capture；`^` 仍是 Known Difference，其他
   baseline fixture 也继续接受后续 official golden 校准。
-- Lua heap cap、OOM 分类、最终 linear memory 容量尚未决定。
-- `@/%/$`、upper RAM、地址 wrap、64 KiB alias 和 GFX/SCREEN remap 全部属于
-  Phase 0B。
+- Lua heap cap/OOM 与 Phase 0B fixed artifact 参数已由
+  [ADR-013](./adr/013-shared-pico-ram-boundary.md) 回答；production corpus sizing 仍后续校准。
+- `@/%/$`、upper RAM、地址 wrap、64 KiB alias 和 GFX/SCREEN remap 已由
+  [Phase 0B](./13-phase-0b-evidence.md) 完成。
 - production `p8w_*` ABI、frame lifecycle、host requests、graphics/audio/input 和
   Player 均未实现。

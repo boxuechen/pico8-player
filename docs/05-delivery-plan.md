@@ -22,7 +22,7 @@
 
 ## 3. Phase 0 — 架构 Spike
 
-状态：**进行中**（Phase 0S、Phase 0A 已完成；下一阶段为 Phase 0B）
+状态：**进行中**（Phase 0S、Phase 0A、Phase 0B 已完成；下一阶段为 Phase 0C）
 
 目标：用最小实验验证混合架构成立，并锁定 ABI。Spike 代码可以被重写，不得被未经审查地升级为生产代码。
 
@@ -74,6 +74,11 @@ ABI、语言结果、NOTICE 和可复现 hash 见 [Phase 0A 完成证据](./12-p
 
 ### 0B. Shared Pico RAM
 
+状态：**Complete（2026-08-05）**。ownership、canonical mapper、ordered patch、
+zero-copy TS lease、fixed memory/OOM 和 lifecycle 证据见
+[Phase 0B 完成证据](./13-phase-0b-evidence.md) 与
+[ADR-013](./adr/013-shared-pico-ram-boundary.md)。
+
 任务：
 
 - 在 WASM memory 分配连续 64 KiB。
@@ -82,12 +87,12 @@ ABI、语言结果、NOTICE 和可复现 hash 见 [Phase 0A 完成证据](./12-p
 - 从 Lua `@/%/$` 与 TS 双向观察相同地址，并覆盖 `0x8000..0xffff` upper RAM。
 - 验证 `@/%/$` 的地址 wrap、多字节跨界及 `0x5f54/0x5f55` GFX/SCREEN remap；必要时以最小 z8lua patch 接入统一 address mapper。
 - 以 `initial === maximum`、growth off 构建，验证固定容量、受控 OOM 和 typed-view identity。
-- 用官方 golden 校准 cold boot、cart run 与 reset 的 RAM 保留/清零 matrix；参考实现行为只作为候选。
+- 锁定新 context/reset 的物理 RAM 初态；cart run/reset 保留矩阵因依赖 Cart ROM 与 Runtime lifecycle，移入 Phase 1。
 
 验收：
 
 - 100% 双向 alias 测试通过。
-- upper RAM 和 video remap 下，direct operators、`peek/poke/memcpy` 与 graphics 不能产生两套地址语义。
+- upper RAM 和 video remap 下，direct operators、`peek/poke/memcpy` 与 TS binding 使用唯一 mapper；未来 graphics 禁止复制地址规则。
 - logical frame 内无 RAM sync copy。
 - memory growth 被构建配置禁止；heap stress 只产生受控 OOM，不 detach/替换现有 typed views。
 
@@ -180,6 +185,7 @@ Go 条件：
 
 - `.p8` parser 和基础 `.p8.png` parser。
 - CartImage、Cart ROM、Base RAM load/reload 基线。
+- 用获准的 official golden 校准 cold boot、cart run 与 reset 的 RAM 保留/清零 matrix；参考实现行为只作为候选。
 - Runtime state machine 和 Worker protocol v1。
 - `_init/_update/_update60/_draw/flip`。
 - `cls/color/pset/pget/line/rect/rectfill/circ/circfill` 子集。

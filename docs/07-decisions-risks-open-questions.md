@@ -18,7 +18,7 @@
 | ADR-010 | Proposed | Worker 生成 PCM chunk，AudioWorklet 消费 | 避免 AudioWorklet 拥有权威游戏状态 |
 | ADR-011 | Proposed | 默认 hidden-tab policy 为 pause，不追帧 | 避免恢复时 spiral of death 和无意义电量消耗 |
 | ADR-012 | [Accepted](./adr/012-z8lua-source-and-phase-0a-wasm.md) | z8lua 使用 tracked vendored `pico8@8575dfb` + ordered patch manifest；Phase 0A 产物由 pinned Emscripten 重建 | 生产不依赖 `ref/`、移动 head 或网络 fetch；spike ABI 与 production ABI 分离 |
-| ADR-013 | Accepted | v1 WASM memory 使用 `initial === maximum`，禁止 growth | 保证共享 Pico RAM/typed views 地址稳定；Phase 0 只校准固定容量与 Lua heap cap |
+| ADR-013 | [Accepted](./adr/013-shared-pico-ram-boundary.md) | context-owned 64 KiB RAM、唯一 logical mapper、runtime-neutral lease；v1 WASM memory 使用 `initial === maximum`，禁止 growth | 保证 z8lua direct operators、TS/hardware 与 typed views 地址/生命周期一致 |
 | ADR-014 | Accepted | 内部 canonical test PCM 使用 22050 Hz mono signed PCM16LE | 固定 deterministic audio golden 格式；不把它宣称为官方公开硬件规格，设备输出另测重采样 |
 | ADR-015 | Accepted | 使用 08 定义的四 package DAG + web-player 三 execution domains，并机器阻断非法 import | 让 simulation、VM adapter 与浏览器设备边界成为可执行约束，而非目录命名约定 |
 | ADR-016 | Accepted | 使用 pnpm workspace；精确版本在根 `packageManager` 字段 pin | 与既有稳定测试命令一致，并支持 package exports/project references 的单仓库边界 |
@@ -63,7 +63,13 @@
 
 ### Q-02：固定 z8lua WASM memory 应配置多大？
 
-v1 已决定 `initial === maximum` 并禁止 growth；未决的是固定容量与 Lua heap cap。Phase 0 必须用代表 cart、恶意 allocation、100 次 create/destroy 和多实例压力给出峰值、余量、受控 OOM 结果，并把最终字节数写入构建配置与 ADR。未来允许 growth 属于架构变更，不是本问题的候选答案。
+状态：**Phase 0B artifact 参数已回答，production sizing 仍需代表 cart corpus**。
+
+v1 已决定 `initial === maximum` 并禁止 growth。Phase 0B 锁定 16 MiB linear
+memory、默认 1 MiB per-context Lua heap cap，验证 binary descriptor、恶意
+allocation、64 concurrent contexts、受控 OOM 与 typed-view identity。该结果足以
+关闭 Shared RAM spike，但不以合成压力替代代表 cart 的峰值/余量数据；后续若调整
+固定字节数，仍须更新 ADR/manifest，未来允许 growth 属于独立架构变更。
 
 ### Q-03：raw fixed-point ABI 如何暴露？
 
@@ -120,8 +126,11 @@ toolchain、base sandbox patch、allowlist、NOTICE、language fixture、100-con
 artifact hash 见 [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) 和
 [Phase 0A 证据](./12-phase-0a-evidence.md)。`^` 已登记 Known Difference。
 
-Q-09 中的 upper RAM、wrap、multi-byte 和 remap 子项按阶段边界保留给 Phase 0B，
-不能因为 0A 已选定 pin 而视为通过。
+Q-09 中的 upper RAM、wrap、multi-byte 和 remap 子项已由 Phase 0B 回答，见
+[ADR-013](./adr/013-shared-pico-ram-boundary.md) 与
+[Phase 0B 证据](./13-phase-0b-evidence.md)：ordered patch 0002 只改 `lvm.c`，让
+`@/%/$` 与项目唯一 mapper 收敛；lower/upper、negative、`0x7fff/0xffff`、
+little-endian 和全部文档 video bases 回归通过。interop cost 仍属于 Phase 0C。
 
 必须分别核对 `pico8` 与 `zepto8` branch，而不是只写仓库 URL。输出至少包括：
 

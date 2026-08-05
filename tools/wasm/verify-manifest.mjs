@@ -4,7 +4,12 @@ import { readFile, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { BUILD_FLAGS, Z8LUA_SOURCES, resolveEmxx } from "./config.mjs";
+import {
+  BRIDGE_SOURCES,
+  BUILD_FLAGS,
+  Z8LUA_SOURCES,
+  resolveEmxx,
+} from "./config.mjs";
 import { verifySourceInventory } from "./source-inventory.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -27,7 +32,7 @@ const sourceLock = await readJson("wasm/source.lock.json");
 const patchManifest = await readJson("wasm/patches/manifest.json");
 const toolchainLock = await readJson("wasm/toolchain.lock.json");
 
-assert.equal(manifest.phase, "0A");
+assert.equal(manifest.phase, "0B");
 assert.equal(manifest.upstream.commit, sourceLock.upstream.commit);
 assert.equal(manifest.upstream.tree, sourceLock.upstream.tree);
 assert.equal(manifest.toolchain.emsdkManagerCommit, toolchainLock.emsdk.managerCommit);
@@ -41,11 +46,24 @@ assert.equal(
   toolchainLock.emsdk.emccVersionCommit,
 );
 assert.deepEqual(manifest.buildFlags, BUILD_FLAGS);
+assert.deepEqual(manifest.compiledBridgeSources, BRIDGE_SOURCES);
 assert.deepEqual(manifest.compiledZ8luaSources, Z8LUA_SOURCES);
 assert.ok(
-  Z8LUA_SOURCES.every((path) => !path.includes("ref/")),
+  [...BRIDGE_SOURCES, ...Z8LUA_SOURCES].every((path) => !path.includes("ref/")),
   "production source list must not read ref/",
 );
+assert.equal(manifest.sharedPicoRam.bytesPerContext, 0x10000);
+assert.equal(manifest.sharedPicoRam.alignmentBytes, 16);
+assert.deepEqual(manifest.fixedMemory, {
+  initialPages: 256,
+  maximumPages: 256,
+  bytes: 16_777_216,
+  growth: false,
+  defaultLuaHeapLimitBytes: 1_048_576,
+  minimumTestedLuaHeapLimitBytes: 32_768,
+  ordinaryOomStatus: "P8W_OUT_OF_MEMORY",
+});
+assert.equal(manifest.patchManifest.patches.length, patchManifest.patches.length);
 
 for (const patch of manifest.patchManifest.patches) {
   assert.equal(await digest(patch.path), patch.sha256);
@@ -69,5 +87,5 @@ for (const artifact of manifest.artifact.files) {
 }
 
 process.stdout.write(
-  `Verified Phase 0A manifest and ${manifest.artifact.files.length} artifact files\n`,
+  `Verified Phase 0B manifest and ${manifest.artifact.files.length} artifact files\n`,
 );

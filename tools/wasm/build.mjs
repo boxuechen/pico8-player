@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 
 import {
   ARTIFACT_BASENAME,
+  BRIDGE_SOURCES,
   BUILD_FLAGS,
   SOURCE_DATE_EPOCH,
   Z8LUA_SOURCES,
@@ -50,7 +51,8 @@ export async function build(outputDirectory) {
   const args = [
     ...BUILD_FLAGS,
     "-Iwasm/z8lua",
-    "wasm/bridge/p8w_baseline.cpp",
+    "-Iwasm/bridge",
+    ...BRIDGE_SOURCES,
     ...sources,
     "-o",
     artifactPath,

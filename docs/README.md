@@ -2,8 +2,9 @@
 
 本目录是本项目的工程事实来源（source of truth），用于指导 Codex 和人工开发者实现一个以 **z8lua WASM + TypeScript Runtime** 为核心的 Web-native PICO-8 player。
 
-当前仓库已完成 Phase 0S 工程骨架与 Phase 0A z8lua WASM baseline，但尚未实现
-Shared Pico RAM、cart、PICO-8 Runtime 或 Player UI 行为。任何实现任务开始前，
+当前仓库已完成 Phase 0S 工程骨架、Phase 0A z8lua WASM baseline 与 Phase 0B
+Shared Pico RAM；下一阶段是 Phase 0C interop microbenchmark。尚未实现 cart、完整
+PICO-8 Runtime 或 Player UI 行为。任何实现任务开始前，
 必须先阅读本页、当前阶段文档、[源码目录与边界契约](./08-source-layout-and-boundaries.md)，
 以及与该任务直接相关的模块契约。
 
@@ -33,6 +34,7 @@ Shared Pico RAM、cart、PICO-8 Runtime 或 Player UI 行为。任何实现任�
 | 10 | [10-reference-sources.md](./10-reference-sources.md) | 本地参考 clone 的精确 commit、用途、许可提醒与隔离规则 |
 | 11 | [11-phase-0s-evidence.md](./11-phase-0s-evidence.md) | Phase 0S 工具选择、边界覆盖和可复现验证证据 |
 | 12 | [12-phase-0a-evidence.md](./12-phase-0a-evidence.md) | z8lua pin、sandbox ABI、语言 fixture、NOTICE 与 artifact 可复现证据 |
+| 13 | [13-phase-0b-evidence.md](./13-phase-0b-evidence.md) | 64 KiB shared RAM、canonical mapper、zero-copy lease、fixed memory/OOM 证据 |
 
 如果文档之间出现冲突，按以下优先级处理：
 

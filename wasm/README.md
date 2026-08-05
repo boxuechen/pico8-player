@@ -1,6 +1,6 @@
 # WASM source ownership
 
-`wasm/` contains the independently reproducible Phase 0A z8lua build. It never
+`wasm/` contains the independently reproducible Phase 0A/0B z8lua build. It never
 imports, includes, or symlinks local repositories from `ref/`.
 
 - `source.lock.json` pins the vendored upstream snapshot and its inventory.
@@ -8,8 +8,9 @@ imports, includes, or symlinks local repositories from `ref/`.
 - `toolchain.lock.json` pins emsdk and Emscripten.
 - `manifest.lock.json` records the exact source set, flags, guest allowlist,
   notices, imports, and expected artifact hashes.
-- `bridge/` owns the Phase 0A-only `p8w0a_*` experiment ABI. It deliberately
-  cannot be mistaken for the proposed production `p8w_*` ABI.
+- `bridge/` owns the bounded `p8w0a_*` language baseline and `p8w0b_*` Shared
+  RAM experiment ABIs. Their phase prefixes deliberately separate both from
+  the proposed production `p8w_*` ABI.
 - `dist/` is generated and ignored; every build also emits the third-party
   notice and license files.
 

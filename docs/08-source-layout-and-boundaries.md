@@ -131,6 +131,8 @@
 - 不定义 `MessagePort`、DOM event 等 Web transport 类型；它们属于 app 的 `transport/`。
 - `RuntimeCommand`、`RuntimeEvent`、frame/audio transferable DTO 仍属于 app transport；contracts 只提供其中跨 core/main 共享的稳定字段类型，防止 main 为复用一个 type 而依赖 RuntimeCore。
 - 不成为 `utils/common/shared` 垃圾桶。一个类型只有被两个以上合法上层 consumer 共享、且语义稳定时才进入此 package。
+- Phase 0B 已加入稳定的 `PICO_RAM_SIZE` 与 runtime-neutral `PicoMemoryLease`；
+  lease 只携带 `ArrayBuffer` range 和 opaque ID，不携带 WASM/module/handle。
 
 ### `@pico8-web/cart-codec`
 
@@ -163,6 +165,11 @@
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/runtime-core` 的显式 public port types、WASM artifact。对 RuntimeCore 的依赖必须是 `import type`；bridge 运行时不得加载 core implementation。
 禁止依赖：cart parser、graphics/audio 实现、UI、IndexedDB、Canvas、AudioContext、网络。
+
+Phase 0B 的 public `Phase0BMemoryBinding` 与 `Phase0BMemoryModule` 是明确命名的
+bounded adapter probe：它负责验证 pointer/size、创建 zero-copy views、检查 stale
+lease，并把 logical access 路由到 WASM canonical mapper。它不是 production
+`VmPort`，也不把 Emscripten concrete objects 交给 RuntimeCore。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
 

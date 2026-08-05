@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 import { Worker } from "node:worker_threads";
 
-import createZ8LuaPhase0AModule from "../../wasm/dist/z8lua-phase-0a.mjs";
+import createZ8LuaPhase0BModule from "../../wasm/dist/z8lua-phase-0b.mjs";
 
 const STATUS = {
   OK: 0,
@@ -27,7 +27,7 @@ const decoder = new TextDecoder();
 let module;
 
 before(async () => {
-  module = await createZ8LuaPhase0AModule();
+  module = await createZ8LuaPhase0BModule();
 });
 
 function copyBytes(pointer, length) {
@@ -108,7 +108,7 @@ test("ES module instantiates inside a Worker", async () => {
 
 test("WASM import surface contains no filesystem, WASI, or host API", async () => {
   const bytes = await readFile(
-    new URL("../../wasm/dist/z8lua-phase-0a.wasm", import.meta.url),
+    new URL("../../wasm/dist/z8lua-phase-0b.wasm", import.meta.url),
   );
   const compiled = await WebAssembly.compile(bytes);
   const imports = WebAssembly.Module.imports(compiled).map(

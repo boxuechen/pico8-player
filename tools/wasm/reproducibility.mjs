@@ -29,7 +29,7 @@ async function digest(path) {
   return createHash("sha256").update(await readFile(path)).digest("hex");
 }
 
-const temporaryRoot = await mkdtemp(join(tmpdir(), "p8w-phase-0a-repro-"));
+const temporaryRoot = await mkdtemp(join(tmpdir(), "p8w-phase-0b-repro-"));
 try {
   const first = join(temporaryRoot, "first");
   const second = join(temporaryRoot, "second");

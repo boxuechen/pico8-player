@@ -8,6 +8,11 @@
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
+实施状态：Phase 0A baseline 与 Phase 0B Shared Pico RAM 已完成；证据分别见
+[12-phase-0a-evidence.md](./12-phase-0a-evidence.md) 和
+[13-phase-0b-evidence.md](./13-phase-0b-evidence.md)。`p8w0a_*`/`p8w0b_*` 都是
+bounded spike ABI，不是本文件后文 Proposed production `p8w_*`。
+
 ## 1. 结论与边界
 
 WASM 只负责必须靠 z8lua 保真的语言内核及其薄桥接层：
@@ -60,7 +65,7 @@ hash；`ref/z8lua`、submodule 与 build-time fetch 均不是生产输入。
 
 - z8lua 不实现依赖 PICO-8 machine state 的绝大多数 API；这些属于本项目 TS Runtime。[上游限制说明](https://github.com/samhocevar/z8lua/blob/4a7089ea55556aef95a82a618d7bf19c1be1b568/README.md#limitations)
 - `^` 仍经 floating point 实现，上游明确说明结果不保证与 PICO-8 bit-for-bit 一致。初始兼容矩阵必须记录此差异；不能声称 fixed-point 全部 bit-exact。[上游 `^` 限制](https://github.com/samhocevar/z8lua/blob/4a7089ea55556aef95a82a618d7bf19c1be1b568/README.md#limitations)
-- 当前 `luaV_peek()` 把地址做 `int(a) & 0x7fff`，且 flat `PEEK` 只接受 `< 0x8000`；multi-byte 值直接从相邻 flat bytes 拼装。[源码](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lvm.c#L221-L241) 这与上游 README 所称“64-KiB address space”以及本项目的 v0.2.7 upper RAM/remap 目标不能直接等同。
+- 未 patch 的上游 `luaV_peek()` 把地址做 `int(a) & 0x7fff`，且 flat `PEEK` 只接受 `< 0x8000`；multi-byte 值直接从相邻 flat bytes 拼装。[源码](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lvm.c#L221-L241) Phase 0B 已用 ordered patch 0002 让 direct operators 调 project-owned mapper；不得把这一项目 patch 误写成上游能力。
 - `lua_setpico8memory()` 只有 flat pointer，没有 graphics/screen remap callback。由于 `@/%/$` 是 `peek/peek2/peek4` shorthand，不能在未测试时假设它们已符合 remapped memory access。
 - `pico8` branch 的 `luaL_openlibs()` 默认仍开放 base、PICO-8、coroutine、table、string 和 `debug`。[library 列表](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/linit.c#L29-L36) 这不是官方 PICO-8 sandbox；特别是 `debug.sethook` 会威胁 CPU budget。
 
@@ -184,7 +189,7 @@ v1 production **MUST** 禁止 WASM memory growth，并令 `initial === maximum`�
 
 ### 5.2 `@/%/$` 与 remap gap
 
-flat `lua_setpico8memory()` 只能作为 baseline spike，不能直接作为 v0.2.7 兼容完成条件。Phase 0B **MUST** 覆盖：
+flat `lua_setpico8memory()` 不能单独作为 v0.2.7 兼容完成条件。Phase 0B 已覆盖：
 
 - lower RAM 与 upper RAM 读。
 - negative/fixed-point address 到 16-bit address 的规则。
@@ -192,7 +197,7 @@ flat `lua_setpico8memory()` 只能作为 baseline spike，不能直接作为 v0.
 - `%` / `$` 在 `0x7fff`、`0xffff` 和 remap 边界上的逐 byte 行为。
 - GFX/SCREEN remap 后，`@/%/$` 与 `peek/peek2/peek4` 的一致性。官方手册明确说明 GFX/SCREEN remap 在低层影响 `peek/poke/memcpy`，并把 `@/%/$` 定义为 peek shorthand。[官方 Memory/Remapping 章节](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
 
-若 pinned z8lua 失败，最小本地 patch **SHOULD**：
+Pinned z8lua 确认失败后，Phase 0B 的最小本地 patch 已按以下契约落地：
 
 1. 把 direct operator 地址规范化为 `uint16_t`，不要硬编码 `& 0x7fff`。
 2. 为 global state 增加 `readByte(ud, uint16_t address)` callback，或等价的受控 address translator。
@@ -201,6 +206,18 @@ flat `lua_setpico8memory()` 只能作为 baseline spike，不能直接作为 v0.
 5. patch 保持最小、单独存放、记录 upstream commit，并用 upper/remap/cross-boundary 回归锁定。
 
 地址翻译的最终规则以官方手册和可复现 conformance capture 为准，不以 fake-08 或 z8lua 当前 flat behavior 为规范。
+
+实际唯一 mapper 位于 `wasm/bridge/p8w_pico_memory.*`。`lvm.c` patch、bounded
+memory probes 和 `Phase0BMemoryBinding` 都调用它；未来 graphics/memory fast path
+不得复制 remap switch。非法 video base 当前防御性回退默认值，因手册未定义该
+输入，其兼容状态保持 unknown。
+
+### 5.3 Phase 0B bounded ABI（已实现）
+
+Phase 0B 只新增 `p8w0b_*` probe：context create/destroy/run/result、RAM
+pointer/size/reset、canonical map/read/write 和 source alloc/free。ABI version 为
+`0x00020000`。它用于锁定 RAM boundary 与测试，不含 compile/resume/frame/request
+state machine，不得被 RuntimeCore 当作 production `VmPort`。
 
 ## 6. Proposed C ABI v1
 
@@ -447,10 +464,11 @@ pnpm run verify:wasm
 
 Emscripten 锁定为 6.0.5；emsdk manager、release commit、完整 source list、flags、
 imports 与 artifact hash 分别由 `wasm/toolchain.lock.json` 和
-`wasm/manifest.lock.json` 机器验证。实际 baseline 使用 16 MiB fixed memory、
+`wasm/manifest.lock.json` 机器验证。实际 Phase 0B artifact 使用 16 MiB fixed memory、
 `worker,node` ES module、Wasm EH、`SUPPORT_LONGJMP=wasm`、filesystem/dynamic
-execution/growth off。`node` 只服务 CI Worker smoke；16 MiB 也只是 Phase 0A
-baseline，不是生产容量决定。
+execution/growth off。binary descriptor 已验证 `initial=maximum=256` pages，
+`grow(1)` 失败且 view identity 不变。`node` 只服务 CI Worker smoke；16 MiB 与默认
+1 MiB Lua cap 是 Phase 0B artifact 参数，不是代表 cart corpus 的最终容量决定。
 
 z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try/throw`，
 因此不能使用 `-fno-exceptions`。Phase 0A 选择 native Wasm exceptions；正式浏览器
@@ -462,7 +480,7 @@ z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try
 - 业务热路径直接调用 exported function；不使用 Embind，默认也不导出 `ccall/cwrap`。Emscripten 说明 direct call 更快，但调用者必须自行处理 primitive/pointer。[官方 interop 文档](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html)
 - 禁止 Asyncify、pthreads 和 WASM Workers 作为 Phase 0 依赖。pthreads 会引入 SharedArrayBuffer 及 COOP/COEP 部署要求。[Emscripten pthread 文档](https://emscripten.org/docs/porting/pthreads.html)
 - error/exception mode 必须显式 pin，避免工具链升级静默改变；Phase 0A 是 Wasm EH + `SUPPORT_LONGJMP=wasm`。[官方 longjmp 文档](https://emscripten.org/docs/porting/setjmp-longjmp.html)
-- production 禁止 memory growth；Phase 0A 的 16 MiB 只是待 heap stress 验证的基线。若固定 memory 不足，先测量并调整，不得静默改为 growth。
+- production 禁止 memory growth；Phase 0B 已验证 16 MiB descriptor、64 context、受控 OOM 与 view identity。若后续代表 corpus 证明固定 memory 不足，先测量并调整，不得静默改为 growth。
 - debug build 应开启 assertions、source map、stack overflow check；release build 与 debug build 分离。
 - `.wasm` 与 `.mjs` 分文件发布；不默认 `SINGLE_FILE`，不嵌入文件系统或网络 shim。
 - build 输出必须记录 z8lua SHA、patch hash、emsdk version、flags 与 artifact hash，支持可复现检查。
@@ -472,7 +490,7 @@ z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try
 Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 
 1. **Baseline VM（Phase 0A Complete）**：pin source、tracked allocator、白名单 libs、compile/execute shorthand/fixed/coroutine fixture、instruction budget、NOTICE。
-2. **Shared RAM**：64 KiB stable allocation、`lua_setpico8memory` alias、TS 双向读写、upper/remap gap conformance。
+2. **Shared RAM（Phase 0B Complete）**：64 KiB stable allocation、`lua_setpico8memory` alias、TS 双向读写、upper/wrap/remap conformance、fixed memory/OOM。
 3. **Raw ABI**：`p8w_*` lifecycle、Q16.16、byte string、structured error 和 stack tests。
 4. **Host schema prototype**：选择 5–10 个不同签名 API，生成 generic call frame wrapper/binding。
 5. **Frame control**：callback loop、root custom `flip()`、instruction error、Window watchdog。
@@ -556,7 +574,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 
 | 问题 | 当前默认 | 关闭条件 |
 | --- | --- | --- |
-| 固定 WASM memory 容量 | growth off 已锁定；Phase 0A 使用 16 MiB baseline | heap/cart stress + 多实例内存测试确定生产 `initial === maximum` 数值 |
+| 固定 WASM memory 容量 | Phase 0B artifact 为 16 MiB，descriptor/64-context/OOM/view identity passed | 代表 cart corpus 继续校准 production sizing；禁止开启 growth |
 | Lua heap cap | 未定 | 兼容 corpus 和恶意 allocation fixture |
 | generic call frame 是否足够快 | 未定 | 12.1 browser benchmark |
 | `@/%/$` upper/remap 精确规则 | 上游 flat 实现不满足假设 | 官方 capture + 最小 patch + golden |

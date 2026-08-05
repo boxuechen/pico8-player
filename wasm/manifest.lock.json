@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "0A",
+  "phase": "0B",
   "upstream": {
     "repository": "https://github.com/samhocevar/z8lua.git",
     "branch": "pico8",
@@ -15,6 +15,10 @@
       {
         "path": "wasm/patches/0001-sandbox-base-library.patch",
         "sha256": "944c7e2b6e2b8d45efd65b3c1b0574a1cdaf6f9c3fc5af3429f47353fe3388ec"
+      },
+      {
+        "path": "wasm/patches/0002-shared-pico-memory-reader.patch",
+        "sha256": "d062cbc0ee2af76cbf969cbf4cf727fe9e5a003b3ec0bdcb3640fcb53722cd00"
       }
     ]
   },
@@ -53,6 +57,10 @@
     "lstrlib.c",
     "lpico8lib.c"
   ],
+  "compiledBridgeSources": [
+    "wasm/bridge/p8w_baseline.cpp",
+    "wasm/bridge/p8w_pico_memory.cpp"
+  ],
   "excludedGuestLibraries": [
     "debug",
     "eris",
@@ -72,7 +80,38 @@
       "loadstring",
       "require"
     ],
-    "phase0aPrint": "project-owned no-op used only to execute P8 ? shorthand"
+    "phase0aPrint": "project-owned no-op used only to execute P8 ? shorthand",
+    "phase0bMemoryProbes": [
+      "peek",
+      "peek2",
+      "peek4",
+      "poke",
+      "poke2",
+      "poke4",
+      "memcpy"
+    ]
+  },
+  "sharedPicoRam": {
+    "bytesPerContext": 65536,
+    "alignmentBytes": 16,
+    "pointerLifetime": "stable from p8w0b_create through p8w0b_destroy",
+    "vmBinding": "lua_setpico8memory",
+    "mapperSource": "wasm/bridge/p8w_pico_memory.cpp",
+    "typescriptBinding": "packages/z8lua-bridge/src/public.ts#Phase0BMemoryBinding",
+    "copyPolicy": "zero-copy; no logical-frame RAM synchronization",
+    "resetDefaults": {
+      "0x5f54": "0x00",
+      "0x5f55": "0x60"
+    }
+  },
+  "fixedMemory": {
+    "initialPages": 256,
+    "maximumPages": 256,
+    "bytes": 16777216,
+    "growth": false,
+    "defaultLuaHeapLimitBytes": 1048576,
+    "minimumTestedLuaHeapLimitBytes": 32768,
+    "ordinaryOomStatus": "P8W_OUT_OF_MEMORY"
   },
   "buildFlags": [
     "-O2",
@@ -87,7 +126,7 @@
     "-sSTRICT=1",
     "-sMODULARIZE=1",
     "-sEXPORT_ES6=1",
-    "-sEXPORT_NAME=createZ8LuaPhase0AModule",
+    "-sEXPORT_NAME=createZ8LuaPhase0BModule",
     "-sENVIRONMENT=worker,node",
     "-sFILESYSTEM=0",
     "-sDYNAMIC_EXECUTION=0",
@@ -95,12 +134,13 @@
     "-sINITIAL_MEMORY=16777216",
     "-sSTACK_SIZE=262144",
     "-sMALLOC=emmalloc",
+    "-sABORTING_MALLOC=0",
     "-sSUPPORT_LONGJMP=wasm",
     "-sASSERTIONS=0",
     "-sEXIT_RUNTIME=0",
     "-sINVOKE_RUN=0",
-    "-sEXPORTED_FUNCTIONS=_p8w0a_abi_version,_p8w0a_create,_p8w0a_destroy,_p8w0a_run,_p8w0a_result_count,_p8w0a_result_type,_p8w0a_result_number_bits,_p8w0a_result_boolean,_p8w0a_result_string_ptr,_p8w0a_result_string_length,_p8w0a_last_error_ptr,_p8w0a_last_error_length,_p8w0a_live_contexts,_p8w0a_live_lua_bytes,_p8w0a_alloc,_p8w0a_free",
-    "-sEXPORTED_RUNTIME_METHODS=HEAPU8"
+    "-sEXPORTED_FUNCTIONS=_p8w0a_abi_version,_p8w0a_create,_p8w0a_destroy,_p8w0a_run,_p8w0a_result_count,_p8w0a_result_type,_p8w0a_result_number_bits,_p8w0a_result_boolean,_p8w0a_result_string_ptr,_p8w0a_result_string_length,_p8w0a_last_error_ptr,_p8w0a_last_error_length,_p8w0a_live_contexts,_p8w0a_live_lua_bytes,_p8w0a_alloc,_p8w0a_free,_p8w0b_abi_version,_p8w0b_create,_p8w0b_destroy,_p8w0b_run,_p8w0b_result_count,_p8w0b_result_type,_p8w0b_result_number_bits,_p8w0b_result_boolean,_p8w0b_result_string_ptr,_p8w0b_result_string_length,_p8w0b_last_error_ptr,_p8w0b_last_error_length,_p8w0b_live_contexts,_p8w0b_live_lua_bytes,_p8w0b_ram_ptr,_p8w0b_ram_size,_p8w0b_ram_reset,_p8w0b_map_address,_p8w0b_read8,_p8w0b_write8,_p8w0b_alloc,_p8w0b_free",
+    "-sEXPORTED_RUNTIME_METHODS=HEAPU8,wasmMemory"
   ],
   "wasmImports": [
     "env:_abort_js:function",
@@ -158,21 +198,21 @@
         "sha256": "97f447536de3b0d1a2df792f749459a67ab613e7b877e9494ae6d45eca383a28"
       },
       {
-        "path": "z8lua-phase-0a.mjs",
-        "bytes": 6710,
-        "sha256": "584957d21b8a2c0b730a96408b94651062f8bae127feb389216335b45c4c7990"
+        "path": "z8lua-phase-0b.mjs",
+        "bytes": 8807,
+        "sha256": "b161d29cf95a0a1aeb129249197b4832d6ee6b0bf13d5aab73d8b2f38cd07e71"
       },
       {
-        "path": "z8lua-phase-0a.wasm",
-        "bytes": 172757,
-        "sha256": "522928ee2ae73e77bde0d77391a80b0e9ba0eca6d1bd06ab473e69b3ae5c9823"
+        "path": "z8lua-phase-0b.wasm",
+        "bytes": 178359,
+        "sha256": "697686de9c0b7e85cd4172a82ee9d73fc9c340be042726b131e3b021bf46377b"
       }
     ],
     "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."
   },
   "deferred": [
-    "Phase 0B shared 64 KiB Pico RAM and direct memory operators",
-    "production p8w_* ABI, host API, cart lifecycle and frame slicing",
+    "Phase 0C interop microbenchmark and hot-path decision",
+    "production p8w_* ABI, full host API, cart lifecycle and frame slicing",
     "cart codec, graphics, audio, input, persistence, Player UI and BBS behavior"
   ]
 }

@@ -1,0 +1,51 @@
+diff --git a/lvm.c b/lvm.c
+index b6a1bae..8f91ea0 100644
+--- a/lvm.c
++++ b/lvm.c
+@@ -26,6 +26,8 @@
+ #include "ltm.h"
+ #include "lvm.h"
+ 
++#include "p8w_pico_memory.h"
++
+ 
+ 
+ /* limit for table tag-method chains (to avoid loops) */
+@@ -218,25 +220,16 @@ static int call_orderTM (lua_State *L, const TValue *p1, const TValue *p2,
+ }
+ 
+ 
+-#define PEEK(ram, address) (ram && (address < 0x8000) ? ram[address] : 0)
+-
+ lua_Number luaV_peek(struct lua_State *L, lua_Number a, int count)
+ {
+   unsigned char const *p = G(L)->pico8memory;
+-  int address = int(a) & 0x7fff;
+-  uint32_t ret = 0;
+-  switch (count) {
+-    case 4:
+-      ret |= PEEK(p, address + 1) << 8;
+-      ret |= PEEK(p, address);
+-      address += 2;
+-    case 2:
+-      ret |= PEEK(p, address + 1) << 24;
+-    case 1:
+-      ret |= PEEK(p, address) << 16;
+-      break;
+-  }
+-  return lua_Number::frombits(ret);
++  uint16_t address = p8w::normalize_address(static_cast<int32_t>(a));
++  if (count == 1)
++    return lua_Number::frombits(static_cast<int32_t>(p8w::read8(p, address)) << 16);
++  if (count == 2)
++    return lua_Number::frombits(static_cast<int32_t>(
++        static_cast<uint32_t>(p8w::read16(p, address)) << 16));
++  return lua_Number::frombits(static_cast<int32_t>(p8w::read32(p, address)));
+ }
+ 
+ 
+@@ -943,4 +936,3 @@ void luaV_execute (lua_State *L) {
+     }
+   }
+ }
+-

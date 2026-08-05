@@ -4,7 +4,12 @@ import { delimiter, join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 export const SOURCE_DATE_EPOCH = "1731622349";
-export const ARTIFACT_BASENAME = "z8lua-phase-0a";
+export const ARTIFACT_BASENAME = "z8lua-phase-0b";
+
+export const BRIDGE_SOURCES = [
+  "wasm/bridge/p8w_baseline.cpp",
+  "wasm/bridge/p8w_pico_memory.cpp",
+];
 
 export const Z8LUA_SOURCES = [
   "lapi.c",
@@ -52,6 +57,28 @@ export const EXPORTED_FUNCTIONS = [
   "_p8w0a_live_lua_bytes",
   "_p8w0a_alloc",
   "_p8w0a_free",
+  "_p8w0b_abi_version",
+  "_p8w0b_create",
+  "_p8w0b_destroy",
+  "_p8w0b_run",
+  "_p8w0b_result_count",
+  "_p8w0b_result_type",
+  "_p8w0b_result_number_bits",
+  "_p8w0b_result_boolean",
+  "_p8w0b_result_string_ptr",
+  "_p8w0b_result_string_length",
+  "_p8w0b_last_error_ptr",
+  "_p8w0b_last_error_length",
+  "_p8w0b_live_contexts",
+  "_p8w0b_live_lua_bytes",
+  "_p8w0b_ram_ptr",
+  "_p8w0b_ram_size",
+  "_p8w0b_ram_reset",
+  "_p8w0b_map_address",
+  "_p8w0b_read8",
+  "_p8w0b_write8",
+  "_p8w0b_alloc",
+  "_p8w0b_free",
 ];
 
 export const BUILD_FLAGS = [
@@ -67,7 +94,7 @@ export const BUILD_FLAGS = [
   "-sSTRICT=1",
   "-sMODULARIZE=1",
   "-sEXPORT_ES6=1",
-  "-sEXPORT_NAME=createZ8LuaPhase0AModule",
+  "-sEXPORT_NAME=createZ8LuaPhase0BModule",
   "-sENVIRONMENT=worker,node",
   "-sFILESYSTEM=0",
   "-sDYNAMIC_EXECUTION=0",
@@ -75,12 +102,13 @@ export const BUILD_FLAGS = [
   "-sINITIAL_MEMORY=16777216",
   "-sSTACK_SIZE=262144",
   "-sMALLOC=emmalloc",
+  "-sABORTING_MALLOC=0",
   "-sSUPPORT_LONGJMP=wasm",
   "-sASSERTIONS=0",
   "-sEXIT_RUNTIME=0",
   "-sINVOKE_RUN=0",
   `-sEXPORTED_FUNCTIONS=${EXPORTED_FUNCTIONS.join(",")}`,
-  "-sEXPORTED_RUNTIME_METHODS=HEAPU8",
+  "-sEXPORTED_RUNTIME_METHODS=HEAPU8,wasmMemory",
 ];
 
 const EXPECTED_VERSION = "6.0.5";

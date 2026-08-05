@@ -15,7 +15,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "pnpm run test:architecture && pnpm run test:wasm",
     "test:architecture": "pnpm run build && node --test tests/architecture/architecture.test.mjs",
-    "test:wasm": "pnpm run build:wasm && node --test tests/wasm/phase-0a.test.mjs",
+    "test:wasm": "pnpm run build && pnpm run build:wasm && node --test tests/wasm/phase-0a.test.mjs tests/wasm/phase-0b.test.mjs",
     "test:wasm:repro": "node tools/wasm/reproducibility.mjs",
     "test:public-exports": "pnpm run build && tsc -p tests/architecture/consumer/tsconfig.json --pretty false",
     "verify:wasm": "pnpm run test:wasm && pnpm run test:wasm:repro && node tools/wasm/verify-manifest.mjs",

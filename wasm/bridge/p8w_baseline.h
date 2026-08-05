@@ -14,6 +14,7 @@ enum p8w_status {
   P8W_LOAD_ERROR = 3,
   P8W_RUNTIME_ERROR = 4,
   P8W_BUDGET_EXCEEDED = 5,
+  P8W_OUT_OF_MEMORY = 6,
 };
 
 uint32_t p8w0a_abi_version(void);
@@ -37,6 +38,36 @@ uint32_t p8w0a_live_lua_bytes(void);
 
 void *p8w0a_alloc(uint32_t size);
 void p8w0a_free(void *pointer);
+
+/* Phase 0B bounded experiment ABI. This remains separate from proposed p8w_* v1. */
+uint32_t p8w0b_abi_version(void);
+uint32_t p8w0b_create(uint32_t lua_heap_limit);
+uint32_t p8w0b_destroy(uint32_t handle);
+uint32_t p8w0b_run(uint32_t handle, const char *source,
+                   uint32_t source_length, uint32_t instruction_budget);
+
+uint32_t p8w0b_result_count(uint32_t handle);
+int32_t p8w0b_result_type(uint32_t handle, uint32_t result_index);
+int32_t p8w0b_result_number_bits(uint32_t handle, uint32_t result_index);
+uint32_t p8w0b_result_boolean(uint32_t handle, uint32_t result_index);
+const char *p8w0b_result_string_ptr(uint32_t handle, uint32_t result_index);
+uint32_t p8w0b_result_string_length(uint32_t handle, uint32_t result_index);
+
+const char *p8w0b_last_error_ptr(uint32_t handle);
+uint32_t p8w0b_last_error_length(uint32_t handle);
+uint32_t p8w0b_live_contexts(void);
+uint32_t p8w0b_live_lua_bytes(void);
+
+uint32_t p8w0b_ram_ptr(uint32_t handle);
+uint32_t p8w0b_ram_size(uint32_t handle);
+uint32_t p8w0b_ram_reset(uint32_t handle);
+uint32_t p8w0b_map_address(uint32_t handle, uint32_t logical_address);
+uint32_t p8w0b_read8(uint32_t handle, uint32_t logical_address);
+uint32_t p8w0b_write8(uint32_t handle, uint32_t logical_address,
+                      uint32_t value);
+
+void *p8w0b_alloc(uint32_t size);
+void p8w0b_free(void *pointer);
 
 #ifdef __cplusplus
 }

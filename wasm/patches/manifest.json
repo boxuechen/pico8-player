@@ -14,6 +14,20 @@
         "tests/wasm/phase-0a.test.mjs: wasm import surface"
       ],
       "upstreamStatus": "project-specific; not submitted"
+    },
+    {
+      "order": 2,
+      "file": "0002-shared-pico-memory-reader.patch",
+      "sha256": "d062cbc0ee2af76cbf969cbf4cf727fe9e5a003b3ec0bdcb3640fcb53722cd00",
+      "target": "lvm.c",
+      "purpose": "Route z8lua @/%/$ through the project-owned 16-bit, bytewise Pico address mapper instead of the upstream lower-32-KiB flat reader.",
+      "enabledBy": "Phase 0B build includes wasm/bridge/p8w_pico_memory.h",
+      "tests": [
+        "tests/wasm/phase-0b.test.mjs: JS/Lua lower and upper RAM alias",
+        "tests/wasm/phase-0b.test.mjs: 16-bit wrap and little-endian multi-byte reads",
+        "tests/wasm/phase-0b.test.mjs: GFX/SCREEN remap mapper convergence"
+      ],
+      "upstreamStatus": "project integration patch; not submitted"
     }
   ],
   "policy": "Ordered patches are applied to the vendored snapshot and must remain minimal, reviewable, and covered by named conformance tests."

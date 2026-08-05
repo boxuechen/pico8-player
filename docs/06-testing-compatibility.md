@@ -595,10 +595,26 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 | `sin/cos` | raw table result deterministic | `unknown`（baseline locked） | official differential 扩充角度边界 |
 | coroutine yield/return | nested Lua fixture passed | `unknown`（仅 VM 语义） | Phase 0E 验证 frame/host continuation |
 | `^` power | `2^0.5` baseline raw = `92681` | `partial` / Known Difference | 上游明确使用 floating point；不得宣称 bit-exact |
-| `@/%/$` lower/upper/remap | 未实现 shared Pico RAM | `unsupported`（Phase 0A） | Phase 0B conformance + 必要的最小 patch |
+| `@/%/$` lower/upper/remap | Phase 0A artifact 未实现；已由后续 Phase 0B artifact 取代 | `unsupported`（仅 Phase 0A 历史 artifact） | 见下表与 ADR-013 |
 
 `^` 的当前记录是 upstream-declared difference，不伪造未知的官方 raw expected。
 获得合法官方 capture 后，必须补充官方值、artifact hash、PICO-8 版本和平台。
+
+### 15.5 Phase 0B Shared Pico RAM 矩阵
+
+本表只记录 [Phase 0B artifact](./13-phase-0b-evidence.md) 的 RAM boundary，不代表
+完整 memory/graphics API 或 cart lifecycle 已实现。手册明确项目可标为
+`implemented-baseline`；未定义/尚无正版 capture 的行为保持 `unknown`。
+
+| 行为 | Phase 0B 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| physical 64 KiB / lower+upper alias | Lua direct/API 与 JS 双向 passed | `implemented-baseline` | production `VmPort/PicoRam` 复用 lease，不另分配 |
+| negative / 16-bit address wrap | `-1`、`-0.5`、超 `0xffff` passed | `implemented-baseline` | official edge capture 扩充 invalid/fraction corpus |
+| `peek2/peek4` little-endian + `0xffff` wrap | direct/API raw bits 一致 passed | `implemented-baseline` | 保留逐-byte mapper 回归 |
+| GFX/SCREEN documented bases | `00/60/80/a0/c0/e0` 两窗口 passed | `implemented-baseline` | graphics/API 实现必须调用 canonical mapper |
+| invalid `0x5f54/55` base | 防御性回退对应 default | `unknown` | 正版 PICO-8 capture 前不宣称兼容 |
+| context reset 初态 | 全零 + `5f54=00`,`5f55=60` | `implemented-baseline`（仅 Shared RAM） | cart-run/reset matrix 留给 Phase 1 official golden |
+| fixed memory/OOM | descriptor 256/256 pages；growth/heap pressure 受控 | `implemented-baseline` | 代表 cart corpus 继续校准 production sizing |
 
 ## 16. Definition of Done
 

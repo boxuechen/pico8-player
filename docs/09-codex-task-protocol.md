@@ -152,22 +152,21 @@ Spike 输出必须包括：
 
 ## 10. 当前推荐任务
 
-**Phase 0S 与 Phase 0A 已于 2026-08-05 完成**，证据见
+**Phase 0S、Phase 0A 与 Phase 0B 已于 2026-08-05 完成**，证据见
 [11-phase-0s-evidence.md](./11-phase-0s-evidence.md) 和
-[12-phase-0a-evidence.md](./12-phase-0a-evidence.md)。不得继续向 scaffold 或
-`p8w0a_*` spike 填入无验收归属的 placeholder behavior。
+[12-phase-0a-evidence.md](./12-phase-0a-evidence.md)、
+[13-phase-0b-evidence.md](./13-phase-0b-evidence.md)。不得继续向 scaffold、
+`p8w0a_*` 或 `p8w0b_*` spike 填入无验收归属的 placeholder behavior。
 
-下一个独立任务是 **Phase 0B：Shared Pico RAM**。它只回答 64 KiB stable
-allocation、`lua_setpico8memory()` alias、upper RAM/wrap/multi-byte、
-GFX/SCREEN remap、固定 memory/OOM 与 TS typed-view identity；不实现 cart codec、
-完整 host API、graphics/audio/input、frame loop 或 Player UI。
+下一个独立任务是 **Phase 0C：Interop Microbenchmark**。它只回答 z8lua/WASM ↔
+JS 的调用成本与是否需要最小 hot-path 下沉，不扩张成完整 Runtime 实现。
 
-Phase 0B 必须从 ADR-012 的 vendored source、patch manifest 和 locked build 继续，
-但不能把 `p8w0a_*` 临时签名升级为 production public contract。0B 的 bounded
-交付包括：
+Phase 0C 必须从 ADR-012/013 的 vendored source、ordered patches、fixed memory 和
+canonical mapper 继续；不得通过复制 mapper、开启 memory growth 或把 bounded
+`p8w0b_*` 直接升级为 production ABI 来取得好看的数字。bounded 交付包括：
 
-- 独立、连续、稳定的 65,536-byte Pico RAM 与显式 pointer/size probe。
-- Lua direct operators 与 TS view 双向 alias，无 logical-frame copy。
-- lower/upper、negative/wrap、multi-byte cross-boundary 与 remap conformance。
-- memory growth 关闭、typed-view identity、heap stress 和受控 OOM 证据。
-- 只为上述行为增加最小 patch；每个 patch 同步 provenance、测试和 manifest hash。
+- 建立 no-op/raw fixed/byte-string 与 `pset/peek/poke/spr` 代表 workload。
+- 分别测 1K/16K/64K calls/frame，报告 p50/p95/p99 和测试环境。
+- Chromium、Firefox、Safari 使用同一 harness；缺失设备结果不得伪造。
+- 对 fallback ladder 每一级给出数据或明确 `not-applicable` 依据。
+- 输出 ADR-006 的 go/no-go 与后续 raw ABI/host schema 约束，不实现 frame lifecycle。
