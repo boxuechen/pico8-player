@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web.invalid/schemas/phase-0c-interop-result-v1.json",
+  "title": "Phase 0C interop benchmark result",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "suiteId",
+    "runId",
+    "createdAt",
+    "sourceRevision",
+    "artifact",
+    "environment",
+    "protocol",
+    "availability",
+    "cases"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "suiteId": { "const": "phase-0c-interop-v1" },
+    "runId": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "sourceRevision": { "type": "string", "minLength": 1 },
+    "artifact": {
+      "type": "object",
+      "required": ["benchmarkAbiVersion", "wasmBytes", "wasmSha256"],
+      "properties": {
+        "benchmarkAbiVersion": { "const": 196608 },
+        "wasmBytes": { "type": "integer", "minimum": 1 },
+        "wasmSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": true
+    },
+    "environment": {
+      "type": "object",
+      "required": ["runtime", "userAgent", "hardwareConcurrency", "timerResolutionMs"],
+      "additionalProperties": true
+    },
+    "protocol": { "type": "object" },
+    "availability": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["engine", "status"],
+        "properties": {
+          "engine": { "enum": ["chromium", "firefox", "webkit", "node"] },
+          "status": { "enum": ["measured", "not-run", "unavailable"] },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "caseId",
+          "operation",
+          "path",
+          "callsPerFrame",
+          "correctness",
+          "calibration",
+          "samplesMsPerFrame",
+          "summary",
+          "memory"
+        ],
+        "properties": {
+          "caseId": { "type": "string" },
+          "operation": { "type": "string" },
+          "path": { "type": "string" },
+          "callsPerFrame": { "type": "integer", "minimum": 1 },
+          "byteLength": { "type": ["integer", "null"], "minimum": 0 },
+          "correctness": {
+            "type": "object",
+            "required": ["passed", "resultChecksum", "ramHash"],
+            "properties": {
+              "passed": { "const": true },
+              "resultChecksum": { "type": "integer", "minimum": 0 },
+              "ramHash": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "calibration": {
+            "type": "object",
+            "required": ["repeatsPerSample", "warmupFrames", "targetSampleDurationMs"]
+          },
+          "samplesMsPerFrame": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "number", "minimum": 0 }
+          },
+          "summary": {
+            "type": "object",
+            "required": [
+              "p50Ms",
+              "p95Ms",
+              "p99Ms",
+              "meanMs",
+              "minMs",
+              "maxMs",
+              "callsPerSecondAtP50",
+              "nanosecondsPerCallAtP50"
+            ]
+          },
+          "memory": {
+            "type": "object",
+            "required": ["wasmBufferStable", "wasmBytesBefore", "wasmBytesAfter", "jsHeap"]
+          }
+        }
+      }
+    },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

@@ -17,5 +17,10 @@ pointer/size/reset probes, and routes logical memory through
 memory probes, and the TypeScript `Phase0BMemoryBinding`; no frame copy or
 second JS remap table exists.
 
-Neither phase ABI implements production compile/resume state, cart lifecycle,
-graphics/audio/input/persistence, or Player behavior.
+Phase 0C adds only `p8w0c_bench_*` exports and generated primitive JS imports.
+Its no-op/raw/string/pset/peek-poke/sprite probes compare per-operation
+JS→WASM, WASM→JS, pure-WASM, and shared-memory paths. RAM-bearing probes reuse
+`p8w0b_*` handles and the canonical mapper; no remap policy is duplicated.
+
+None of these phase ABIs implements production compile/resume state, cart
+lifecycle, graphics/audio/input/persistence, or Player behavior.

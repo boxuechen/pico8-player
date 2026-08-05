@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 import { Worker } from "node:worker_threads";
 
-import createZ8LuaPhase0BModule from "../../wasm/dist/z8lua-phase-0b.mjs";
+import createZ8LuaPhase0CModule from "../../wasm/dist/z8lua-phase-0c.mjs";
 
 const STATUS = {
   OK: 0,
@@ -27,7 +27,7 @@ const decoder = new TextDecoder();
 let module;
 
 before(async () => {
-  module = await createZ8LuaPhase0BModule();
+  module = await createZ8LuaPhase0CModule();
 });
 
 function copyBytes(pointer, length) {
@@ -106,15 +106,21 @@ test("ES module instantiates inside a Worker", async () => {
   assert.deepEqual(message, { abiVersion: 0x00010000, memoryBytes: 16_777_216 });
 });
 
-test("WASM import surface contains no filesystem, WASI, or host API", async () => {
+test("WASM import surface is limited to runtime support and Phase 0C probes", async () => {
   const bytes = await readFile(
-    new URL("../../wasm/dist/z8lua-phase-0b.wasm", import.meta.url),
+    new URL("../../wasm/dist/z8lua-phase-0c.wasm", import.meta.url),
   );
   const compiled = await WebAssembly.compile(bytes);
   const imports = WebAssembly.Module.imports(compiled).map(
     ({ module: namespace, name, kind }) => `${namespace}:${name}:${kind}`,
   );
   assert.deepEqual(imports, [
+    "env:p8w0c_js_noop:function",
+    "env:p8w0c_js_raw3:function",
+    "env:p8w0c_js_bytes:function",
+    "env:p8w0c_js_pset:function",
+    "env:p8w0c_js_peek_poke:function",
+    "env:p8w0c_js_spr:function",
     "env:_abort_js:function",
     "env:emscripten_date_now:function",
     "env:emscripten_resize_heap:function",

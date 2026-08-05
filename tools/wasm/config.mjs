@@ -4,11 +4,12 @@ import { delimiter, join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 export const SOURCE_DATE_EPOCH = "1731622349";
-export const ARTIFACT_BASENAME = "z8lua-phase-0b";
+export const ARTIFACT_BASENAME = "z8lua-phase-0c";
 
 export const BRIDGE_SOURCES = [
   "wasm/bridge/p8w_baseline.cpp",
   "wasm/bridge/p8w_pico_memory.cpp",
+  "wasm/bridge/p8w_interop_bench.cpp",
 ];
 
 export const Z8LUA_SOURCES = [
@@ -79,6 +80,25 @@ export const EXPORTED_FUNCTIONS = [
   "_p8w0b_write8",
   "_p8w0b_alloc",
   "_p8w0b_free",
+  "_p8w0c_bench_abi_version",
+  "_p8w0c_bench_export_noop",
+  "_p8w0c_bench_export_raw3",
+  "_p8w0c_bench_export_bytes",
+  "_p8w0c_bench_export_pset",
+  "_p8w0c_bench_export_peek_poke",
+  "_p8w0c_bench_export_spr",
+  "_p8w0c_bench_import_noop",
+  "_p8w0c_bench_import_raw3",
+  "_p8w0c_bench_import_bytes",
+  "_p8w0c_bench_import_pset",
+  "_p8w0c_bench_import_peek_poke",
+  "_p8w0c_bench_import_spr",
+  "_p8w0c_bench_control_noop",
+  "_p8w0c_bench_control_raw3",
+  "_p8w0c_bench_control_bytes",
+  "_p8w0c_bench_control_pset",
+  "_p8w0c_bench_control_peek_poke",
+  "_p8w0c_bench_control_spr",
 ];
 
 export const BUILD_FLAGS = [
@@ -94,7 +114,7 @@ export const BUILD_FLAGS = [
   "-sSTRICT=1",
   "-sMODULARIZE=1",
   "-sEXPORT_ES6=1",
-  "-sEXPORT_NAME=createZ8LuaPhase0BModule",
+  "-sEXPORT_NAME=createZ8LuaPhase0CModule",
   "-sENVIRONMENT=worker,node",
   "-sFILESYSTEM=0",
   "-sDYNAMIC_EXECUTION=0",

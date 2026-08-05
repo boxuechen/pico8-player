@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "phase-0c-interop-v1",
+  "benchmarkAbiVersion": 196608,
+  "seed": 305419896,
+  "protocol": {
+    "warmupFrames": 100,
+    "measuredSamples": 30,
+    "targetSampleDurationMs": 100,
+    "maximumCalibrationRepeats": 262144,
+    "callCounts": [1024, 4096, 16384, 65536],
+    "byteStringCallCount": 1024,
+    "byteStringLengths": [0, 8, 64, 1024]
+  },
+  "paths": [
+    {
+      "id": "js_to_wasm_export",
+      "perOperationBoundary": "JS -> exported Wasm function"
+    },
+    {
+      "id": "wasm_to_js_import",
+      "perOperationBoundary": "Wasm -> generated primitive JS import -> Wasm"
+    },
+    {
+      "id": "wasm_control",
+      "perOperationBoundary": "none; loop and operation stay in Wasm"
+    },
+    {
+      "id": "js_shared_memory",
+      "perOperationBoundary": "none after one canonical mapper resolution during setup"
+    }
+  ],
+  "operations": [
+    {
+      "id": "noop_scalar",
+      "callCounts": [1024, 16384, 65536]
+    },
+    {
+      "id": "raw_q16x3",
+      "callCounts": [1024, 16384, 65536]
+    },
+    {
+      "id": "byte_string",
+      "callCounts": [1024],
+      "byteLengths": [0, 8, 64, 1024]
+    },
+    {
+      "id": "peek_poke",
+      "callCounts": [1024, 16384, 65536]
+    },
+    {
+      "id": "pset",
+      "callCounts": [1024, 16384, 65536]
+    },
+    {
+      "id": "spr_8x8",
+      "callCounts": [1024, 4096, 16384, 65536]
+    }
+  ],
+  "correctness": {
+    "requireEqualResultChecksumAcrossPaths": true,
+    "requireEqualRamHashAcrossPaths": true,
+    "requireStableWasmBufferIdentity": true
+  }
+}

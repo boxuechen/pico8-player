@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 
 import { Phase0BMemoryBinding } from "@pico8-web/z8lua-bridge";
-import createZ8LuaPhase0BModule from "../../wasm/dist/z8lua-phase-0b.mjs";
+import createZ8LuaPhase0CModule from "../../wasm/dist/z8lua-phase-0c.mjs";
 
 const STATUS = {
   OK: 0,
@@ -16,7 +16,7 @@ const decoder = new TextDecoder();
 let module;
 
 before(async () => {
-  module = await createZ8LuaPhase0BModule();
+  module = await createZ8LuaPhase0CModule();
 });
 
 function copiedBytes(pointer, length) {
@@ -285,7 +285,7 @@ test("all documented GFX/SCREEN video bases resolve through the canonical mapper
 
 test("Wasm memory descriptor has equal initial and maximum limits", async () => {
   const bytes = await readFile(
-    new URL("../../wasm/dist/z8lua-phase-0b.wasm", import.meta.url),
+    new URL("../../wasm/dist/z8lua-phase-0c.wasm", import.meta.url),
   );
   assert.deepEqual(definedMemoryLimits(bytes), {
     flags: 1,

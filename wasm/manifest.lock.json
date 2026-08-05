@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "0B",
+  "phase": "0C",
   "upstream": {
     "repository": "https://github.com/samhocevar/z8lua.git",
     "branch": "pico8",
@@ -59,7 +59,8 @@
   ],
   "compiledBridgeSources": [
     "wasm/bridge/p8w_baseline.cpp",
-    "wasm/bridge/p8w_pico_memory.cpp"
+    "wasm/bridge/p8w_pico_memory.cpp",
+    "wasm/bridge/p8w_interop_bench.cpp"
   ],
   "excludedGuestLibraries": [
     "debug",
@@ -113,6 +114,24 @@
     "minimumTestedLuaHeapLimitBytes": 32768,
     "ordinaryOomStatus": "P8W_OUT_OF_MEMORY"
   },
+  "interopBenchmark": {
+    "abiVersion": 196608,
+    "scope": "bounded p8w0c_bench_* probes only; not a production host API",
+    "caseManifest": "benchmarks/interop/case-manifest.json",
+    "resultSchema": "benchmarks/interop/result.schema.json",
+    "paths": [
+      "js_to_wasm_export",
+      "wasm_to_js_import",
+      "wasm_control",
+      "js_shared_memory"
+    ],
+    "requiredCallsPerFrame": [1024, 16384, 65536],
+    "warmupFrames": 100,
+    "measuredSamples": 30,
+    "targetSampleDurationMs": 100,
+    "canonicalMapper": "wasm/bridge/p8w_pico_memory.cpp",
+    "memoryGrowth": false
+  },
   "buildFlags": [
     "-O2",
     "-std=c++17",
@@ -126,7 +145,7 @@
     "-sSTRICT=1",
     "-sMODULARIZE=1",
     "-sEXPORT_ES6=1",
-    "-sEXPORT_NAME=createZ8LuaPhase0BModule",
+    "-sEXPORT_NAME=createZ8LuaPhase0CModule",
     "-sENVIRONMENT=worker,node",
     "-sFILESYSTEM=0",
     "-sDYNAMIC_EXECUTION=0",
@@ -139,10 +158,16 @@
     "-sASSERTIONS=0",
     "-sEXIT_RUNTIME=0",
     "-sINVOKE_RUN=0",
-    "-sEXPORTED_FUNCTIONS=_p8w0a_abi_version,_p8w0a_create,_p8w0a_destroy,_p8w0a_run,_p8w0a_result_count,_p8w0a_result_type,_p8w0a_result_number_bits,_p8w0a_result_boolean,_p8w0a_result_string_ptr,_p8w0a_result_string_length,_p8w0a_last_error_ptr,_p8w0a_last_error_length,_p8w0a_live_contexts,_p8w0a_live_lua_bytes,_p8w0a_alloc,_p8w0a_free,_p8w0b_abi_version,_p8w0b_create,_p8w0b_destroy,_p8w0b_run,_p8w0b_result_count,_p8w0b_result_type,_p8w0b_result_number_bits,_p8w0b_result_boolean,_p8w0b_result_string_ptr,_p8w0b_result_string_length,_p8w0b_last_error_ptr,_p8w0b_last_error_length,_p8w0b_live_contexts,_p8w0b_live_lua_bytes,_p8w0b_ram_ptr,_p8w0b_ram_size,_p8w0b_ram_reset,_p8w0b_map_address,_p8w0b_read8,_p8w0b_write8,_p8w0b_alloc,_p8w0b_free",
+    "-sEXPORTED_FUNCTIONS=_p8w0a_abi_version,_p8w0a_create,_p8w0a_destroy,_p8w0a_run,_p8w0a_result_count,_p8w0a_result_type,_p8w0a_result_number_bits,_p8w0a_result_boolean,_p8w0a_result_string_ptr,_p8w0a_result_string_length,_p8w0a_last_error_ptr,_p8w0a_last_error_length,_p8w0a_live_contexts,_p8w0a_live_lua_bytes,_p8w0a_alloc,_p8w0a_free,_p8w0b_abi_version,_p8w0b_create,_p8w0b_destroy,_p8w0b_run,_p8w0b_result_count,_p8w0b_result_type,_p8w0b_result_number_bits,_p8w0b_result_boolean,_p8w0b_result_string_ptr,_p8w0b_result_string_length,_p8w0b_last_error_ptr,_p8w0b_last_error_length,_p8w0b_live_contexts,_p8w0b_live_lua_bytes,_p8w0b_ram_ptr,_p8w0b_ram_size,_p8w0b_ram_reset,_p8w0b_map_address,_p8w0b_read8,_p8w0b_write8,_p8w0b_alloc,_p8w0b_free,_p8w0c_bench_abi_version,_p8w0c_bench_export_noop,_p8w0c_bench_export_raw3,_p8w0c_bench_export_bytes,_p8w0c_bench_export_pset,_p8w0c_bench_export_peek_poke,_p8w0c_bench_export_spr,_p8w0c_bench_import_noop,_p8w0c_bench_import_raw3,_p8w0c_bench_import_bytes,_p8w0c_bench_import_pset,_p8w0c_bench_import_peek_poke,_p8w0c_bench_import_spr,_p8w0c_bench_control_noop,_p8w0c_bench_control_raw3,_p8w0c_bench_control_bytes,_p8w0c_bench_control_pset,_p8w0c_bench_control_peek_poke,_p8w0c_bench_control_spr",
     "-sEXPORTED_RUNTIME_METHODS=HEAPU8,wasmMemory"
   ],
   "wasmImports": [
+    "env:p8w0c_js_noop:function",
+    "env:p8w0c_js_raw3:function",
+    "env:p8w0c_js_bytes:function",
+    "env:p8w0c_js_pset:function",
+    "env:p8w0c_js_peek_poke:function",
+    "env:p8w0c_js_spr:function",
     "env:_abort_js:function",
     "env:emscripten_date_now:function",
     "env:emscripten_resize_heap:function"
@@ -198,20 +223,20 @@
         "sha256": "97f447536de3b0d1a2df792f749459a67ab613e7b877e9494ae6d45eca383a28"
       },
       {
-        "path": "z8lua-phase-0b.mjs",
-        "bytes": 8807,
-        "sha256": "b161d29cf95a0a1aeb129249197b4832d6ee6b0bf13d5aab73d8b2f38cd07e71"
+        "path": "z8lua-phase-0c.mjs",
+        "bytes": 12742,
+        "sha256": "f915834b42bc10d8bf501e17a049bf90eb6a71f52ccd45d9fb6f5ef2c39255bd"
       },
       {
-        "path": "z8lua-phase-0b.wasm",
-        "bytes": 178359,
-        "sha256": "697686de9c0b7e85cd4172a82ee9d73fc9c340be042726b131e3b021bf46377b"
+        "path": "z8lua-phase-0c.wasm",
+        "bytes": 182176,
+        "sha256": "94d4133e08d6a01bcfdb2762686585f799c8f0ab010415ac5160019c9fde2b73"
       }
     ],
     "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."
   },
   "deferred": [
-    "Phase 0C interop microbenchmark and hot-path decision",
+    "Phase 0D lossless .p8.png codec",
     "production p8w_* ABI, full host API, cart lifecycle and frame slicing",
     "cart codec, graphics, audio, input, persistence, Player UI and BBS behavior"
   ]

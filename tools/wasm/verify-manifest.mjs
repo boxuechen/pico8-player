@@ -28,11 +28,12 @@ await verifySourceInventory(projectRoot);
 await resolveEmxx();
 
 const manifest = await readJson("wasm/manifest.lock.json");
+const benchmarkManifest = await readJson("benchmarks/interop/case-manifest.json");
 const sourceLock = await readJson("wasm/source.lock.json");
 const patchManifest = await readJson("wasm/patches/manifest.json");
 const toolchainLock = await readJson("wasm/toolchain.lock.json");
 
-assert.equal(manifest.phase, "0B");
+assert.equal(manifest.phase, "0C");
 assert.equal(manifest.upstream.commit, sourceLock.upstream.commit);
 assert.equal(manifest.upstream.tree, sourceLock.upstream.tree);
 assert.equal(manifest.toolchain.emsdkManagerCommit, toolchainLock.emsdk.managerCommit);
@@ -48,6 +49,24 @@ assert.equal(
 assert.deepEqual(manifest.buildFlags, BUILD_FLAGS);
 assert.deepEqual(manifest.compiledBridgeSources, BRIDGE_SOURCES);
 assert.deepEqual(manifest.compiledZ8luaSources, Z8LUA_SOURCES);
+assert.equal(manifest.interopBenchmark.abiVersion, benchmarkManifest.benchmarkAbiVersion);
+assert.equal(manifest.interopBenchmark.warmupFrames, benchmarkManifest.protocol.warmupFrames);
+assert.equal(manifest.interopBenchmark.measuredSamples, benchmarkManifest.protocol.measuredSamples);
+assert.equal(
+  manifest.interopBenchmark.targetSampleDurationMs,
+  benchmarkManifest.protocol.targetSampleDurationMs,
+);
+assert.deepEqual(
+  manifest.interopBenchmark.paths,
+  benchmarkManifest.paths.map(({ id }) => id),
+);
+for (const requiredCount of manifest.interopBenchmark.requiredCallsPerFrame) {
+  for (const operation of benchmarkManifest.operations) {
+    if (operation.id !== "byte_string") {
+      assert.ok(operation.callCounts.includes(requiredCount), `${operation.id} must include ${requiredCount}`);
+    }
+  }
+}
 assert.ok(
   [...BRIDGE_SOURCES, ...Z8LUA_SOURCES].every((path) => !path.includes("ref/")),
   "production source list must not read ref/",
@@ -87,5 +106,5 @@ for (const artifact of manifest.artifact.files) {
 }
 
 process.stdout.write(
-  `Verified Phase 0B manifest and ${manifest.artifact.files.length} artifact files\n`,
+  `Verified Phase 0C manifest and ${manifest.artifact.files.length} artifact files\n`,
 );
