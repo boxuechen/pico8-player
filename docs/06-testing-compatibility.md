@@ -582,6 +582,24 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 - P2：特定 API/模式明显不兼容但有规避方式，或部分 cart 的可玩性受损。
 - P3：轻微视觉/听觉/性能差异，不影响核心玩法。
 
+### 15.4 Phase 0A P8 Lua baseline 矩阵
+
+本表只记录 [Phase 0A artifact](./12-phase-0a-evidence.md) 的 z8lua baseline，
+不等同于完整 Player API 支持。没有正版 PICO-8 capture 的项目保持 `unknown`，即使
+上游 fixture 已稳定。
+
+| 行为 | Phase 0A 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| short-if、`?`、compound assignment | z8lua/WASM fixture passed | `unknown`（尚无官方 capture） | official differential 收录最小原创 cart |
+| Q16.16 wrap 与 division-by-zero | raw bits fixture passed | `unknown`（baseline locked） | 与 PICO-8 0.2.7 edge capture 对比 |
+| `sin/cos` | raw table result deterministic | `unknown`（baseline locked） | official differential 扩充角度边界 |
+| coroutine yield/return | nested Lua fixture passed | `unknown`（仅 VM 语义） | Phase 0E 验证 frame/host continuation |
+| `^` power | `2^0.5` baseline raw = `92681` | `partial` / Known Difference | 上游明确使用 floating point；不得宣称 bit-exact |
+| `@/%/$` lower/upper/remap | 未实现 shared Pico RAM | `unsupported`（Phase 0A） | Phase 0B conformance + 必要的最小 patch |
+
+`^` 的当前记录是 upstream-declared difference，不伪造未知的官方 raw expected。
+获得合法官方 capture 后，必须补充官方值、artifact hash、PICO-8 版本和平台。
+
 ## 16. Definition of Done
 
 ### 16.1 单个功能或 bugfix

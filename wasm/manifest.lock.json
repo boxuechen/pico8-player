@@ -1,10 +1,178 @@
 {
   "schemaVersion": 1,
-  "phase": "0S",
-  "upstream": null,
-  "patches": [],
-  "toolchain": null,
-  "buildFlags": [],
-  "licenses": [],
-  "artifact": null
+  "phase": "0A",
+  "upstream": {
+    "repository": "https://github.com/samhocevar/z8lua.git",
+    "branch": "pico8",
+    "commit": "8575dfbc524003c869c0aa05e109819302c576f9",
+    "tree": "76d6bede9c178d7a7128d9a56106e10e1c342eaa",
+    "supply": "tracked vendored snapshot plus ordered local patches",
+    "sourceLock": "wasm/source.lock.json"
+  },
+  "patchManifest": {
+    "path": "wasm/patches/manifest.json",
+    "patches": [
+      {
+        "path": "wasm/patches/0001-sandbox-base-library.patch",
+        "sha256": "944c7e2b6e2b8d45efd65b3c1b0574a1cdaf6f9c3fc5af3429f47353fe3388ec"
+      }
+    ]
+  },
+  "toolchain": {
+    "emsdkManagerCommit": "17a714fde0f1aaac53d282efcc6093b377addc8d",
+    "emscriptenVersion": "6.0.5",
+    "emscriptenReleaseCommit": "dbd755b5da399329c2576f6e3dfa7f419f5d8409",
+    "emccVersionCommit": "1db513782be24469589d7cb8a1f1834e9a33f271",
+    "lock": "wasm/toolchain.lock.json"
+  },
+  "compiledZ8luaSources": [
+    "lapi.c",
+    "lcode.c",
+    "ldebug.c",
+    "ldo.c",
+    "ldump.c",
+    "lfunc.c",
+    "lgc.c",
+    "llex.c",
+    "lmem.c",
+    "lobject.c",
+    "lopcodes.c",
+    "lparser.c",
+    "lstate.c",
+    "lstring.c",
+    "ltable.c",
+    "ltm.c",
+    "lundump.c",
+    "lvm.c",
+    "lzio.c",
+    "lctype.c",
+    "lauxlib.c",
+    "lbaselib.c",
+    "lcorolib.c",
+    "ltablib.c",
+    "lstrlib.c",
+    "lpico8lib.c"
+  ],
+  "excludedGuestLibraries": [
+    "debug",
+    "eris",
+    "io",
+    "os",
+    "package",
+    "math",
+    "bit32"
+  ],
+  "guestLibraryAllowlist": {
+    "opened": ["base-sandboxed", "pico8-pure", "coroutine", "table", "string"],
+    "removedBaseGlobals": [
+      "collectgarbage",
+      "dofile",
+      "load",
+      "loadfile",
+      "loadstring",
+      "require"
+    ],
+    "phase0aPrint": "project-owned no-op used only to execute P8 ? shorthand"
+  },
+  "buildFlags": [
+    "-O2",
+    "-std=c++17",
+    "-x",
+    "c++",
+    "-fwasm-exceptions",
+    "-fno-rtti",
+    "-fno-ident",
+    "-DP8W_BASELIB_SANDBOX=1",
+    "--no-entry",
+    "-sSTRICT=1",
+    "-sMODULARIZE=1",
+    "-sEXPORT_ES6=1",
+    "-sEXPORT_NAME=createZ8LuaPhase0AModule",
+    "-sENVIRONMENT=worker,node",
+    "-sFILESYSTEM=0",
+    "-sDYNAMIC_EXECUTION=0",
+    "-sALLOW_MEMORY_GROWTH=0",
+    "-sINITIAL_MEMORY=16777216",
+    "-sSTACK_SIZE=262144",
+    "-sMALLOC=emmalloc",
+    "-sSUPPORT_LONGJMP=wasm",
+    "-sASSERTIONS=0",
+    "-sEXIT_RUNTIME=0",
+    "-sINVOKE_RUN=0",
+    "-sEXPORTED_FUNCTIONS=_p8w0a_abi_version,_p8w0a_create,_p8w0a_destroy,_p8w0a_run,_p8w0a_result_count,_p8w0a_result_type,_p8w0a_result_number_bits,_p8w0a_result_boolean,_p8w0a_result_string_ptr,_p8w0a_result_string_length,_p8w0a_last_error_ptr,_p8w0a_last_error_length,_p8w0a_live_contexts,_p8w0a_live_lua_bytes,_p8w0a_alloc,_p8w0a_free",
+    "-sEXPORTED_RUNTIME_METHODS=HEAPU8"
+  ],
+  "wasmImports": [
+    "env:_abort_js:function",
+    "env:emscripten_date_now:function",
+    "env:emscripten_resize_heap:function"
+  ],
+  "licenses": [
+    {
+      "component": "Emscripten-generated glue and runtime portions",
+      "spdx": "MIT OR NCSA",
+      "path": "wasm/licenses/Emscripten.txt",
+      "sha256": "2fd38dc06e484cdd7a3f1e2f6577f5d53062052a2fd85131b56b89fbd673731c"
+    },
+    {
+      "component": "Lua 5.2-derived sources",
+      "spdx": "MIT",
+      "path": "wasm/licenses/Lua-5.2.txt",
+      "sha256": "7cd641a360b8c28f13fc32e186c0664aaa4ad2391452d9ca3e643500273be8b2"
+    },
+    {
+      "component": "z8lua PICO-8 fixed-point and pure-library additions",
+      "spdx": "WTFPL",
+      "path": "wasm/licenses/WTFPL-2.txt",
+      "sha256": "97f447536de3b0d1a2df792f749459a67ab613e7b877e9494ae6d45eca383a28"
+    },
+    {
+      "component": "artifact third-party notice",
+      "path": "wasm/THIRD_PARTY_NOTICES.md",
+      "sha256": "b0957a11915f43945c9a11878b74d91d29911675fa69ae4bc690e5196017b73c"
+    }
+  ],
+  "artifact": {
+    "sourceDateEpoch": 1731622349,
+    "outputDirectory": "wasm/dist",
+    "tracked": false,
+    "files": [
+      {
+        "path": "THIRD_PARTY_NOTICES.md",
+        "bytes": 1049,
+        "sha256": "b0957a11915f43945c9a11878b74d91d29911675fa69ae4bc690e5196017b73c"
+      },
+      {
+        "path": "licenses/Emscripten.txt",
+        "bytes": 5091,
+        "sha256": "2fd38dc06e484cdd7a3f1e2f6577f5d53062052a2fd85131b56b89fbd673731c"
+      },
+      {
+        "path": "licenses/Lua-5.2.txt",
+        "bytes": 1066,
+        "sha256": "7cd641a360b8c28f13fc32e186c0664aaa4ad2391452d9ca3e643500273be8b2"
+      },
+      {
+        "path": "licenses/WTFPL-2.txt",
+        "bytes": 430,
+        "sha256": "97f447536de3b0d1a2df792f749459a67ab613e7b877e9494ae6d45eca383a28"
+      },
+      {
+        "path": "z8lua-phase-0a.mjs",
+        "bytes": 6710,
+        "sha256": "584957d21b8a2c0b730a96408b94651062f8bae127feb389216335b45c4c7990"
+      },
+      {
+        "path": "z8lua-phase-0a.wasm",
+        "bytes": 172757,
+        "sha256": "522928ee2ae73e77bde0d77391a80b0e9ba0eca6d1bd06ab473e69b3ae5c9823"
+      }
+    ],
+    "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."
+  },
+  "deferred": [
+    "Phase 0B shared 64 KiB Pico RAM and direct memory operators",
+    "production p8w_* ABI, host API, cart lifecycle and frame slicing",
+    "cart codec, graphics, audio, input, persistence, Player UI and BBS behavior"
+  ]
 }

@@ -292,11 +292,11 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 
 ### 7.1 Production build inputs
 
-- `wasm/z8lua/`：精确 pin 的 upstream source；供应方式由 ADR-012 决定。
+- `wasm/z8lua/`：ADR-012 已接受的 tracked vendored upstream snapshot + ordered patch result；最终 inventory 由 `wasm/source.lock.json` 锁定。
 - `wasm/patches/`：按顺序编号的最小 patch，每个 patch 对应 provenance、原因和 conformance test。
 - `wasm/bridge/`：本项目 C/C++ ABI wrapper，不放 TS Runtime 逻辑。
 - `wasm/manifest.lock.json`：记录 upstream SHA、patch hash、emsdk version、flags、license inputs 和 artifact hash。
-- `wasm/dist/`：构建输出；是否提交二进制由 Phase 0 ADR 决定，但目录不是手写 source。
+- `wasm/dist/`：被 Git 忽略的构建输出；ADR-012 要求从锁定输入重建并按 `manifest.lock.json` 核验 hash 与 NOTICE，不提交二进制。
 - `packages/z8lua-bridge/src/generated/`：由 ABI/API schema 生成的 TS declarations/wrappers；文件头必须标记 generator 和 source hash，禁止手工编辑。
 - `spec/pico-api-inventory.yaml`：即使 ADR-008 最终拒绝全量代码生成，也必须作为 API 名称、签名、返回值、版本和实现状态的 machine-readable inventory。
 

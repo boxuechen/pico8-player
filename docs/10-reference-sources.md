@@ -7,6 +7,7 @@
 | `ref/z8lua/` | <https://github.com/samhocevar/z8lua> | `8575dfbc524003c869c0aa05e109819302c576f9`（`origin/pico8`，detached） | P8 Lua 语法、fixed-point VM、direct memory operators 和 native build baseline |
 | `ref/fake-08/` | <https://github.com/jtothebell/fake-08> | `814991a2571ad3970e386cef48f3b148aa1c27b9`（`master`） | cart parsing、hardware behavior、graphics/audio 算法和 differential diagnosis |
 | `ref/zepto8/` | <https://github.com/samhocevar/zepto8> | `b2929a4fe31e5765ef66d7794edd11086b9638b4`（`master`，detached） | 独立 emulator 行为及 compression/runtime 交叉检查 |
+| `ref/emsdk/` | <https://github.com/emscripten-core/emsdk> | `17a714fde0f1aaac53d282efcc6093b377addc8d`（detached） | Emscripten release mapping 与安装器审计；实际 toolchain 安装在 repo 外且由 `wasm/toolchain.lock.json` 锁定 |
 
 默认不初始化 submodule。只有明确、有限的调研需要时才能初始化指定 submodule，并把仓库和 commit 补记在本页。
 
@@ -30,6 +31,9 @@ git -C ref/fake-08 checkout 814991a2571ad3970e386cef48f3b148aa1c27b9
 
 git clone https://github.com/samhocevar/zepto8.git ref/zepto8
 git -C ref/zepto8 checkout --detach b2929a4fe31e5765ef66d7794edd11086b9638b4
+
+git clone https://github.com/emscripten-core/emsdk.git ref/emsdk
+git -C ref/emsdk checkout --detach 17a714fde0f1aaac53d282efcc6093b377addc8d
 ```
 
 这些命令只复现研究输入，不是 production dependency 的安装流程。clone 更新后必须同步本页；本地 `ref/README.md` 不属于 tracked source of truth。

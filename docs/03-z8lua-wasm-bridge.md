@@ -32,13 +32,16 @@ Bridge 可以为已测得的热点执行最小 RAM primitive，但这属于 [ADR
 
 ### 2.1 Pin 选择
 
-初始 spike **SHOULD** 使用 z8lua 的 `pico8` feature branch，而不是默认 `zepto8` composite branch：
+Phase 0A 已按 [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) 接受
+z8lua 的 `pico8` feature branch，而不是默认 `zepto8` composite branch：
 
 - 上游 README 把 `pico8` 描述为只实现 PICO-8 syntax/type system、适合作为自有 emulator 起点的 clean branch；`zepto8` 还合并了 Eris snapshot 和实验性 Oua 功能。[上游分支说明](https://github.com/samhocevar/z8lua/blob/4a7089ea55556aef95a82a618d7bf19c1be1b568/README.md#branches)
 - 本文核验的 `pico8` 提交是 [`8575dfbc524003c869c0aa05e109819302c576f9`](https://github.com/samhocevar/z8lua/tree/8575dfbc524003c869c0aa05e109819302c576f9)，提交日期为 2024-11-14。
 - 对照核验的 `zepto8` HEAD 是 [`4a7089ea55556aef95a82a618d7bf19c1be1b568`](https://github.com/samhocevar/z8lua/tree/4a7089ea55556aef95a82a618d7bf19c1be1b568)，同样不是版本化 release。
 
-生产构建 **MUST** pin 完整 commit SHA，禁止从移动 branch head 构建。具体使用 vendored source、submodule 还是受校验的 fetch 仍由 Phase 0 的 ADR-012 决定。
+生产构建 **MUST** pin 完整 commit SHA，禁止从移动 branch head 构建。ADR-012
+已决定使用 tracked vendored snapshot、ordered local patches 和 patched inventory
+hash；`ref/z8lua`、submodule 与 build-time fetch 均不是生产输入。
 
 ### 2.2 已提供的能力
 
@@ -435,35 +438,31 @@ WebAssembly trap、JS import exception 和 Lua error 必须可区分。bridge �
 
 ## 10. Emscripten 构建基线
 
-z8lua 没有上游 WASM build；下面是本项目 Proposed baseline。Emscripten 版本 **MUST** 固定在 lock/toolchain 文件，CI 与本地使用同一版本。
-
-Release 候选方向：
+z8lua 没有上游 WASM build。Phase 0A 已把 baseline 落为真实命令：
 
 ```sh
-em++ -std=c++17 -O3 -flto \
-  <pinned-z8lua-sources> <bridge-sources> \
-  --no-entry \
-  -sMODULARIZE=1 \
-  -sEXPORT_ES6=1 \
-  -sENVIRONMENT=worker \
-  -sFILESYSTEM=0 \
-  -sALLOW_MEMORY_GROWTH=0 \
-  -sINITIAL_MEMORY=33554432 \
-  -sABORTING_MALLOC=0 \
-  -sSUPPORT_LONGJMP=emscripten \
-  -sEXPORTED_FUNCTIONS=_malloc,_free,_p8w_abi_version,<all-p8w-exports> \
-  -o z8lua-bridge.mjs
+pnpm run build:wasm
+pnpm run verify:wasm
 ```
 
-这只是 spike 起点，不是已验证命令。脚手架建立后必须变为真实 package script，并记录完整 source list。
+Emscripten 锁定为 6.0.5；emsdk manager、release commit、完整 source list、flags、
+imports 与 artifact hash 分别由 `wasm/toolchain.lock.json` 和
+`wasm/manifest.lock.json` 机器验证。实际 baseline 使用 16 MiB fixed memory、
+`worker,node` ES module、Wasm EH、`SUPPORT_LONGJMP=wasm`、filesystem/dynamic
+execution/growth off。`node` 只服务 CI Worker smoke；16 MiB 也只是 Phase 0A
+baseline，不是生产容量决定。
+
+z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try/throw`，
+因此不能使用 `-fno-exceptions`。Phase 0A 选择 native Wasm exceptions；正式浏览器
+支持结论仍须经过目标 Chromium/Firefox/Safari 矩阵。
 
 构建要求：
 
 - 使用 ES module factory，以便 Worker 中显式实例化并隔离 module scope。Emscripten 的 `MODULARIZE`/ES module 行为见[官方文档](https://emscripten.org/docs/compiling/Modularized-Output.html)。
 - 业务热路径直接调用 exported function；不使用 Embind，默认也不导出 `ccall/cwrap`。Emscripten 说明 direct call 更快，但调用者必须自行处理 primitive/pointer。[官方 interop 文档](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html)
 - 禁止 Asyncify、pthreads 和 WASM Workers 作为 Phase 0 依赖。pthreads 会引入 SharedArrayBuffer 及 COOP/COEP 部署要求。[Emscripten pthread 文档](https://emscripten.org/docs/porting/pthreads.html)
-- 保留 `setjmp/longjmp` 支持，因为 Lua protected error 路径依赖它。Emscripten 当前默认支持，但项目显式 pin mode，避免工具链升级静默改变。[官方 longjmp 文档](https://emscripten.org/docs/porting/setjmp-longjmp.html)
-- production 禁止 memory growth；32 MiB 只是待 heap stress 验证的起始值。若固定 memory 不足，先测量并调整，不得静默改为 growth。
+- error/exception mode 必须显式 pin，避免工具链升级静默改变；Phase 0A 是 Wasm EH + `SUPPORT_LONGJMP=wasm`。[官方 longjmp 文档](https://emscripten.org/docs/porting/setjmp-longjmp.html)
+- production 禁止 memory growth；Phase 0A 的 16 MiB 只是待 heap stress 验证的基线。若固定 memory 不足，先测量并调整，不得静默改为 growth。
 - debug build 应开启 assertions、source map、stack overflow check；release build 与 debug build 分离。
 - `.wasm` 与 `.mjs` 分文件发布；不默认 `SINGLE_FILE`，不嵌入文件系统或网络 shim。
 - build 输出必须记录 z8lua SHA、patch hash、emsdk version、flags 与 artifact hash，支持可复现检查。
@@ -472,7 +471,7 @@ em++ -std=c++17 -O3 -flto \
 
 Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 
-1. **Baseline VM**：pin source、受限 allocator、白名单 libs、compile/execute shorthand/fixed/coroutine fixture、NOTICE。
+1. **Baseline VM（Phase 0A Complete）**：pin source、tracked allocator、白名单 libs、compile/execute shorthand/fixed/coroutine fixture、instruction budget、NOTICE。
 2. **Shared RAM**：64 KiB stable allocation、`lua_setpico8memory` alias、TS 双向读写、upper/remap gap conformance。
 3. **Raw ABI**：`p8w_*` lifecycle、Q16.16、byte string、structured error 和 stack tests。
 4. **Host schema prototype**：选择 5–10 个不同签名 API，生成 generic call frame wrapper/binding。
@@ -517,16 +516,16 @@ Phase 0 Exit 前，本 bridge 至少满足：
 
 ### Build / supply chain
 
-- [ ] z8lua 与 emsdk 均 pin，clean checkout 可重复构建相同或可解释的 artifact hash。
-- [ ] Phase 0 比较后选定的 z8lua upstream branch、精确 commit 与所有本地 patch 都有 provenance；不得把初始 `pico8` 推荐写成免验证前提。
-- [ ] Lua/WTFPL notices 和 third-party 清单进入发行物。
+- [x] z8lua 与 emsdk 均 pin，clean build outputs 可重复构建相同 artifact hash。
+- [x] Phase 0A 比较后选定的 z8lua upstream branch、精确 commit 与所有本地 patch 都有 provenance。
+- [x] Lua/WTFPL notices 和 third-party 清单进入生成 artifact。
 
 ### Language / sandbox
 
-- [ ] shorthand、compound assignment、overflow、division by zero、sin/cos 和 coroutine fixture 通过。
-- [ ] `^` 差异有明确 conformance result/known-difference；未宣称 bit-exact。
-- [ ] guest 无法取得 `debug.sethook`、filesystem、network 或 native module。
-- [ ] 创建/销毁 100 contexts 后无可观察 session/heap 线性泄漏。
+- [x] shorthand、compound assignment、overflow、division by zero、sin/cos 和 coroutine fixture 通过。
+- [x] `^` 差异有明确 baseline result/known-difference；未宣称 bit-exact。
+- [x] guest 无法取得 `debug.sethook`、filesystem、network 或 native module。
+- [x] 创建/销毁 100 contexts 后无可观察 session/tracked-Lua-heap 线性泄漏。
 
 ### RAM / ABI
 
@@ -557,7 +556,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 
 | 问题 | 当前默认 | 关闭条件 |
 | --- | --- | --- |
-| 固定 WASM memory 容量 | growth off 已锁定；32 MiB 仅为待验证起点 | heap/cart stress + 多实例内存测试确定 `initial === maximum` 数值 |
+| 固定 WASM memory 容量 | growth off 已锁定；Phase 0A 使用 16 MiB baseline | heap/cart stress + 多实例内存测试确定生产 `initial === maximum` 数值 |
 | Lua heap cap | 未定 | 兼容 corpus 和恶意 allocation fixture |
 | generic call frame 是否足够快 | 未定 | 12.1 browser benchmark |
 | `@/%/$` upper/remap 精确规则 | 上游 flat 实现不满足假设 | 官方 capture + 最小 patch + golden |
@@ -566,7 +565,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 | nested coroutine HostRequest | 不宣称通用支持 | root bubbling + resume tests；否则显式降级 |
 | count quantum/default budget | 未定 | 跨浏览器 determinism + representative corpus |
 | generated binding（ADR-008） | Proposed | 5–10 signature prototype/stack tests |
-| Emscripten longjmp mode | Proposed `emscripten` | browser matrix 后决定是否采用 Wasm EH |
+| Emscripten exception/longjmp mode | Phase 0A 为 Wasm EH + `SUPPORT_LONGJMP=wasm` | browser matrix 后接受或替换 production mode |
 
 实现者不得自行“顺手解决”这些问题并静默改变契约。每项必须以 fixture、benchmark 或官方依据关闭，并同步 [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md)。
 

@@ -1,0 +1,2 @@
+wasm/z8lua/** -whitespace
+wasm/patches/*.patch -whitespace

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/samhocevar/z8lua.git",
+    "branch": "pico8",
+    "commit": "8575dfbc524003c869c0aa05e109819302c576f9",
+    "tree": "76d6bede9c178d7a7128d9a56106e10e1c342eaa",
+    "commitDate": "2024-11-14T23:12:29+01:00"
+  },
+  "snapshot": {
+    "path": "wasm/z8lua",
+    "sha256Inventory": "96ae88282b8c0a76b21533c0ee8743b2117be2f935d814fcdc2f77b9f74448e9",
+    "inventoryExcludes": ["README.md"]
+  },
+  "comparison": {
+    "branch": "zepto8",
+    "commit": "4a7089ea55556aef95a82a618d7bf19c1be1b568",
+    "decision": "rejected",
+    "reason": "Adds Eris/Oua serialization and a materially larger guest-visible surface that Phase 0A does not require."
+  }
+}

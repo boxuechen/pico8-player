@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "emsdk": {
+    "repository": "https://github.com/emscripten-core/emsdk.git",
+    "managerCommit": "17a714fde0f1aaac53d282efcc6093b377addc8d",
+    "version": "6.0.5",
+    "releaseCommit": "dbd755b5da399329c2576f6e3dfa7f419f5d8409",
+    "emccVersionCommit": "1db513782be24469589d7cb8a1f1834e9a33f271"
+  }
+}

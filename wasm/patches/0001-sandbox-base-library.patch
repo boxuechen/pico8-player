@@ -1,0 +1,84 @@
+diff --git a/lbaselib.c b/lbaselib.c
+index f44a9a3..04c7547 100644
+--- a/lbaselib.c
++++ b/lbaselib.c
+@@ -20,6 +20,7 @@
+ #include "lualib.h"
+ 
+ 
++#if !defined(P8W_BASELIB_SANDBOX)
+ static int luaB_print (lua_State *L) {
+   int n = lua_gettop(L);  /* number of arguments */
+   int i;
+@@ -41,6 +42,7 @@ static int luaB_print (lua_State *L) {
+   luai_writeline();
+   return 0;
+ }
++#endif
+ 
+ 
+ #define SPACECHARS\t" \\f\\n\\r\\t\\v"
+@@ -157,6 +159,7 @@ static int luaB_rawset (lua_State *L) {
+ }
+ 
+ 
++#if !defined(P8W_BASELIB_SANDBOX)
+ static int luaB_collectgarbage (lua_State *L) {
+   static const char *const opts[] = {"stop", "restart", "collect",
+     "count", "step", "setpause", "setstepmul",
+@@ -184,6 +187,7 @@ static int luaB_collectgarbage (lua_State *L) {
+     }
+   }
+ }
++#endif
+ 
+ 
+ static int luaB_type (lua_State *L) {
+@@ -253,6 +257,7 @@ static int luaB_ipairs (lua_State *L) {
+ }
+ 
+ 
++#if !defined(P8W_BASELIB_SANDBOX)
+ static int load_aux (lua_State *L, int status, int envidx) {
+   if (status == LUA_OK) {
+     if (envidx != 0) {  /* 'env' parameter? */
+@@ -352,6 +357,7 @@ static int luaB_dofile (lua_State *L) {
+   lua_callk(L, 0, LUA_MULTRET, 0, dofilecont);
+   return dofilecont(L);
+ }
++#endif
+ 
+ 
+ static int luaB_assert (lua_State *L) {
+@@ -427,20 +433,26 @@ static int luaB_tostring (lua_State *L) {
+ 
+ static const luaL_Reg base_funcs[] = {
+   {"assert", luaB_assert},
++#if !defined(P8W_BASELIB_SANDBOX)
+   {"collectgarbage", luaB_collectgarbage},
+   {"dofile", luaB_dofile},
++#endif
+   {"error", luaB_error},
+   {"getmetatable", luaB_getmetatable},
+   {"ipairs", luaB_ipairs},
++#if !defined(P8W_BASELIB_SANDBOX)
+   {"loadfile", luaB_loadfile},
+   {"load", luaB_load},
+ #if defined(LUA_COMPAT_LOADSTRING)
+   {"loadstring", luaB_load},
++#endif
+ #endif
+   {"next", luaB_next},
+   {"pairs", luaB_pairs},
+   {"pcall", luaB_pcall},
++#if !defined(P8W_BASELIB_SANDBOX)
+   {"print", luaB_print},
++#endif
+   {"rawequal", luaB_rawequal},
+   {"rawlen", luaB_rawlen},
+   {"rawget", luaB_rawget},
+@@ -466,4 +478,3 @@ LUAMOD_API int luaopen_base (lua_State *L) {
+   lua_setfield(L, -2, "_VERSION");  /* set global _VERSION */
+   return 1;
+ }
+-

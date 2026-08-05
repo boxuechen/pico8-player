@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  phase-0s:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -21,5 +21,13 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      - uses: actions/checkout@v5
+        with:
+          repository: emscripten-core/emsdk
+          ref: 17a714fde0f1aaac53d282efcc6093b377addc8d
+          path: .cache/emsdk
+      - run: .cache/emsdk/emsdk install 6.0.5
+      - run: .cache/emsdk/emsdk activate 6.0.5
+      - run: echo "EMSDK=$GITHUB_WORKSPACE/.cache/emsdk" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       - run: pnpm run verify

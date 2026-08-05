@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "upstreamCommit": "8575dfbc524003c869c0aa05e109819302c576f9",
+  "patches": [
+    {
+      "order": 1,
+      "file": "0001-sandbox-base-library.patch",
+      "sha256": "944c7e2b6e2b8d45efd65b3c1b0574a1cdaf6f9c3fc5af3429f47353fe3388ec",
+      "target": "lbaselib.c",
+      "purpose": "Compile out stdout, filesystem-backed loaders, dynamic source loading, and guest GC controls from the base registration table.",
+      "enabledBy": "P8W_BASELIB_SANDBOX=1",
+      "tests": [
+        "tests/wasm/phase-0a.test.mjs: guest library allowlist",
+        "tests/wasm/phase-0a.test.mjs: wasm import surface"
+      ],
+      "upstreamStatus": "project-specific; not submitted"
+    }
+  ],
+  "policy": "Ordered patches are applied to the vendored snapshot and must remain minimal, reviewable, and covered by named conformance tests."
+}

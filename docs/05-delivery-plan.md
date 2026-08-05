@@ -22,7 +22,7 @@
 
 ## 3. Phase 0 — 架构 Spike
 
-状态：**进行中**（Phase 0S 已完成；Phase 0A 尚未开始）
+状态：**进行中**（Phase 0S、Phase 0A 已完成；下一阶段为 Phase 0B）
 
 目标：用最小实验验证混合架构成立，并锁定 ABI。Spike 代码可以被重写，不得被未经审查地升级为生产代码。
 
@@ -50,6 +50,10 @@
 - [源码布局 Scaffold Exit Gate](./08-source-layout-and-boundaries.md#10-scaffold-exit-gate) 全部满足。
 
 ### 0A. z8lua WASM 基线
+
+状态：**Complete（2026-08-05）**。source/toolchain pin、branch 选择、sandbox
+ABI、语言结果、NOTICE 和可复现 hash 见 [Phase 0A 完成证据](./12-phase-0a-evidence.md)
+与 [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md)。
 
 任务：
 

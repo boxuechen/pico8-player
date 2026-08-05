@@ -152,14 +152,22 @@ Spike 输出必须包括：
 
 ## 10. 当前推荐任务
 
-**Phase 0S 已于 2026-08-05 完成**，证据见 [11-phase-0s-evidence.md](./11-phase-0s-evidence.md)。不得继续向 scaffold 填入无验收归属的 placeholder behavior。
+**Phase 0S 与 Phase 0A 已于 2026-08-05 完成**，证据见
+[11-phase-0s-evidence.md](./11-phase-0s-evidence.md) 和
+[12-phase-0a-evidence.md](./12-phase-0a-evidence.md)。不得继续向 scaffold 或
+`p8w0a_*` spike 填入无验收归属的 placeholder behavior。
 
-下一个独立任务是 **Phase 0A：可复现的 z8lua WASM baseline**。它仍然不实现 cart codec、Pico RAM、graphics/audio 或 player UI。
+下一个独立任务是 **Phase 0B：Shared Pico RAM**。它只回答 64 KiB stable
+allocation、`lua_setpico8memory()` alias、upper RAM/wrap/multi-byte、
+GFX/SCREEN remap、固定 memory/OOM 与 TS typed-view identity；不实现 cart codec、
+完整 host API、graphics/audio/input、frame loop 或 Player UI。
 
-以下 Proposed 项是 Phase 0A 的必交付结果，不是“开始 0A 之前已经完成”的循环前置条件。0A 的第一个 bounded task 应先生成候选清单和可运行的最小 build；随后用同阶段证据逐项锁定：
+Phase 0B 必须从 ADR-012 的 vendored source、patch manifest 和 locked build 继续，
+但不能把 `p8w0a_*` 临时签名升级为 production public contract。0B 的 bounded
+交付包括：
 
-- z8lua source pin / vendoring 策略。
-- `pico8` / `zepto8` branch 选择依据，以及 upstream commit + local patch manifest。
-- Emscripten toolchain pin。
-- generated WASM artifact 是否进入仓库。
-- license/NOTICE 生成方式。
+- 独立、连续、稳定的 65,536-byte Pico RAM 与显式 pointer/size probe。
+- Lua direct operators 与 TS view 双向 alias，无 logical-frame copy。
+- lower/upper、negative/wrap、multi-byte cross-boundary 与 remap conformance。
+- memory growth 关闭、typed-view identity、heap stress 和受控 OOM 证据。
+- 只为上述行为增加最小 patch；每个 patch 同步 provenance、测试和 manifest hash。

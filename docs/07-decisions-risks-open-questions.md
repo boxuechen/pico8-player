@@ -17,7 +17,7 @@
 | ADR-009 | Proposed | 首个 renderer 使用 Canvas2D，保留 WebGL adapter | 128 × 128 输出足够小；先优化正确性和可移植性 |
 | ADR-010 | Proposed | Worker 生成 PCM chunk，AudioWorklet 消费 | 避免 AudioWorklet 拥有权威游戏状态 |
 | ADR-011 | Proposed | 默认 hidden-tab policy 为 pause，不追帧 | 避免恢复时 spiral of death 和无意义电量消耗 |
-| ADR-012 | Proposed | z8lua 使用 pinned vendored source 或 submodule | 构建必须可复现；具体供应链方式由 Phase 0 决定 |
+| ADR-012 | [Accepted](./adr/012-z8lua-source-and-phase-0a-wasm.md) | z8lua 使用 tracked vendored `pico8@8575dfb` + ordered patch manifest；Phase 0A 产物由 pinned Emscripten 重建 | 生产不依赖 `ref/`、移动 head 或网络 fetch；spike ABI 与 production ABI 分离 |
 | ADR-013 | Accepted | v1 WASM memory 使用 `initial === maximum`，禁止 growth | 保证共享 Pico RAM/typed views 地址稳定；Phase 0 只校准固定容量与 Lua heap cap |
 | ADR-014 | Accepted | 内部 canonical test PCM 使用 22050 Hz mono signed PCM16LE | 固定 deterministic audio golden 格式；不把它宣称为官方公开硬件规格，设备输出另测重采样 |
 | ADR-015 | Accepted | 使用 08 定义的四 package DAG + web-player 三 execution domains，并机器阻断非法 import | 让 simulation、VM adapter 与浏览器设备边界成为可执行约束，而非目录命名约定 |
@@ -114,6 +114,14 @@ v1 已决定 `initial === maximum` 并禁止 growth；未决的是固定容量�
 不得因暂时无法精确模拟 CPU 而移除安全 budget。
 
 ### Q-09：z8lua pin 与最小 patch surface 是什么？
+
+状态：**Phase 0A 范围已回答（2026-08-05）**。pin、branch 对比、source supply、
+toolchain、base sandbox patch、allowlist、NOTICE、language fixture、100-context 与
+artifact hash 见 [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) 和
+[Phase 0A 证据](./12-phase-0a-evidence.md)。`^` 已登记 Known Difference。
+
+Q-09 中的 upper RAM、wrap、multi-byte 和 remap 子项按阶段边界保留给 Phase 0B，
+不能因为 0A 已选定 pin 而视为通过。
 
 必须分别核对 `pico8` 与 `zepto8` branch，而不是只写仓库 URL。输出至少包括：
 

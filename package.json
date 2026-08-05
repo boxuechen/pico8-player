@@ -11,11 +11,15 @@
   },
   "scripts": {
     "build": "tsc -b --pretty false",
+    "build:wasm": "node tools/wasm/build.mjs",
     "typecheck": "tsc -b --pretty false",
-    "test": "pnpm run test:architecture",
+    "test": "pnpm run test:architecture && pnpm run test:wasm",
     "test:architecture": "pnpm run build && node --test tests/architecture/architecture.test.mjs",
+    "test:wasm": "pnpm run build:wasm && node --test tests/wasm/phase-0a.test.mjs",
+    "test:wasm:repro": "node tools/wasm/reproducibility.mjs",
     "test:public-exports": "pnpm run build && tsc -p tests/architecture/consumer/tsconfig.json --pretty false",
-    "verify": "pnpm run typecheck && pnpm run build && pnpm run test:architecture"
+    "verify:wasm": "pnpm run test:wasm && pnpm run test:wasm:repro && node tools/wasm/verify-manifest.mjs",
+    "verify": "pnpm run typecheck && pnpm run build && pnpm run test:architecture && pnpm run verify:wasm"
   },
   "devDependencies": {
     "@babel/parser": "8.0.4",
