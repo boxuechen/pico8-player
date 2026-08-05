@@ -1,0 +1,9 @@
+schema_version: 1
+target: pico8-0.2.7-player
+owner: packages/runtime-core
+status_values:
+  - unimplemented
+  - partial
+  - implemented
+  - unsupported
+apis: []

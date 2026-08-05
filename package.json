@@ -1,0 +1,28 @@
+{
+  "name": "pico8-web-player-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@10.8.0",
+  "engines": {
+    "node": ">=22.22.0 <23",
+    "pnpm": "10.8.0"
+  },
+  "scripts": {
+    "build": "tsc -b --pretty false",
+    "typecheck": "tsc -b --pretty false",
+    "test": "pnpm run test:architecture",
+    "test:architecture": "pnpm run build && node --test tests/architecture/architecture.test.mjs",
+    "test:public-exports": "pnpm run build && tsc -p tests/architecture/consumer/tsconfig.json --pretty false",
+    "verify": "pnpm run typecheck && pnpm run build && pnpm run test:architecture"
+  },
+  "devDependencies": {
+    "@babel/parser": "8.0.4",
+    "@pico8-web/cart-codec": "workspace:*",
+    "@pico8-web/contracts": "workspace:*",
+    "@pico8-web/runtime-core": "workspace:*",
+    "@pico8-web/z8lua-bridge": "workspace:*",
+    "typescript": "7.0.2"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "../../dist/main",
+    "tsBuildInfoFile": "../../dist/main.tsbuildinfo",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["*.ts", "render/**/*.ts", "ui/**/*.ts"],
+  "references": [{ "path": "../transport" }]
+}

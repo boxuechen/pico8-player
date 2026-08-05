@@ -1,0 +1,4 @@
+{
+  "logicalPath": "apps/web-player/src/main/illegal.ts",
+  "expectedRule": "main-imports-runtime"
+}

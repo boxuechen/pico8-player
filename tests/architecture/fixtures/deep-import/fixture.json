@@ -1,0 +1,4 @@
+{
+  "logicalPath": "packages/runtime-core/src/illegal.ts",
+  "expectedRule": "deep-package-import"
+}

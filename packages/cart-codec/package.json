@@ -1,0 +1,20 @@
+{
+  "name": "@pico8-web/cart-codec",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b tsconfig.json --pretty false",
+    "typecheck": "tsc -b tsconfig.json --pretty false"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/public.d.ts",
+      "import": "./dist/public.js"
+    }
+  },
+  "dependencies": {
+    "@pico8-web/contracts": "workspace:*"
+  }
+}

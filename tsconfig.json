@@ -1,0 +1,10 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/contracts" },
+    { "path": "./packages/cart-codec" },
+    { "path": "./packages/runtime-core" },
+    { "path": "./packages/z8lua-bridge" },
+    { "path": "./apps/web-player" }
+  ]
+}

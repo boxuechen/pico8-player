@@ -1,0 +1,12 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": ".",
+    "outDir": "../../dist/transport",
+    "tsBuildInfoFile": "../../dist/transport.tsbuildinfo",
+    "lib": ["ES2022"]
+  },
+  "include": ["*.ts"],
+  "references": [{ "path": "../../../../packages/contracts" }]
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "phase": "0S",
+  "upstream": null,
+  "patches": [],
+  "toolchain": null,
+  "buildFlags": [],
+  "licenses": [],
+  "artifact": null
+}
