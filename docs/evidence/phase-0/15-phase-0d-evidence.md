@@ -2,9 +2,9 @@
 
 > 日期：2026-08-05
 > 实现基线：`6fd43f221325163ddc819a8b6cb3f83741aa2474`
-> 决策：[ADR-005](./adr/005-lossless-p8png.md)
-> 机器契约：[`spec/cart-codec-contract.json`](../spec/cart-codec-contract.json)
-> 锁定清单：[`packages/cart-codec/manifest.lock.json`](../packages/cart-codec/manifest.lock.json)
+> 决策：[ADR-005](../../adr/005-lossless-p8png.md)
+> 机器契约：[`spec/cart-codec-contract.json`](../../../spec/cart-codec-contract.json)
+> 锁定清单：[`packages/cart-codec/manifest.lock.json`](../../../packages/cart-codec/manifest.lock.json)
 
 ## 1. 结论
 

@@ -1,5 +1,23 @@
 # 系统架构
 
+> 文档角色：稳定的系统边界与目标拓扑。当前实现状态以
+> [当前阶段文档](./phases/0f-browser-render-audio-transport.md)、机器契约和源码为准。
+
+## 状态路由
+
+| 状态 | 本文内容 |
+| --- | --- |
+| **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
+| **Implemented through Phase 0E** | WASM 内固定 64 KiB RAM、bounded `loadCart/step/hostResponse/dispose` Worker DTO、generation/watchdog、manual frame slice 与 startup clock |
+| **Target** | 完整 Session 状态机、完整 Worker 协议、boot/frame transaction、renderer/audio 数据路径和 wall-clock scheduler |
+| **Deferred** | persistence、完整 cart swap、BBS resolver 和完整 L3 host integration |
+
+第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
+当前 bounded Worker 协议由
+[`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json) 和
+[`worker-protocol.ts`](../apps/web-player/src/transport/worker-protocol.ts) 定义；Phase 0F
+只扩展 presenter/audio transport 所需的最小边界。
+
 ## 1. 架构总览
 
 本项目采用三执行域架构：Window 主线程、Runtime Worker、AudioWorklet。未来经许可的远端 cart resolver 属于可选外部服务，不进入 player core。
@@ -119,6 +137,8 @@ player UI
 
 ## 4. Session 状态机
 
+> 状态：Target。
+
 ```mermaid
 stateDiagram-v2
     [*] --> idle
@@ -150,6 +170,8 @@ stateDiagram-v2
 状态转换必须原子化。新 cart load 失败时，不得留下旧 VM 与新 RAM 混合状态。
 
 ## 5. Worker 协议
+
+> 状态：Target；Phase 0E 仅实现 bounded subset。
 
 协议必须带版本，并使用可判别 union。下面是 v1 的跨线程基线；更具体字段以 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准，不能再引入 `boot`、`host-response` 等同义消息。
 
@@ -185,6 +207,8 @@ export type RuntimeToHost =
 
 ## 6. Boot transaction
 
+> 状态：Phase 0E 实现 bounded subset；完整 transaction 是 Target。
+
 一次 cart load 按以下顺序执行：
 
 1. 验证输入长度和 signature。
@@ -201,6 +225,8 @@ export type RuntimeToHost =
 
 ## 7. Frame transaction
 
+> 状态：Target full transaction。
+
 每个 logical frame 的权威顺序为：
 
 1. scheduler 决定本次 simulation slice、callback 次数与是否 draw。
@@ -214,6 +240,8 @@ export type RuntimeToHost =
 同一 logical frame 中 Lua API 对 RAM 的写入必须立即对后续 API 可见。
 
 ## 8. 时间模型
+
+> 状态：startup/manual slice 已实现；wall-clock scheduler Deferred。
 
 - Runtime 维护自己的 accumulator 和 logical simulation clock。
 - `_update()` 模式逻辑速率为 30 Hz；`_update60()` 模式为 60 Hz。

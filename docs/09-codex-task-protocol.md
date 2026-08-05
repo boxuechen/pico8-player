@@ -7,9 +7,9 @@
 ## 1. 开始任务前
 
 1. 阅读 [README.md](./README.md)。
-2. 从 [05-delivery-plan.md](./05-delivery-plan.md) 确认当前 Phase 和 exit gate。
+2. 打开 README 标记的唯一 active phase 文档，确认范围、稳定输入和 exit gate。
 3. 从 [08-source-layout-and-boundaries.md](./08-source-layout-and-boundaries.md) 确认代码 owner、合法 dependency edge、public export 和 composition root。
-4. 阅读与任务有关的具体契约文档。
+4. 只阅读 phase 文档路由的具体契约章节；历史 evidence 按需追溯。
 5. 检查工作树，保留用户已有修改，不覆盖无关文件。
 6. 搜索现有 API、tests、ADR 和 compatibility entries，避免重复实现。
 7. 明确本任务属于：spike、生产实现、兼容修复、测试、文档或构建系统。
@@ -150,19 +150,8 @@ Spike 输出必须包括：
 - <explicit item, or none>
 ```
 
-## 10. 当前推荐任务
+## 10. 当前 phase routing
 
-**Phase 0S–0E 已于 2026-08-05 完成**，证据见
-[11-phase-0s-evidence.md](./11-phase-0s-evidence.md) 和
-[12-phase-0a-evidence.md](./12-phase-0a-evidence.md)、
-[13-phase-0b-evidence.md](./13-phase-0b-evidence.md)、
-[14-phase-0c-evidence.md](./14-phase-0c-evidence.md)、
-[15-phase-0d-evidence.md](./15-phase-0d-evidence.md) 和
-[16-phase-0e-evidence.md](./16-phase-0e-evidence.md)。不得继续向 scaffold、
-`p8w0a_*`、`p8w0b_*` 或 `p8w0c_bench_*` spike 填入无验收归属的 placeholder behavior。
-
-下一个独立任务是 **Phase 0F：Browser Render / Audio Transport**。它复用 Phase 0E
-的 packed screen/frame DTO、Worker generation/watchdog 和 RuntimeCore port，不得把
-renderer、AudioWorklet 或 wall-clock scheduler 反向塞入 VM adapter。Phase 0E 的
-startup time offset 已由官方 Web Player capture 锁定为 `1/30s`；0F 必须复用
-RuntimeCore 的 committed-slice clock，不得在 renderer/scheduler 内二次偏移。
+当前任务不在本协议维护。唯一入口由 [README](./README.md#当前开发入口) 指向
+[`docs/phases/`](./phases/)；阶段切换只更新该入口和 roadmap，不把任务内容复制到
+本协议。

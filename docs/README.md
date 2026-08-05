@@ -1,89 +1,94 @@
 # PICO-8 Web Player 开发文档
 
-本目录是本项目的工程事实来源（source of truth），用于指导 Codex 和人工开发者实现一个以 **z8lua WASM + TypeScript Runtime** 为核心的 Web-native PICO-8 player。
+本目录是项目工程事实入口。目标是以 z8lua WASM + TypeScript Runtime 实现
+Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE 或导出工具。
 
-当前仓库已完成 Phase 0S 工程骨架、Phase 0A z8lua WASM baseline、Phase 0B
-Shared Pico RAM、Phase 0C interop microbenchmark、Phase 0D lossless
-`.p8.png` codec 与 Phase 0E coroutine frame slice；下一阶段是 Phase 0F browser
-render/audio transport。尚未实现完整 PICO-8
-Runtime 或 Player UI 行为。任何实现任务开始前，
-必须先阅读本页、当前阶段文档、[源码目录与边界契约](./08-source-layout-and-boundaries.md)，
-以及与该任务直接相关的模块契约。
+## 当前开发入口
 
-## 已锁定的方向
+当前阶段是 **Phase 0F：Browser Render / Audio Transport**。
 
-- 目标是 player，不实现 PICO-8 编辑器、命令行环境、SPLORE 浏览器或导出工具。
-- 兼容目标以当前 [PICO-8 v0.2.7 手册](https://www.lexaloffle.com/dl/docs/pico-8_manual.html) 记载的 cart 运行时为准。
-- P8 Lua parser、VM、coroutine、GC 和 16:16 fixed-point 语义使用 [z8lua](https://github.com/samhocevar/z8lua) 编译到 WASM。
-- cart hardware、64 KiB Base RAM 的宿主视图、graphics、audio、input、persistence、调度器和 player UI 使用 TypeScript 实现。
-- Runtime 必须在 Web Worker 中运行；任意 cart 不得直接占用浏览器主线程。
-- 浏览器支持与发布门禁只覆盖 Chrome 或 Chromium；Firefox、Safari/WebKit 及其
-  移动变体不在当前项目测试或兼容承诺内。
-- `.p8.png` 必须按二进制无损解码，禁止通过 Canvas 取像素来解析 cart 数据。
-- 第一阶段只接受用户本地提供的 `.p8` / `.p8.png`。未经明确授权，不实现自动访问、抓取或镜像 Lexaloffle BBS。
+开始实现前只需按顺序阅读：
 
-## 文档索引与阅读顺序
+1. [Phase 0F 执行文档](./phases/0f-browser-render-audio-transport.md)：范围、稳定输入、
+   三个交付单元和 exit gate。
+2. [源码目录与边界契约](./08-source-layout-and-boundaries.md)：package DAG、execution
+   domains、composition roots 和 import 门禁。
+3. Phase 文档明确路由的 04/06 章节；不要默认通读所有历史 evidence。
 
-| 顺序 | 文档 | 用途 |
-| --- | --- | --- |
-| 1 | [01-scope-and-success-criteria.md](./01-scope-and-success-criteria.md) | 产品边界、兼容等级、成功指标和禁止捷径 |
-| 2 | [02-system-architecture.md](./02-system-architecture.md) | 进程拓扑、状态机、数据流、所有权和错误模型 |
-| 3 | [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) | z8lua 构建、WASM ABI、Lua/JS bridge 和性能边界 |
-| 4 | [04-typescript-runtime.md](./04-typescript-runtime.md) | Cart、RAM、Graphics、Audio、Input、Storage 等 TS 模块契约 |
-| 5 | [05-delivery-plan.md](./05-delivery-plan.md) | 从技术 spike 到兼容版本的可执行阶段计划 |
-| 6 | [06-testing-compatibility.md](./06-testing-compatibility.md) | 单元、conformance、golden、性能和浏览器测试门禁 |
-| 7 | [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md) | ADR 摘要、风险登记和必须用实验回答的问题 |
-| 8 | [08-source-layout-and-boundaries.md](./08-source-layout-and-boundaries.md) | canonical workspace、package DAG、composition roots 和 import 门禁 |
-| 9 | [09-codex-task-protocol.md](./09-codex-task-protocol.md) | 后续 Codex 每次执行开发任务时必须遵守的协议 |
-| 10 | [10-reference-sources.md](./10-reference-sources.md) | 本地参考 clone 的精确 commit、用途、许可提醒与隔离规则 |
-| 11 | [11-phase-0s-evidence.md](./11-phase-0s-evidence.md) | Phase 0S 工具选择、边界覆盖和可复现验证证据 |
-| 12 | [12-phase-0a-evidence.md](./12-phase-0a-evidence.md) | z8lua pin、sandbox ABI、语言 fixture、NOTICE 与 artifact 可复现证据 |
-| 13 | [13-phase-0b-evidence.md](./13-phase-0b-evidence.md) | 64 KiB shared RAM、canonical mapper、zero-copy lease、fixed memory/OOM 证据 |
-| 14 | [14-phase-0c-evidence.md](./14-phase-0c-evidence.md) | interop contract、真实 Chromium p50/p95/p99、fallback 与 ADR-006 go/no-go |
-| 15 | [15-phase-0d-evidence.md](./15-phase-0d-evidence.md) | lossless PNG/cart contract、typed API、bounded decoder、fixtures 与错误门禁 |
-| 16 | [16-phase-0e-evidence.md](./16-phase-0e-evidence.md) | frame lifecycle、Q16.16 time、budget poison、HostRequest 降级与 Chrome watchdog |
+根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。当前任务
+细节不得复制回 AGENTS、README、roadmap 和 Codex 协议。
 
-如果文档之间出现冲突，按以下优先级处理：
+## 文档权威边界
 
-1. PICO-8 官方手册中明确记载的运行时行为。
-2. 已完成并有测试证据的 ADR / conformance 结果。
-3. 本目录中更具体的模块契约。
-4. `docs/README.md` 中的概括性描述。
-5. fake-08、zepto8 等参考实现的现有行为。
+| 内容 | 唯一权威位置 |
+| --- | --- |
+| 当前阶段范围、任务和验收 | [`docs/phases/`](./phases/) |
+| 产品范围与兼容等级 | [`01-scope-and-success-criteria.md`](./01-scope-and-success-criteria.md) |
+| 运行拓扑、状态和 transaction 语义 | [`02-system-architecture.md`](./02-system-architecture.md) |
+| z8lua/WASM bridge 契约 | [`03-z8lua-wasm-bridge.md`](./03-z8lua-wasm-bridge.md) |
+| TypeScript Runtime 模块目标契约 | [`04-typescript-runtime.md`](./04-typescript-runtime.md) |
+| 跨阶段 roadmap | [`05-delivery-plan.md`](./05-delivery-plan.md) |
+| 测试策略、兼容矩阵和发布门禁 | [`06-testing-compatibility.md`](./06-testing-compatibility.md) |
+| ADR 索引、风险和真正未决问题 | [`07-decisions-risks-open-questions.md`](./07-decisions-risks-open-questions.md) |
+| 源码目录、依赖和 composition roots | [`08-source-layout-and-boundaries.md`](./08-source-layout-and-boundaries.md) |
+| 通用 Codex 工作协议 | [`09-codex-task-protocol.md`](./09-codex-task-protocol.md) |
+| 本地参考源码与许可隔离 | [`10-reference-sources.md`](./10-reference-sources.md) |
+| 已完成阶段和 differential 记录 | [`evidence/`](./evidence/) |
+| Accepted/Rejected 设计决定 | [`adr/`](./adr/) |
+| ABI、Runtime、codec/API 机器契约 | [`../spec/`](../spec/) |
 
-参考实现不是规范。采用其算法前，必须确认其行为、版本覆盖和许可证来源。
+边界规则：
 
-## 规范用语
+- `spec/` 优先于文档中的示例字段；示例不得成为第二份协议。
+- `docs/adr/` 决定默认路径；普通任务不能静默改变 Accepted ADR。
+- `docs/evidence/` 是历史审计资料，不是当前实现状态入口。
+- 02 只定义运行时行为，08 只定义代码放置和依赖；不得互相复制目录树或协议。
+- 05 只维护 roadmap 状态，09 只维护通用工作流；当前任务只属于 phase 文档。
 
-本文档集使用以下关键词：
+## 实现状态标签
 
-- **MUST / 必须**：违反即视为实现错误。
-- **MUST NOT / 禁止**：不可作为临时捷径提交。
-- **SHOULD / 应当**：默认执行；偏离时必须记录理由和测试证据。
-- **MAY / 可以**：不影响兼容契约的实现选择。
-- **Spike**：为回答一个明确技术问题而写的最小实验代码，不等同于生产实现。
-- **Conformance cart**：只验证一个或一组明确 PICO-8 行为的测试 cart。
-- **Logical time slice**：target FPS 下的一个 simulation-clock 单位。官方差分锁定 boot startup 为 `1/30s`，因此 30 Hz boot commit 1 slice、60 Hz boot commit 2 slices；之后每个成功 step commit 1 slice。
-- **Host frame**：一次成功 `step()` 发布的画面，使用独立 `frameId`。startup epoch 不发布 frame event，不能用 `frameId` 代替 logical time counter。
-- **Custom-loop step**：从 startup/上一个受控 `flip()` continuation 推进到下一个 `flip()`；首次 `flip()` 同时识别 lifecycle 并 commit startup epoch。
+大型 living contract 使用以下标签，阅读示例代码前先确认状态：
 
-## 外部事实来源
+- **Implemented**：当前源码与自动化证据已经支持。
+- **Accepted**：架构决定已锁定，但可能尚未完整实现。
+- **Proposed**：必须由当前/未来 phase 用 spike 和 ADR 决定。
+- **Deferred**：明确不在当前 phase 范围。
+- **Evidence**：完成时记录；不随当前实现细节反复改写。
 
-- [PICO-8 User Manual](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
-- [z8lua](https://github.com/samhocevar/z8lua)
-- [fake-08](https://github.com/jtothebell/fake-08)
-- [zepto8](https://github.com/samhocevar/zepto8)
-- [Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos)
+找不到状态时，以当前源码、机器 contract 和测试为准，不把目标架构描述当成已实现。
 
-以上三份开源参考的本地固定 checkout 与隔离规则见 [10-reference-sources.md](./10-reference-sources.md)。`ref/` 只用于离线阅读和 provenance 查找，不是 production dependency 或测试输入。
+## 已锁定方向
+
+- 兼容目标是 [PICO-8 v0.2.7 手册](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
+  所描述的 cart Runtime。
+- z8lua WASM 负责 P8 Lua parser、VM、coroutine、GC 和 Q16.16 语言语义。
+- TypeScript Runtime 负责 cart hardware、Pico RAM、graphics、audio、input、
+  persistence、scheduler 和 player orchestration。
+- Runtime 在 Web Worker；Canvas/WebGL 和 AudioContext/AudioWorklet 是 app adapters。
+- Chrome/Chromium 是唯一浏览器支持和发布门禁；Firefox/WebKit 不在范围。
+- `.p8.png` 从 bytes 无损解析，禁止用 Canvas 读取 cart payload。
+- 首版只接受 caller-provided/local cart bytes；未经授权不实现 BBS 自动访问。
+- `ref/` 只用于隔离的本地阅读，不进入 workspace、production、tests 或 build。
+
+## 规范优先级
+
+1. 官方手册明确的运行时行为。
+2. 合法、可复现的官方 capture 和已完成 conformance evidence。
+3. `spec/` 与 Accepted ADR。
+4. 更具体的模块契约。
+5. fake-08、zepto8 等带 provenance 的参考实现。
+
+参考实现不是规范。外部来源和固定 checkout 见
+[`10-reference-sources.md`](./10-reference-sources.md)，站点访问还必须遵守
+[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos)。
 
 ## 文档维护规则
 
-- 实现改变公共接口、状态机、内存所有权或兼容承诺时，必须在同一任务中更新相关文档。
-- 源码 package、执行域、公共 exports 或 production dependency edge 变化时，必须同步 [08-source-layout-and-boundaries.md](./08-source-layout-and-boundaries.md) 和 architecture tests；其他文档不得维护第二套目录树。
-- 一个未决问题只有在附带可复现测试、基准或官方依据后才能改为“已决定”。
-- z8lua 不能只记录仓库或 branch 名；构建必须记录精确 commit、本地 patch manifest、工具链版本和产物 hash。
-- `ref/` 中的本地 clone 不得进入 workspace、production/test import graph 或构建；新增/更新 clone 时必须同步 [10-reference-sources.md](./10-reference-sources.md) 的 commit、用途与许可提醒。
-- 阶段完成时，必须更新 [05-delivery-plan.md](./05-delivery-plan.md) 的状态与证据链接。
-- 已知兼容差异必须进入测试兼容矩阵，不得只留在代码注释或聊天记录中。
-- 文档中的命令在项目脚手架创建后必须变成真实、可执行的 package scripts；在此之前不得伪造“已通过”的命令。
+- 公共接口、状态机、ownership 或兼容承诺改变时，同一任务更新唯一 owner 文档。
+- package、execution domain、exports 或 dependency edge 改变时，更新 08 和
+  architecture tests；其他文档只链接。
+- 一个 Proposed 项只有获得测试、benchmark 或官方依据后才能改为 Accepted/Rejected。
+- 阶段开始时创建/启用 phase 文档；阶段结束后把证据归档到 `docs/evidence/`，并把
+  roadmap 状态压缩为一行。
+- 已知差异进入 06 的兼容矩阵，不只留在聊天或代码注释。
+- 文档中的命令必须真实存在；目标命令必须显式标为 Proposed，不能伪造已通过。

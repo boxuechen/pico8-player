@@ -4,7 +4,7 @@
 
 范围：Shared Pico RAM、canonical address mapper、TS zero-copy lease、固定 memory/OOM
 
-ADR：[ADR-013](./adr/013-shared-pico-ram-boundary.md)
+ADR：[ADR-013](../../adr/013-shared-pico-ram-boundary.md)
 
 ## 1. 结论
 

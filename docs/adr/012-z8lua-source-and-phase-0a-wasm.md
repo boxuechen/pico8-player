@@ -42,7 +42,7 @@ Player 需要 P8 Lua parser、Q16.16 数值和 coroutine，但不能让本地研
 
 ## Evidence
 
-- [Phase 0A 完成证据](../12-phase-0a-evidence.md)
+- [Phase 0A 完成证据](../evidence/phase-0/12-phase-0a-evidence.md)
 - `pnpm run verify:wasm`
 - `tests/wasm/phase-0a.test.mjs`
 - `wasm/manifest.lock.json`

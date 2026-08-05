@@ -3,7 +3,7 @@
 - 状态：Accepted（Phase 0C；Chrome/Chromium-only scope 于 Phase 0D 前锁定）
 - 日期：2026-08-05
 - 决策范围：z8lua WASM 与 TypeScript Runtime 之间的调用/Shared RAM 边界
-- 证据：[Phase 0C 完成证据](../14-phase-0c-evidence.md)
+- 证据：[Phase 0C 完成证据](../evidence/phase-0/14-phase-0c-evidence.md)
 
 ## 1. 决策
 

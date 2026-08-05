@@ -56,7 +56,7 @@ GFX/SCREEN 低层 remap。
 
 ## Evidence
 
-- [Phase 0B 完成证据](../13-phase-0b-evidence.md)
+- [Phase 0B 完成证据](../evidence/phase-0/13-phase-0b-evidence.md)
 - `tests/wasm/phase-0b.test.mjs`
 - `wasm/patches/0002-shared-pico-memory-reader.patch`
 - `wasm/manifest.lock.json`

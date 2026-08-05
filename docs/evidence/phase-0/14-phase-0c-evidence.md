@@ -1,9 +1,9 @@
 # Phase 0C 完成证据
 
-> 日期：2026-08-05  
-> 实现基线：`10caca4fa1dccd7304128f0ace42294900385711`  
-> 决策：[ADR-006](./adr/006-interop-hot-path-boundary.md)  
-> 原始结果：[chromium-macos-arm64.json](../benchmarks/interop/results/chromium-macos-arm64.json)
+> 日期：2026-08-05
+> 实现基线：`10caca4fa1dccd7304128f0ace42294900385711`
+> 决策：[ADR-006](../../adr/006-interop-hot-path-boundary.md)
+> 原始结果：[chromium-macos-arm64.json](../../../benchmarks/interop/results/chromium-macos-arm64.json)
 
 ## 1. 结论
 

@@ -59,7 +59,7 @@ lifecycle；Lua count hook 只能处理中断 VM instructions，不能覆盖 par
   [`tests/browser/phase-0e.html`](../../tests/browser/phase-0e.html)。
 - 官方 Web Player clock capture、probe hash 与截图：
   [`docs/evidence/phase-0e-official-clock.json`](../evidence/phase-0e-official-clock.json)。
-- 完整交付记录：[Phase 0E 完成证据](../16-phase-0e-evidence.md)。
+- 完整交付记录：[Phase 0E 完成证据](../evidence/phase-0/16-phase-0e-evidence.md)。
 
 ## Consequences
 

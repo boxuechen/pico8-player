@@ -3,6 +3,18 @@
 > 状态：v1 canonical source layout
 > 适用范围：所有 production source、WASM source、生成物、测试与构建工具
 
+## 状态路由
+
+| 状态 | 本文内容 |
+| --- | --- |
+| **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
+| **Scaffold** | main composition/UI、audio protocol、PCM queue 与 AudioWorklet processor 的文件位已建立，但 Phase 0F 前不代表功能完成 |
+| **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
+| **Current owner** | Phase 0F 的 presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
+
+目录树是归属契约，不是“文件全部存在”的清单。当前阶段执行入口是
+[`phases/0f-browser-render-audio-transport.md`](./phases/0f-browser-render-audio-transport.md)。
+
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
 目录美观不是目标。目标是让以下约束能够被 TypeScript project references、package `exports` 和自动化依赖图测试强制执行：
@@ -369,6 +381,8 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 普通功能任务可以在既有目录内部增加文件，但必须能明确回答：state owner 是谁、consumer port 在哪里、concrete adapter 在哪里、由哪个 composition root 注入、由哪层测试验证。
 
 ## 10. Scaffold Exit Gate
+
+> 状态：Evidence；Complete。
 
 Phase 0S 完成前不得开始把 cart behavior 填入 production modules。门禁为：
 

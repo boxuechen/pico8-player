@@ -4,7 +4,7 @@
 
 范围：可复现 z8lua WASM baseline
 
-ADR：[ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md)
+ADR：[ADR-012](../../adr/012-z8lua-source-and-phase-0a-wasm.md)
 
 > 历史记录：本页 hash 对应 Phase 0A commit `df6159376ab59792743f87387a2a48e1f37da3f4`。
 > 当前 `wasm/source.lock.json`、artifact 名称与 manifest 已由 Phase 0B 的 ordered
@@ -107,7 +107,7 @@ pnpm run verify
 - 未运行正版 PICO-8 differential capture；`^` 仍是 Known Difference，其他
   baseline fixture 也继续接受后续 official golden 校准。
 - Lua heap cap/OOM 与 Phase 0B fixed artifact 参数已由
-  [ADR-013](./adr/013-shared-pico-ram-boundary.md) 回答；production corpus sizing 仍后续校准。
+  [ADR-013](../../adr/013-shared-pico-ram-boundary.md) 回答；production corpus sizing 仍后续校准。
 - `@/%/$`、upper RAM、地址 wrap、64 KiB alias 和 GFX/SCREEN remap 已由
   [Phase 0B](./13-phase-0b-evidence.md) 完成。
 - production `p8w_*` ABI、frame lifecycle、host requests、graphics/audio/input 和

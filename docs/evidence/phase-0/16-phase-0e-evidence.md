@@ -2,10 +2,10 @@
 
 > 日期：2026-08-05
 > 初始实现基线：`033dabb6d766a35ec29a65826a391fc5938006f6`；官方 clock 差分修订与本文同提交
-> 决策：[ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md)
-> ABI：[`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)
-> Runtime contract：[`spec/phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)
-> artifact lock：[`wasm/runtime-v1.manifest.lock.json`](../wasm/runtime-v1.manifest.lock.json)
+> 决策：[ADR-017](../../adr/017-coroutine-frame-slice-and-fault-containment.md)
+> ABI：[`spec/abi/p8w-v1.json`](../../../spec/abi/p8w-v1.json)
+> Runtime contract：[`spec/phase-0e-runtime-contract.json`](../../../spec/phase-0e-runtime-contract.json)
+> artifact lock：[`wasm/runtime-v1.manifest.lock.json`](../../../wasm/runtime-v1.manifest.lock.json)
 
 ## 1. 结论
 
@@ -90,7 +90,7 @@ loop boundary、`cls/pset/btn` 基本语义与 coroutine 的 direct resume behav
 中打开真实官方 widget，只替换本次 `get_cart.php` response，不上传数据、不修改 BBS；
 官方 player/widget 调试下载只留在 gitignored `ref/`。仓库只提交结构化 capture、原创
 source 与纯 probe framebuffer 截图：
-[`phase-0e-official-clock.json`](./evidence/phase-0e-official-clock.json)。
+[`phase-0e-official-clock.json`](../phase-0e-official-clock.json)。
 
 其他已知限制：custom loop 暂定 30 Hz；没有官方 CPU cost accounting；nested 一般
 async host suspension unsupported；`__p8w_probe_host_request` 不是 guest public API；

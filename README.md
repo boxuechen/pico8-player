@@ -7,9 +7,11 @@ callback/custom-loop frame slice with Worker fault containment. Browser support
 and release testing target Chrome/Chromium only. Full cart hardware, render/audio
 transport, and the player UI are not implemented yet.
 
-Start with [the engineering documentation](./docs/README.md), the
-[Phase 0S evidence](./docs/11-phase-0s-evidence.md), and the
-[Phase 0E evidence](./docs/16-phase-0e-evidence.md).
+Start with [the engineering documentation](./docs/README.md) and the
+[current Phase 0F execution brief](./docs/phases/0f-browser-render-audio-transport.md).
+Completed Phase 0 records live in the
+[evidence archive](./docs/evidence/phase-0/README.md) and are not required reading
+for each implementation task.
 
 ```sh
 pnpm install --frozen-lockfile

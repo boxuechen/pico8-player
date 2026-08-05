@@ -5,6 +5,20 @@
 > 基准版本：PICO-8 0.2.7
 > 最近核验：2026-08-05
 
+## 状态路由
+
+本文是长期质量契约，不表示所有命令、fixture 和 CI lane 已经存在。
+
+| 状态 | 对应范围 |
+| --- | --- |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E 和 aggregate verify scripts；已归档的 Phase 0 evidence |
+| **Current Phase 0F gates** | framebuffer/presenter、audio transport/queue、Chrome benchmark 与 soak；具体命令和阈值由[当前阶段文档](./phases/0f-browser-render-audio-transport.md)收敛 |
+| **Target** | 第 3 节完整测试资产布局、尚未落地的 unit/conformance/fuzz/differential/CI 命令与 release matrix |
+| **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
+
+执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本；历史结果只在
+[`evidence/`](./evidence/README.md) 中陈述。
+
 本文定义 pico8-web-player 的测试策略、兼容性口径、性能预算和发布门禁。它是后续 Codex 开发时的执行契约，不是测试愿望清单。任何运行时行为变更都必须能回答三个问题：
 
 1. 它对应哪条 PICO-8 行为或项目明确声明的扩展？
@@ -381,7 +395,7 @@ Phase 0C 已把 bridge-only 子集锁定在
 64 KiB RAM hash 与 fixed-buffer identity，再允许 timing；统计使用 R-7 quantile。
 Chrome DedicatedWorker 不暴露 `performance.memory` 时 allocation 必须记为
 `unavailable`，不能填 0。实测与浏览器缺失状态见
-[Phase 0C 证据](./14-phase-0c-evidence.md)。后续 framebuffer copy、完整
+[Phase 0C 证据](./evidence/phase-0/14-phase-0c-evidence.md)。后续 framebuffer copy、完整
 `pget/sspr/map`、audio 和 representative cart benchmark 是增量场景，不得改写
 Phase 0C 原始 contract 或结果。
 
@@ -596,7 +610,7 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 
 ### 15.4 Phase 0A P8 Lua baseline 矩阵
 
-本表只记录 [Phase 0A artifact](./12-phase-0a-evidence.md) 的 z8lua baseline，
+本表只记录 [Phase 0A artifact](./evidence/phase-0/12-phase-0a-evidence.md) 的 z8lua baseline，
 不等同于完整 Player API 支持。没有正版 PICO-8 capture 的项目保持 `unknown`，即使
 上游 fixture 已稳定。
 
@@ -614,7 +628,7 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 
 ### 15.5 Phase 0B Shared Pico RAM 矩阵
 
-本表只记录 [Phase 0B artifact](./13-phase-0b-evidence.md) 的 RAM boundary，不代表
+本表只记录 [Phase 0B artifact](./evidence/phase-0/13-phase-0b-evidence.md) 的 RAM boundary，不代表
 完整 memory/graphics API 或 cart lifecycle 已实现。手册明确项目可标为
 `implemented-baseline`；未定义/尚无正版 capture 的行为保持 `unknown`。
 
@@ -630,7 +644,7 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 
 ### 15.6 Phase 0E Coroutine Frame Slice 矩阵
 
-本表只覆盖 [Phase 0E evidence](./16-phase-0e-evidence.md) 的 lifecycle/safety slice，
+本表只覆盖 [Phase 0E evidence](./evidence/phase-0/16-phase-0e-evidence.md) 的 lifecycle/safety slice，
 不把最小 `cls/pset/btn` 宣称为完整 API conformance。startup time 已由官方 Web
 Player capture 锁定；custom 60 Hz/fps-selection 仍留给后续 conformance。
 

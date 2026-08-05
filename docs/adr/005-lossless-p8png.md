@@ -3,7 +3,7 @@
 - 状态：Accepted（Phase 0D）
 - 日期：2026-08-05
 - 决策范围：`.p8.png` PNG/cart payload/code source 解码
-- 证据：[Phase 0D 完成证据](../15-phase-0d-evidence.md)
+- 证据：[Phase 0D 完成证据](../evidence/phase-0/15-phase-0d-evidence.md)
 - 机器契约：[`spec/cart-codec-contract.json`](../../spec/cart-codec-contract.json)
 
 ## 1. 决策

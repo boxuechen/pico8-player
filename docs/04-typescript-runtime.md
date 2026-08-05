@@ -5,6 +5,21 @@
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
 
+## 状态路由
+
+本文同时保存已接受边界和未来 Runtime 目标。代码示例默认是 Target interface；只有被
+机器契约、public export 和测试共同覆盖时，才可视为当前 API。
+
+| 状态 | 对应范围 |
+| --- | --- |
+| **Implemented through Phase 0E** | `.p8.png` bounded decode；`FrameSliceRuntime` / `FrameVmPort`；production z8lua adapter；bounded Worker DTO、watchdog/generation、startup clock |
+| **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
+| **Proposed in Phase 0F** | main-thread presenter、dedicated audio `MessagePort`、bounded Worklet queue；执行细节见[当前阶段文档](./phases/0f-browser-render-audio-transport.md) |
+| **Deferred** | 文本 `.p8`、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
+
+Phase 0E 当前协议以 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)
+为准。本文不得被用来提前实现当前阶段范围外的完整 Runtime。
+
 ## 1. 文档目的与规范用语
 
 本文把“z8lua WASM + TypeScript Runtime”拆成可以直接编码、测试和验收的模块契约。后续 Codex 实现代码前，必须先能回答：代码属于哪个模块、依赖方向是否正确、状态由谁拥有、如何确定性测试、错误如何跨 Worker 上报。
@@ -353,6 +368,8 @@ v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值�
 
 ## 7. Graphics
 
+> 状态：Target；Phase 0F 只验证 presenter boundary。
+
 ### 7.1 分层
 
 ```ts
@@ -395,6 +412,8 @@ interface ScreenEncoder {
 热点优化顺序固定为：先 conformance 正确，再 profile；只下沉被测量证明的 `pset/pget/spr/sspr/map/tline/memcpy` 热点。任何 WASM 下沉实现必须继续以同一块 RAM 和同一组 golden 为准。
 
 ## 8. AudioSynth 与 AudioWorklet
+
+> 状态：Target；Phase 0F 只验证 transport。
 
 ### 8.1 责任边界
 
@@ -539,6 +558,8 @@ interface CartDataWindow {
 `cstore` 不得覆写用户本地原文件。Web Player 使用每 cart identity 的 copy-on-write ROM overlay，并可由 UI 另行提供导出；overlay 是否跨 session 持久化由产品配置决定，但同一次运行内 `cstore` 后的 `reload` 必须读取新值。
 
 ## 12. Worker、watchdog 与消息协议
+
+> 状态：Mixed；Phase 0E bounded subset 已实现，完整协议仍是 Target。
 
 ```ts
 type RuntimeCommand =

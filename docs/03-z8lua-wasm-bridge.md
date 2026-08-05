@@ -8,10 +8,21 @@
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
-实施状态：Phase 0A baseline 与 Phase 0B Shared Pico RAM 已完成；证据分别见
-[12-phase-0a-evidence.md](./12-phase-0a-evidence.md) 和
-[13-phase-0b-evidence.md](./13-phase-0b-evidence.md)。`p8w0a_*`/`p8w0b_*` 都是
-bounded spike ABI，不是本文件后文 Proposed production `p8w_*`。
+实施状态：Phase 0A baseline、Phase 0B Shared Pico RAM 和 Phase 0E production-named
+frame ABI subset 已完成；证据见 [Phase 0 evidence](./evidence/phase-0/README.md)。
+`p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；Phase 0E 已实现 `p8w_*` lifecycle、
+frame stepping、host-request、budget 和 structured error 的受限子集。本文列出的完整 ABI
+只有机器契约、public adapter 与测试共同覆盖的部分才算 Implemented。
+
+| 状态 | 本文内容 |
+| --- | --- |
+| **Implemented** | Phase 0A/0B 基线；Phase 0E production `p8w_*` bounded subset；固定内存、manual slice、root host-request 与错误路径 |
+| **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
+| **Proposed** | 完整函数/值 binding、capability surface、剩余 lifecycle 与 host API 扩展 |
+| **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
+
+机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter；
+第 11–12 节是 Phase 0 的历史实施/测量说明，不是下一阶段任务入口。
 
 ## 1. 结论与边界
 
@@ -220,6 +231,8 @@ pointer/size/reset、canonical map/read/write 和 source alloc/free。ABI versio
 state machine，不得被 RuntimeCore 当作 production `VmPort`。
 
 ## 6. Proposed C ABI v1
+
+> 状态：Phase 0E bounded subset 已实现；其余接口仍是 Target。
 
 本节是本项目 **Proposed** ABI，不是 z8lua 上游 API。Phase 0 可以修改它，但修改后必须更新本文、TS declarations 和 ABI tests。
 
@@ -488,6 +501,8 @@ z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try
 
 ## 11. Phase 0 实施顺序
 
+> 状态：Evidence / historical。
+
 Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 
 1. **Baseline VM（Phase 0A Complete）**：pin source、tracked allocator、白名单 libs、compile/execute shorthand/fixed/coroutine fixture、instruction budget、NOTICE。
@@ -501,6 +516,8 @@ Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 每个 slice 必须同时提交 tests 和相应 ADR/本文更新；spike 结果不能只存在于聊天或 benchmark 截图。
 
 ## 12. 性能 Spike
+
+> 状态：Evidence / historical。
 
 ### 12.1 必测 workload
 
@@ -539,7 +556,7 @@ cross-path hash 与 fixed-buffer 门禁通过，未触发下沉。由于支持�
 Chrome/Chromium，浏览器 portability condition 已关闭；representative-cart 8 ms
 gate 仍留给后续完整 Runtime。见
 [ADR-006](./adr/006-interop-hot-path-boundary.md) 与
-[Phase 0C 证据](./14-phase-0c-evidence.md)。
+[Phase 0C 证据](./evidence/phase-0/14-phase-0c-evidence.md)。
 
 ## 13. 验收标准
 
