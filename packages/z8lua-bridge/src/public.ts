@@ -6,13 +6,44 @@ import type {
   FrameVmMode,
   FrameVmPort,
   FrameVmState,
+  PicoApiHost,
   VmFaultRecord,
   VmOperationOutcome,
 } from "@pico8-web/runtime-core";
+import { dispatchPicoHostCall } from "./generated/pico-host-bindings.js";
 
 const INVALID_MAPPED_ADDRESS = 0xffff_ffff;
 const moduleIds = new WeakMap<object, number>();
 let nextModuleId = 1;
+const hostDispatcherState = Symbol("p8w.host-dispatcher-state");
+const HOST_DISPATCH_OK = 0;
+const HOST_DISPATCH_FAILED = 1;
+
+export type HostBindingState = "unbound" | "bound" | "released";
+
+interface HostBindingSlot {
+  state: HostBindingState;
+  host: PicoApiHost | undefined;
+  error: string | undefined;
+}
+
+interface HostDispatcherState {
+  nextBindingId: number;
+  readonly slots: Map<number, HostBindingSlot>;
+}
+
+type HostDispatchCallback = (
+  bindingId: number,
+  operationId: number,
+  argumentMask: number,
+  argument0: number,
+  argument1: number,
+  argument2: number,
+  argument3: number,
+  argument4: number,
+  argument5: number,
+  resultPointer: number,
+) => number;
 
 /** Minimal Emscripten surface consumed by the Phase 0B memory adapter. */
 export interface Phase0BMemoryModule {
@@ -160,9 +191,11 @@ export type { PicoMemoryLease } from "@pico8-web/contracts";
 /** Production-named v1 ABI surface. Phase 0C benchmark symbols are excluded. */
 export interface FrameRuntimeModule {
   readonly HEAPU8: Uint8Array;
+  p8wHostCall?: HostDispatchCallback;
   _p8w_abi_version(): number;
   _p8w_create(luaHeapLimit: number): number;
   _p8w_destroy(handle: number): number;
+  _p8w_bind_host(handle: number, bindingId: number): number;
   _p8w_compile(handle: number, sourcePointer: number, sourceLength: number): number;
   _p8w_boot(handle: number, budget: number, buttons: number, timeRaw: number): number;
   _p8w_step(handle: number, budget: number, buttons: number, timeRaw: number): number;
@@ -201,7 +234,7 @@ export interface Z8LuaFrameVmOptions {
   readonly luaHeapLimit?: number;
 }
 
-const FRAME_ABI_VERSION = 0x0001_0000;
+const FRAME_ABI_VERSION = 0x0001_0001;
 const STATUS_OK = 0;
 const STATUS_YIELDED = 1;
 const STATUS_INVALID_HANDLE = 2;
@@ -214,6 +247,7 @@ const STATUS_OOM = 8;
 const STATUS_UNSUPPORTED = 9;
 const STATUS_HOST_ERROR = 10;
 const STATUS_STOPPED = 11;
+const STATUS_HOST_API_ERROR = 13;
 const YIELD_FRAME_END = 1;
 const YIELD_FLIP = 2;
 const YIELD_HOST_REQUEST = 3;
@@ -229,6 +263,115 @@ const TextDecoderConstructor = (
   }
 ).TextDecoder;
 const textDecoder = new TextDecoderConstructor("utf-8", { fatal: false });
+
+function safeErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function dispatcherState(module: FrameRuntimeModule): HostDispatcherState {
+  const carrier = module as FrameRuntimeModule & Record<PropertyKey, unknown>;
+  const existing = carrier[hostDispatcherState] as HostDispatcherState | undefined;
+  if (existing !== undefined) return existing;
+  if (module.p8wHostCall !== undefined) {
+    throw new Error("frame runtime module already owns a foreign host dispatcher");
+  }
+  const state: HostDispatcherState = { nextBindingId: 1, slots: new Map() };
+  const callback: HostDispatchCallback = (
+    bindingId,
+    operationId,
+    argumentMask,
+    argument0,
+    argument1,
+    argument2,
+    argument3,
+    argument4,
+    argument5,
+    resultPointer,
+  ) => {
+    const slot = state.slots.get(bindingId >>> 0);
+    if (slot === undefined || slot.state !== "bound" || slot.host === undefined) {
+      if (slot !== undefined) slot.error = `host binding ${bindingId >>> 0} is ${slot.state}`;
+      return HOST_DISPATCH_FAILED;
+    }
+    try {
+      const pointer = resultPointer >>> 0;
+      if (pointer === 0 || pointer + 4 > module.HEAPU8.byteLength) {
+        throw new RangeError("host dispatch returned an invalid result pointer");
+      }
+      const result = dispatchPicoHostCall(
+        slot.host,
+        operationId,
+        argumentMask,
+        [argument0 | 0, argument1 | 0, argument2 | 0, argument3 | 0, argument4 | 0, argument5 | 0],
+      );
+      new DataView(module.HEAPU8.buffer).setInt32(pointer, result | 0, true);
+      slot.error = undefined;
+      return HOST_DISPATCH_OK;
+    } catch (error) {
+      slot.error = safeErrorMessage(error);
+      return HOST_DISPATCH_FAILED;
+    }
+  };
+  Object.defineProperty(carrier, hostDispatcherState, { value: state });
+  module.p8wHostCall = callback;
+  return state;
+}
+
+/** Session-local, exactly-once host slot backed by a module-local dispatcher. */
+export class PicoApiHostRouter {
+  readonly bindingId: number;
+  readonly #module: FrameRuntimeModule;
+  readonly #dispatcher: HostDispatcherState;
+  readonly #slot: HostBindingSlot;
+
+  constructor(module: FrameRuntimeModule) {
+    const state = dispatcherState(module);
+    const bindingId = state.nextBindingId++;
+    if (bindingId === 0 || bindingId > 0xffff_ffff) {
+      throw new Error("frame runtime host binding ids are exhausted");
+    }
+    this.bindingId = bindingId >>> 0;
+    this.#module = module;
+    this.#dispatcher = state;
+    this.#slot = { state: "unbound", host: undefined, error: undefined };
+    state.slots.set(this.bindingId, this.#slot);
+  }
+
+  get state(): HostBindingState {
+    return this.#slot.state;
+  }
+
+  assertModule(module: FrameRuntimeModule): void {
+    if (module !== this.#module) throw new Error("host router belongs to a different WASM module");
+  }
+
+  bind(host: PicoApiHost): void {
+    if (this.#slot.state !== "unbound") {
+      throw new Error(`host router cannot bind from ${this.#slot.state}`);
+    }
+    this.#slot.host = host;
+    this.#slot.error = undefined;
+    this.#slot.state = "bound";
+  }
+
+  release(): void {
+    if (this.#slot.state === "released") return;
+    this.#slot.host = undefined;
+    this.#slot.error = undefined;
+    this.#slot.state = "released";
+    this.#dispatcher.slots.delete(this.bindingId);
+  }
+
+  consumeError(): string | undefined {
+    const error = this.#slot.error;
+    this.#slot.error = undefined;
+    return error;
+  }
+}
+
+export function createPicoApiHostRouter(module: FrameRuntimeModule): PicoApiHostRouter {
+  return new PicoApiHostRouter(module);
+}
 
 function frameState(raw: number): FrameVmState {
   return (
@@ -279,6 +422,8 @@ function failureCode(status: number): VmFaultRecord["code"] {
       return "E_FEATURE_UNSUPPORTED";
     case STATUS_HOST_ERROR:
       return "E_HOST_REQUEST";
+    case STATUS_HOST_API_ERROR:
+      return "E_HOST_API";
     case STATUS_INVALID_HANDLE:
     case STATUS_INVALID_STATE:
     case STATUS_BAD_ARGUMENT:
@@ -358,22 +503,60 @@ export class Z8LuaFrameVm implements FrameVmPort {
   readonly memory: PicoMemoryLease;
   readonly #module: FrameRuntimeModule;
   readonly #binding: FrameRuntimeMemoryBinding;
+  readonly #hostRouter: PicoApiHostRouter;
   #handle: number;
 
-  constructor(module: FrameRuntimeModule, options: Z8LuaFrameVmOptions = {}) {
+  constructor(
+    module: FrameRuntimeModule,
+    hostRouter: PicoApiHostRouter,
+    options: Z8LuaFrameVmOptions = {},
+  ) {
+    hostRouter.assertModule(module);
     if ((module._p8w_abi_version() >>> 0) !== FRAME_ABI_VERSION) {
+      hostRouter.release();
       throw new Error("unsupported p8w frame runtime ABI version");
     }
     const heapLimit = options.luaHeapLimit ?? 0;
     if (!Number.isInteger(heapLimit) || heapLimit < 0 || heapLimit > 0xffff_ffff) {
+      hostRouter.release();
       throw new RangeError("luaHeapLimit must be a uint32");
     }
     const handle = module._p8w_create(heapLimit) >>> 0;
-    if (handle === 0) throw new Error("unable to create z8lua frame VM");
-    this.#module = module;
-    this.#handle = handle;
-    this.#binding = new FrameRuntimeMemoryBinding(module, handle);
-    this.memory = this.#binding.lease;
+    if (handle === 0) {
+      hostRouter.release();
+      throw new Error("unable to create z8lua frame VM");
+    }
+    try {
+      this.#module = module;
+      this.#handle = handle;
+      this.#hostRouter = hostRouter;
+      this.#binding = new FrameRuntimeMemoryBinding(module, handle);
+      this.memory = this.#binding.lease;
+    } catch (error) {
+      module._p8w_destroy(handle);
+      hostRouter.release();
+      throw error;
+    }
+  }
+
+  get hostBindingState(): HostBindingState {
+    return this.#hostRouter.state;
+  }
+
+  bindHost(host: PicoApiHost): void {
+    this.#assertLive();
+    if (host.memoryLeaseId !== this.memory.leaseId) {
+      throw new Error("PicoApiHost is bound to a different memory lease");
+    }
+    this.#hostRouter.bind(host);
+    const status = this.#module._p8w_bind_host(
+      this.#handle,
+      this.#hostRouter.bindingId,
+    ) >>> 0;
+    if (status !== STATUS_OK) {
+      this.#hostRouter.release();
+      throw new Error(`unable to bind PicoApiHost: p8w status ${status}`);
+    }
   }
 
   resetRam(): void {
@@ -463,8 +646,12 @@ export class Z8LuaFrameVm implements FrameVmPort {
     if (this.#handle === 0) return;
     const handle = this.#handle;
     this.#handle = 0;
-    if (this.#module._p8w_destroy(handle) !== STATUS_OK) {
-      throw new Error("unable to destroy z8lua frame VM");
+    try {
+      if (this.#module._p8w_destroy(handle) !== STATUS_OK) {
+        throw new Error("unable to destroy z8lua frame VM");
+      }
+    } finally {
+      this.#hostRouter.release();
     }
   }
 
@@ -504,10 +691,13 @@ export class Z8LuaFrameVm implements FrameVmPort {
   }
 
   #fault(status: number): VmFaultRecord {
-    const message = this.#text(
+    const bridgeMessage = this.#text(
       this.#module._p8w_error_message_ptr(this.#handle),
       this.#module._p8w_error_message_length(this.#handle),
-    ) || `p8w status ${status}`;
+    );
+    const message = status === STATUS_HOST_API_ERROR
+      ? (this.#hostRouter.consumeError() ?? bridgeMessage) || `p8w status ${status}`
+      : bridgeMessage || `p8w status ${status}`;
     const trace = this.#text(
       this.#module._p8w_error_trace_ptr(this.#handle),
       this.#module._p8w_error_trace_length(this.#handle),

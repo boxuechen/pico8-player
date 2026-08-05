@@ -9,19 +9,19 @@ status_values:
 apis:
   - name: cls
     status: partial
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: clears mapped packed screen; clip/draw-state conformance deferred
+    owner: packages/runtime-core
+    phase: 1A
+    note: synchronous generated binding to TS; clears mapped packed screen; clip/draw-state conformance deferred
   - name: pset
     status: partial
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: bounds and explicit/default colour only; camera/clip/fillp deferred
+    owner: packages/runtime-core
+    phase: 1A
+    note: synchronous generated binding to TS; bounds and explicit/default colour only; camera/clip/fillp deferred
   - name: btn
     status: partial
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: P1 six-button held snapshot only; btnp/multi-player deferred
+    owner: packages/runtime-core
+    phase: 1A
+    note: synchronous generated binding to TS; P1 six-button held snapshot only; btnp/multi-player deferred
   - name: time
     aliases: [t]
     status: partial

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "contractName": "pico-host-api-v1",
+  "dispatchAbi": {
+    "argumentEncoding": "signed-q16.16-raw-int32",
+    "presenceEncoding": "uint32-bit-mask",
+    "maximumArguments": 6,
+    "resultEncoding": "signed-int32-out-parameter",
+    "failureEncoding": "nonzero-status"
+  },
+  "bindings": [
+    {
+      "id": 1,
+      "guestName": "cls",
+      "hostMethod": "cls",
+      "parameters": [
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 2,
+      "guestName": "pset",
+      "hostMethod": "pset",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 3,
+      "guestName": "btn",
+      "hostMethod": "btn",
+      "parameters": [
+        { "name": "buttonRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "playerRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "integer-if-first-omitted-otherwise-boolean"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 # 架构决定、风险与未决问题
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义；当前没有 active phase。
+如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义；当前 active phase 是 Phase 1。
 
 ## 1. ADR registry
 
@@ -17,7 +17,7 @@
 | ADR-005 | [Accepted](./adr/005-lossless-p8png.md) | bounded、bytes-only `.p8.png` codec |
 | ADR-006 | [Accepted](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length hybrid ABI 与 profile-driven fallback |
 | ADR-007 | Accepted | 首版只接受 caller-provided/local cart bytes |
-| ADR-008 | Proposed / Phase 1+ | API schema 是否生成 bindings |
+| ADR-008 | [Accepted](./adr/008-schema-generated-host-bindings.md) | production schema 单向生成 C/TS host bindings；prototype 不暴露未实现 API |
 | ADR-009 | [Accepted](./adr/009-canvas2d-frame-presenter.md) | Canvas2D 是唯一默认 presenter；WebGL fallback 未实现 |
 | ADR-010 | [Accepted](./adr/010-dedicated-messageport-audio-transport.md) | dedicated MessagePort 是唯一默认 PCM transport；不实现 relay/SAB |
 | ADR-011 | Proposed / later | hidden-tab 默认 pause、不追帧 |
@@ -32,16 +32,14 @@
 
 ### Active blockers
 
-当前没有 active phase blocker。Phase 0F 的 browser-boundary 决策、composition 和生命周期
-门禁已完成，见
-[`17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)。
+当前没有 active phase blocker。Phase 1A 已完成；下一 work unit 由
+[`Phase 1`](./phases/1-l1-minimal-playable-loop.md) 激活。
 
 ### Deferred open questions
 
 | ID | 问题 | 何时回答 |
 | --- | --- | --- |
 | Q-02 | production WASM/Lua heap sizing 是否适合代表 cart corpus？ | Phase 4 corpus；不得开启 memory growth |
-| Q-04 | API binding 是否从 machine inventory 生成？ | Phase 1 用 5–10 个异构签名 prototype |
 | Q-08 | 官方 virtual CPU/cost 如何校准？ | Phase 4；当前 hard instruction budget 只负责安全 |
 | Q-10 | HostRequest 能否跨任意 guest coroutine 层恢复？ | L3；当前 nested 固定 unsupported，只允许预供给/同步 cache |
 
@@ -56,6 +54,7 @@
 | Q-07 | dedicated MessagePort 双速率 10 分钟 soak 通过；不需要 SAB/relay | [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | Q-09 | z8lua pin/patch、upper RAM mapper 和 benchmark boundary 已锁定 | [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
+| Q-04 | 采用 schema 单向生成；production 只列已实现 API，8-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
 
 ## 3. Risk register
 

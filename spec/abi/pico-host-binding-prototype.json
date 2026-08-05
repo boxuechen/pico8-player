@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "contractName": "pico-host-binding-prototype",
+  "purpose": "Generator capability fixture; none of these names are runtime-exposed.",
+  "runtimeExposed": false,
+  "dispatchAbi": {
+    "argumentEncoding": "signed-q16.16-raw-int32",
+    "presenceEncoding": "uint32-bit-mask",
+    "maximumArguments": 6,
+    "resultEncoding": "signed-int32-out-parameter",
+    "failureEncoding": "nonzero-status"
+  },
+  "bindings": [
+    { "id": 101, "guestName": "probe_void0", "hostMethod": "probeVoid0", "parameters": [], "result": "void" },
+    { "id": 102, "guestName": "probe_required1", "hostMethod": "probeRequired1", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }], "result": "void" },
+    { "id": 103, "guestName": "probe_optional1", "hostMethod": "probeOptional1", "parameters": [{ "name": "a", "type": "q16.16-raw-i32", "optional": true }], "result": "void" },
+    { "id": 104, "guestName": "probe_pair", "hostMethod": "probePair", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }], "result": "void" },
+    { "id": 105, "guestName": "probe_optional_tail", "hostMethod": "probeOptionalTail", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32", "optional": true }, { "name": "c", "type": "q16.16-raw-i32", "optional": true }], "result": "void" },
+    { "id": 106, "guestName": "probe_integer", "hostMethod": "probeInteger", "parameters": [], "result": "integer" },
+    { "id": 107, "guestName": "probe_boolean", "hostMethod": "probeBoolean", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }], "result": "boolean" },
+    { "id": 108, "guestName": "probe_six", "hostMethod": "probeSix", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }, { "name": "c", "type": "q16.16-raw-i32" }, { "name": "d", "type": "q16.16-raw-i32" }, { "name": "e", "type": "q16.16-raw-i32" }, { "name": "f", "type": "q16.16-raw-i32" }], "result": "integer" }
+  ]
+}

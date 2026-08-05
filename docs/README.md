@@ -5,14 +5,14 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前没有 active phase。**Phase 0F：Browser Render / Audio Transport** 已完成，
-Phase 1 尚未激活。开始下一阶段实现前，先在 [`docs/phases/`](./phases/)
-创建唯一的 active phase 执行文档。
+当前 active phase 是
+[`Phase 1：L1 最小可玩闭环`](./phases/1-l1-minimal-playable-loop.md)。Phase 1A
+Host API Boundary 已完成，下一 work unit 是 1B；后续开发以该 phase 文档为唯一任务入口。
 
 查看当前实现基线时按顺序阅读：
 
-1. [Phase 0F 完成证据](./evidence/phase-0/17-phase-0f-evidence.md)：浏览器边界、
-   唯一默认路径和 Phase 0 exit gate。
+1. [Phase 1 active phase](./phases/1-l1-minimal-playable-loop.md)：当前 checkpoint、
+   下一 work unit、文件边界和验收门禁。
 2. [源码目录与边界契约](./08-source-layout-and-boundaries.md)：package DAG、execution
    domains、composition roots 和 import 门禁。
 3. 未来 active phase 文档明确路由的 owner 章节；不要默认通读所有历史

@@ -10,11 +10,12 @@
 #include "lauxlib.h"
 #include "lua.h"
 #include "lualib.h"
+#include "generated/p8w_host_bindings.generated.h"
 #include "p8w_pico_memory.h"
 
 namespace {
 
-constexpr uint32_t kAbiVersion = 0x00010000u;
+constexpr uint32_t kAbiVersion = 0x00010001u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
@@ -27,6 +28,22 @@ constexpr char kContextRegistryKey[] = "__p8w_runtime_context";
 constexpr char kBudgetSentinel[] = "__p8w_instruction_budget_exceeded__";
 constexpr char kNestedSentinel[] = "__p8w_nested_host_suspend__";
 constexpr char kChunkName[] = "@cart.p8";
+
+EM_JS(uint32_t, dispatch_host_call,
+      (uint32_t binding_id, uint32_t operation_id, uint32_t argument_mask,
+       int32_t argument0, int32_t argument1, int32_t argument2,
+       int32_t argument3, int32_t argument4, int32_t argument5,
+       int32_t *result), {
+        const dispatch = Module['p8wHostCall'];
+        if (typeof dispatch !== 'function') return 1;
+        try {
+          return dispatch(binding_id, operation_id, argument_mask, argument0,
+                          argument1, argument2, argument3, argument4,
+                          argument5, result) >>> 0;
+        } catch (error) {
+          return 1;
+        }
+      });
 
 enum class ActiveKind : uint8_t { None, TopLevel, Init, Update, Update60, Draw };
 
@@ -52,7 +69,8 @@ struct Context {
   uint32_t target_fps = 0;
   uint32_t button_mask = 0;
   int32_t time_raw = 0;
-  uint8_t draw_color = 6;
+  uint32_t host_binding_id = 0;
+  bool host_bound = false;
 
   uint32_t budget_start = 0;
   uint32_t remaining_budget = 0;
@@ -60,6 +78,7 @@ struct Context {
   bool nested_suspend_attempt = false;
   bool host_oom = false;
   bool host_response_failed = false;
+  bool host_api_failed = false;
 
   bool pending_request = false;
   bool response_ready = false;
@@ -259,56 +278,47 @@ int p8_poke4(lua_State *state) {
   return 0;
 }
 
-int p8_cls(lua_State *state) {
-  Context *context = context_from_lua(state);
-  const uint8_t color = static_cast<uint8_t>(
-      lua_isnoneornil(state, 1)
-          ? 0
-          : static_cast<int32_t>(luaL_checknumber(state, 1))) &
-                        0x0fu;
-  const uint8_t packed = static_cast<uint8_t>(color | (color << 4u));
-  for (uint32_t index = 0; index < 0x2000u; ++index) {
-    context->ram[p8w::map_address(context->ram, 0x6000u + index)] = packed;
+int p8_host_call(lua_State *state) {
+  auto *descriptor = static_cast<const P8wHostBindingDescriptor *>(
+      lua_touserdata(state, lua_upvalueindex(1)));
+  if (descriptor == nullptr) return luaL_error(state, "host binding invariant failed");
+  int32_t arguments[6] = {};
+  uint32_t argument_mask = 0;
+  for (uint8_t index = 0; index < descriptor->maximum_arguments; ++index) {
+    const int stack_index = static_cast<int>(index) + 1;
+    if (lua_isnoneornil(state, stack_index)) {
+      if (index < descriptor->minimum_arguments) {
+        luaL_checknumber(state, stack_index);
+      }
+      continue;
+    }
+    arguments[index] = luaL_checknumber(state, stack_index).bits();
+    argument_mask |= 1u << index;
   }
-  return 0;
-}
-
-int p8_pset(lua_State *state) {
   Context *context = context_from_lua(state);
-  const int32_t x = static_cast<int32_t>(luaL_checknumber(state, 1));
-  const int32_t y = static_cast<int32_t>(luaL_checknumber(state, 2));
-  const uint8_t color = static_cast<uint8_t>(
-      lua_isnoneornil(state, 3)
-          ? context->draw_color
-          : static_cast<int32_t>(luaL_checknumber(state, 3))) &
-                        0x0fu;
-  if (x < 0 || x >= 128 || y < 0 || y >= 128) return 0;
-  const uint32_t logical =
-      0x6000u + static_cast<uint32_t>(y) * 64u +
-      (static_cast<uint32_t>(x) >> 1u);
-  const uint32_t physical = p8w::map_address(context->ram, logical);
-  const uint32_t shift = (static_cast<uint32_t>(x) & 1u) << 2u;
-  const uint8_t mask = static_cast<uint8_t>(0x0fu << shift);
-  context->ram[physical] = static_cast<uint8_t>(
-      (context->ram[physical] & static_cast<uint8_t>(~mask)) |
-      (color << shift));
-  return 0;
-}
-
-int p8_btn(lua_State *state) {
-  Context *context = context_from_lua(state);
-  if (lua_isnoneornil(state, 1)) {
-    lua_pushinteger(state, static_cast<int16_t>(context->button_mask & 0x3fu));
+  if (context == nullptr || !context->host_bound) {
+    return luaL_error(state, "PicoApiHost is not bound");
+  }
+  const P8wPhase previous_phase = context->phase;
+  context->phase = P8W_PHASE_HOST_CALL;
+  int32_t result = 0;
+  const uint32_t status = dispatch_host_call(
+      context->host_binding_id, descriptor->operation_id, argument_mask,
+      arguments[0], arguments[1], arguments[2], arguments[3], arguments[4],
+      arguments[5], &result);
+  if (status != 0) {
+    context->host_api_failed = true;
+    return luaL_error(state, "synchronous PicoApiHost call failed");
+  }
+  context->phase = previous_phase;
+  if (descriptor->result_kind == P8W_HOST_RESULT_VOID) return 0;
+  if (descriptor->result_kind == P8W_HOST_RESULT_BOOLEAN ||
+      (descriptor->result_kind == P8W_HOST_RESULT_INTEGER_OR_BOOLEAN &&
+       (argument_mask & 1u) != 0)) {
+    lua_pushboolean(state, result != 0);
     return 1;
   }
-  const int32_t button = static_cast<int32_t>(luaL_checknumber(state, 1));
-  const int32_t player = lua_isnoneornil(state, 2)
-                             ? 0
-                             : static_cast<int32_t>(
-                                   luaL_checknumber(state, 2));
-  lua_pushboolean(state,
-                  player == 0 && button >= 0 && button < 6 &&
-                      (context->button_mask & (1u << button)) != 0);
+  lua_pushinteger(state, static_cast<int16_t>(result));
   return 1;
 }
 
@@ -385,6 +395,15 @@ void register_function(lua_State *state, const char *name,
   lua_setglobal(state, name);
 }
 
+void register_host_functions(lua_State *state) {
+  for (const auto &binding : kP8wHostBindings) {
+    lua_pushlightuserdata(
+        state, const_cast<P8wHostBindingDescriptor *>(&binding));
+    lua_pushcclosure(state, p8_host_call, 1);
+    lua_setglobal(state, binding.guest_name);
+  }
+}
+
 void open_guest_environment(lua_State *state) {
   luaL_requiref(state, "_G", luaopen_base, 1);
   lua_pop(state, 1);
@@ -407,9 +426,7 @@ void open_guest_environment(lua_State *state) {
   register_function(state, "peek4", p8_peek4);
   register_function(state, "poke", p8_poke);
   register_function(state, "poke4", p8_poke4);
-  register_function(state, "cls", p8_cls);
-  register_function(state, "pset", p8_pset);
-  register_function(state, "btn", p8_btn);
+  register_host_functions(state);
   register_function(state, "time", p8_time);
   register_function(state, "t", p8_time);
   register_function(state, "flip", p8_flip);
@@ -446,6 +463,7 @@ bool begin_budget(Context *context, uint32_t budget) {
   context->allocations.denied = false;
   context->host_oom = false;
   context->host_response_failed = false;
+  context->host_api_failed = false;
   context->yield_reason = P8W_YIELD_NONE;
   clear_error(context);
   return true;
@@ -509,6 +527,10 @@ P8wStatus classify_resume_error(Context *context, lua_State *thread,
   if (context->host_response_failed) {
     copy_lua_error(context, thread, P8W_STATUS_HOST_ERROR);
     return P8W_STATUS_HOST_ERROR;
+  }
+  if (context->host_api_failed) {
+    copy_lua_error(context, thread, P8W_STATUS_HOST_API_ERROR);
+    return P8W_STATUS_HOST_API_ERROR;
   }
   if (lua_status == LUA_ERRMEM || context->allocations.denied ||
       context->host_oom) {
@@ -677,12 +699,24 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_destroy(uint32_t handle) {
   return P8W_STATUS_OK;
 }
 
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_bind_host(uint32_t handle,
+                                            uint32_t binding_id) {
+  Context *context = context_from_handle(handle);
+  if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  if (context->state != P8W_STATE_EMPTY || context->host_bound)
+    return P8W_STATUS_INVALID_STATE;
+  if (binding_id == 0) return P8W_STATUS_BAD_ARGUMENT;
+  context->host_binding_id = binding_id;
+  context->host_bound = true;
+  return P8W_STATUS_OK;
+}
+
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_compile(uint32_t handle,
                                          const uint8_t *source,
                                          uint32_t source_length) {
   Context *context = context_from_handle(handle);
   if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
-  if (context->state != P8W_STATE_EMPTY)
+  if (context->state != P8W_STATE_EMPTY || !context->host_bound)
     return P8W_STATUS_INVALID_STATE;
   if (source == nullptr && source_length != 0)
     return P8W_STATUS_BAD_ARGUMENT;

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "abiName": "p8w",
-  "abiVersion": 65536,
+  "abiVersion": 65537,
   "numberEncoding": "signed-q16.16-raw-int32",
   "stringEncoding": "byte-string-pointer-length",
   "memory": {
@@ -40,7 +40,8 @@
     "FEATURE_UNSUPPORTED": 9,
     "HOST_ERROR": 10,
     "STOPPED": 11,
-    "INTERNAL_ERROR": 12
+    "INTERNAL_ERROR": 12,
+    "HOST_API_ERROR": 13
   },
   "phases": {
     "NONE": 0,
@@ -57,6 +58,7 @@
     { "name": "p8w_abi_version", "parameters": [], "result": "u32" },
     { "name": "p8w_create", "parameters": ["u32:lua_heap_limit"], "result": "u32:handle" },
     { "name": "p8w_destroy", "parameters": ["u32:handle"], "result": "status" },
+    { "name": "p8w_bind_host", "parameters": ["u32:handle", "u32:binding_id"], "result": "status" },
     { "name": "p8w_compile", "parameters": ["u32:handle", "ptr:u8:source", "u32:length"], "result": "status" },
     { "name": "p8w_boot", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_step", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
@@ -85,6 +87,8 @@
   ],
   "invariants": [
     "one p8w_step completes at most one simulation slice",
+    "p8w_compile is invalid until a nonzero host binding is installed exactly once",
+    "synchronous host calls preserve raw Q16.16 argument bits and use an int32 out-parameter",
     "instruction exhaustion poisons the context and is never a resumable yield",
     "p8w_boot preserves its supplied time_raw through top-level and _init or the first custom-loop FLIP",
     "HOST_REQUEST payload and response are copied byte strings",

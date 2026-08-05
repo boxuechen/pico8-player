@@ -21,6 +21,7 @@ enum P8wStatus {
   P8W_STATUS_HOST_ERROR = 10,
   P8W_STATUS_STOPPED = 11,
   P8W_STATUS_INTERNAL_ERROR = 12,
+  P8W_STATUS_HOST_API_ERROR = 13,
 };
 
 enum P8wVmState {
@@ -63,6 +64,7 @@ enum P8wPhase {
 uint32_t p8w_abi_version(void);
 uint32_t p8w_create(uint32_t lua_heap_limit);
 uint32_t p8w_destroy(uint32_t handle);
+uint32_t p8w_bind_host(uint32_t handle, uint32_t binding_id);
 uint32_t p8w_compile(uint32_t handle, const uint8_t *source,
                      uint32_t source_length);
 uint32_t p8w_boot(uint32_t handle, uint32_t instruction_budget,

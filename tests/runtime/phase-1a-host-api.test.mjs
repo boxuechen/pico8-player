@@ -1,0 +1,255 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test, { before } from "node:test";
+
+import {
+  createPicoApiHost,
+  FrameSliceRuntime,
+} from "@pico8-web/runtime-core";
+import {
+  createPicoApiHostRouter,
+  Z8LuaFrameVm,
+} from "@pico8-web/z8lua-bridge";
+import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
+import {
+  renderCpp,
+  renderTypeScript,
+  validateBindingContract,
+} from "../../tools/wasm/generate-host-bindings.mjs";
+
+const encoder = new TextEncoder();
+let module;
+
+before(async () => {
+  module = await createZ8LuaModule();
+});
+
+function sourceCart(source) {
+  return {
+    rom: new Uint8Array(0x8000),
+    luaSource: encoder.encode(source),
+  };
+}
+
+function createVm() {
+  const router = createPicoApiHostRouter(module);
+  return { router, vm: new Z8LuaFrameVm(module, router) };
+}
+
+function wrapHost(memory, overrides = {}) {
+  const base = createPicoApiHost(memory);
+  return {
+    memoryLeaseId: base.memoryLeaseId,
+    reset: () => base.reset(),
+    setInput: (input) => base.setInput(input),
+    cls: (colorRaw) => base.cls(colorRaw),
+    pset: (xRaw, yRaw, colorRaw) => base.pset(xRaw, yRaw, colorRaw),
+    btn: (buttonRaw, playerRaw) => base.btn(buttonRaw, playerRaw),
+    ...overrides,
+  };
+}
+
+test("binding generator proves eight heterogeneous signatures without exposing prototype APIs", async () => {
+  const prototype = validateBindingContract(JSON.parse(await readFile(
+    new URL("../../spec/abi/pico-host-binding-prototype.json", import.meta.url),
+    "utf8",
+  )), { runtimeExposed: false });
+  assert.equal(prototype.bindings.length, 8);
+  const production = validateBindingContract(JSON.parse(await readFile(
+    new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
+    "utf8",
+  )));
+  assert.deepEqual(production.bindings.map(({ guestName }) => guestName), ["cls", "pset", "btn"]);
+  assert.match(renderTypeScript(production), /argumentMask & 4/u);
+  assert.match(renderCpp(production), /P8W_HOST_RESULT_INTEGER_OR_BOOLEAN/u);
+  assert.equal(renderCpp(prototype).includes("probe_six"), true);
+});
+
+test("WASM compile is gated by an exactly-once nonzero host binding", () => {
+  const handle = module._p8w_create(0) >>> 0;
+  assert.notEqual(handle, 0);
+  const source = encoder.encode("function _update() end function _draw() end");
+  const pointer = module._p8w_alloc(source.byteLength) >>> 0;
+  module.HEAPU8.set(source, pointer);
+  try {
+    assert.equal(module._p8w_compile(handle, pointer, source.byteLength) >>> 0, 3);
+    assert.equal(module._p8w_bind_host(handle, 0) >>> 0, 4);
+    assert.equal(module._p8w_bind_host(handle, 91) >>> 0, 0);
+    assert.equal(module._p8w_bind_host(handle, 92) >>> 0, 3);
+    assert.equal(module._p8w_compile(handle, pointer, source.byteLength) >>> 0, 0);
+  } finally {
+    module._p8w_free(pointer);
+    assert.equal(module._p8w_destroy(handle) >>> 0, 0);
+  }
+});
+
+test("session routers reject double bind, rebind and stale dispatch without cross-routing", () => {
+  const first = createVm();
+  const second = createVm();
+  assert.notEqual(first.router.bindingId, second.router.bindingId);
+  const firstHost = createPicoApiHost(first.vm.memory);
+  const secondHost = createPicoApiHost(second.vm.memory);
+  first.vm.bindHost(firstHost);
+  second.vm.bindHost(secondHost);
+  assert.equal(first.vm.hostBindingState, "bound");
+  assert.throws(() => first.vm.bindHost(firstHost), /cannot bind from bound/u);
+
+  const resultPointer = module._p8w_alloc(4) >>> 0;
+  try {
+    assert.equal(module.p8wHostCall(
+      first.router.bindingId, 1, 1, 0x0003_0000, 0, 0, 0, 0, 0, resultPointer,
+    ), 0);
+    assert.equal(first.vm.copyRam(0x6000, 1)[0], 0x33);
+    assert.equal(second.vm.copyRam(0x6000, 1)[0], 0);
+    first.vm.destroy();
+    assert.equal(first.vm.hostBindingState, "released");
+    assert.equal(module.p8wHostCall(
+      first.router.bindingId, 1, 0, 0, 0, 0, 0, 0, 0, resultPointer,
+    ), 1);
+    assert.throws(() => first.router.bind(firstHost), /cannot bind from released/u);
+    assert.equal(module.p8wHostCall(
+      second.router.bindingId, 1, 1, 0x0004_0000, 0, 0, 0, 0, 0, resultPointer,
+    ), 0);
+    assert.equal(second.vm.copyRam(0x6000, 1)[0], 0x44);
+  } finally {
+    module._p8w_free(resultPointer);
+    second.vm.destroy();
+  }
+});
+
+test("raw Q16.16 arguments, optional presence and btn results cross the synchronous ABI exactly", () => {
+  const { vm } = createVm();
+  const calls = [];
+  const base = createPicoApiHost(vm.memory);
+  const host = wrapHost(vm.memory, {
+    reset: () => base.reset(),
+    setInput: (input) => base.setInput(input),
+    cls(colorRaw) {
+      calls.push(["cls", colorRaw]);
+      base.cls(colorRaw);
+    },
+    pset(xRaw, yRaw, colorRaw) {
+      calls.push(["pset", xRaw, yRaw, colorRaw]);
+      base.pset(xRaw, yRaw, colorRaw);
+    },
+    btn(buttonRaw, playerRaw) {
+      calls.push(["btn", buttonRaw, playerRaw]);
+      return base.btn(buttonRaw, playerRaw);
+    },
+  });
+  const runtime = new FrameSliceRuntime(vm, { picoApiHost: host });
+  const boot = runtime.boot(sourceCart(`
+function _init()
+ cls() cls(2.5)
+ pset(-1.5,3.25) pset(4.5,5.75,7.5)
+ poke(0x150,btn())
+ poke(0x151,btn(0) and 1 or 0)
+ poke(0x152,btn(5,0) and 1 or 0)
+ poke(0x153,btn(5,1) and 1 or 0)
+ btn(nil,1)
+end
+function _update() end
+function _draw() end`), { buttons: 0b10_0001 });
+  assert.equal(boot.ok, true, JSON.stringify(boot));
+  assert.deepEqual(calls.slice(0, 4), [
+    ["cls", undefined],
+    ["cls", 0x0002_8000],
+    ["pset", -0x0001_8000, 0x0003_4000, undefined],
+    ["pset", 0x0004_8000, 0x0005_c000, 0x0007_8000],
+  ]);
+  assert.deepEqual(runtime.copyRam(0x150, 4), Uint8Array.of(33, 1, 1, 0));
+  assert.deepEqual(calls.at(-1), ["btn", undefined, 0x0001_0000]);
+  runtime.dispose();
+});
+
+test("TypeScript host owns mapped cls/pset semantics while direct memory and flip remain in WASM", () => {
+  const { vm } = createVm();
+  const runtime = new FrameSliceRuntime(vm);
+  const boot = runtime.boot(sourceCart(`
+poke(0x5f55,0xe0)
+cls(9) pset(1,0,2)
+n=0
+while true do
+ poke(0x160,n)
+ flip()
+ n+=1
+end`));
+  assert.deepEqual(boot, {
+    ok: true,
+    value: { kind: "ready", mode: "custom", targetFps: 30 },
+  });
+  assert.equal(runtime.copyRam(0xe000, 1)[0], 0x29);
+  assert.equal(runtime.copyRam(0x6000, 1)[0], 0);
+  assert.equal(runtime.copyRam(0x160, 1)[0], 0);
+  assert.equal(runtime.step().ok, true);
+  assert.equal(runtime.copyRam(0x160, 1)[0], 1);
+  runtime.dispose();
+});
+
+test("host throws become a contained E_HOST_API fault and poison the VM", () => {
+  const { vm } = createVm();
+  const base = createPicoApiHost(vm.memory);
+  const host = wrapHost(vm.memory, {
+    pset() {
+      throw new Error("phase-1a-test-host-failure");
+    },
+    cls: (colorRaw) => base.cls(colorRaw),
+  });
+  const runtime = new FrameSliceRuntime(vm, { picoApiHost: host });
+  const boot = runtime.boot(sourceCart(`
+function _init() pset(1,2,3) end
+function _update() end
+function _draw() end`));
+  assert.equal(boot.ok, false);
+  assert.equal(boot.error.code, "E_HOST_API");
+  assert.equal(boot.error.phase, "host-call");
+  assert.equal(boot.error.message, "phase-1a-test-host-failure");
+  assert.equal(runtime.state, "faulted");
+  assert.equal(runtime.step().error.code, "E_INVALID_STATE");
+  runtime.dispose();
+});
+
+test("synchronous host calls keep the Lua stack balanced and stay within the Phase 1A budget", () => {
+  const { vm } = createVm();
+  let dispatchCount = 0;
+  const base = createPicoApiHost(vm.memory);
+  const host = wrapHost(vm.memory, {
+    reset: () => base.reset(),
+    setInput: (input) => base.setInput(input),
+    cls(colorRaw) {
+      dispatchCount += 1;
+      base.cls(colorRaw);
+    },
+    pset(xRaw, yRaw, colorRaw) {
+      dispatchCount += 1;
+      base.pset(xRaw, yRaw, colorRaw);
+    },
+    btn(buttonRaw, playerRaw) {
+      dispatchCount += 1;
+      return base.btn(buttonRaw, playerRaw);
+    },
+  });
+  const runtime = new FrameSliceRuntime(vm, {
+    instructionBudget: 2_000_000,
+    picoApiHost: host,
+  });
+  const started = performance.now();
+  const boot = runtime.boot(sourceCart(`
+function _init()
+ local sum=0
+ for i=1,10000 do
+  pset(i%128,(i/128)%128,i%16)
+  if btn(0) then sum+=1 end
+ end
+ poke(0x170,sum) cls(1) pset(0,0,7)
+end
+function _update() end
+function _draw() end`), { buttons: 1 });
+  const elapsedMs = performance.now() - started;
+  assert.equal(boot.ok, true, JSON.stringify(boot));
+  assert.equal(dispatchCount, 20_002);
+  assert.equal(runtime.copyRam(0x170, 1)[0], 0x10);
+  assert.equal(runtime.copyRam(0x6000, 1)[0], 0x17);
+  assert.ok(elapsedMs < 1_000, `host interop took ${elapsedMs.toFixed(1)}ms`);
+  runtime.dispose();
+});

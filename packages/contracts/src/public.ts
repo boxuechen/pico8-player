@@ -27,6 +27,7 @@ export type RuntimeErrorCode =
   | "E_VM_WATCHDOG"
   | "E_FEATURE_UNSUPPORTED"
   | "E_HOST_REQUEST"
+  | "E_HOST_API"
   | "E_INVALID_STATE"
   | "E_INVARIANT";
 

@@ -5,7 +5,7 @@ import test, { before } from "node:test";
 
 import { decodeP8Png } from "@pico8-web/cart-codec";
 import { FrameSliceRuntime, logicalTimeRaw } from "@pico8-web/runtime-core";
-import { Z8LuaFrameVm } from "@pico8-web/z8lua-bridge";
+import { createPicoApiHostRouter, Z8LuaFrameVm } from "@pico8-web/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 import { createPhase0EWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
 import {
@@ -48,7 +48,10 @@ function sourceCart(source) {
 }
 
 function createRuntime(source, instructionBudget = 100_000) {
-  const runtime = new FrameSliceRuntime(new Z8LuaFrameVm(module), {
+  const runtime = new FrameSliceRuntime(new Z8LuaFrameVm(
+    module,
+    createPicoApiHostRouter(module),
+  ), {
     instructionBudget,
   });
   const boot = runtime.boot(sourceCart(source));
@@ -102,7 +105,10 @@ function _draw()
  cls(2) pset(peek(0x101)-1,0,7)
 end`;
   const cart = decodeP8Png(syntheticP8Png(source));
-  const runtime = new FrameSliceRuntime(new Z8LuaFrameVm(module), {
+  const runtime = new FrameSliceRuntime(new Z8LuaFrameVm(
+    module,
+    createPicoApiHostRouter(module),
+  ), {
     instructionBudget: 100_000,
   });
   const boot = runtime.boot(cart);
@@ -302,7 +308,11 @@ function _draw() end`).runtime;
   assert.equal(staleResult.error.code, "E_INVALID_STATE");
   stale.dispose();
 
-  const lowMemoryVm = new Z8LuaFrameVm(module, { luaHeapLimit: 32 * 1024 });
+  const lowMemoryVm = new Z8LuaFrameVm(
+    module,
+    createPicoApiHostRouter(module),
+    { luaHeapLimit: 32 * 1024 },
+  );
   const lowMemory = new FrameSliceRuntime(lowMemoryVm, {
     instructionBudget: 100_000,
   });

@@ -8,15 +8,15 @@
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
-实施状态：Phase 0A baseline、Phase 0B Shared Pico RAM 和 Phase 0E production-named
-frame ABI subset 已完成；证据见 [Phase 0 evidence](./evidence/phase-0/README.md)。
-`p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；Phase 0E 已实现 `p8w_*` lifecycle、
-frame stepping、host-request、budget 和 structured error 的受限子集。本文列出的完整 ABI
+实施状态：Phase 0A/0B、Phase 0E frame ABI 与 Phase 1A synchronous Host API boundary
+已完成；Phase 0 历史证据见 [Phase 0 evidence](./evidence/phase-0/README.md)。
+`p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
+exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
 只有机器契约、public adapter 与测试共同覆盖的部分才算 Implemented。
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | Phase 0A/0B 基线；Phase 0E production `p8w_*` bounded subset；固定内存、manual slice、root host-request 与错误路径 |
+| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；Phase 1A module-local router、generated `cls/pset/btn` 与 host error containment |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | 完整函数/值 binding、capability surface、剩余 lifecycle 与 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -230,16 +230,17 @@ pointer/size/reset、canonical map/read/write 和 source alloc/free。ABI versio
 `0x00020000`。它用于锁定 RAM boundary 与测试，不含 compile/resume/frame/request
 state machine，不得被 RuntimeCore 当作 production `VmPort`。
 
-## 6. Proposed C ABI v1
+## 6. C ABI v1
 
-> 状态：Phase 0E bounded subset 已实现；其余接口仍是 Target。
+> 状态：机器契约中的 Phase 1A subset 已实现；下方 capability/step-vector 草图仍是 Target。
 
-本节是本项目 **Proposed** ABI，不是 z8lua 上游 API。Phase 0 可以修改它，但修改后必须更新本文、TS declarations 和 ABI tests。
+当前事实只由 [`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)、public adapter 与真实
+artifact tests 共同定义。下方较宽接口保留为未来能力草图，不能据此调用不存在的 symbol。
 
 所有 public symbol 使用 `extern "C"`，只传 `i32/u32` 和 wasm32 pointer；禁止把 `lua_State *`、`z8::fix32`、C++ object、`i64` 或 JS object 暴露到边界。
 
 ```c
-#define P8W_ABI_VERSION 0x00010000u /* major << 16 | minor */
+#define P8W_ABI_VERSION 0x00010001u /* implemented major << 16 | minor */
 
 typedef uint32_t p8w_handle_t; /* opaque; 0 is invalid */
 
@@ -343,7 +344,10 @@ Pending request 的完成契约：
 
 ## 7. WASM import 与 host-call frame
 
-Phase 0 初始实现只需要一个必选同步 import：
+Phase 1A 的 implemented import 以 binding id、operation id、presence mask、最多 6 个 raw
+Q16.16 参数和 `int32` result pointer 同步调用 module-local TS dispatcher。它捕获 TS throw，
+并映射为 `P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。以下 generic call frame 是未来 strings、
+vectors 和 multi-return 的 target，不是当前 artifact layout：
 
 ```c
 int32_t p8_host_call(uint32_t host_context_id,
@@ -591,7 +595,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 - [x] root 手写 `flip()` loop 每 resume 只前进一个 boundary，且不重复启动 callback loop。
 - [x] nested coroutine 的 control/HostRequest 原型明确为 `E_FEATURE_UNSUPPORTED:nested-host-suspend`；`reload/cstore` 使用预供给/同步 cache 或 unsupported。
 - [x] Lua 无限循环由 count hook 转成不可恢复 `P8W_STATUS_INSTRUCTION_BUDGET`，Runtime 映射为 `E_VM_INSTRUCTION_BUDGET`，不是 yield 后继续。
-- [ ] JS import throw、Lua runtime error、OOM、budget 和 raw Wasm trap 可区分。
+- [x] JS host import throw 映射为不可恢复 `E_HOST_API`；Lua runtime、OOM、budget 和 HostRequest error 保持独立分类。raw Wasm trap 的最终分类仍待后续 hardening。
 - [x] hook 无法中断的 Worker JS stall 在真实 Chrome 中由 Window watchdog 终止并重建，generation 防 stale response。
 
 ### Performance
@@ -612,7 +616,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 | callback 动态替换及 custom loop fps | 未定 | 30/60/custom conformance |
 | nested coroutine HostRequest | 不宣称通用支持 | root bubbling + resume tests；否则显式降级 |
 | count quantum/default budget | 未定 | Chrome/Chromium determinism + representative corpus |
-| generated binding（ADR-008） | Proposed | 5–10 signature prototype/stack tests |
+| generated binding（ADR-008） | Accepted；production 3 bindings + isolated 8-signature prototype | 新增 string/vector/multi-return shape 时扩 schema/prototype/lifetime tests |
 | Emscripten exception/longjmp mode | Phase 0A 为 Wasm EH + `SUPPORT_LONGJMP=wasm` | browser matrix 后接受或替换 production mode |
 
 实现者不得自行“顺手解决”这些问题并静默改变契约。每项必须以 fixture、benchmark 或官方依据关闭，并同步 [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md)。

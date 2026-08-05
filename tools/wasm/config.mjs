@@ -111,6 +111,7 @@ export const RUNTIME_EXPORTED_FUNCTIONS = [
   "_p8w_abi_version",
   "_p8w_create",
   "_p8w_destroy",
+  "_p8w_bind_host",
   "_p8w_compile",
   "_p8w_boot",
   "_p8w_step",

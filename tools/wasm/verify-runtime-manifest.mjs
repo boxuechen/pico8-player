@@ -51,7 +51,7 @@ const abi = JSON.parse(
   await readFile(join(projectRoot, manifest.abiContract), "utf8"),
 );
 
-assert.equal(manifest.phase, "0E");
+assert.equal(manifest.phase, "1A");
 assert.equal(manifest.abiVersion, abi.abiVersion);
 assert.deepEqual(manifest.compiledBridgeSources, RUNTIME_BRIDGE_SOURCES);
 assert.equal(

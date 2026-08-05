@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "phase": "1",
+  "name": "L1 minimal playable loop",
+  "status": "active",
+  "browserGate": ["chrome", "chromium"],
+  "completedWorkUnits": ["1A"],
+  "activeWorkUnit": null,
+  "nextWorkUnit": "1B",
+  "workUnits": {
+    "1A": {
+      "name": "Host API Boundary",
+      "status": "complete",
+      "bindingLifecycle": ["created", "memory-ready", "host-bound", "runnable", "released"],
+      "bindingPolicy": {
+        "routerScope": "session-local",
+        "dispatcherScope": "emscripten-module-local",
+        "bindCount": "exactly-once",
+        "compileBeforeBind": "INVALID_STATE",
+        "rebind": "rejected",
+        "staleDispatch": "rejected"
+      },
+      "synchronousHostApis": ["cls", "pset", "btn"],
+      "argumentEncoding": "signed-q16.16-raw-int32",
+      "optionalEncoding": "uint32-presence-mask",
+      "resultEncoding": "signed-int32-out-parameter",
+      "hostFailure": "E_HOST_API:poisoned-non-recoverable",
+      "wasmOwned": ["flip-control-flow", "peek", "peek4", "poke", "poke4", "time", "t"],
+      "generatedBindings": {
+        "decision": "ADR-008 Accepted",
+        "productionSchema": "spec/abi/pico-host-api-v1.json",
+        "capabilityPrototype": "spec/abi/pico-host-binding-prototype.json",
+        "prototypeSignatureCount": 8,
+        "manifest": "spec/abi/generated-bindings.manifest.json"
+      },
+      "verification": [
+        "pnpm run test:phase-1a",
+        "pnpm run test:phase-0e",
+        "pnpm run test:benchmark",
+        "pnpm run test:architecture",
+        "pnpm run verify"
+      ]
+    },
+    "1B": { "name": "Text .p8 decode and ParsedCart normalization", "status": "next" },
+    "1C": { "name": "CartSession reset and lifecycle", "status": "not-started" },
+    "1D": { "name": "L1 graphics and input completion", "status": "not-started" },
+    "1E": { "name": "Worker scheduling and minimal player shell", "status": "not-started" },
+    "1F": { "name": "L1 conformance and phase exit", "status": "not-started" }
+  },
+  "phase1AExcluded": [
+    "text-.p8-parser",
+    "line-rect-circ",
+    "btnp",
+    "canvas-dom-audio-host-calls",
+    "automatic-bbs-access",
+    "third-party-cart-fixtures"
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "phase": "0E",
+  "phase": "1A",
   "abiContract": "spec/abi/p8w-v1.json",
-  "abiVersion": 65536,
+  "abiVersion": 65537,
   "upstream": {
     "repository": "https://github.com/samhocevar/z8lua.git",
     "commit": "8575dfbc524003c869c0aa05e109819302c576f9",
@@ -13,7 +13,7 @@
     "wasm/bridge/p8w_frame_runtime.cpp"
   ],
   "z8luaSourceInventorySha256": "a1fdf06e85812e71517e3c6987759cd62637220aa3935b2420b45ca7d221981f",
-  "buildFlagsSha256": "7aa44aec48d904cf8fad28643c2efd39b129c05fa2bd2697d3a8c1de9375835a",
+  "buildFlagsSha256": "e2233fdcaa86a1f1724e394e9fe8b7bead92c0177cce19d8a44ade6e984d8795",
   "productionExportPrefix": "p8w_",
   "forbiddenExportPrefixes": ["p8w0a_", "p8w0b_", "p8w0c_bench_"],
   "limits": {
@@ -31,18 +31,18 @@
     "files": [
       {
         "path": "z8lua-runtime-v1.mjs",
-        "bytes": 7607,
-        "sha256": "f6e25e84f9041294965afdd9dd7e2b19a1d65729a0042aedaf817586df416d86"
+        "bytes": 8075,
+        "sha256": "bc701ba4e6b647c8b75d8c25dea81de8b97ef167277decfd9c5ae9e3ce896a13"
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 181095,
-        "sha256": "f0642eb0ad83d599cc0a21cadbea44293f80fbc21327095ee211d1b7bf27ec60"
+        "bytes": 181619,
+        "sha256": "d28178de13288623e5ce9c8a11970acf5fccd32aa1bbf12d822f72de820d9793"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs",
     "chromium": "tests/browser/phase-0e.html",
     "fixtures": "project-owned synthetic source and p8.png only"
   }

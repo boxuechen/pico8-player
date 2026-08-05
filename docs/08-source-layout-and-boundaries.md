@@ -170,10 +170,10 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 0E 当前公共实现为
-`FrameSliceRuntime` + `FrameVmPort`：负责 decoded cart ROM/source transaction、manual
-step、logical Q16.16 time、input snapshot、HostRequest budget transaction 和 packed
-screen snapshot；graphics/audio/scheduler/persistence 仍未落地。
+最终拥有 player simulation 和 session 权威状态。Phase 1A 当前公共实现为
+`FrameSliceRuntime` + `FrameVmPort` + browser-neutral `PicoApiHost`：除既有 frame/time/
+HostRequest transaction 外，host 通过同一 `PicoMemoryLease` 同步实现 `cls/pset/btn`；
+其余 graphics/audio/scheduler/persistence 仍未落地。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。
@@ -199,9 +199,9 @@ bounded adapter probe：它负责验证 pointer/size、创建 zero-copy views、
 lease，并把 logical access 路由到 WASM canonical mapper。它不是 production
 `VmPort`，也不把 Emscripten concrete objects 交给 RuntimeCore。
 
-Phase 0E 的 production public adapter 是 `Z8LuaFrameVm` 与 factory-facing
-`FrameRuntimeModule` type；linear-memory binding/view 保持 package-private。adapter
-只实现 RuntimeCore 的 `FrameVmPort`，编译 artifact
+Phase 1A 的 production public adapter 还包含 session-local `PicoApiHostRouter`；
+module-local dispatcher 只负责按 binding id 路由，不保存跨 module global delegate。
+linear-memory binding/view 保持 package-private。adapter 只实现 RuntimeCore 的 `FrameVmPort`，编译 artifact
 为 `z8lua-runtime-v1`；`p8w0c_bench_*` 不得出现在该 artifact 或 adapter interface。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
@@ -338,6 +338,7 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 - `wasm/manifest.lock.json`：记录 upstream SHA、patch hash、emsdk version、flags、license inputs 和 artifact hash。
 - `wasm/dist/`：被 Git 忽略的构建输出；ADR-012 要求从锁定输入重建并按 `manifest.lock.json` 核验 hash 与 NOTICE，不提交二进制。
 - `packages/z8lua-bridge/src/generated/`：由 ABI/API schema 生成的 TS declarations/wrappers；文件头必须标记 generator 和 source hash，禁止手工编辑。
+- `wasm/bridge/generated/`：同一 generator 产生的 C/C++ descriptor/header；与 TS 生成物共同由 `spec/abi/generated-bindings.manifest.json` 锁定。
 - `spec/pico-api-inventory.yaml`：即使 ADR-008 最终拒绝全量代码生成，也必须作为 API 名称、签名、返回值、版本和实现状态的 machine-readable inventory。
 
 生成方向只能是 `spec + wasm ABI -> generated bindings`。禁止从现有 TS 实现反向抓取一个临时 schema，再把它宣称为事实源。

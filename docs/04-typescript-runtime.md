@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 0F** | `.p8.png` bounded decode；`FrameSliceRuntime` / `FrameVmPort`；production z8lua adapter；bounded Worker DTO、watchdog/generation、startup clock；Canvas2D presenter；dedicated audio `MessagePort`、bounded Worklet queue 与 browser composition |
+| **Implemented through Phase 1A** | Phase 0F baseline；browser-neutral `PicoApiHost`；session router/two-stage bind；TS-owned `cls/pset/btn` over leased RAM；`E_HOST_API` containment |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | 文本 `.p8`、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -157,7 +157,9 @@ IndexedDB / network / File API ──> port adapters（实现接口）
 
 RuntimeCore 不 import z8lua concrete adapter；`apps/web-player/src/worker/compose-runtime.ts` 是唯一把 core、codec、bridge 和浏览器 adapters 组装起来的 composition root。
 
-ADR-008 仍为 Proposed：在它被 Accepted 前，API inventory、C/TS signature 对照和 stack-balance tests 是 **MUST**；binding generator 只是 SHOULD。若 ADR-008 被接受，生成物必须放在独立文件且不得手工改；若被拒绝，仍禁止无测试地手工维护两份互相独立的签名事实源。
+ADR-008 已 Accepted：production API schema 单向生成 C descriptor 与 TS dispatcher，生成物
+必须位于独立目录并由 hash manifest/architecture test 审计。prototype schema 不得作为
+runtime capability；typed `PicoApiHost` 仍是 hardware 语义 owner。
 
 ## 5. Cart 加载与解析
 

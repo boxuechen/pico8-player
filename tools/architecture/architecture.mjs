@@ -670,8 +670,16 @@ function checkGeneratedBindings(repoRoot) {
   if (!existsSync(manifestPath)) return [];
   const manifest = readJson(manifestPath);
   const listed = new Map((manifest.files ?? []).map((entry) => [toPosix(entry.path), entry.sha256]));
-  const generatedRoot = path.join(repoRoot, "packages/z8lua-bridge/src/generated");
-  const generatedSources = walk(generatedRoot, (file) => /\.(?:[cm]?[jt]sx?|d\.ts)$/.test(file));
+  const generatedSources = [
+    ...walk(
+      path.join(repoRoot, "packages/z8lua-bridge/src/generated"),
+      (file) => /\.(?:[cm]?[jt]sx?|d\.ts)$/.test(file),
+    ),
+    ...walk(
+      path.join(repoRoot, "wasm/bridge/generated"),
+      (file) => /\.(?:h|hpp|inc)$/.test(file),
+    ),
+  ];
   const violations = [];
   for (const file of generatedSources) {
     const relativePath = toPosix(path.relative(repoRoot, file));

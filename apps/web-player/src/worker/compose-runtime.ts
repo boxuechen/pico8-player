@@ -7,6 +7,7 @@ import {
   type RuntimeStepResult,
 } from "@pico8-web/runtime-core";
 import {
+  createPicoApiHostRouter,
   Z8LuaFrameVm,
   type FrameRuntimeModule,
 } from "@pico8-web/z8lua-bridge";
@@ -98,11 +99,18 @@ export function createPhase0EWorkerController(
         if (command.type === "loadCart") {
           runtime?.dispose();
           const cart = decodeP8Png(new Uint8Array(command.p8PngBytes));
-          runtime = new FrameSliceRuntime(new Z8LuaFrameVm(module), {
-            ...(command.instructionBudget === undefined
-              ? {}
-              : { instructionBudget: command.instructionBudget }),
-          });
+          const hostRouter = createPicoApiHostRouter(module);
+          const vm = new Z8LuaFrameVm(module, hostRouter);
+          try {
+            runtime = new FrameSliceRuntime(vm, {
+              ...(command.instructionBudget === undefined
+                ? {}
+                : { instructionBudget: command.instructionBudget }),
+            });
+          } catch (error) {
+            vm.destroy();
+            throw error;
+          }
           return translateResult(command, runtime.boot(cart));
         }
         if (runtime === undefined) {

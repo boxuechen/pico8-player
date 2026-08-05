@@ -16,6 +16,7 @@ import {
   type FrameVmPort,
 } from "@pico8-web/runtime-core";
 import {
+  createPicoApiHostRouter,
   Z8LuaFrameVm,
   type FrameRuntimeModule,
   Phase0BMemoryBinding,
@@ -33,7 +34,10 @@ const decodeOptions: P8PngDecodeOptions = { limits: { maximumCartVersion: 42 } }
 const decodedCart: DecodedP8PngCart = decodeP8Png(pngBytes, decodeOptions);
 const codecErrorConstructor: typeof CartCodecError = CartCodecError;
 declare const frameModule: FrameRuntimeModule;
-const frameVm: FrameVmPort = new Z8LuaFrameVm(frameModule);
+const frameVm: FrameVmPort = new Z8LuaFrameVm(
+  frameModule,
+  createPicoApiHostRouter(frameModule),
+);
 const frameRuntime = new FrameSliceRuntime(frameVm);
 const input: PicoInputSnapshot = { buttons: 0 };
 declare const serializedError: SerializedRuntimeError;
