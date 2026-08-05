@@ -1,6 +1,6 @@
 # Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit：2E
+> 状态：Active；当前 work unit：2F
 > 机器合同：[`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
 > 前置证据：[`Phase 1 L1 exit`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -33,8 +33,8 @@ Non-goals：
 | 2B | Draw State 与基础图元 | Complete | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
 | 2C | Sprite Sheet 与 Blitter | Complete | `sget/sset/spr/sspr` 产生确定 framebuffer |
 | 2D | Map、Flags 与 `tline` | Complete | map remap、layer flags 和 fixed-point texture sampling 可复现 |
-| 2E | P8SCII 与 Custom Font | **Active** | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
-| 2F | Conformance 与 Phase Exit | Planned | Node real-WASM 和 Chrome production 路径通过 golden、性能与恢复门禁 |
+| 2E | P8SCII 与 Custom Font | Complete | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
+| 2F | Conformance 与 Phase Exit | **Active** | Node real-WASM 和 Chrome production 路径通过 golden、性能与恢复门禁 |
 
 ## Completed work unit：2A
 
@@ -67,82 +67,85 @@ binding manifest 和两个 WASM artifact manifest 锁定。独立 `PicoMapMemory
 upper region，canonical C++ mapper 只增加 upper-map/video arbitration；`map/tline` 复用 2C
 sprite raster，Chrome frame DTO 未增加 tile state。`tline(bits)` precision overload 不在 2D claim。
 
-## Active work unit：2E
+## Completed work unit：2E
+
+结果由 [`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
+的 2E record、`tests/runtime/phase-2e-p8scii.test.mjs`、`tests/browser/phase-2e.*`、字体 provenance
+与两个 WASM artifact manifest 锁定。append-only binding id `29..30` 已承载同步 byte string；
+RuntimeCore software renderer 支持内建/custom font、visual controls、cursor/scroll 与 mapped screen，
+Chrome frame DTO 没有新增 text state。P8SCII audio/timed controls、advanced screen/bitplane mode 与
+`tline(bits)` 继续作为已声明差异。
+
+## Active work unit：2F
 
 ### Observable behavior
 
-1. 注册 `print` 与 `cursor`，append binding id `29..30`，不重排 1–28。`print` 首次把 production
-   byte-string slot 用于 guest Lua string，embedded NUL、非 UTF-8 byte、empty string 与同步 view
-   lifetime 必须精确；不得先解码为 JS Unicode。
-2. 删除 quiet `print` placeholder；`print(str,x,y,[col])`、`print(str,[col])` overload、返回最右
-   x、implicit newline、explicit NUL termination、cursor RAM `0x5f26/27` 与 pen side effect 必须可测。
-3. RuntimeCore 新增唯一 byte-oriented text renderer。内建 256 glyph font 数据必须有仓库内
-   provenance/license，按 packed bit rows software raster；不得调用 Canvas `fillText/measureText`。
-4. 实现同步 visual P8SCII parser：printable bytes、terminate/repeat/background、cursor shift、
-   backspace/tab/newline/decorate/foreground/carriage-return、default/custom font switch，以及视觉
-   special commands、render modes、one-off glyph/outline/raw-memory-write。每次 `print` 重置临时属性，
-   只保留手册规定的 cursor/foreground side effect；malformed/truncated sequence 必须 bounded。
-5. 实现 `0x5600..0x5dff` custom font 8×8 rows、font-wide attributes、per-character width/y adjustment、
-   custom tab，以及 `0x5f58..0x5f5b` default attributes；所有读取即时来自 shared Pico RAM。
-6. implicit cursor output 超过 y=122 时滚动 mapped screen；`0x5f36 & 0x40` 禁用 scroll。
-   camera/clip、foreground/background palette 与 text raster ordering 必须确定并留 framebuffer/RAM golden。
-7. P8SCII audio command 与 timed delay/frame-skip command 不得在 Phase 2 偷渡 AudioSynth 或新的
-   suspension path；登记为 partial/known difference。Canvas/Worker DTO 不增加 glyph/text state。
+1. 在 `tests/conformance/carts/phase-2/` 建立至少两个项目自有、可审阅 cart。合并覆盖 Base RAM、
+   draw state/primitives、sprite、map/flags/tline、P8SCII/custom font 与 remap；不得下载 BBS cart、
+   引入第三方 corpus 或依赖 `ref/`。
+2. 用 machine-readable manifest 锁定 cart bytes/source、期望 packed screen、相关 RAM、draw state、
+   display palette 与 frame trace hash。oracle 必须来自项目可审阅预期，不从被测实现运行结果
+   无审查地自举。
+3. Node real-WASM 对每个 cart 执行 fresh session、确定帧数、cold reset/replay，并证明同一 oracle
+   可重复；Chrome production Worker/Canvas 路径必须得到相同最终 screen/palette 和可见像素。
+4. 添加代表 Phase 2 graphics/text frame 的 Chrome 性能采样，发布门禁为 p95 ≤ 8 ms。若未触发
+   门禁不得进行大范围优化；若触发，只能沿 ADR-006 profile-first ladder 修改且保持全部 golden。
+5. 覆盖 malformed/resource fault、structured error、stale generation rejection 与随后加载有效 cart
+   的恢复路径；资源限制不得造成 Worker hang、跨 session 状态泄漏或部分提交。
+6. 汇总 2A–2F compatibility matrix，开放 P0/P1 必须为 0。只关闭 project-owned Phase 2 profile，
+   不宣称官方 bit-exact、第三方 playable rate 或 Firefox/WebKit 支持。
+7. 通过全部门禁后创建不可变 `docs/evidence/phase-2/` 退出证据，关闭机器合同、压缩 roadmap，
+   删除本 active phase 文档，并以独立 commit 保持 worktree 干净。
 
 ### 允许修改的范围
 
-- `spec/phase-2-graphics-memory-text-contract.json`
-- `spec/pico-api-inventory.yaml`、production host binding schema/generated files
-- `tools/wasm/generate-host-bindings.mjs`
-- `wasm/bridge/p8w_frame_runtime.*` 与 generated header
-- `packages/runtime-core/src/{graphics,memory,frame-runtime.ts,pico-api,public.ts}`
-- `packages/z8lua-bridge/src/**`
+- `tests/conformance/carts/phase-2/**`、对应 machine manifest/oracle
 - `tests/{runtime,browser,architecture}/**`、`tools/browser/**`、`package.json`
-- 本 work unit 直接拥有的文档状态和 compatibility matrix
+- 仅为 conformance 暴露所需的既有 package public contract；语义缺陷修复必须附 regression
+- `spec/phase-2-graphics-memory-text-contract.json`、`spec/pico-api-inventory.yaml`
+- Phase 2 直接拥有的状态、compatibility matrix 与最终 `docs/evidence/phase-2/**`
 
-不得修改 `docs/evidence/**`；不得实现 AudioSynth/persistence；不得让 Canvas 知道 glyph、font 或 P8SCII。
+不得扩展 AudioSynth/input/persistence/BBS；不得为了 benchmark 复制 graphics 实现或改变
+Canvas/Worker ownership；`ref/` 始终不进入 build/test/import。
 
 ### Routed contracts
 
-- [Shared Pico RAM 与 raw fixed encoding](../03-z8lua-wasm-bridge.md#5-shared-pico-ram)
-- [Byte string / P8SCII ABI](../03-z8lua-wasm-bridge.md#82-byte-string--p8scii)
-- [Graphics layering 与必须保持的行为](../04-typescript-runtime.md#7-graphics)
-- [PicoRam layout 与 remap](../04-typescript-runtime.md#6-picoram64kib-共享地址空间)
-- [所有权与 frame transaction](../02-system-architecture.md#2-所有权与共享内存)
-- [Composition roots 与 render ownership](../08-source-layout-and-boundaries.md#4-composition-roots-与实例生命周期)
+- [Runtime ownership 与 frame transaction](../02-system-architecture.md#2-所有权与共享内存)
+- [Host ABI 与 byte lifetime](../03-z8lua-wasm-bridge.md#7-wasm--ts-host-api-abi)
+- [Graphics behavior](../04-typescript-runtime.md#7-graphics)
 - [确定性模型](../04-typescript-runtime.md#14-确定性契约)
-- [Framebuffer/RAM golden](../06-testing-compatibility.md#7-goldenframebufferram-与-audio)
-- [Chrome/Chromium gate](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
-- [interop 性能门禁](../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
-- [ADR-006](../adr/006-interop-hot-path-boundary.md)、[ADR-008](../adr/008-schema-generated-host-bindings.md)、[ADR-009](../adr/009-canvas2d-frame-presenter.md)、[ADR-013](../adr/013-shared-pico-ram-boundary.md)
+- [Conformance 分层](../06-testing-compatibility.md#4-conformance-测试分层)
+- [Golden contract](../06-testing-compatibility.md#7-goldenframebufferram-与-audio)
+- [性能门禁](../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
+- [Chrome support matrix](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
+- [Composition roots](../08-source-layout-and-boundaries.md#4-composition-roots-与实例生命周期)
+- [ADR-006](../adr/006-interop-hot-path-boundary.md)、[ADR-009](../adr/009-canvas2d-frame-presenter.md)、[ADR-013](../adr/013-shared-pico-ram-boundary.md)
 
 ### Verification
 
-2E 必须新增 `pnpm run test:phase-2e`，覆盖：
+2F 必须新增独立 aggregate gate，至少覆盖：
 
-- binding ids、byte-string `0/embedded-NUL/non-UTF8/1024` 与 malformed type/arity/lifetime。
-- explicit/implicit `print` overload、return value、cursor/pen RAM、newline/NUL termination、scroll enable/disable。
-- built-in ASCII/high P8SCII glyph bitmap、camera/clip/palette/background 和 deterministic framebuffer golden。
-- visual control parser 的每类 opcode、nested repeat/decorate/one-off/outline/raw write 与 truncated-input bounds。
-- custom font rows/attributes/adjustments/default registers/direct poke equality 和 custom/default switch。
-- 至少 10,000 个 deterministic byte arrays 不 crash/hang/OOB；repeat/outline/work 与 input length 有硬上限。
-- real Chrome production Worker/Canvas text smoke、无 Canvas text API、Phase 0C/1/2B/2C/2D regressions。
+- corpus manifest/source/oracle hash 与 license/ownership；禁止 `ref/` dependency。
+- 所有 cart 的 Node real-WASM fresh/reset replay、RAM/screen/draw-state/palette exact match。
+- Chrome production Worker/Canvas cart replay、同一最终 oracle、p95 ≤ 8 ms。
+- fault → generation reset → valid cart recovery 与 stale response rejection。
+- Phase 0C、Phase 1 exit、Phase 2A–2E regressions 及 architecture boundary。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-2e
-pnpm run test:phase-2e:chrome
+pnpm run test:phase-2f
+pnpm run test:phase-2f:chrome
 pnpm run verify
 git status --short
 ```
 
-### 2E exit gate
+### 2F exit gate
 
-- byte-string ABI、built-in/custom glyph raster、cursor/scroll 与 visual controls 有 deterministic RAM/frame evidence。
-- renderer 全程使用 shared `PicoRam` 和 existing pixel path，presenter/transport 没有新增 text dependency。
-- compatibility matrix 明确 audio/timed controls、bitplane/advanced screen 与 `tline(bits)` 的 partial 状态。
-- 2E 独立提交后 worktree 干净；随后才折叠本节并激活 2F。
+- project-owned corpus 的 Node/Chrome oracle、reset deterministic、performance 与 recovery 全通过。
+- compatibility matrix 没有开放 P0/P1，known differences 与实际范围一致。
+- Phase 2 immutable evidence 与关闭后的 machine contract 可独立复核。
+- 2F 独立提交后 worktree 干净，Phase 3 仍保持未激活。
 
 ## Phase exit gate
 

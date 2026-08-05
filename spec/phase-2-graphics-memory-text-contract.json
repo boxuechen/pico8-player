@@ -9,9 +9,9 @@
     "phase1Evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
     "baselineCommit": "916de2a"
   },
-  "completedWorkUnits": ["2A", "2B", "2C", "2D"],
-  "activeWorkUnit": "2E",
-  "nextWorkUnit": "2F",
+  "completedWorkUnits": ["2A", "2B", "2C", "2D", "2E"],
+  "activeWorkUnit": "2F",
+  "nextWorkUnit": null,
   "workUnits": {
     "2A": {
       "name": "Canonical Memory and Host ABI",
@@ -185,7 +185,7 @@
     },
     "2E": {
       "name": "P8SCII and Custom Font",
-      "status": "active",
+      "status": "complete",
       "graphicsApis": ["print", "cursor"],
       "textEncoding": "byte-string-p8scii",
       "fontSources": {
@@ -205,9 +205,74 @@
         "visual-control-parser-and-bounds",
         "chrome-production-gate",
         "independent-commit-and-clean-worktree"
-      ]
+      ],
+      "result": {
+        "hostBindingIds": "29..30",
+        "builtinFontSha256": "a36a2826466ec5e8834462d8d438ddffa617b7bf938b46260eb7f80dfa4c5ea6",
+        "textGoldenSha256": "da6169dd3f2d02bf500de92892d6a1b0a28b3386016aedf14a121f5915e69f65",
+        "maximumInputBytes": 65536,
+        "maximumGlyphs": 65536,
+        "maximumPixelWrites": 8388608,
+        "maximumNestedControls": 256,
+        "chromeGate": "Google Chrome 150",
+        "knownDifferences": [
+          "p8scii-audio-control-has-no-audio-side-effect",
+          "timed-delay-and-frame-skip-controls-do-not-suspend",
+          "tline-one-argument-precision-mode-deferred",
+          "advanced-screen-and-bitplane-modes-deferred"
+        ],
+        "verification": [
+          "pnpm run test:phase-2e",
+          "pnpm run test:phase-2e:chrome",
+          "pnpm run verify"
+        ]
+      }
     },
-    "2F": { "name": "Conformance and Phase Exit", "status": "planned" }
+    "2F": {
+      "name": "Conformance and Phase Exit",
+      "status": "active",
+      "corpus": {
+        "ownership": "project-owned",
+        "location": "tests/conformance/carts/phase-2",
+        "minimumFlows": 2,
+        "coverage": [
+          "memory-draw-state-primitives-sprites",
+          "map-flags-tline",
+          "p8scii-custom-font-remap"
+        ],
+        "forbidden": ["bbs-download", "third-party-cart-corpus", "ref-runtime-dependency"]
+      },
+      "oracles": [
+        "packed-screen",
+        "relevant-pico-ram",
+        "draw-state",
+        "display-palette",
+        "frame-trace"
+      ],
+      "executionPaths": [
+        "node-real-wasm-fresh-session-and-reset-replay",
+        "chrome-production-worker-and-canvas"
+      ],
+      "performanceGate": {
+        "environment": "chrome-or-chromium-desktop",
+        "profile": "representative-phase-2-graphics-and-text-frame",
+        "p95MillisecondsMaximum": 8,
+        "optimizationPolicy": "adr-006-profile-first"
+      },
+      "recoveryGate": [
+        "malformed-or-resource-fault-is-structured",
+        "generation-reset-rejects-stale-work",
+        "fresh-valid-cart-recovers-after-fault"
+      ],
+      "exit": [
+        "project-conformance-corpus-and-hash-manifest",
+        "node-and-chrome-oracles-match",
+        "performance-and-recovery-gates-pass",
+        "zero-open-p0-or-p1",
+        "immutable-phase-evidence-and-roadmap-closure",
+        "independent-commit-and-clean-worktree"
+      ]
+    }
   },
   "scope": [
     "base-ram-memory-api",

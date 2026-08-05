@@ -6,7 +6,7 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 ## 当前开发入口
 
 当前 active phase 是 [Phase 2 — Graphics、Memory 与 Text](./phases/2-graphics-memory-text.md)，
-active work unit 为 **2E P8SCII 与 Custom Font**。Phase 1A–1F 和 Phase 2A–2D 已完成。
+active work unit 为 **2F Conformance 与 Phase Exit**。Phase 1A–1F 和 Phase 2A–2E 已完成。
 
 日常实现只读取以下入口，不通读已完成阶段的执行过程：
 

@@ -7,6 +7,7 @@
 | `ref/z8lua/` | <https://github.com/samhocevar/z8lua> | `8575dfbc524003c869c0aa05e109819302c576f9`（`origin/pico8`，detached） | P8 Lua 语法、fixed-point VM、direct memory operators 和 native build baseline |
 | `ref/fake-08/` | <https://github.com/jtothebell/fake-08> | `814991a2571ad3970e386cef48f3b148aa1c27b9`（`master`） | cart parsing、hardware behavior、graphics/audio 算法和 differential diagnosis |
 | `ref/zepto8/` | <https://github.com/samhocevar/zepto8> | `b2929a4fe31e5765ef66d7794edd11086b9638b4`（`master`，detached） | 独立 emulator 行为及 compression/runtime 交叉检查 |
+| `ref/tac08/` | <https://github.com/0xcafed00d/tac08> | `38c1f3bb2ae81c06983dc5132d45f0c8747dff95`（`master`） | Phase 2E 内建字体 provenance 与 MIT notice 交叉检查 |
 | `ref/emsdk/` | <https://github.com/emscripten-core/emsdk> | `17a714fde0f1aaac53d282efcc6093b377addc8d`（detached） | Emscripten release mapping 与安装器审计；实际 toolchain 安装在 repo 外且由 `wasm/toolchain.lock.json` 锁定 |
 
 默认不初始化 submodule。只有明确、有限的调研需要时才能初始化指定 submodule，并把仓库和 commit 补记在本页。
@@ -32,6 +33,9 @@ git -C ref/fake-08 checkout 814991a2571ad3970e386cef48f3b148aa1c27b9
 git clone https://github.com/samhocevar/zepto8.git ref/zepto8
 git -C ref/zepto8 checkout --detach b2929a4fe31e5765ef66d7794edd11086b9638b4
 
+git clone https://github.com/0xcafed00d/tac08.git ref/tac08
+git -C ref/tac08 checkout --detach 38c1f3bb2ae81c06983dc5132d45f0c8747dff95
+
 git clone https://github.com/emscripten-core/emsdk.git ref/emsdk
 git -C ref/emsdk checkout --detach 17a714fde0f1aaac53d282efcc6093b377addc8d
 ```
@@ -52,3 +56,12 @@ Phase 0D 在设计 raw/legacy/PXA contract 时检查了以下锁定路径：
 fixtures 和 vectors 均独立编写，没有复制/翻译参考实现，也不在 build/test 时读取
 `ref/`。机器登记及 source/contract/fixture hashes 见
 `packages/cart-codec/manifest.lock.json`。
+
+## Phase 2E P8SCII 字体记录
+
+Phase 2E 检查了 fake-08 `814991a…/source/fontdata.cpp` 中的
+`defaultFontBinaryData`，并通过 tac08 `38c1f3b…/LICENSE` 核对其上游归属和 MIT
+notice。项目把固定 2048 bytes 转写为 RuntimeCore 内部 hex constant，保留 byte-for-byte
+SHA-256 `a36a2826466ec5e8834462d8d438ddffa617b7bf938b46260eb7f80dfa4c5ea6`；
+许可正文与改写说明位于 `packages/runtime-core/THIRD_PARTY_NOTICES.md`。production/test
+不会读取 `ref/`。

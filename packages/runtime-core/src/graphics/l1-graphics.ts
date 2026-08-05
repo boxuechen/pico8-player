@@ -1,5 +1,6 @@
 import type { PicoRam } from "../memory/pico-ram.js";
 import { PicoMapMemory } from "./map-memory.js";
+import { P8sciiText } from "./p8scii-text.js";
 
 const SCREEN_WIDTH = 128;
 const SCREEN_HEIGHT = 128;
@@ -12,6 +13,7 @@ const CLIP_LEFT = 0x5f20;
 const CLIP_TOP = 0x5f21;
 const CLIP_RIGHT = 0x5f22;
 const CLIP_BOTTOM = 0x5f23;
+const PRINT_START_X = 0x5f24;
 const TEXT_CURSOR_X = 0x5f26;
 const TEXT_CURSOR_Y = 0x5f27;
 const PEN_REGISTER = 0x5f25;
@@ -48,6 +50,7 @@ export class L1Graphics {
   readonly #mapMemory: PicoMapMemory;
   readonly #ram: Uint8Array;
   readonly #view: DataView;
+  readonly #text: P8sciiText;
   readonly #shapeMask = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT);
   #maskingShape = false;
 
@@ -60,6 +63,17 @@ export class L1Graphics {
       this.#ram.byteOffset,
       this.#ram.byteLength,
     );
+    this.#text = new P8sciiText(memory, {
+      plot: (worldX, worldY, sourceColor) => {
+        this.#plotTextPixel(worldX, worldY, sourceColor);
+      },
+      clear: (sourceColor) => {
+        this.cls((sourceColor & 0x0f) << 16);
+      },
+      scroll: (rows) => {
+        this.#scrollScreen(rows);
+      },
+    });
   }
 
   reset(): void {
@@ -438,6 +452,19 @@ export class L1Graphics {
       mapX = advanceTlineQ16(mapX, deltaX, 1, maskX);
       mapY = advanceTlineQ16(mapY, deltaY, 1, maskY);
     }
+  }
+
+  print(
+    bytes: Uint8Array,
+    xOrColorRaw?: number,
+    yRaw?: number,
+    colorRaw?: number,
+  ): number {
+    return this.#text.print(bytes, xOrColorRaw, yRaw, colorRaw);
+  }
+
+  cursor(xRaw: number, yRaw: number, colorRaw?: number): void {
+    this.#text.cursor(xRaw, yRaw, colorRaw);
   }
 
   pset(xRaw: number, yRaw: number, colorRaw?: number): void {
@@ -861,6 +888,28 @@ export class L1Graphics {
     this.#writeScreenPixel(x, y, color);
   }
 
+  #plotTextPixel(worldX: number, worldY: number, sourceColor: number): void {
+    const x = worldX - this.#cameraX();
+    const y = worldY - this.#cameraY();
+    if (!this.#insideClip(x, y)) return;
+    const color = this.#ram[DRAW_PALETTE + (sourceColor & 0x0f)]! & 0x0f;
+    this.#writeScreenPixel(x, y, color);
+  }
+
+  #scrollScreen(rows: number): void {
+    const amount = clamp(Math.trunc(rows), 0, SCREEN_HEIGHT);
+    if (amount === 0) return;
+    const remainingBytes = (SCREEN_HEIGHT - amount) * (SCREEN_WIDTH >> 1);
+    const snapshot = this.#memory.copy(
+      SCREEN_ADDRESS + amount * (SCREEN_WIDTH >> 1),
+      remainingBytes,
+    );
+    for (let index = 0; index < snapshot.byteLength; index += 1) {
+      this.#memory.writeU8(SCREEN_ADDRESS + index, snapshot[index]!);
+    }
+    this.#memory.fill(SCREEN_ADDRESS + remainingBytes, SCREEN_BYTES - remainingBytes, 0);
+  }
+
   #drawFilled(color: RasterColor, inverted: boolean, drawShape: () => void): void {
     if (!inverted) {
       drawShape();
@@ -982,6 +1031,7 @@ export class L1Graphics {
 
   #resetClipAndCursor(): void {
     this.#resetClip();
+    this.#ram[PRINT_START_X] = 0;
     this.#ram[TEXT_CURSOR_X] = 0;
     this.#ram[TEXT_CURSOR_Y] = 0;
   }

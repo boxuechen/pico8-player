@@ -343,6 +343,29 @@
         { "name": "layersRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "void"
+    },
+    {
+      "id": 29,
+      "guestName": "print",
+      "hostMethod": "print",
+      "parameters": [
+        { "name": "bytes", "type": "byte-string" },
+        { "name": "xOrColorRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "yRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "integer"
+    },
+    {
+      "id": 30,
+      "guestName": "cursor",
+      "hostMethod": "cursor",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

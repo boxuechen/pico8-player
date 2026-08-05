@@ -241,8 +241,6 @@ void remove_global(lua_State *state, const char *name) {
   lua_setglobal(state, name);
 }
 
-int quiet_print(lua_State *) { return 0; }
-
 uint32_t logical_address(lua_State *state, int index) {
   return p8w::normalize_address(
       static_cast<int32_t>(luaL_checknumber(state, index)));
@@ -572,7 +570,6 @@ void open_guest_environment(lua_State *state) {
                            "os", "package"}) {
     remove_global(state, name);
   }
-  register_function(state, "print", quiet_print);
   register_function(state, "peek", p8_peek);
   register_function(state, "peek2", p8_peek2);
   register_function(state, "peek4", p8_peek4);

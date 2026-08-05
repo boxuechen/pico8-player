@@ -78,6 +78,13 @@ export interface PicoApiHost {
     mdyRaw?: number,
     layersRaw?: number,
   ): void;
+  print(
+    bytes: Uint8Array,
+    xOrColorRaw?: number,
+    yRaw?: number,
+    colorRaw?: number,
+  ): number;
+  cursor(xRaw: number, yRaw: number, colorRaw?: number): void;
   pset(xRaw: number, yRaw: number, colorRaw?: number): void;
   line(
     x0Raw?: number,
@@ -276,6 +283,19 @@ class RuntimePicoApiHost implements PicoApiHost {
       mdyRaw,
       layersRaw,
     );
+  }
+
+  print(
+    bytes: Uint8Array,
+    xOrColorRaw?: number,
+    yRaw?: number,
+    colorRaw?: number,
+  ): number {
+    return this.#graphics.print(bytes, xOrColorRaw, yRaw, colorRaw);
+  }
+
+  cursor(xRaw: number, yRaw: number, colorRaw?: number): void {
+    this.#graphics.cursor(xRaw, yRaw, colorRaw);
   }
 
   pset(xRaw: number, yRaw: number, colorRaw?: number): void {

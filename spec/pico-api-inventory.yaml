@@ -199,11 +199,12 @@ apis:
     phase: 2D
     note: signed Q16.16 tile-coordinate sampler with default/explicit deltas, RAM masks/offsets and layers; one-argument precision mode deferred
   - name: print
-    status: unimplemented
+    status: partial
     owner: packages/runtime-core
     phase: 2E
-    note: current WASM quiet placeholder has no text behavior
+    note: byte-oriented built-in/custom font raster and synchronous visual P8SCII controls; audio and timed frame delays are intentionally deferred
   - name: cursor
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2E
+    note: RAM-backed cursor, print-home and optional pen update through generated host binding

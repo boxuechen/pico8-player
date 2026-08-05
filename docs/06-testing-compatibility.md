@@ -723,8 +723,9 @@ logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与�
 三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
 corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
 
-- Phase 2D 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map 与 tile-precision
-  `tline`；text、`tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
+- Phase 2E 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
+  `tline` 与 visual P8SCII/custom font；P8SCII audio/timed controls、`tline(bits)` precision
+  overload 与 advanced screen/bitplane mode 仍 `partial`。
 - AudioSynth、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
@@ -742,7 +743,7 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
 | width/block memory | unaligned/cross-wrap `peek2/4`、`poke2/4`、overlap-safe `memcpy`、`memset` 通过 | `compatible`（project vectors） | 非法/溢出参数 edge 仍 `unknown` |
 | canonical remap | direct/API/RuntimeCore graphics/frame snapshot 在 GFX/SCREEN remap 下收敛 | `compatible`（documented bases） | invalid video base defensive fallback 继续 `unknown` |
 | logical-memory port | stable lease、buffer identity、destroy 后 stale rejection、无 browser/WASM concrete type leak | `compatible`（architecture contract） | map resolver 属于 2D，不混入 low-level mapper |
-| Host call frame | ABI `0x00010002`、80 bytes、12 scalar slots、presence、byte pointer/length、result/error passed | `implemented-foundation` | byte-string guest behavior由 2E `print` 完成；multi-return 仍 deferred |
+| Host call frame | ABI `0x00010002`、80 bytes、12 scalar slots、presence、byte pointer/length、result/error passed | `implemented-foundation` | byte-string guest behavior已由 2E `print` 完成；multi-return 仍 deferred |
 | regression/performance | reproducible artifact、Phase 0C benchmark、Phase 0E/1A/1D 与 Chrome production gates passed | gate passed | graphics stress 从 2B/2C 建立 |
 
 Known Differences：memory API 的未定义 invalid inputs 沿用 defensive/structured error，不宣称
@@ -763,7 +764,7 @@ official exact；`reload/cstore/cartdata` 仍 unsupported/deferred。2A 没有�
 | regression/performance | Phase 1D/1E/1F passed；ordinary Worker p95 `0.4001ms`，`>16.67ms` `0/120` | gate passed | sprite stress 从 2C 建立 |
 
 Known Differences：camera/clip 的 undocumented multi-return 不是当前 v0.2.7 manual claim；bitplane、
-advanced screen modes 与 text 尚未实现；map/tile-precision tline 后续由 2D 关闭。2B 没有开放 P0/P1。
+advanced screen modes 仍未实现；map/tile-precision tline 已由 2D、visual text 已由 2E 关闭。2B 没有开放 P0/P1。
 
 ### 15.13 Phase 2C Sprite Sheet/Blitter 矩阵
 
@@ -781,7 +782,7 @@ Chrome 页面均为项目原创；advanced screen/bitplane mode 不在本 unit �
 | framebuffer/Chrome | packed golden `337c0b37…07180`；production Worker/Canvas pattern 与 negative-scale pixels passed | gate passed（Chrome 150） | 2D 继续保持 transport/presenter 无 tile dependency |
 
 Known Differences：advanced screen/bitplane mode 和 undocumented invalid/overflow input 仍不声明
-official exact；map、flags 与 tile-precision `tline` 已由 2D 关闭，text 尚未实现。2C 没有开放 P0/P1。
+official exact；map、flags 与 tile-precision `tline` 已由 2D、visual text 已由 2E 关闭。2C 没有开放 P0/P1。
 
 ### 15.14 Phase 2D Map/Flags/Tline 矩阵
 
@@ -800,6 +801,26 @@ framebuffer golden 与 Chrome 页面均为项目原创；不存在 Canvas/Worker
 
 Known Differences：`tline(bits)` precision-setting overload、advanced screen/bitplane mode 和未记录
 invalid/overflow edge 不在 2D compatible claim；project golden 不等于 official bit-exact。2D 没有开放 P0/P1。
+
+### 15.15 Phase 2E P8SCII/Custom Font 矩阵
+
+本表只声明同步 visual P8SCII、standard packed-4bpp text path。测试 byte arrays、RAM/framebuffer
+golden 与 Chrome 页面均为项目原创；字体 bitmap 的固定来源、checkout、hash 和 MIT notice 记录于
+[`10-reference-sources.md`](./10-reference-sources.md) 与 RuntimeCore third-party notice。
+
+| 行为 | Phase 2E 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| byte-string host binding | append-only id `29..30`；empty、embedded NUL、non-UTF8、1024 bytes、类型/arity/error 与同步 lifetime passed | `compatible`（2E profile） | async-retained byte view 仍禁止；multi-return deferred |
+| `print/cursor` basics | explicit/implicit overload、rightmost return、cursor/pen、NUL/newline/carriage return 与 scroll enable/disable passed | `compatible`（project vectors） | undocumented invalid coordinate edge 仍 `unknown` |
+| built-in/custom font | 256 glyph bitmap hash `a36a2826…5ea6`；`0x5600..0x5dff` rows/attrs/adjustments/tab 和 `0x5f58..5b` defaults live-read passed | `compatible`（documented RAM） | external Unicode font shaping 不在 P8SCII runtime scope |
+| visual controls | repeat、shift/tab、decorate、foreground/font switch、special modes、one-off、outline 与 raw writes passed | `compatible`（visual synchronous profile） | audio control 无 synth side effect；timed controls 不 suspend |
+| raster ordering | camera/clip、foreground/background draw palette、mapped screen、scroll 与 packed framebuffer hash `da6169dd…9f65` deterministic | `compatible`（standard 4bpp） | advanced screen/bitplane mode deferred |
+| bounds/fuzz | 65,536-byte input、65,536 glyph、8,388,608 pixel-write、256 nested-control hard caps；10,000 deterministic arrays 无 crash/hang/OOB | gate passed | 代表 cart stress/performance 由 2F 汇总 |
+| Chrome boundary | Chrome 150 production Worker/Canvas built-in/custom/one-off/background pixels passed；frame DTO 无 text/font/glyph state | gate passed（Chrome 150） | 2F 汇总同 cart Node/Chrome oracle |
+
+Known Differences：P8SCII audio command 只被同步消费而不产生 AudioSynth side effect，timed delay/
+frame-skip commands 不引入 suspension；`tline(bits)`、advanced screen/bitplane mode 仍 deferred。
+project golden 不等于 official bit-exact。2E 没有开放 P0/P1。
 
 ## 16. Definition of Done
 

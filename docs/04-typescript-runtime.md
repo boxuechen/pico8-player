@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 2D** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline |
+| **Implemented through Phase 2E** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -439,7 +439,8 @@ interface ScreenEncoder {
 
 `Graphics` 在 Worker 内做确定性 software rendering，直接读写 packed RAM。`ScreenEncoder` 应用 screen palette 并生成 128×128 RGBA；主线程 `ScreenPresenter` 只负责最近邻缩放和 letterbox。
 
-Phase 2B–2D 当前实现位于 `graphics/l1-graphics.ts` 与 `graphics/map-memory.ts`：支持
+Phase 2B–2E 当前实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`、
+`graphics/p8scii-text.ts` 与 `graphics/p8scii-font.ts`：支持
 `cls/color/camera/clip/pal/palt/fillp/pget/pset/line/rect/rectfill/circ/circfill/oval/ovalfill`，
 使用 mapped packed screen，并从 `0x5f00..0x5f3f` 与 `0x5f60..0x5f6f` 即时读写 draw state。
 `sget/sset/spr/sspr` 通过同一个 `PicoRam` logical mapper 访问 GFX，blitter 在 RuntimeCore 内
@@ -447,9 +448,11 @@ Phase 2B–2D 当前实现位于 `graphics/l1-graphics.ts` 与 `graphics/map-mem
 `mget/mset/map/tline` 通过独立的 live map resolver 解释 `0x5f56/57`，直接访问同一 physical
 RAM，并复用 sprite raster；lower map 在 `0x1000..0x2fff` ring 中排列，upper map 使用
 `base<<8..0xffff`，GFX/screen upper conflict 仍由 C++ canonical mapper 裁决。
-`RuntimeFrame` 另外快照 `0x5f10..0x5f1f` 的 16-byte display palette，main Canvas 只把
-palette index 映射到标准/extended RGBA。当前兼容声明仅是 standard 128×128 packed 4bpp；
-text、bitplane 和 advanced screen mode 仍是 Target；`tline(bits)` precision overload 延后。
+`print/cursor` 使用原始 byte string，经 software parser/raster 读取内建字体或 RAM-backed custom
+font；cursor、scroll、camera/clip 与 palette 仍经过同一 RAM/pixel path。P8SCII audio/timed controls
+只同步消费、不产生音频或 suspension。`RuntimeFrame` 另外快照 `0x5f10..0x5f1f` 的 16-byte display
+palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当前兼容声明仅是 standard
+128×128 packed 4bpp；bitplane、advanced screen mode 与 `tline(bits)` precision overload 延后。
 
 ### 7.2 必须保持的行为
 

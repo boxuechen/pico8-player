@@ -58,7 +58,7 @@ test("Phase 2D appends map bindings without changing the 80-byte ABI", async () 
     "utf8",
   ));
   assert.equal(contract.dispatchAbi.callFrame.byteSize, 80);
-  assert.deepEqual(contract.bindings.slice(22).map(({ id, guestName }) => [id, guestName]), [
+  assert.deepEqual(contract.bindings.slice(22, 28).map(({ id, guestName }) => [id, guestName]), [
     [23, "mget"],
     [24, "mset"],
     [25, "fget"],
