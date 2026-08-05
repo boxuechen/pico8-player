@@ -133,6 +133,8 @@
 - 不成为 `utils/common/shared` 垃圾桶。一个类型只有被两个以上合法上层 consumer 共享、且语义稳定时才进入此 package。
 - Phase 0B 已加入稳定的 `PICO_RAM_SIZE` 与 runtime-neutral `PicoMemoryLease`；
   lease 只携带 `ArrayBuffer` range 和 opaque ID，不携带 WASM/module/handle。
+- Phase 0E 加入 `PicoInputSnapshot`、`SerializedRuntimeError` 和 stable error/phase
+  unions；versioned Worker command/event 仍留在 app transport。
 
 ### `@pico8-web/cart-codec`
 
@@ -153,7 +155,10 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-拥有 player simulation 和 session 权威状态：`RuntimeCore`、`CartSession`、Pico RAM、graphics、audio synth、input、scheduler、persistence window、PICO API host 与 load transaction。
+最终拥有 player simulation 和 session 权威状态。Phase 0E 当前公共实现为
+`FrameSliceRuntime` + `FrameVmPort`：负责 decoded cart ROM/source transaction、manual
+step、logical Q16.16 time、input snapshot、HostRequest budget transaction 和 packed
+screen snapshot；graphics/audio/scheduler/persistence 仍未落地。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。
@@ -178,6 +183,11 @@ Phase 0B 的 public `Phase0BMemoryBinding` 与 `Phase0BMemoryModule` 是明确�
 bounded adapter probe：它负责验证 pointer/size、创建 zero-copy views、检查 stale
 lease，并把 logical access 路由到 WASM canonical mapper。它不是 production
 `VmPort`，也不把 Emscripten concrete objects 交给 RuntimeCore。
+
+Phase 0E 的 production public adapter 是 `Z8LuaFrameVm` 与 factory-facing
+`FrameRuntimeModule` type；linear-memory binding/view 保持 package-private。adapter
+只实现 RuntimeCore 的 `FrameVmPort`，编译 artifact
+为 `z8lua-runtime-v1`；`p8w0c_bench_*` 不得出现在该 artifact 或 adapter interface。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
 

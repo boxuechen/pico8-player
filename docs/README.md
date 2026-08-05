@@ -3,8 +3,9 @@
 本目录是本项目的工程事实来源（source of truth），用于指导 Codex 和人工开发者实现一个以 **z8lua WASM + TypeScript Runtime** 为核心的 Web-native PICO-8 player。
 
 当前仓库已完成 Phase 0S 工程骨架、Phase 0A z8lua WASM baseline、Phase 0B
-Shared Pico RAM、Phase 0C interop microbenchmark 与 Phase 0D lossless
-`.p8.png` codec；下一阶段是 Phase 0E coroutine frame slice。尚未实现完整 PICO-8
+Shared Pico RAM、Phase 0C interop microbenchmark、Phase 0D lossless
+`.p8.png` codec 与 Phase 0E coroutine frame slice；下一阶段是 Phase 0F browser
+render/audio transport。尚未实现完整 PICO-8
 Runtime 或 Player UI 行为。任何实现任务开始前，
 必须先阅读本页、当前阶段文档、[源码目录与边界契约](./08-source-layout-and-boundaries.md)，
 以及与该任务直接相关的模块契约。
@@ -40,6 +41,7 @@ Runtime 或 Player UI 行为。任何实现任务开始前，
 | 13 | [13-phase-0b-evidence.md](./13-phase-0b-evidence.md) | 64 KiB shared RAM、canonical mapper、zero-copy lease、fixed memory/OOM 证据 |
 | 14 | [14-phase-0c-evidence.md](./14-phase-0c-evidence.md) | interop contract、真实 Chromium p50/p95/p99、fallback 与 ADR-006 go/no-go |
 | 15 | [15-phase-0d-evidence.md](./15-phase-0d-evidence.md) | lossless PNG/cart contract、typed API、bounded decoder、fixtures 与错误门禁 |
+| 16 | [16-phase-0e-evidence.md](./16-phase-0e-evidence.md) | frame lifecycle、Q16.16 time、budget poison、HostRequest 降级与 Chrome watchdog |
 
 如果文档之间出现冲突，按以下优先级处理：
 

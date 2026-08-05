@@ -76,10 +76,11 @@ TypeScript 负责：
 | `P0-RT-03` | Proposed | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM | Chrome/Chromium 的 transferable `MessagePort` 与 10 分钟队列测试 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
 | `P0-RT-05` | Proposed（Phase 1） | cold boot/cart run 的 RAM reset matrix | 依赖 Cart ROM/Runtime lifecycle 与官方 golden；fake-08 只能作为候选行为 |
-| `P0-RT-06` | Proposed | 外部 `reload/cstore` 使用 z8lua 可恢复 host-call suspension | 最小 coroutine prototype 能在资源返回后从 API 调用点继续 |
-| `P0-RT-07` | Proposed | 前台 tick watchdog 250ms、boot 2s、ordinary 60Hz core p95 8ms | Chrome/Chromium benchmark、missed-frame 数据；最终阈值写入 CI 配置 |
+| `P0-RT-06` | Accepted with constraints（ADR-017；Phase 0E） | root host-call 可恢复；nested guest coroutine 固定 unsupported，L3 外部数据只用预供给/同步 cache | root byte-string continuation 与 nested sentinel tests 已通过；一般 bubbling 需新 ADR |
+| `P0-RT-07` | Mechanism Accepted / thresholds Proposed（ADR-017） | Window command watchdog terminate/recreate + generation；各命令 deadline 后续校准 | fake stale-generation test 与 Chrome JS-stall recovery 已通过；250ms/2s/8ms 尚不作为最终 release threshold |
 | `P0-RT-08` | Accepted（ADR-013；Phase 0B passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 已通过；interop cost 留给 Phase 0C |
 | `P0-RT-09` | Accepted（ADR-015） | 四 package DAG + main/worker/worklet execution domains | Phase 0S exports/project references、architecture tests 与 negative fixtures |
+| `P0-RT-10` | Accepted（ADR-017；Phase 0E passed） | `FrameSliceRuntime` 通过 `FrameVmPort` 驱动 callback/custom loop；logical time 只按 completed slice 推进 | 60-step counts、Q16.16 time、input/frame RAM hash、budget/error/HostRequest 与 Chrome Worker gate |
 
 其中 `P0-RT-03` 是与系统架构图一致的目标数据路径。若目标浏览器不能可靠转交 port，允许的 fallback 是 Worker → Window → `AudioWorkletNode.port`，但必须先更新 ADR、背压测试和本文；两条路径不得同时作为无规则的运行时分支。
 

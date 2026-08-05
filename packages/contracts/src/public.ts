@@ -17,3 +17,41 @@ export interface PicoMemoryLease {
   readonly byteLength: typeof PICO_RAM_SIZE;
   readonly leaseId: string;
 }
+
+/** Stable cross-domain failure codes introduced by the Phase 0E slice. */
+export type RuntimeErrorCode =
+  | "E_VM_SYNTAX"
+  | "E_VM_RUNTIME"
+  | "E_VM_INSTRUCTION_BUDGET"
+  | "E_VM_OOM"
+  | "E_VM_WATCHDOG"
+  | "E_FEATURE_UNSUPPORTED"
+  | "E_HOST_REQUEST"
+  | "E_INVALID_STATE"
+  | "E_INVARIANT";
+
+export type RuntimePhase =
+  | "none"
+  | "compile"
+  | "boot"
+  | "init"
+  | "update"
+  | "update60"
+  | "draw"
+  | "custom-loop"
+  | "host-call";
+
+export interface SerializedRuntimeError {
+  readonly code: RuntimeErrorCode;
+  readonly message: string;
+  readonly phase: RuntimePhase;
+  readonly line?: number;
+  readonly trace?: string;
+  readonly recoverable: boolean;
+  readonly details?: Readonly<Record<string, string | number | boolean>>;
+}
+
+export interface PicoInputSnapshot {
+  /** P1 left/right/up/down/O/X, bits 0..5. */
+  readonly buttons: number;
+}

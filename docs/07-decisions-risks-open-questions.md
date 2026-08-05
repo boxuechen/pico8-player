@@ -22,6 +22,7 @@
 | ADR-014 | Accepted | 内部 canonical test PCM 使用 22050 Hz mono signed PCM16LE | 固定 deterministic audio golden 格式；不把它宣称为官方公开硬件规格，设备输出另测重采样 |
 | ADR-015 | Accepted | 使用 08 定义的四 package DAG + web-player 三 execution domains，并机器阻断非法 import | 让 simulation、VM adapter 与浏览器设备边界成为可执行约束，而非目录命名约定 |
 | ADR-016 | Accepted | 使用 pnpm workspace；精确版本在根 `packageManager` 字段 pin | 与既有稳定测试命令一致，并支持 package exports/project references 的单仓库边界 |
+| ADR-017 | [Accepted](./adr/017-coroutine-frame-slice-and-fault-containment.md) | host-driven callback/custom frame slice、budget poison + Window watchdog；nested host suspension 明确 unsupported | 保证一次 step 至多一 slice、死循环不冻结 Window，且不伪造一般 nested async 已解决 |
 
 每个 Proposed 项必须在依赖它的生产实现合并前转为 Accepted 或 Rejected。
 
@@ -44,7 +45,7 @@
 | R-13 | Worker fault 恢复后残留 stale frame/audio | 中 | 中 | 新 session 显示旧帧或旧声音 | session generation ID、sequence number、丢弃 stale message、清空 audio queue |
 | R-14 | API surface 太大导致“广而不准” | 高 | 中高 | 多数 API 存在无测试 stub | 按 vertical slice + conformance 交付；未知 stub 数作为 release gate |
 | R-15 | 上游 z8lua direct `@/%/$` 与 v0.2.7 的 64KiB/remap 语义不完整 | 高 | 高 | upper RAM、跨界读或 GFX/SCREEN remap 与 `peek()` 不一致 | Pin 后维护最小 address-mapper patch；逐 byte multi-width conformance；记录 upstream provenance |
-| R-16 | 异步 HostRequest 在 guest nested coroutine 中只 yield 给 guest caller | 中高 | 高（L3） | `reload/cstore` 返回错误值、被 `coresume` 吞掉或无法恢复 | Phase 0 root+nested prototype；优先预供给/同步 cache；无法保证时明确 unsupported，不伪造同步语义 |
+| R-16 | 异步 HostRequest 在 guest nested coroutine 中只 yield 给 guest caller | 已触发（Phase 0E） | 高（L3） | `reload/cstore` 返回错误值、被 `coresume` 吞掉或无法恢复 | root continuation 已通过；nested 固定 `E_FEATURE_UNSUPPORTED:nested-host-suspend`，只允许预供给/同步 cache，见 ADR-017 |
 | R-17 | package 边界退化为 deep import、shared utils 或 concrete adapter 反向依赖 | 高 | 高 | cycle、core 出现 DOM global、main import VM、同一 state 多 owner | ADR-015；Phase 0S architecture tests、explicit exports、独立 tsconfig 与 negative fixtures |
 
 ## 3. Phase 0 必须回答的未决问题
@@ -79,6 +80,11 @@ allocation、64 concurrent contexts、受控 OOM 与 typed-view identity。该�
 固定字节数，仍须更新 ADR/manifest，未来允许 growth 属于独立架构变更。
 
 ### Q-03：raw fixed-point ABI 如何暴露？
+
+状态：**Phase 0E 已回答**。所有 P8 number 以 signed Q16.16 raw `int32` 过
+`p8w_*`；`time()` test 已锁定 59/60 秒为 raw 64443，machine ABI 见
+[`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)。optional/multi-return 的完整 API
+schema 仍属于 ADR-008，不影响本阶段原始数值决定。
 
 需要确认 z8lua `lua_Number` / `fix32` 在 C wrapper 中取得 raw bits 的稳定方式，并定义：
 
@@ -152,6 +158,12 @@ little-endian 和全部文档 video bases 回归通过。interop cost 后续已�
 已核验的上游代码只能作为风险证据，最终 patch 必须针对项目实际 pin 重新确认。
 
 ### Q-10：HostRequest 能否跨所有 coroutine 层级恢复？
+
+状态：**Phase 0E 已回答为 Go with constraints**。root callback continuation 的
+byte-string request/response、stack 恢复与一次 slice 已通过；guest-created nested
+coroutine 无可靠自然 bubbling，固定返回 `E_FEATURE_UNSUPPORTED`，reason 为
+`nested-host-suspend`，且不会把 request 暴露给 host。L3 使用预供给/同步 cache；
+一般 nested async 需要未来最小 VM/glue patch 和新 ADR，不使用 Asyncify。
 
 原型必须覆盖：root callback、custom `flip()` loop、guest `cocreate/coresume` 内调用，以及错误被 guest 捕获的路径。只有能保持 Lua stack、continuation 和“一次且仅一次”副作用时，才可宣称一般异步 suspension。否则 L3 使用预加载/同步 repository，不能把 Promise 直接带入 WASM import。
 

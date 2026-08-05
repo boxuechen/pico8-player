@@ -6,4 +6,50 @@ status_values:
   - partial
   - implemented
   - unsupported
-apis: []
+apis:
+  - name: cls
+    status: partial
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: clears mapped packed screen; clip/draw-state conformance deferred
+  - name: pset
+    status: partial
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: bounds and explicit/default colour only; camera/clip/fillp deferred
+  - name: btn
+    status: partial
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: P1 six-button held snapshot only; btnp/multi-player deferred
+  - name: time
+    aliases: [t]
+    status: partial
+    owner: packages/runtime-core
+    phase: 0E
+    note: Q16.16 logical slice time; custom startup offset awaits official binary differential
+  - name: flip
+    status: partial
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: root top-level continuation implemented; guest-nested suspension unsupported
+  - name: peek
+    status: implemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: canonical Phase 0B logical mapper
+  - name: peek4
+    status: implemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: signed Q16.16 raw bits over canonical byte-wise mapper
+  - name: poke
+    status: implemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: canonical Phase 0B logical mapper
+  - name: poke4
+    status: implemented
+    owner: wasm/bridge/p8w_frame_runtime.cpp
+    phase: 0E
+    note: raw Q16.16 bits over canonical byte-wise mapper

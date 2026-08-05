@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "phase": "0E",
+  "browserGate": ["chrome", "chromium"],
+  "callbackPriority": ["_update60", "_update"],
+  "callbackFrameOrder": ["update", "draw", "frame-end"],
+  "logicalTime": {
+    "encoding": "signed-q16.16",
+    "formula": "floor(completedSlices * 65536 / targetFps)",
+    "callbackRates": [30, 60],
+    "customLoopTemporaryRate": 30,
+    "customStartupFlipCountsAsSlice": false,
+    "officialBinaryDifferential": "pending-local-licensed-pico8-binary"
+  },
+  "minimalGuestApi": ["cls", "pset", "btn", "time", "t", "flip", "peek", "peek4", "poke", "poke4"],
+  "hostRequestProbe": {
+    "guestName": "__p8w_probe_host_request",
+    "publicPicoApi": false,
+    "maximumBytes": 4096,
+    "root": "yield-and-resume-with-continuation",
+    "nested": "E_FEATURE_UNSUPPORTED:nested-host-suspend"
+  },
+  "faultPolicy": {
+    "instructionBudget": "poisoned-non-recoverable",
+    "workerDeadline": "terminate-recreate-increment-generation",
+    "staleGeneration": "drop"
+  },
+  "workerCommands": ["loadCart", "step", "hostResponse", "dispose"],
+  "workerEvents": ["ready", "frame", "hostRequest", "stopped", "fault", "disposed"],
+  "deferred": [
+    "complete graphics API",
+    "audio",
+    "btnp repeat semantics",
+    "persistence",
+    "general reload/cstore async suspension",
+    "text .p8 loader",
+    "BBS/network resolver",
+    "renderer and player UI",
+    "official custom-loop startup differential capture"
+  ]
+}

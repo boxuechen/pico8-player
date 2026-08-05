@@ -628,6 +628,25 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 | context reset 初态 | 全零 + `5f54=00`,`5f55=60` | `implemented-baseline`（仅 Shared RAM） | cart-run/reset matrix 留给 Phase 1 official golden |
 | fixed memory/OOM | descriptor 256/256 pages；growth/heap pressure 受控 | `implemented-baseline` | 代表 cart corpus 继续校准 production sizing |
 
+### 15.6 Phase 0E Coroutine Frame Slice 矩阵
+
+本表只覆盖 [Phase 0E evidence](./16-phase-0e-evidence.md) 的 lifecycle/safety slice，
+不把最小 `cls/pset/btn` 宣称为完整 API conformance。官方 binary 尚未 capture 的
+custom startup time offset 诚实保留 `unknown/temporary`。
+
+| 行为 | Phase 0E 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| `_init/_update60/_draw` lifecycle | 1/60/60 counters、60 frame boundaries passed | `implemented-baseline` | official representative cart differential |
+| `_update60` 优先于 `_update` | 0/60 counters passed | `implemented-baseline` | dynamic callback replacement 另测 |
+| `_update` 30 Hz logical time | 60 slices → raw 131072 passed | `implemented-baseline` | slow-frame multi-update policy 后续 |
+| top-level custom `flip()` | startup + 后续 60 resumes/60 boundaries passed | `partial` | custom fps 与 startup time offset 需合法官方 binary capture |
+| root HostRequest continuation | embedded-NUL request/response、一次 frame passed | `implemented-prototype` | 用真实同步-cache API 替换非公开 probe |
+| nested HostRequest/`flip()` | host side-effect 未发出；structured unsupported | `unsupported` | `nested-host-suspend`；L3 只用预供给/同步 cache |
+| instruction budget | infinite Lua loop → poisoned fault；不可再 step | `implemented-safety` | Phase 4 校准官方 CPU cost，不改变 hard limit |
+| Worker watchdog | Chrome JS stall → terminate/recreate/generation passed | `implemented-safety` | boot/step deadline 与 background policy 后续校准 |
+| Lua error record | phase/line/safe trace passed | `implemented-baseline` | Wasm trap/JS import/OOM 分类 corpus 继续扩充 |
+| minimal framebuffer | packed screen golden SHA-256 locked | `implemented-probe` | Phase 0F renderer；Phase 1 graphics conformance |
+
 ## 16. Definition of Done
 
 ### 16.1 单个功能或 bugfix

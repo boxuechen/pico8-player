@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "phase": "0E",
+  "abiContract": "spec/abi/p8w-v1.json",
+  "abiVersion": 65536,
+  "upstream": {
+    "repository": "https://github.com/samhocevar/z8lua.git",
+    "commit": "8575dfbc524003c869c0aa05e109819302c576f9",
+    "sourceLock": "wasm/source.lock.json"
+  },
+  "compiledBridgeSources": [
+    "wasm/bridge/p8w_pico_memory.cpp",
+    "wasm/bridge/p8w_frame_runtime.cpp"
+  ],
+  "z8luaSourceInventorySha256": "a1fdf06e85812e71517e3c6987759cd62637220aa3935b2420b45ca7d221981f",
+  "buildFlagsSha256": "7aa44aec48d904cf8fad28643c2efd39b129c05fa2bd2697d3a8c1de9375835a",
+  "productionExportPrefix": "p8w_",
+  "forbiddenExportPrefixes": ["p8w0a_", "p8w0b_", "p8w0c_bench_"],
+  "limits": {
+    "fixedWasmBytes": 16777216,
+    "defaultLuaHeapBytes": 1048576,
+    "minimumLuaHeapBytes": 32768,
+    "picoRamBytes": 65536,
+    "hostRequestBytes": 4096,
+    "errorMessageBytes": 1023,
+    "errorTraceBytes": 2047
+  },
+  "artifact": {
+    "outputDirectory": "wasm/dist",
+    "tracked": false,
+    "files": [
+      {
+        "path": "z8lua-runtime-v1.mjs",
+        "bytes": 7607,
+        "sha256": "f6e25e84f9041294965afdd9dd7e2b19a1d65729a0042aedaf817586df416d86"
+      },
+      {
+        "path": "z8lua-runtime-v1.wasm",
+        "bytes": 181095,
+        "sha256": "f0642eb0ad83d599cc0a21cadbea44293f80fbc21327095ee211d1b7bf27ec60"
+      }
+    ]
+  },
+  "tests": {
+    "node": "tests/runtime/phase-0e.test.mjs",
+    "chromium": "tests/browser/phase-0e.html",
+    "fixtures": "project-owned synthetic source and p8.png only"
+  }
+}

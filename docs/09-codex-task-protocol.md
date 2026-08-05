@@ -152,18 +152,16 @@ Spike 输出必须包括：
 
 ## 10. 当前推荐任务
 
-**Phase 0S–0D 已于 2026-08-05 完成**，证据见
+**Phase 0S–0E 已于 2026-08-05 完成**，证据见
 [11-phase-0s-evidence.md](./11-phase-0s-evidence.md) 和
 [12-phase-0a-evidence.md](./12-phase-0a-evidence.md)、
 [13-phase-0b-evidence.md](./13-phase-0b-evidence.md)、
-[14-phase-0c-evidence.md](./14-phase-0c-evidence.md) 和
-[15-phase-0d-evidence.md](./15-phase-0d-evidence.md)。不得继续向 scaffold、
+[14-phase-0c-evidence.md](./14-phase-0c-evidence.md)、
+[15-phase-0d-evidence.md](./15-phase-0d-evidence.md) 和
+[16-phase-0e-evidence.md](./16-phase-0e-evidence.md)。不得继续向 scaffold、
 `p8w0a_*`、`p8w0b_*` 或 `p8w0c_bench_*` spike 填入无验收归属的 placeholder behavior。
 
-下一个独立任务是 **Phase 0E：Coroutine Frame Slice**。它只回答最小 host API、
-callback/custom-loop lifecycle、受控 `flip()` continuation、instruction budget、
-Worker watchdog 与 nested HostRequest 可恢复性，不扩张成完整 graphics/audio/player。
-
-Phase 0E 必须消费 cart-codec 的公共 export，不得 deep import 或把 loader/VM 状态
-塞回 codec。Phase 0D 已锁定的 PNG/ROM/source contract 不应在 0E 中顺手改写；若
-真实 integration 暴露 contract 缺陷，必须以独立 regression + ADR 更新重新打开。
+下一个独立任务是 **Phase 0F：Browser Render / Audio Transport**。它复用 Phase 0E
+的 packed screen/frame DTO、Worker generation/watchdog 和 RuntimeCore port，不得把
+renderer、AudioWorklet 或 wall-clock scheduler 反向塞入 VM adapter。Phase 0E 的
+custom startup time offset 仍等待合法官方 binary differential；0F 不得自行改变。

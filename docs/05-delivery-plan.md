@@ -22,7 +22,7 @@
 
 ## 3. Phase 0 — 架构 Spike
 
-状态：**进行中**（Phase 0S–0D 已完成；下一阶段为 Phase 0E）
+状态：**进行中**（Phase 0S–0E 已完成；下一阶段为 Phase 0F）
 
 目标：用最小实验验证混合架构成立，并锁定 ABI。Spike 代码可以被重写，不得被未经审查地升级为生产代码。
 
@@ -145,6 +145,11 @@ manifest/provenance 与回归证据见 [Phase 0D 完成证据](./15-phase-0d-evi
 Runtime、BBS/network、label presenter 或 VM 行为。
 
 ### 0E. Coroutine Frame Slice
+
+状态：**Complete（2026-08-05）**。实现、真实 Chrome gate、nested 降级与已知
+custom startup time capture 限制见 [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md)
+和 [Phase 0E 证据](./16-phase-0e-evidence.md)。production `p8w_*` 与 Phase 0C
+benchmark artifact 已物理隔离。
 
 任务：
 

@@ -7,6 +7,9 @@ import {
   ARTIFACT_BASENAME,
   BRIDGE_SOURCES,
   BUILD_FLAGS,
+  RUNTIME_ARTIFACT_BASENAME,
+  RUNTIME_BRIDGE_SOURCES,
+  RUNTIME_BUILD_FLAGS,
   SOURCE_DATE_EPOCH,
   Z8LUA_SOURCES,
   resolveEmxx,
@@ -48,19 +51,24 @@ export async function build(outputDirectory) {
   await mkdir(absoluteOutputDirectory, { recursive: true });
 
   const sources = Z8LUA_SOURCES.map((name) => join("wasm", "z8lua", name));
-  const args = [
-    ...BUILD_FLAGS,
+  const compile = (flags, bridgeSources, outputPath) => run(emxx, [
+    ...flags,
     "-Iwasm/z8lua",
     "-Iwasm/bridge",
-    ...BRIDGE_SOURCES,
+    ...bridgeSources,
     ...sources,
     "-o",
-    artifactPath,
-  ];
-  await run(emxx, args, {
+    outputPath,
+  ], {
     cwd: projectRoot,
     env: { ...process.env, SOURCE_DATE_EPOCH },
   });
+  await compile(BUILD_FLAGS, BRIDGE_SOURCES, artifactPath);
+  await compile(
+    RUNTIME_BUILD_FLAGS,
+    RUNTIME_BRIDGE_SOURCES,
+    join(absoluteOutputDirectory, `${RUNTIME_ARTIFACT_BASENAME}.mjs`),
+  );
   const licenseOutputDirectory = join(absoluteOutputDirectory, "licenses");
   await mkdir(licenseOutputDirectory, { recursive: true });
   await copyFile(
@@ -79,7 +87,9 @@ export async function build(outputDirectory) {
     join(projectRoot, "wasm", "licenses", "WTFPL-2.txt"),
     join(licenseOutputDirectory, "WTFPL-2.txt"),
   );
-  process.stdout.write(`Built ${artifactPath}\nToolchain: ${versionLine}\n`);
+  process.stdout.write(
+    `Built ${artifactPath} and ${join(absoluteOutputDirectory, `${RUNTIME_ARTIFACT_BASENAME}.mjs`)}\nToolchain: ${versionLine}\n`,
+  );
   return absoluteOutputDirectory;
 }
 

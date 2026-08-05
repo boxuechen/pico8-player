@@ -22,5 +22,9 @@ Its no-op/raw/string/pset/peek-poke/sprite probes compare per-operation
 JS→WASM, WASM→JS, pure-WASM, and shared-memory paths. RAM-bearing probes reuse
 `p8w0b_*` handles and the canonical mapper; no remap policy is duplicated.
 
-None of these phase ABIs implements production compile/resume state, cart
-lifecycle, graphics/audio/input/persistence, or Player behavior.
+Phase 0E adds the separate production-named `p8w_*` v1 ABI in
+`p8w_frame_runtime.*`. It implements only compile/boot/manual step, callback and
+top-level `flip()` continuations, minimal `cls/pset/btn/time`, shared RAM,
+instruction poisoning, structured errors and the bounded HostRequest control-flow
+probe. It is built into `z8lua-runtime-v1`, which excludes all `p8w0*` symbols.
+Complete graphics/audio/input/persistence and Player behavior remain outside it.

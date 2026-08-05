@@ -6,7 +6,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ARTIFACT_BASENAME } from "./config.mjs";
+import {
+  ARTIFACT_BASENAME,
+  RUNTIME_ARTIFACT_BASENAME,
+} from "./config.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -40,6 +43,8 @@ try {
   for (const filename of [
     `${ARTIFACT_BASENAME}.mjs`,
     `${ARTIFACT_BASENAME}.wasm`,
+    `${RUNTIME_ARTIFACT_BASENAME}.mjs`,
+    `${RUNTIME_ARTIFACT_BASENAME}.wasm`,
     "THIRD_PARTY_NOTICES.md",
     "licenses/Emscripten.txt",
     "licenses/Lua-5.2.txt",

@@ -5,11 +5,17 @@ import { spawnSync } from "node:child_process";
 
 export const SOURCE_DATE_EPOCH = "1731622349";
 export const ARTIFACT_BASENAME = "z8lua-phase-0c";
+export const RUNTIME_ARTIFACT_BASENAME = "z8lua-runtime-v1";
 
 export const BRIDGE_SOURCES = [
   "wasm/bridge/p8w_baseline.cpp",
   "wasm/bridge/p8w_pico_memory.cpp",
   "wasm/bridge/p8w_interop_bench.cpp",
+];
+
+export const RUNTIME_BRIDGE_SOURCES = [
+  "wasm/bridge/p8w_pico_memory.cpp",
+  "wasm/bridge/p8w_frame_runtime.cpp",
 ];
 
 export const Z8LUA_SOURCES = [
@@ -101,6 +107,37 @@ export const EXPORTED_FUNCTIONS = [
   "_p8w0c_bench_control_spr",
 ];
 
+export const RUNTIME_EXPORTED_FUNCTIONS = [
+  "_p8w_abi_version",
+  "_p8w_create",
+  "_p8w_destroy",
+  "_p8w_compile",
+  "_p8w_boot",
+  "_p8w_step",
+  "_p8w_complete_host_request",
+  "_p8w_state",
+  "_p8w_mode",
+  "_p8w_target_fps",
+  "_p8w_yield_reason",
+  "_p8w_phase",
+  "_p8w_consumed_instructions",
+  "_p8w_pending_request_id",
+  "_p8w_pending_request_ptr",
+  "_p8w_pending_request_length",
+  "_p8w_error_status",
+  "_p8w_error_line",
+  "_p8w_error_message_ptr",
+  "_p8w_error_message_length",
+  "_p8w_error_trace_ptr",
+  "_p8w_error_trace_length",
+  "_p8w_ram_ptr",
+  "_p8w_ram_size",
+  "_p8w_ram_reset",
+  "_p8w_map_address",
+  "_p8w_alloc",
+  "_p8w_free",
+];
+
 export const BUILD_FLAGS = [
   "-O2",
   "-std=c++17",
@@ -130,6 +167,16 @@ export const BUILD_FLAGS = [
   `-sEXPORTED_FUNCTIONS=${EXPORTED_FUNCTIONS.join(",")}`,
   "-sEXPORTED_RUNTIME_METHODS=HEAPU8,wasmMemory",
 ];
+
+export const RUNTIME_BUILD_FLAGS = BUILD_FLAGS.map((flag) => {
+  if (flag === "-sEXPORT_NAME=createZ8LuaPhase0CModule") {
+    return "-sEXPORT_NAME=createZ8LuaRuntimeV1Module";
+  }
+  if (flag.startsWith("-sEXPORTED_FUNCTIONS=")) {
+    return `-sEXPORTED_FUNCTIONS=${RUNTIME_EXPORTED_FUNCTIONS.join(",")}`;
+  }
+  return flag;
+});
 
 const EXPECTED_VERSION = "6.0.5";
 const EXPECTED_VERSION_COMMIT = "1db513782be24469589d7cb8a1f1834e9a33f271";

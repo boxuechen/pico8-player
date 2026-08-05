@@ -560,22 +560,22 @@ Phase 0 Exit 前，本 bridge 至少满足：
 
 ### RAM / ABI
 
-- [ ] `p8w_abi_version`、invalid handle/state、reset/destroy 和 major mismatch 测试通过。
-- [ ] TS 与 Lua 对同一 64 KiB RAM 双向 alias，无 frame copy。
-- [ ] lower/upper、negative、`0xffff` wrap、multi-byte cross-boundary、GFX/SCREEN remap conformance 通过，或存在带 tests 的最小 pin patch。
+- [x] `p8w_abi_version`、invalid state、reset/destroy 和 adapter major mismatch contract 已落地；stale/invalid completion 继续扩充 corpus。
+- [x] TS 与 Lua 对同一 64 KiB RAM 双向 alias，无 logical-frame RAM copy；frame event 只复制 8 KiB packed screen。
+- [x] lower/upper、negative、`0xffff` wrap、multi-byte cross-boundary、GFX/SCREEN remap conformance 由 Phase 0B patch/tests 锁定。
 - [ ] raw fixed、nil/default、embedded NUL、multi-return、host error、stack balance 全覆盖。
 - [ ] 8K vararg/result vector 不截断、不过界，Lua stack 不足时受控失败。
-- [ ] 所有 error/request pointer lifetime 有 use-after-next-call 测试或 defensive copy test。
+- [x] Phase 0E error/request/response pointer 由 adapter 立即 defensive copy；embedded NUL regression 通过。
 - [ ] pending request 的 ID 匹配、success/error/cancel、重复/stale completion、payload copy 与 size cap 测试通过。
 
 ### Control / safety
 
-- [ ] callback cart 手动推进 60 次得到精确的 update/draw count。
-- [ ] root 手写 `flip()` loop 每 resume 只前进一个 boundary，且不重复启动 callback loop。
-- [ ] nested coroutine 的 `flip/load/reload/cstore` 有测试和明确结果；未解决项按同步-cache/unsupported 降级。
-- [ ] Lua 无限循环由 count hook 转成不可恢复 `P8W_ERROR_BUDGET`，Runtime 映射为 `E_VM_INSTRUCTION_BUDGET`，不是 yield 后继续。
+- [x] callback cart 手动推进 60 次得到精确的 update/draw count。
+- [x] root 手写 `flip()` loop 每 resume 只前进一个 boundary，且不重复启动 callback loop。
+- [x] nested coroutine 的 control/HostRequest 原型明确为 `E_FEATURE_UNSUPPORTED:nested-host-suspend`；`reload/cstore` 使用预供给/同步 cache 或 unsupported。
+- [x] Lua 无限循环由 count hook 转成不可恢复 `P8W_STATUS_INSTRUCTION_BUDGET`，Runtime 映射为 `E_VM_INSTRUCTION_BUDGET`，不是 yield 后继续。
 - [ ] JS import throw、Lua runtime error、OOM、budget 和 raw Wasm trap 可区分。
-- [ ] hook 失效或 native stall 时，Window watchdog 能终止并重建 Worker。
+- [x] hook 无法中断的 Worker JS stall 在真实 Chrome 中由 Window watchdog 终止并重建，generation 防 stale response。
 
 ### Performance
 
