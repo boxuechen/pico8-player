@@ -84,7 +84,12 @@ trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload �
 门禁通过。兼容声明严格限于 L1 bounded profile，详见
 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
 
+<a id="phase-2-activation-baseline"></a>
+
 ### Phase 2 — Graphics、Memory 与 Text
+
+> 状态：Not started。以下是 activation baseline，不是 work-unit 拆解或 production
+> implementation 授权。
 
 目标：完成大多数可视 cart 所需 graphics/memory/text 行为。
 

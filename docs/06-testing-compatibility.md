@@ -17,7 +17,8 @@
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
-执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本；历史结果只在
+执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本。第 15 节维护当前
+compatibility/known-difference 结论和必要摘要；原始环境记录与完整历史测量只在
 [`evidence/`](./evidence/README.md) 中陈述。
 
 本文定义 pico8-web-player 的测试策略、兼容性口径、性能预算和发布门禁。它是后续 Codex 开发时的执行契约，不是测试愿望清单。任何运行时行为变更都必须能回答三个问题：

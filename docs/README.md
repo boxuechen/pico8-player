@@ -5,19 +5,22 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前没有 active phase。[`Phase 1：L1 最小可玩闭环`](./phases/1-l1-minimal-playable-loop.md)
-的 1A–1F 已完成，退出证据见
-[`Phase 1 evidence`](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。下一步是根据 roadmap
-和 Phase 1 完成基线创建独立 Phase 2 文档、展开首个 work unit 后再修改 production code。
+当前没有 active phase，也没有已授权的 production work unit。Phase 1A–1F 已完成；下一项
+工作是 **Phase 2 activation**，不是直接实现 Graphics API。
 
-查看当前实现基线时按顺序阅读：
+激活 Phase 2 时只读取以下基线，不通读已完成阶段的执行过程：
 
-1. [Phase 1 completion record](./phases/1-l1-minimal-playable-loop.md)：已完成的 L1 边界、
-   文件和退出门禁；不得继续向其中追加 Phase 2 任务。
-2. [源码目录与边界契约](./08-source-layout-and-boundaries.md)：package DAG、execution
-   domains、composition roots 和 import 门禁。
-3. [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) 与 roadmap 的
-   Phase 2 headline；据此创建新的 active phase，再读取其明确路由的 owner 章节。
+1. [roadmap 的 Phase 2 headline](./05-delivery-plan.md#phase-2-activation-baseline)：目标和
+   exit headline；它本身不授权实现。
+2. [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) 的“完成结论”和
+   “Known Differences”：确认已实现边界与不得外推的兼容声明。
+3. [`phase-1-l1-contract.json`](../spec/phase-1-l1-contract.json)：机器可读的完成状态、公开
+   case 和 deferred 范围。
+4. [`docs/phases/README.md`](./phases/README.md)：创建新的 Phase 2 文档和首个 work unit；
+   该文档再用精确 anchor 路由 03/04/06/08 的必要章节。
+
+在 active phase 建立后，日常实现默认只读：本页 → active phase → 它明确链接的 contract
+小节。不要把 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务
 细节不得复制回 AGENTS、README、roadmap 和 Codex 协议。
@@ -93,6 +96,8 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
   architecture tests；其他文档只链接。
 - 一个 Proposed 项只有获得测试、benchmark 或官方依据后才能改为 Accepted/Rejected。
 - 阶段开始时创建/启用 phase 文档；阶段结束后把证据归档到 `docs/evidence/`，并把
-  roadmap 状态压缩为一行。
+  roadmap 状态压缩为一行，再删除已完成的 phase 执行文档。
+- phase 文档只展开当前 work unit；完成 unit 折叠为结果、机器合同和 evidence 链接，禁止
+  累积复制稳定 owner 文档的历史正文。
 - 已知差异进入 06 的兼容矩阵，不只留在聊天或代码注释。
 - 文档中的命令必须真实存在；目标命令必须显式标为 Proposed，不能伪造已通过。

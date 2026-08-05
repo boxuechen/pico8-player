@@ -7,9 +7,12 @@
 ## 1. 开始任务前
 
 1. 阅读 [README.md](./README.md)。
-2. 打开 README 标记的唯一 active phase 文档，确认范围、稳定输入和 exit gate。
-3. 从 [08-source-layout-and-boundaries.md](./08-source-layout-and-boundaries.md) 确认代码 owner、合法 dependency edge、public export 和 composition root。
-4. 只阅读 phase 文档路由的具体契约章节；历史 evidence 按需追溯。
+2. 若存在 active phase，打开其唯一 phase 文档，确认范围、稳定输入和 exit gate；若不存在，
+   production implementation 未授权，只能按 [phase activation contract](./phases/README.md)
+   创建阶段合同。
+3. 从 phase 文档链接的 [08-source-layout-and-boundaries.md](./08-source-layout-and-boundaries.md)
+   精确章节确认代码 owner、合法 dependency edge、public export 和 composition root。
+4. 只阅读 phase 文档路由的契约小节；历史 evidence 仅在激活阶段或定位回归时按需追溯。
 5. 检查工作树，保留用户已有修改，不覆盖无关文件。
 6. 搜索现有 API、tests、ADR 和 compatibility entries，避免重复实现。
 7. 明确本任务属于：spike、生产实现、兼容修复、测试、文档或构建系统。
@@ -153,5 +156,6 @@ Spike 输出必须包括：
 ## 10. 当前 phase routing
 
 当前任务不在本协议维护。唯一入口由 [README](./README.md#当前开发入口) 指向
-[`docs/phases/`](./phases/)；阶段切换只更新该入口和 roadmap，不把任务内容复制到
-本协议。
+[`docs/phases/`](./phases/)；阶段文档的创建、折叠和删除遵守其
+[lifecycle contract](./phases/README.md)。阶段切换只更新入口、机器合同、roadmap 和 evidence，
+不把任务内容复制到本协议。

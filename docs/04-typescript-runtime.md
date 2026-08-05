@@ -531,10 +531,10 @@ blur/visibility/device lifecycle、多玩家与 devkit input 仍由后续 work u
 > 30/60Hz accumulator、首 pulse anchor、0..5 ticks、overflow drop/diagnostic 与 pause/resume
 > re-anchor。下方 `deterministic/stepExact`、slow-frame update/draw 合并仍是 Target。
 
-Phase 1F 已从 production Worker 外部用 fixed synthetic pulses 重放 30/60/custom carts，并在
-真实 Chrome rAF 中观察约 `33.40/16.00/33.20ms` median frame interval；ordinary 60Hz
-Worker round-trip 120-tick p95 为 `0.1001ms`。这些是当前 bounded profile evidence，不表示
-下方 target `stepExact` API 已实现，也不替代 Phase 2/4 stress corpus。
+Phase 1F 已从 production Worker 外部用 fixed synthetic pulses 重放 30/60/custom carts；具体
+设备测量只保存在 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。该
+bounded-profile 结果不表示下方 target `stepExact` API 已实现，也不替代 Phase 2/4 stress
+corpus。
 
 ### 10.1 双模式
 
