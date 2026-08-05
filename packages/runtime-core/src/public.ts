@@ -84,8 +84,11 @@ export type RuntimeSessionState =
   | "disposed";
 
 export interface RuntimeFrame {
+  /** Zero-based host-published frame index; startup does not publish frame 0. */
   readonly frameId: number;
+  /** Committed target-rate clock slices, including the 1/30-second startup epoch. */
   readonly completedSlices: string;
+  /** Guest clock for this transaction; equals logicalTimeRaw(completedSlices, targetFps). */
   readonly timeRawBeforeStep: number;
   readonly targetFps: 30 | 60;
   /** Packed 4bpp screen bytes copied from Base RAM 0x6000..0x7fff. */
@@ -130,6 +133,7 @@ const DEFAULT_INSTRUCTION_BUDGET = 1_000_000;
 const CART_ROM_BYTES = 0x8000;
 const SCREEN_OFFSET = 0x6000;
 const SCREEN_BYTES = 0x2000;
+const STARTUP_TIME_RAW = Math.floor(65_536 / 30);
 
 function invalidState(message: string): SerializedRuntimeError {
   return {
@@ -220,8 +224,17 @@ export class FrameSliceRuntime {
     this.#vm.writeCartRom(cart.rom);
     const compiled = this.#vm.compile(cart.luaSource);
     if (compiled.kind === "fault") return this.#acceptFault(compiled.error);
-    const outcome = this.#vm.boot(this.#instructionBudget, buttons, 0);
-    return this.#acceptBootOutcome(outcome, buttons, 0, this.#instructionBudget);
+    const outcome = this.#vm.boot(
+      this.#instructionBudget,
+      buttons,
+      STARTUP_TIME_RAW,
+    );
+    return this.#acceptBootOutcome(
+      outcome,
+      buttons,
+      STARTUP_TIME_RAW,
+      this.#instructionBudget,
+    );
   }
 
   step(input: PicoInputSnapshot = { buttons: 0 }): RuntimeResult<RuntimeStepResult> {
@@ -237,7 +250,7 @@ export class FrameSliceRuntime {
         error: invalidState(error instanceof Error ? error.message : String(error)),
       };
     }
-    const timeRaw = logicalTimeRaw(this.#completedSlices, this.#targetFps);
+    const timeRaw = logicalTimeRaw(this.#completedSlices + 1n, this.#targetFps);
     const outcome = this.#vm.step(this.#instructionBudget, buttons, timeRaw);
     return this.#acceptStepOutcome(
       outcome,
@@ -335,6 +348,9 @@ export class FrameSliceRuntime {
       };
     }
     this.#pending = undefined;
+    // Official startup runs top-level/_init at 1/30 s. Express that epoch in
+    // target-rate slices so completedSlices remains the source of logical time.
+    this.#completedSlices = BigInt(this.#targetFps / 30);
     this.#state = "ready";
     return {
       ok: true,

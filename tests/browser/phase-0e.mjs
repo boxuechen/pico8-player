@@ -36,7 +36,7 @@ function _draw() cls(2) pset(peek(0x150)-1,0,7) end`);
     frame = await client.step({ buttons: index === 59 ? 1 : 0 });
     check(frame.type === "frame", `step ${index} did not produce a frame`);
   }
-  check(frame.completedSlices === "60", "60 steps did not complete 60 slices");
+  check(frame.completedSlices === "62", "60 steps did not reach official slice 62");
   const screen = new Uint8Array(frame.packedScreen);
   check(screen[29] === 0x72, "packed framebuffer did not contain final pset");
 

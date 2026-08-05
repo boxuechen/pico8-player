@@ -82,7 +82,8 @@ allocation、64 concurrent contexts、受控 OOM 与 typed-view identity。该�
 ### Q-03：raw fixed-point ABI 如何暴露？
 
 状态：**Phase 0E 已回答**。所有 P8 number 以 signed Q16.16 raw `int32` 过
-`p8w_*`；`time()` test 已锁定 59/60 秒为 raw 64443，machine ABI 见
+`p8w_*`；官方 Web Player 与 Runtime test 已锁定 startup `1/30s` 为 raw 2184，
+60 Hz callback 的第 60 个 host step（slice 62）为 raw 67720。machine ABI 见
 [`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)。optional/multi-return 的完整 API
 schema 仍属于 ADR-008，不影响本阶段原始数值决定。
 

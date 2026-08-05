@@ -27,7 +27,7 @@ apis:
     status: partial
     owner: packages/runtime-core
     phase: 0E
-    note: Q16.16 logical slice time; custom startup offset awaits official binary differential
+    note: Q16.16 committed-slice time; official Web Player locks startup to 1/30 second
   - name: flip
     status: partial
     owner: wasm/bridge/p8w_frame_runtime.cpp

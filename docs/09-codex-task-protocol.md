@@ -164,4 +164,5 @@ Spike 输出必须包括：
 下一个独立任务是 **Phase 0F：Browser Render / Audio Transport**。它复用 Phase 0E
 的 packed screen/frame DTO、Worker generation/watchdog 和 RuntimeCore port，不得把
 renderer、AudioWorklet 或 wall-clock scheduler 反向塞入 VM adapter。Phase 0E 的
-custom startup time offset 仍等待合法官方 binary differential；0F 不得自行改变。
+startup time offset 已由官方 Web Player capture 锁定为 `1/30s`；0F 必须复用
+RuntimeCore 的 committed-slice clock，不得在 renderer/scheduler 内二次偏移。

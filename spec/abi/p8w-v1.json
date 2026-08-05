@@ -86,7 +86,7 @@
   "invariants": [
     "one p8w_step completes at most one simulation slice",
     "instruction exhaustion poisons the context and is never a resumable yield",
-    "first custom-loop FLIP establishes startup and does not increment logical time",
+    "p8w_boot preserves its supplied time_raw through top-level and _init or the first custom-loop FLIP",
     "HOST_REQUEST payload and response are copied byte strings",
     "nested guest coroutine host suspension returns FEATURE_UNSUPPORTED with nested-host-suspend",
     "Phase 0C p8w0c_bench symbols are absent from the runtime artifact"

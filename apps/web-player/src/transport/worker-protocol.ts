@@ -41,7 +41,9 @@ export type Phase0ERuntimeToHost =
     })
   | (EventEnvelope & {
       readonly type: "frame";
+      /** Zero-based host-published frame index; distinct from the guest clock. */
       readonly frameId: number;
+      /** Committed target-rate clock slices, including the startup epoch. */
       readonly completedSlices: string;
       readonly timeRawBeforeStep: number;
       readonly targetFps: 30 | 60;

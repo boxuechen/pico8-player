@@ -139,7 +139,7 @@ try {
   );
   if (
     result.callbackSteps !== 60 ||
-    result.completedSlices !== "60" ||
+    result.completedSlices !== "62" ||
     result.watchdogCode !== "E_VM_WATCHDOG" ||
     result.recovered !== true
   ) {

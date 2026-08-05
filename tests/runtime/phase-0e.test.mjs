@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 
 import { decodeP8Png } from "@pico8-web/cart-codec";
@@ -59,10 +60,37 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
+test("official Web Player clock evidence is project-owned and hash-locked", async () => {
+  const projectRoot = new URL("../../", import.meta.url);
+  const evidence = JSON.parse(
+    await readFile(new URL("docs/evidence/phase-0e-official-clock.json", projectRoot), "utf8"),
+  );
+  assert.deepEqual(
+    evidence.captures.map(({ name, samples }) => ({ name, samples })),
+    [
+      { name: "custom-loop-30", samples: [1, 2, 3, 4, 5, 6, 7, 8] },
+      { name: "callback-30", samples: [1, 1, 2, 3, 4, 5, 6, 7] },
+      { name: "callback-60", samples: [2, 2, 3, 4, 5, 6, 7, 8] },
+    ],
+  );
+  assert.deepEqual(evidence.conclusion.startupCompletedSlices, { "30": 1, "60": 2 });
+  for (const capture of evidence.captures) {
+    assert.equal(capture.source.includes("ref/"), false);
+    assert.equal(capture.screenshot.includes("ref/"), false);
+    assert.equal(sha256(await readFile(new URL(capture.source, projectRoot))), capture.sourceSha256);
+    assert.equal(
+      sha256(await readFile(new URL(capture.screenshot, projectRoot))),
+      capture.screenshotSha256,
+    );
+  }
+});
+
 test("decoded .p8.png boots callback mode and 60 manual slices are exact", () => {
   const source = `
+poke4(0x11c,time())
 function _init()
  poke(0x100,1) poke(0x101,0) poke(0x102,0)
+ poke4(0x118,time())
 end
 function _update60()
  poke(0x101,peek(0x101)+1)
@@ -82,6 +110,7 @@ end`;
     ok: true,
     value: { kind: "ready", mode: "callback", targetFps: 60 },
   });
+  assert.equal(runtime.completedSlices, 2n);
 
   let lastFrame;
   for (let index = 0; index < 60; index += 1) {
@@ -91,13 +120,15 @@ end`;
     lastFrame = stepped.value.frame;
   }
 
-  const counters = runtime.copyRam(0x100, 0x18);
+  const counters = runtime.copyRam(0x100, 0x20);
   assert.deepEqual([...counters.subarray(0, 3)], [1, 60, 60]);
-  assert.equal(new DataView(counters.buffer).getInt32(0x10, true), logicalTimeRaw(59n, 60));
+  assert.equal(new DataView(counters.buffer).getInt32(0x10, true), logicalTimeRaw(62n, 60));
   assert.equal(counters[0x14], 1);
-  assert.equal(runtime.completedSlices, 60n);
-  assert.equal(lastFrame.timeRawBeforeStep, logicalTimeRaw(59n, 60));
-  assert.equal(lastFrame.completedSlices, "60");
+  assert.equal(new DataView(counters.buffer).getInt32(0x18, true), logicalTimeRaw(1n, 30));
+  assert.equal(new DataView(counters.buffer).getInt32(0x1c, true), logicalTimeRaw(1n, 30));
+  assert.equal(runtime.completedSlices, 62n);
+  assert.equal(lastFrame.timeRawBeforeStep, logicalTimeRaw(62n, 60));
+  assert.equal(lastFrame.completedSlices, "62");
   assert.equal(lastFrame.screen[29], 0x72);
   assert.equal(sha256(lastFrame.screen), "9627762b606887336f881c14c4e14c6384f699baece8e96f13c70ee1ba6915b6");
   runtime.dispose();
@@ -110,32 +141,43 @@ function _update() poke(0x120,peek(0x120)+1) end
 function _update60() poke(0x121,peek(0x121)+1) end
 function _draw() end`);
   assert.equal(boot.targetFps, 60);
+  assert.equal(runtime.completedSlices, 2n);
   for (let index = 0; index < 60; index += 1) assert.equal(runtime.step().ok, true);
   assert.deepEqual([...runtime.copyRam(0x120, 2)], [0, 60]);
   runtime.dispose();
 
   const thirty = createRuntime(`
-function _init() poke(0x120,0) end
+function _init() poke(0x120,0) poke4(0x124,time()) end
 function _update() poke(0x120,peek(0x120)+1) end
 function _draw() end`).runtime;
+  assert.equal(thirty.completedSlices, 1n);
+  assert.equal(
+    new DataView(thirty.copyRam(0x120, 8).buffer).getInt32(4, true),
+    logicalTimeRaw(1n, 30),
+  );
   for (let index = 0; index < 60; index += 1) assert.equal(thirty.step().ok, true);
   assert.equal(thirty.copyRam(0x120, 1)[0], 60);
-  assert.equal(logicalTimeRaw(thirty.completedSlices, 30), 0x0002_0000);
+  assert.equal(thirty.completedSlices, 61n);
+  assert.equal(logicalTimeRaw(thirty.completedSlices, 30), 0x0002_0888);
   thirty.dispose();
 });
 
-test("custom loop startup flip is not a slice and every later step reaches one flip", () => {
+test("custom loop startup flip commits the official 1/30 s epoch", () => {
   const { runtime, boot } = createRuntime(`
 n=0
 while true do
  poke(0x130,n) poke4(0x134,time())
  cls(n) pset(n,1,7)
- flip()
+  flip()
  n+=1
 end`);
   assert.deepEqual(boot, { kind: "ready", mode: "custom", targetFps: 30 });
-  assert.equal(runtime.completedSlices, 0n);
+  assert.equal(runtime.completedSlices, 1n);
   assert.equal(runtime.copyRam(0x130, 1)[0], 0);
+  assert.equal(
+    new DataView(runtime.copyRam(0x130, 8).buffer).getInt32(4, true),
+    logicalTimeRaw(1n, 30),
+  );
   for (let index = 0; index < 60; index += 1) {
     const stepped = runtime.step();
     assert.equal(stepped.ok, true);
@@ -143,8 +185,8 @@ end`);
   }
   const state = runtime.copyRam(0x130, 8);
   assert.equal(state[0], 60);
-  assert.equal(new DataView(state.buffer).getInt32(4, true), logicalTimeRaw(59n, 30));
-  assert.equal(runtime.completedSlices, 60n);
+  assert.equal(new DataView(state.buffer).getInt32(4, true), logicalTimeRaw(61n, 30));
+  assert.equal(runtime.completedSlices, 61n);
   runtime.dispose();
 });
 
@@ -196,7 +238,7 @@ function _draw() pset(1,1,7) end`).runtime;
   assert.equal(completed.ok, true);
   assert.equal(completed.value.kind, "frame");
   assert.equal(root.copyRam(0x140, 1)[0], 4);
-  assert.equal(root.completedSlices, 1n);
+  assert.equal(root.completedSlices, 2n);
   root.dispose();
 
   const nested = createRuntime(`
@@ -309,6 +351,7 @@ function _draw() cls(3) pset(0,0,7) end`);
     input: { buttons: 0 },
   });
   assert.equal(frame.type, "frame");
+  assert.equal(frame.completedSlices, "2");
   assert.equal(frame.packedScreen.byteLength, 0x2000);
   assert.equal(new Uint8Array(frame.packedScreen)[0], 0x37);
   controller.dispose();

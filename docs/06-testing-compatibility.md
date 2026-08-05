@@ -120,13 +120,13 @@ Golden 和差分测试必须运行在 deterministic host 中：
 统一帧定义如下：
 
 1. `boot` 检查点：callback cart 位于 cart 解码、RAM 初始化和 `_init()` 返回后、第一次 update 前；custom-loop cart 位于 top-level 的第一个受控 `flip()` boundary，且不得额外调用 `_init()`。
-2. `frame 0` 的输入先写入 runtime，再执行 `_update60()`；若不存在则按 30 Hz 计划执行 `_update()`，随后执行 `_draw()` 并 yield。
+2. host `frame 0` 的输入先写入 runtime，再执行 `_update60()`；若不存在则按 30 Hz 计划执行 `_update()`，随后执行 `_draw()` 并 yield。其 logical slice ordinal 在 30 Hz 为 2、60 Hz 为 3，因为 startup epoch 已 commit。
 3. 帧检查点在 draw/yield 返回后、下一帧输入写入前采集。
 4. 该帧产生的音频样本归属于同一帧区间。
 
-custom-loop manifest 必须显式声明 lifecycle；其 `frame 0` 在锁存输入后从 startup/上一个 `flip()` continuation resume 到下一个 `flip()`，不伪造 `_update/_draw` callback。
+custom-loop manifest 必须显式声明 lifecycle；其 host `frame 0` 在锁存输入后从 startup `flip()` continuation resume 到下一个 `flip()`，不伪造 `_update/_draw` callback。
 
-首次 startup `flip()` 暂不计 logical frame/time。Phase 0 必须用正版 PICO-8 capture 对比首次/第二次 `flip()` 前后的 `time()`、screen、audio 和 input；若结果不同，先形成 ADR，再同步修改 README、02、03、04、05 和本节，禁止只偏移 golden frame 编号。
+官方 Web Player capture 已对比 custom 首八次 `flip()`、callback 30/60 Hz 的 top-level、`_init` 和 update clock：startup 固定为 `1/30s`，首次 startup `flip()` commit 1 个 30 Hz slice。结构化证据见 [`phase-0e-official-clock.json`](./evidence/phase-0e-official-clock.json)；golden 必须同时断言 guest clock、`completedSlices` 与独立 `frameId`，禁止只偏移截图编号。
 
 输入 trace 记录“状态变化”，而不是依赖浏览器事件时间戳。例如：
 
@@ -631,15 +631,15 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 ### 15.6 Phase 0E Coroutine Frame Slice 矩阵
 
 本表只覆盖 [Phase 0E evidence](./16-phase-0e-evidence.md) 的 lifecycle/safety slice，
-不把最小 `cls/pset/btn` 宣称为完整 API conformance。官方 binary 尚未 capture 的
-custom startup time offset 诚实保留 `unknown/temporary`。
+不把最小 `cls/pset/btn` 宣称为完整 API conformance。startup time 已由官方 Web
+Player capture 锁定；custom 60 Hz/fps-selection 仍留给后续 conformance。
 
 | 行为 | Phase 0E 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
 | `_init/_update60/_draw` lifecycle | 1/60/60 counters、60 frame boundaries passed | `implemented-baseline` | official representative cart differential |
 | `_update60` 优先于 `_update` | 0/60 counters passed | `implemented-baseline` | dynamic callback replacement 另测 |
-| `_update` 30 Hz logical time | 60 slices → raw 131072 passed | `implemented-baseline` | slow-frame multi-update policy 后续 |
-| top-level custom `flip()` | startup + 后续 60 resumes/60 boundaries passed | `partial` | custom fps 与 startup time offset 需合法官方 binary capture |
+| callback 30/60 Hz logical time | startup `1/30s`；60 steps → slices 61/62 passed | `implemented-baseline` | slow-frame multi-update policy 后续 |
+| top-level custom `flip()` | official samples 1..8；startup + 后续 60 boundaries passed | `implemented-baseline`（30 Hz） | custom fps-selection 后续 |
 | root HostRequest continuation | embedded-NUL request/response、一次 frame passed | `implemented-prototype` | 用真实同步-cache API 替换非公开 probe |
 | nested HostRequest/`flip()` | host side-effect 未发出；structured unsupported | `unsupported` | `nested-host-suspend`；L3 只用预供给/同步 cache |
 | instruction budget | infinite Lua loop → poisoned fault；不可再 step | `implemented-safety` | Phase 4 校准官方 CPU cost，不改变 hard limit |

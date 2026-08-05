@@ -80,7 +80,7 @@ TypeScript 负责：
 | `P0-RT-07` | Mechanism Accepted / thresholds Proposed（ADR-017） | Window command watchdog terminate/recreate + generation；各命令 deadline 后续校准 | fake stale-generation test 与 Chrome JS-stall recovery 已通过；250ms/2s/8ms 尚不作为最终 release threshold |
 | `P0-RT-08` | Accepted（ADR-013；Phase 0B passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 已通过；interop cost 留给 Phase 0C |
 | `P0-RT-09` | Accepted（ADR-015） | 四 package DAG + main/worker/worklet execution domains | Phase 0S exports/project references、architecture tests 与 negative fixtures |
-| `P0-RT-10` | Accepted（ADR-017；Phase 0E passed） | `FrameSliceRuntime` 通过 `FrameVmPort` 驱动 callback/custom loop；logical time 只按 completed slice 推进 | 60-step counts、Q16.16 time、input/frame RAM hash、budget/error/HostRequest 与 Chrome Worker gate |
+| `P0-RT-10` | Accepted（ADR-017；Phase 0E passed） | `FrameSliceRuntime` 通过 `FrameVmPort` 驱动 callback/custom loop；startup epoch 和后续 logical time 只按 committed slice 推进 | 官方 Web Player clock capture、60-step counts、Q16.16 time、input/frame RAM hash、budget/error/HostRequest 与 Chrome Worker gate |
 
 其中 `P0-RT-03` 是与系统架构图一致的目标数据路径。若目标浏览器不能可靠转交 port，允许的 fallback 是 Worker → Window → `AudioWorkletNode.port`，但必须先更新 ADR、背压测试和本文；两条路径不得同时作为无规则的运行时分支。
 
@@ -498,7 +498,7 @@ type StepResult = Readonly<{
 ### 10.2 帧语义
 
 - 有 `_update60` 时逻辑频率为 60Hz；否则 `_update`/`_draw` 正常为 30Hz。callback cart 的 `_init` 在 startup transaction 内至多调用一次，并在返回后才允许 commit；top-level 先到达受控 `flip()` 的 custom-loop cart 不由 Runtime 自动调用 `_init`。
-- `time()/t()` 来自 Runtime 的 logical simulation clock，不直接等同于 callback 调用计数：常规模式按 30/60Hz simulation slice 推进；custom-loop 首个 `flip()` 只完成 lifecycle detection/startup，从该 continuation resume 到下一个 `flip()` 才完成第一个 runtime simulation slice 并推进时间。`updateCount` 另行记录；慢帧下多个 update/一次 draw，以及 custom startup 边界的暂行规则，都必须由 Phase 0 官方差分固定。禁止返回浏览器时间，同一 simulation slice 内多次读取必须一致。
+- `time()/t()` 来自 Runtime 的 logical simulation clock，不直接等同于 callback 调用计数。官方 Web Player capture 锁定 startup transaction 为 `1/30s`：30 Hz callback/custom boot commit 1 slice，60 Hz callback boot commit 2 slices。每次 `step()` 以 `completedSlices+1` 计算即将执行的 clock，只有到达 callback frame-end 或 custom `flip()` boundary 才 commit；fault/stop 不 commit。`updateCount` 另行记录；慢帧下多个 update/一次 draw仍由后续 conformance 固定。禁止返回浏览器时间，同一 transaction 内多次读取必须一致。
 - `flip()` 是 VM 到 Runtime 的 frame boundary yield。自定义 main loop 必须能通过它交还控制权。
 - 每个 logical frame transaction 的固定次序为：scheduler 先决定本次 simulation slice、callback 次数与是否 draw → 在 slice 开始锁存输入并更新 hardware state（常规慢帧模式下每次实际 update 前重新锁存规则由 conformance 固定）→ resume VM → 同步 API/RAM 写即时生效 → 接收 yield/trap → 按 logical clock 生成音频 →（若本次 visible draw/flip）发布画面 → 持久化 dirty check → heartbeat。只收到、但未形成 simulation slice 的 rAF pulse 不得消耗 `btnp` edge、推进 `time()` 或生成音频；custom-loop 在 startup 之后到达的每个 `flip()` boundary 可以结束并推进 slice，即使没有 `_update/_update60` callback。
 - catch-up 必须有上限（建议最多 5 ticks/vsync）。超过上限时丢弃墙钟 backlog、发出 `E_TIME_DISCONTINUITY` warning；不得一次执行数百 tick 冻结页面。

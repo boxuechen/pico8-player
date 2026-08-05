@@ -149,9 +149,9 @@ end
 - bridge 将 context 标记为 `CUSTOM_LOOP`，不得额外启动 callback loop。
 - `flip()` wrapper **MUST** 用 `lua_yieldk()` 和 continuation；下一次 Runtime resume 后，该 Lua 调用正常返回并从下一条语句继续。
 - 一次 `p8w_resume()` 最多提交一个受控 frame/flip boundary。
-- top-level 的首次 `P8W_YIELD_FLIP` 是暂行 startup boundary，不单独计入 Runtime logical frame/time；从其 continuation resume 到下一个 `P8W_YIELD_FLIP` 才完成 custom-loop frame 0。Phase 0 必须用官方 capture 验证这一帧偏移规则并形成 ADR。
+- top-level 的首次 `P8W_YIELD_FLIP` 建立 custom startup boundary。官方 Web Player capture 已锁定：boot transaction 内 `time()` 为 `1/30s`，该 boundary 成功后 Runtime commit 1 个 30 Hz startup slice；从 continuation resume 到下一个 `P8W_YIELD_FLIP` 再 commit 1 slice。VM bridge 只保存 host 传入的 `time_raw`，clock counter 与 commit policy 仍归 RuntimeCore。
 
-custom loop 的精确 30/60 Hz 规则必须由 Phase 0/1 conformance 固定；在证据前不得把 display refresh 直接当作 guest frame rate。
+custom loop 在 Phase 0E 固定为 30 Hz；未来若支持其他 rate，必须由独立 conformance 固定，不得把 display refresh 直接当作 guest frame rate。
 
 ### 4.4 Nested coroutine 陷阱
 

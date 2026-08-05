@@ -146,8 +146,8 @@ Runtime、BBS/network、label presenter 或 VM 行为。
 
 ### 0E. Coroutine Frame Slice
 
-状态：**Complete（2026-08-05）**。实现、真实 Chrome gate、nested 降级与已知
-custom startup time capture 限制见 [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md)
+状态：**Complete（2026-08-05）**。实现、真实 Chrome gate、nested 降级与官方
+startup clock capture 见 [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md)
 和 [Phase 0E 证据](./16-phase-0e-evidence.md)。production `p8w_*` 与 Phase 0C
 benchmark artifact 已物理隔离。
 
@@ -163,7 +163,7 @@ benchmark artifact 已物理隔离。
 验收：
 
 - 手动 step 60 次得到精确 60 次 update/draw。
-- custom `flip()` loop 完成 startup boundary 后，手动 resume 60 次必须精确到达后续 60 个 `flip()` boundary、推进 60 个 simulation slices，且没有 callback 也能推进 `time()`；首次 startup boundary 是否计时必须以官方差分结果形成 ADR。
+- custom `flip()` loop 的首次 boundary 必须按官方差分 commit `1/30s` startup epoch；随后手动 resume 60 次精确到达后续 60 个 boundary、追加 60 个 simulation slices，且没有 callback 也能推进 `time()`。
 - 无限循环 cart 不阻塞 Window，能终止并重建 Worker。
 - Lua runtime error 带 phase、line 和安全 trace。
 - nested coroutine HostRequest 有通过证据，或兼容矩阵与 L3 范围中存在明确、可测试的降级结论。

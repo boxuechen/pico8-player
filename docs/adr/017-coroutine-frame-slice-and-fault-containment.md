@@ -13,9 +13,9 @@ lifecycle；Lua count hook 只能处理中断 VM instructions，不能覆盖 par
 
 官方 PICO-8 0.2.7 手册明确了 `_update()` 的 30 Hz、`_update60()` 的 60 Hz、
 `_draw()` frame callback、按 update 计数的 `time()`，以及 custom main loop 中
-`flip()` 的 back-buffer/wait boundary。当前开发机没有已授权的官方 PICO-8 binary，
-因此手册未明确的“首次 startup flip 是否先推进 custom-loop time”不能伪造成官方
-差分结果。
+`flip()` 的 back-buffer/wait boundary。手册没有给出 startup transaction 的精确
+`time()` 偏移，因此使用官方 BBS Web Player 0.2.7 和项目原创 probe cart 做了隔离
+差分；没有上传 cart，也没有把 BBS 作者的 cart 内容纳入仓库。
 
 ## Decision
 
@@ -25,12 +25,14 @@ lifecycle；Lua count hook 只能处理中断 VM instructions，不能覆盖 par
    host request 临时进入 `WAITING_HOST`，不可恢复错误进入 `FAULTED`。
 3. callback frame 默认顺序为 `_update60`（优先）或 `_update`，再 `_draw`；一次
    Runtime `step()` 至多提交一个 `FRAME_END`。
-4. top-level 首次 `flip()` 只识别 `CUSTOM_LOOP` startup，不增加 completed slice；
-   之后每次 host step 从 continuation 到下一个 `flip()`，完成一个 slice。custom
-   rate 暂定 30 Hz。此条是 project contract，不宣称已获官方 binary capture；获取
-   合法本地 binary 后必须补 differential，再决定是否迁移 time offset。
+4. 官方差分锁定 startup 在 `1/30s`：30 Hz callback/custom boot 完成后
+   `completedSlices=1`，60 Hz callback boot 完成后 `completedSlices=2`。custom
+   top-level 的首次 `flip()` 既识别 `CUSTOM_LOOP`，也提交这个 startup epoch；custom
+   rate 在本阶段仍固定 30 Hz。
 5. `time()/t()` 由 Runtime 的 `completedSlices` 和 target FPS 计算，按 signed Q16.16
-   raw bits 传入 VM；同一 slice 不读 wall clock。
+   raw bits 传入 VM。每次 `step()` 先以 `completedSlices+1` 计算本 slice 的 clock，
+   guest 到达 frame boundary 后才 commit counter；fault/stop 不 commit。同一
+   transaction 不读 wall clock。
 6. count hook 超限先 poison context 再抛 sentinel。无论 guest 是否捕获 Lua error，
    outer resume 都返回 `E_VM_INSTRUCTION_BUDGET`；faulted VM 禁止原地恢复。count
    quantum 是安全限额，不冒充官方 CPU cost model。
@@ -55,13 +57,16 @@ lifecycle；Lua count hook 只能处理中断 VM instructions，不能覆盖 par
   [`tests/runtime/phase-0e.test.mjs`](../../tests/runtime/phase-0e.test.mjs)。
 - 真实 Chrome module Worker 的 60-step 与 hang/terminate/recreate gate：
   [`tests/browser/phase-0e.html`](../../tests/browser/phase-0e.html)。
+- 官方 Web Player clock capture、probe hash 与截图：
+  [`docs/evidence/phase-0e-official-clock.json`](../evidence/phase-0e-official-clock.json)。
 - 完整交付记录：[Phase 0E 完成证据](../16-phase-0e-evidence.md)。
 
 ## Consequences
 
 - RuntimeCore 不依赖 z8lua concrete adapter；composition root 仍是唯一装配点。
-- custom-loop startup time offset 有明确、可测试的暂行值，不再是实现者自由选择；
-  但 Phase 0 总 exit gate 仍保留官方 binary differential。
+- callback/custom-loop 共用一个有官方 Web Player 证据的 startup clock，不在 VM
+  adapter 内分叉计时；`frameId` 仍只标识 host 发布的 frame，与包含 startup epoch 的
+  `completedSlices` 分工明确。
 - Worker 被 watchdog 杀死后 session state 不恢复；caller 必须重新 `loadCart`。这是
   确定性安全语义，不做不完整 VM snapshot。
 - nested async host behavior 是可观测的不支持项，不会产生一次或多次外部副作用。

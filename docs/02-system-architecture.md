@@ -194,7 +194,7 @@ export type RuntimeToHost =
 5. 将 Cart ROM 规定区域复制到 Base RAM。
 6. 注册受控 PICO-8 globals 和 Lua glue。
 7. 编译 cart code；失败则回滚整个 transaction。
-8. 启动 root coroutine：若 top-level 返回，进入 callback mode 并执行 `_init()`；若先到达受控 `flip()` boundary，进入 custom-loop mode，把该 boundary 作为成功 startup，禁止再额外调用 `_init()` 或启动 callback driver。
+8. 以官方差分锁定的 `1/30s` clock 启动 root coroutine：若 top-level 返回，进入 callback mode 并执行 `_init()`；若先到达受控 `flip()` boundary，进入 custom-loop mode，把该 boundary 作为成功 startup，禁止再额外调用 `_init()` 或启动 callback driver。commit 时把 startup epoch 换算为 target-rate slices（30 Hz 为 1、60 Hz 为 2），但不发布 host frame event。
 9. 只有全部成功后，Window `loadCart` 才把 session 提交为 `ready`；显式 `start` 后进入 `running`。guest `load()` 按官方语义在新 cart transaction 成功后自动运行。
 
 旧 session 在新 session commit 前应保持可销毁但不可继续写入的状态。
@@ -218,7 +218,7 @@ export type RuntimeToHost =
 - Runtime 维护自己的 accumulator 和 logical simulation clock。
 - `_update()` 模式逻辑速率为 30 Hz；`_update60()` 模式为 60 Hz。
 - display refresh 只决定何时请求/显示最新 frame，不直接决定 update 数。
-- `time()` / `t()` 必须由 logical simulation clock 推导，不等同于 callback 调用计数；custom main loop 从 startup `flip()` 恢复后，每到下一个受控 `flip()` 才完成一个 simulation slice 并推进时间。首次用于识别 lifecycle 的 startup boundary 不单独推进时间；此暂行规则必须在 Phase 0 用官方差分结果确认。
+- `time()` / `t()` 必须由 logical simulation clock 推导，不等同于 callback 调用计数。官方 Web Player 差分锁定 startup 为 `1/30s`；custom main loop 的首次 `flip()` commit 这个 startup epoch，之后从 continuation 到每个受控 `flip()` 再 commit 一个 30 Hz slice。callback 60 Hz 用 2 个 target-rate slices 表示同一 startup epoch。
 - scheduler 可以为追赶 wall time 执行多个 update，但必须限制最大 catch-up，避免 spiral of death。
 - tab hidden 策略必须显式：默认 pause simulation 与 audio；恢复时不补跑隐藏期间的所有帧。
 - 测试模式必须允许手动逐帧推进，不依赖 wall clock。

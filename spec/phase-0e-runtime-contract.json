@@ -9,8 +9,12 @@
     "formula": "floor(completedSlices * 65536 / targetFps)",
     "callbackRates": [30, 60],
     "customLoopTemporaryRate": 30,
-    "customStartupFlipCountsAsSlice": false,
-    "officialBinaryDifferential": "pending-local-licensed-pico8-binary"
+    "startupTimeRaw": 2184,
+    "startupTime": "1/30-second",
+    "startupCompletedSlicesByTargetFps": { "30": 1, "60": 2 },
+    "stepTransaction": "evaluate-at-completedSlices-plus-one; commit-on-frame-boundary",
+    "customStartupFlipCountsAsSlice": true,
+    "officialWebDifferential": "docs/evidence/phase-0e-official-clock.json"
   },
   "minimalGuestApi": ["cls", "pset", "btn", "time", "t", "flip", "peek", "peek4", "poke", "poke4"],
   "hostRequestProbe": {
@@ -35,7 +39,6 @@
     "general reload/cstore async suspension",
     "text .p8 loader",
     "BBS/network resolver",
-    "renderer and player UI",
-    "official custom-loop startup differential capture"
+    "renderer and player UI"
   ]
 }

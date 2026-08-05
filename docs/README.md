@@ -63,7 +63,9 @@ Runtime 或 Player UI 行为。任何实现任务开始前，
 - **MAY / 可以**：不影响兼容契约的实现选择。
 - **Spike**：为回答一个明确技术问题而写的最小实验代码，不等同于生产实现。
 - **Conformance cart**：只验证一个或一组明确 PICO-8 行为的测试 cart。
-- **Logical frame**：callback 模式下一次 `_update60()`，或 30 fps 模式下一次 `_update()` 对应的模拟步；custom-loop 模式下从 startup/上一个受控 `flip()` continuation 推进到下一个 `flip()` 的模拟步。首次用于识别 lifecycle 的 startup `flip()` 不单独计作 logical frame。
+- **Logical time slice**：target FPS 下的一个 simulation-clock 单位。官方差分锁定 boot startup 为 `1/30s`，因此 30 Hz boot commit 1 slice、60 Hz boot commit 2 slices；之后每个成功 step commit 1 slice。
+- **Host frame**：一次成功 `step()` 发布的画面，使用独立 `frameId`。startup epoch 不发布 frame event，不能用 `frameId` 代替 logical time counter。
+- **Custom-loop step**：从 startup/上一个受控 `flip()` continuation 推进到下一个 `flip()`；首次 `flip()` 同时识别 lifecycle 并 commit startup epoch。
 
 ## 外部事实来源
 
