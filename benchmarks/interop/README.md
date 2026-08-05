@@ -26,7 +26,9 @@ new case binding.
 - Report p50/p95/p99, mean/min/max, calls/s and ns/call.
 - Absolute budgets are informative unless run on a registered fixed runner.
   Same-machine baseline comparison uses 5% warning and repeated >10% failure.
-- Missing browser data is `not-run` or `unavailable`, never synthesized.
+- Chrome/Chromium is the sole browser gate. A missing Chromium run is
+  `not-run` or `unavailable`, never synthesized. Node remains a correctness
+  and harness smoke environment, not a supported browser.
 
 The required 1K/16K/64K counts mean 1024/16384/65536 logical operations per
 frame. `spr_8x8` additionally measures 4096 calls so the documented sprite
@@ -49,8 +51,8 @@ pnpm run benchmark:interop:chromium -- --smoke
 pnpm run benchmark:interop:serve
 ```
 
-The server prints its loopback URL. Open it in the browser under test; the page
-runs the artifact in a dedicated Worker and renders validated JSON. Automated
-Chromium capture writes a machine-readable result. Safari/Firefox can use the
-same page, but their results must remain `not-run`/`unavailable` until an actual
-run is captured.
+The server prints its loopback URL. Open it in Chrome/Chromium; the page runs
+the artifact in a dedicated Worker and renders validated JSON. Automated
+Chromium capture writes the release-gating machine-readable result. Historical
+result schema values for other engines remain readable, but new runs neither
+probe nor report them and they are outside the support contract.

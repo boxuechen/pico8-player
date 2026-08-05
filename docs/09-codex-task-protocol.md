@@ -85,7 +85,7 @@ Spike 必须从一个可回答的问题开始，并以决策结束。
 
 合格示例：
 
-> 在 Safari 当前版本中，16K 次/frame 的 z8lua WASM→JS `pset(rawX, rawY, color)` 是否能让 Runtime p95 保持在预算内？
+> 在目标 Chrome stable 中，16K 次/frame 的 z8lua WASM→JS `pset(rawX, rawY, color)` 是否能让 Runtime p95 保持在预算内？
 
 Spike 输出必须包括：
 
@@ -152,21 +152,18 @@ Spike 输出必须包括：
 
 ## 10. 当前推荐任务
 
-**Phase 0S、Phase 0A、Phase 0B 与 Phase 0C 已于 2026-08-05 完成**，证据见
+**Phase 0S–0D 已于 2026-08-05 完成**，证据见
 [11-phase-0s-evidence.md](./11-phase-0s-evidence.md) 和
 [12-phase-0a-evidence.md](./12-phase-0a-evidence.md)、
 [13-phase-0b-evidence.md](./13-phase-0b-evidence.md)、
-[14-phase-0c-evidence.md](./14-phase-0c-evidence.md)。不得继续向 scaffold、
+[14-phase-0c-evidence.md](./14-phase-0c-evidence.md) 和
+[15-phase-0d-evidence.md](./15-phase-0d-evidence.md)。不得继续向 scaffold、
 `p8w0a_*`、`p8w0b_*` 或 `p8w0c_bench_*` spike 填入无验收归属的 placeholder behavior。
 
-下一个独立任务是 **Phase 0D：Lossless `.p8.png`**。它只回答 cart PNG bytes 的
-无损解析、解压上限与 Cart ROM/source 提取，不扩张成 Runtime/Player 实现。
+下一个独立任务是 **Phase 0E：Coroutine Frame Slice**。它只回答最小 host API、
+callback/custom-loop lifecycle、受控 `flip()` continuation、instruction budget、
+Worker watchdog 与 nested HostRequest 可恢复性，不扩张成完整 graphics/audio/player。
 
-Phase 0D 必须遵守 cart-codec package boundary，禁止 Canvas/image decoder 改写
-payload low bits，禁止从 BBS/网络抓 fixture。bounded 交付包括：
-
-- 原始 bytes 解析 PNG signature/IHDR/IDAT/IEND、CRC 与 scanline filter 0–4。
-- 只接受明确支持的 dimensions/color type/bit depth，并在 inflate 前后执行硬上限。
-- 从 RGBA channel low bits 逐位提取 cart payload，覆盖 legacy/current code block。
-- 使用项目可分发 fixture 比较 Cart ROM、Lua source 的 byte length 与 SHA-256。
-- malformed/truncated/CRC/filter/decompression bomb 受控失败并进入 fuzz regression。
+Phase 0E 必须消费 cart-codec 的公共 export，不得 deep import 或把 loader/VM 状态
+塞回 codec。Phase 0D 已锁定的 PNG/ROM/source contract 不应在 0E 中顺手改写；若
+真实 integration 暴露 contract 缺陷，必须以独立 regression + ADR 更新重新打开。

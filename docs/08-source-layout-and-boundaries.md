@@ -136,12 +136,20 @@
 
 ### `@pico8-web/cart-codec`
 
-负责纯 bytes → immutable `ParsedCart`：`.p8`、`.p8.png`、code decompression、section packing、校验和诊断。
+最终负责纯 bytes → immutable `ParsedCart`：`.p8`、`.p8.png`、code decompression、
+section packing、校验和诊断。Phase 0D 当前只落地 `.p8.png` 的
+`decodeP8Png(Uint8Array)` → caller-owned ROM/source snapshots；`.p8`、统一
+`ParsedCart`/identity 与 loader integration 仍是后续增量。
 
 允许依赖：`@pico8-web/contracts`。
 禁止依赖：RuntimeCore、z8lua bridge、DOM、Canvas、File API、IndexedDB、网络 resolver。
 
 `CartSource` 的 bytes 由调用方提供；codec 不自行取得资源。
+
+Phase 0D 的 PNG/code internals 只在 package 内部，public consumer 只能从 package
+root 取得 typed API 与 `CartCodecError`。`spec/cart-codec-contract.json` 锁定格式、
+limits/error inventory，`packages/cart-codec/manifest.lock.json` 锁定 source hashes、
+runtime dependency、fixture ownership 与 reference provenance；统一 verify 会验证二者。
 
 ### `@pico8-web/runtime-core`
 

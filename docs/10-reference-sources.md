@@ -37,3 +37,18 @@ git -C ref/emsdk checkout --detach 17a714fde0f1aaac53d282efcc6093b377addc8d
 ```
 
 这些命令只复现研究输入，不是 production dependency 的安装流程。clone 更新后必须同步本页；本地 `ref/README.md` 不属于 tracked source of truth。
+
+## Phase 0D cart-codec 交叉检查记录
+
+Phase 0D 在设计 raw/legacy/PXA contract 时检查了以下锁定路径：
+
+- fake-08 `814991a…/source/cart.cpp`：PNG low-bit extraction、legacy/PXA header 与
+  decoder 行为；该 repository component 标为 MIT，但其 bundled/transitive 组件有
+  多种许可证，因此没有把文件或 dependency 引入项目。
+- zepto8 `b2929a4…/src/pico8/cart.cpp` 与 `src/pico8/code.cpp`：payload、legacy/PXA
+  decode 的独立交叉检查；所检查文件声明 WTFPL-2.0。
+
+交叉检查只用于发现格式分支和设计项目自有 tests。production codec、DEFLATE、
+fixtures 和 vectors 均独立编写，没有复制/翻译参考实现，也不在 build/test 时读取
+`ref/`。机器登记及 source/contract/fixture hashes 见
+`packages/cart-codec/manifest.lock.json`。

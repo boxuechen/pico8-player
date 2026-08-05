@@ -10,8 +10,8 @@
 | ADR-002 | Accepted | 不使用普通 Lua/Fengari 直接替代 P8 VM | 缺少 P8 syntax、fixed-point 和溢出语义 |
 | ADR-003 | Accepted | Pico RAM 分配在 WASM memory，TS 使用零复制 view | z8lua `@/%/$` 与 TS hardware 必须观察同一内存 |
 | ADR-004 | Accepted | Runtime 在 Worker，Window 只负责 host/UI | 隔离死循环和不可信 cart，保护交互线程 |
-| ADR-005 | Accepted | `.p8.png` 从原始 bytes 无损解码 | Canvas 色彩/alpha 处理可能破坏 payload low bits |
-| ADR-006 | [Accepted（portability condition open）](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length 为初始 hybrid ABI；interop 热点以 benchmark 决定是否下沉 | Chrome 实测未触发下沉；Firefox/Safari 仍须同 harness 实测，禁止无证据 full-core WASM |
+| ADR-005 | [Accepted（Phase 0D）](./adr/005-lossless-p8png.md) | `.p8.png` 从原始 bytes 以 bounded TS codec 无损解码 | Canvas/ImageBitmap/平台 inflate 被架构门禁禁止；raw/legacy/PXA 与恶意输入有回归 |
+| ADR-006 | [Accepted](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length 为初始 hybrid ABI；interop 热点以 benchmark 决定是否下沉 | Chrome 实测未触发下沉；Chrome/Chromium 是唯一浏览器门禁，禁止无证据 full-core WASM |
 | ADR-007 | Accepted | 首版只接受 caller-provided/local cart bytes | BBS 自动访问受当前服务条款和作者权利约束 |
 | ADR-008 | Proposed | API schema 生成 C wrapper 与 TS binding | 减少手写 bridge 的参数/返回值不一致 |
 | ADR-009 | Proposed | 首个 renderer 使用 Canvas2D，保留 WebGL adapter | 128 × 128 输出足够小；先优化正确性和可移植性 |
@@ -29,11 +29,11 @@
 
 | ID | 风险 | 概率 | 影响 | 触发信号 | 缓解与 fallback |
 | --- | --- | --- | --- | --- | --- |
-| R-01 | WASM→JS 高频 API 调用耗尽帧预算 | 中（Chrome low；portability open） | 高 | 16K `pset` 或 sprite stress p95 超预算 | ADR-006 raw ABI；同 harness 补 Firefox/Safari；按 ladder 下沉 memory/pixel/block hot paths，最后才评估 full core WASM |
+| R-01 | WASM→JS 高频 API 调用耗尽帧预算 | 低中（interop spike low；完整 Runtime 未测） | 高 | 16K `pset` 或 sprite stress p95 超预算 | ADR-006 raw ABI；在 Chrome/Chromium 持续 profile；按 ladder 下沉 memory/pixel/block hot paths，最后才评估 full core WASM |
 | R-02 | z8lua 与 v0.2.7 仍有语义差异 | 中 | 高 | arithmetic/language conformance 与官方结果不同 | Pin patch set；向上游贡献；维护最小本地 patch 和对应测试 |
 | R-03 | 错误构建配置启用 WASM memory growth，使 TS views 失效 | 低中 | 高 | artifact flags 漂移、随机 RAM corruption 或 detached/stale view | v1 固定 `initial === maximum`；CI 检查 flags/buffer identity；未来 growth 必须另立 ADR |
-| R-04 | PNG decoder 破坏 low bits 或接受 bomb | 中 | 高 | cart hash 不一致、超大分配、decode hang | 原始 bytes parser、维度/长度上限、fuzz、fixture hash |
-| R-05 | AudioWorklet queue underrun，尤其 Safari/mobile | 高 | 中高 | 爆音、静音、buffer 持续增长 | 帧对齐 PCM、预缓冲、bounded queue、必要时 SAB ring buffer |
+| R-04 | PNG decoder 破坏 low bits 或接受 bomb | 低中（Phase 0D bounded baseline passed） | 高 | cart hash 不一致、超大分配、decode hang | 原始 bytes parser、CRC/维度/长度上限、property/malformed regression、fixture hash 与 manifest |
+| R-05 | AudioWorklet queue underrun，尤其移动 Chrome | 高 | 中高 | 爆音、静音、buffer 持续增长 | 帧对齐 PCM、预缓冲、bounded queue、必要时 SAB ring buffer |
 | R-06 | fixed-point 值穿越 bridge 时被 JS float 改写 | 中 | 高 | edge arithmetic、fillp、peek4 golden 失败 | raw Q16.16 `int32` ABI、生成 binding、boundary tests |
 | R-07 | P8SCII/Unicode 转换破坏 byte string | 高 | 中高 | `ord/sub/print`、emoji/custom font 失败 | 内部 byte string；只在明确 UI boundary 转 Unicode |
 | R-08 | CPU budget 与官方 virtual CPU 差异 | 高 | 中高 | 某些 cart 过早中断或永不降帧 | 先做安全 instruction limit；逐步加入 calibrated cost model；记录差异 |
@@ -51,11 +51,11 @@
 
 ### Q-01：interop 性能边界在哪里？
 
-状态：**Phase 0C 已回答已测 Chromium；跨浏览器 portability condition 开放**。
+状态：**Phase 0C 已回答；Chrome/Chromium-only 浏览器范围已锁定**。
 Chrome 150 / Apple M4 Pro 的 16K `pset`、65,536 `peek_poke`、4K `spr_8x8`
 import p95 分别为 0.090/0.599/0.442 ms；80/80 correctness 与 fixed-buffer 门禁
-通过。Firefox 不可用，Safari 未启用 Remote Automation，未伪造数据。完整结果、
-raw ABI 规则和 fallback 见 [ADR-006](./adr/006-interop-hot-path-boundary.md) 与
+通过。其他浏览器引擎不在支持范围，不要求补测，也不伪造数据。完整结果、raw ABI
+规则和 fallback 见 [ADR-006](./adr/006-interop-hot-path-boundary.md) 与
 [Phase 0C 证据](./14-phase-0c-evidence.md)。
 
 必须测：
@@ -64,7 +64,7 @@ raw ABI 规则和 fallback 见 [ADR-006](./adr/006-interop-hot-path-boundary.md)
 - raw fixed-point calls。
 - byte string calls。
 - `pset/peek/poke/spr` 代表调用。
-- Chromium、Firefox、Safari。
+- Chrome/Chromium。
 
 输出：每次调用成本、frame p50/p95/p99、热点下沉阈值和 ADR-006 的最终规则。
 
@@ -101,13 +101,15 @@ allocation、64 concurrent contexts、受控 OOM 与 typed-view identity。该�
 
 ### Q-05：PNG inflate 依赖是什么？
 
-候选：
+状态：**已回答（Phase 0D，2026-08-05）**。
 
-- 原生 TS PNG parser + 平台/JS deflate library。
-- 小型、已审计的 JS PNG dependency。
-- 独立 tiny WASM decoder。
-
-约束：不能经 Canvas；必须可 fuzz；必须在 Safari 支持范围内；许可证必须清晰。
+选择项目自有、runtime-neutral 的 bounded TypeScript zlib/DEFLATE decoder，不增加
+第三方 runtime dependency，也不使用平台 `DecompressionStream`。它只为锁定的
+131,405-byte PNG scanline 输出服务，支持 stored/fixed/dynamic blocks、RFC 1951
+literal-only dynamic tree、32 KiB back-reference、zlib header/Adler-32，并在任何
+写入前检查精确输出与配置上限。PNG 侧同时限制输入/chunk/IDAT、校验 CRC、支持
+filter 0–4。许可证/provenance、fixtures 与错误门禁见
+[ADR-005](./adr/005-lossless-p8png.md) 和 [Phase 0D 证据](./15-phase-0d-evidence.md)。
 
 ### Q-06：初始 renderer 是 Canvas2D 还是 WebGL？
 

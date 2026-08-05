@@ -1,7 +1,7 @@
 # 04 — Web-native TypeScript Runtime 架构
 
 > 状态：TypeScript Runtime 实施契约（v1；Phase 0 暂定项见 2.3）
-> 目标运行环境：现代 Chrome、Safari、Firefox；主线程 + Dedicated Worker + AudioWorklet
+> 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
 
@@ -72,12 +72,12 @@ TypeScript 负责：
 | ID | 状态 | 方向 | Phase 0 所需证据 |
 |---|---|---|---|
 | `P0-RT-01` | Accepted（ADR-013；Phase 0B passed） | WASM memory 固定 `initial === maximum`，不增长；Phase 0B artifact 为 16 MiB / 默认 1 MiB Lua cap | binary descriptor、heap/OOM、64-context 与 typed-view identity 已通过；production corpus sizing 后续继续测 |
-| `P0-RT-02` | Accepted raw-byte invariant（ADR-005）/ Proposed TS implementation | `.p8.png` 不经 Canvas；原始 RGBA8 decoder 暂定在 TS/JS | raw/legacy/PXA hash、Safari、fuzz 和许可证证据 |
-| `P0-RT-03` | Proposed | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM | 目标 Chrome/Firefox/Safari 的 transferable `MessagePort` 与 10 分钟队列测试 |
+| `P0-RT-02` | Accepted / Phase 0D passed（ADR-005） | `.p8.png` 不经 Canvas；项目自有 bounded TS PNG/zlib/DEFLATE/code decoder | raw/legacy/PXA ROM/source hash、malformed/limit、architecture、manifest 与许可证证据已通过 |
+| `P0-RT-03` | Proposed | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM | Chrome/Chromium 的 transferable `MessagePort` 与 10 分钟队列测试 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
 | `P0-RT-05` | Proposed（Phase 1） | cold boot/cart run 的 RAM reset matrix | 依赖 Cart ROM/Runtime lifecycle 与官方 golden；fake-08 只能作为候选行为 |
 | `P0-RT-06` | Proposed | 外部 `reload/cstore` 使用 z8lua 可恢复 host-call suspension | 最小 coroutine prototype 能在资源返回后从 API 调用点继续 |
-| `P0-RT-07` | Proposed | 前台 tick watchdog 250ms、boot 2s、ordinary 60Hz core p95 8ms | 三浏览器 benchmark、missed-frame 数据；最终阈值写入 CI 配置 |
+| `P0-RT-07` | Proposed | 前台 tick watchdog 250ms、boot 2s、ordinary 60Hz core p95 8ms | Chrome/Chromium benchmark、missed-frame 数据；最终阈值写入 CI 配置 |
 | `P0-RT-08` | Accepted（ADR-013；Phase 0B passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 已通过；interop cost 留给 Phase 0C |
 | `P0-RT-09` | Accepted（ADR-015） | 四 package DAG + main/worker/worklet execution domains | Phase 0S exports/project references、architecture tests 与 negative fixtures |
 
@@ -214,7 +214,10 @@ interface IncludeResolver {
    - PXA：header `\0pxa`，原长度与压缩长度来自 header，bitstream 按格式定义解析。
 6. legacy/PXA 的每个 offset、length、bit read 和输出增长都必须先做边界检查；无效回引用返回 `E_CART_CODE_CORRUPT`，禁止读取负 offset、补零后继续或输出超出配置上限。
 
-PNG label 可以另行解码给 UI，但 cart payload 与 UI 图片必须来自同一次“原始 RGBA8”结果。解压算法应与 fake-08/zepto8 的已知向量交叉验证，而不是复制未经测试的代码。
+Phase 0D 公共 API 只返回 ROM/source，不暴露 label/payload 的 live view。未来 PNG
+label 可以另行解码给 UI，但不得反向成为 cart payload 来源。解压算法已与锁定的
+fake-08/zepto8 参考路径做格式交叉检查；production 实现和 fixtures 均为项目原创，
+没有 import/copy `ref/`。
 
 ### 5.4 CartLoader 与资源边界
 
@@ -747,16 +750,17 @@ type SerializedRuntimeError = Readonly<{
 
 ### 17.1 CartParser
 
-- 对至少 raw、legacy、PXA 各 3 个合法 golden，输出 code SHA-256 与 ROM SHA-256 完全匹配预期。
-- `.p8` 与其由正版 PICO-8 导出的 `.p8.png` 在 `0x0000..0x42ff` 产生相同 ROM bytes。
-- 160×205 图片经浏览器色彩配置变化后 payload 仍不变，因为解析路径不经过 Canvas。
+- 项目原创 raw、legacy、PXA 合法向量的 code/ROM SHA-256 完全匹配，并覆盖
+  stored/fixed/dynamic DEFLATE、filter 0–4、拆分 IDAT 与 current literal/backref。
+- `.p8` parser 与官方导出 differential 属于后续增量，不阻塞 Phase 0D `.p8.png` codec。
+- 160×205 RGBA high bits 的 property 变化不改变 payload，因为解析路径不经过 Canvas。
 - malformed PNG/code corpus 和随机 fuzz 输入不会越界、无限循环或分配超过上限；只返回定义内错误码。
 
 ### 17.2 RAM/Graphics
 
 - z8lua 的 direct memory operator 与 TS `PicoRam.bytes` 读到同一地址、同一值，无每帧 RAM copy。
 - 共享 GFX2/MAP2、screen nibble 顺序、palette、clip、camera、remap、fillp 和 custom font 各有独立 cart golden。
-- 同一输入运行 10,000 ticks，RAM/frame hash 在 Chrome、Safari、Firefox 的支持版本一致。
+- 同一输入运行 10,000 ticks，RAM/frame hash 在支持的 Chrome/Chromium 版本一致。
 
 ### 17.3 Audio
 

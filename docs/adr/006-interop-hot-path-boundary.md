@@ -1,6 +1,6 @@
 # ADR-006：以可解释基准决定 JS↔WASM hot-path 边界
 
-- 状态：Accepted（Phase 0C；跨浏览器 portability condition 仍开放）
+- 状态：Accepted（Phase 0C；Chrome/Chromium-only scope 于 Phase 0D 前锁定）
 - 日期：2026-08-05
 - 决策范围：z8lua WASM 与 TypeScript Runtime 之间的调用/Shared RAM 边界
 - 证据：[Phase 0C 完成证据](../14-phase-0c-evidence.md)
@@ -24,9 +24,9 @@ Phase 0C 在实际 Google Chrome 150 / Apple M4 Pro 上给出以下结论：
    并不总是最快，具体 block operation 仍按 profile 选择所在侧。
 4. **No-Go：** `p8w0c_bench_*` 不能升级或改名为 production ABI。它只包含为
    microbenchmark 设计的合成 probe，没有 cart/frame/error/host schema 语义。
-5. **No-Go：** 当前数据不能宣称三浏览器或 Tier A 性能完成。Firefox 在 runner
-   上不可用，Safari 已安装但 Remote Automation 未启用；两者必须使用同一
-   DedicatedWorker harness 实测后，才能关闭 portability condition。
+5. **Scope：** Chrome/Chromium 是唯一受支持、发布阻断的浏览器引擎。Phase 0C
+   的真实 Chrome DedicatedWorker 数据满足该范围；Firefox、Safari/WebKit 不再
+   是 portability condition，也不得从现有数据推导这些引擎受支持。
 6. **No-Go：** 没有证据支持 full-core WASM。只有 fallback ladder 前六级均有
    profile 证据仍不能满足预算时，才能另立 ADR 评估。
 
@@ -66,8 +66,7 @@ checksum/RAM hash 必须一致，buffer identity 必须稳定。
 
 出现任一条件时重新打开 ADR-006，并从最近的 fallback 层级继续：
 
-- 同一 harness 的 Firefox/Safari 数据不满足专项预算，或 Safari 相对同机
-  Chromium 出现数量级退化。
+- 支持范围内 Chrome/Chromium 的同一 harness 数据不满足专项预算。
 - 固定 performance runner 上 16K `pset` p95 > 5 ms、65,536 组
   `peek_poke` p95 > 4 ms、4,096 `spr` p95 > 8 ms。
 - representative cart 的 core tick p95 超预算，profile 指向 interop，而不是
@@ -81,5 +80,6 @@ checksum/RAM hash 必须一致，buffer identity 必须稳定。
 - Phase 0D 可以继续，不需要先把 graphics/runtime core 移进 WASM。
 - production host schema 必须把调用方向、raw bits、pointer lifetime、错误与
   ownership 写成显式 contract；不能从 benchmark probe 反推公共 API。
-- 浏览器结果 JSON、artifact hash、source revision 与 unavailable/not-run 状态是
-  审计证据；截图或手工抄表不能替代。
+- Chrome/Chromium 结果 JSON、artifact hash、source revision 与 unavailable/not-run
+  状态是审计证据；截图或手工抄表不能替代。历史结果中的其他引擎 availability
+  字段只作为原始记录保留，不是待完成门禁。

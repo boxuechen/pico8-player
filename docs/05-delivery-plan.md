@@ -22,7 +22,7 @@
 
 ## 3. Phase 0 — 架构 Spike
 
-状态：**进行中**（Phase 0S、Phase 0A、Phase 0B、Phase 0C 已完成；下一阶段为 Phase 0D）
+状态：**进行中**（Phase 0S–0D 已完成；下一阶段为 Phase 0E）
 
 目标：用最小实验验证混合架构成立，并锁定 ABI。Spike 代码可以被重写，不得被未经审查地升级为生产代码。
 
@@ -98,29 +98,33 @@ zero-copy TS lease、fixed memory/OOM 和 lifecycle 证据见
 
 ### 0C. Interop Microbenchmark
 
-状态：**Complete（2026-08-05）**。contract、80-case Chromium 实测、浏览器
-缺失状态、fallback 逐级结论与可复现命令见 [Phase 0C 完成证据](./14-phase-0c-evidence.md)
+状态：**Complete（2026-08-05）**。contract、80-case Chromium 实测、fallback
+逐级结论与可复现命令见 [Phase 0C 完成证据](./14-phase-0c-evidence.md)
 及 [ADR-006](./adr/006-interop-hot-path-boundary.md)。
 
 任务：
 
 - 建立 `pset`、`peek/poke`、`spr` 代表性 JS imported API。
 - 分别测试 1K、16K、64K calls/frame。
-- 在 Chromium、Firefox、Safari 测 p50/p95/p99。
+- 在 Chrome/Chromium 测 p50/p95/p99。
 - 同时测试纯 WASM hot path 对照组。
 
 Go 条件：
 
-- 代表性 60 fps 压力 cart 在最低支持桌面浏览器上保留足够帧预算。
-- Safari 不出现数量级退化。
+- 代表性 60 fps 压力 cart 在 Chrome/Chromium 上保留足够帧预算。
 
 若失败，严格执行 [全局 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder)。每一级必须产出 benchmark/profile，或记录为什么对该 workload `not-applicable`；不能从去 allocation 直接跳到 full-core WASM，也不能省略 raw ABI、批量输出、局部 memory/pixel/block/audio 下沉的评估。
 
 阶段结论：已测 Chrome 上 raw primitive/pointer-length hybrid boundary 为 Go，
-没有触发 pixel/block 下沉；benchmark ABI 不升格。Firefox 未安装、Safari Remote
-Automation 未启用，portability condition 保持开放，不能宣称三浏览器发布门禁完成。
+没有触发 pixel/block 下沉；benchmark ABI 不升格。项目浏览器范围现已明确收敛为
+Chrome/Chromium，因此不再以其他引擎的缺失数据阻塞该结论。
 
 ### 0D. Lossless `.p8.png`
+
+状态：**Complete（2026-08-05）**。原始 bytes contract、bounded PNG/zlib/DEFLATE、
+filter/low-bit、raw/legacy/PXA、typed API、结构化错误、project-owned fixtures、
+manifest/provenance 与回归证据见 [Phase 0D 完成证据](./15-phase-0d-evidence.md)
+及 [ADR-005](./adr/005-lossless-p8png.md)。
 
 任务：
 
@@ -134,6 +138,11 @@ Automation 未启用，portability condition 保持开放，不能宣称三浏�
 - 禁止使用 Canvas decode 的测试/代码审查门禁存在。
 - legacy/current fixture byte-for-byte 一致。
 - malformed/truncated/bomb cases 受控失败。
+
+阶段结论：`@pico8-web/cart-codec` 提供 runtime-neutral 的 `decodeP8Png()`；只接受
+锁定的 160×205 RGBA8 non-interlaced profile，默认最多 1 MiB 输入、128 chunks、
+256 KiB IDAT 和精确 131,405-byte inflate。Phase 0D 不包含 `.p8`、CartLoader、
+Runtime、BBS/network、label presenter 或 VM 行为。
 
 ### 0E. Coroutine Frame Slice
 
@@ -160,7 +169,7 @@ Automation 未启用，portability condition 保持开放，不能宣称三浏�
 
 - 用固定 128 × 128 RGBA fixture 比较 Canvas2D 与最小 WebGL presenter 的像素、缩放、context-loss 和 present 成本，形成首版 renderer ADR。
 - 由 Window 创建专用 `MessageChannel`，把端口分别转交 Worker 与 AudioWorklet；传输带 `sessionGeneration` 的 bounded PCM16LE chunks、reset、underrun/overrun 信号。
-- 在 Chrome、Firefox、Safari 桌面验证 AudioContext 手势解锁、port transfer、背压和 10 分钟稳态队列；记录 44.1/48 kHz 设备输出下的重采样行为。
+- 在 Chrome/Chromium 桌面验证 AudioContext 手势解锁、port transfer、背压和 10 分钟稳态队列；记录 44.1/48 kHz 设备输出下的重采样行为。
 - 用合成确定性 timeline 和可复现 reference capture 验证 ADR-014 的 22050 Hz mono signed PCM16LE canonical 格式；此 spike 不要求完整 PICO-8 synth。
 - 只有 dedicated port 路径失败且有证据时，才验证 Window relay fallback；SAB 仅在两者仍无法满足门禁时评估。
 
@@ -175,7 +184,7 @@ Automation 未启用，portability condition 保持开放，不能宣称三浏�
 以下全部满足才进入 Phase 1：
 
 - 03/04 文档的 ABI 和 Runtime contract 根据 spike 更新。
-- 0S 与 0A–0F 自动测试全部通过；需要用户手势/真 Safari 的 0F 部分允许使用版本化、可重复的 device-run 记录。
+- 0S 与 0A–0F 自动测试全部通过；需要用户手势的 Chrome/Chromium 0F 部分允许使用版本化、可重复的 device-run 记录。
 - Interop 性能边界已形成 ADR。
 - z8lua pin、patch 策略和 license strategy 已形成 ADR。
 - upper RAM/remap patch surface 与 HostRequest coroutine 限制已形成 ADR/兼容条目。

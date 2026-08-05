@@ -18,9 +18,10 @@ Phase 0C spike 已完成。它建立了可复现的 Node/browser harness、四�
 - 关键 bridge-only workload 都低于现有专项预算。
 
 因此 ADR-006 对已测 Chromium 给出 raw primitive/pointer-length hybrid boundary
-的 **Go**；但 production ABI 和跨浏览器 Tier A 性能仍是有条件的 **No-Go**，直到
-Firefox/Safari 使用同一 harness 取得实测。Phase 0C 没有实现或批准完整 host
-API、frame lifecycle、renderer、audio、input、cart codec 或 Player UI。
+的 **Go**。后续产品范围已明确为仅支持 Chrome/Chromium，故其他引擎数据不再是
+开放 portability condition；production ABI 与 representative-cart 性能仍需后续
+Runtime 阶段验证。Phase 0C 没有实现或批准完整 host API、frame lifecycle、
+renderer、audio、input、cart codec 或 Player UI。
 
 ## 2. 锁定的范围与边界
 
@@ -82,18 +83,17 @@ Chrome DedicatedWorker 没有暴露 `performance.memory`，所以 JS heap/alloca
 字段诚实记录为 `unavailable`。ABI 没有逐调用 object/string conversion，但这不
 替代后续 representative Runtime 的 allocation profile。
 
-## 5. 浏览器可用性
+## 5. 浏览器范围与历史 availability
 
 | Engine | 状态 | 证据/原因 |
 | --- | --- | --- |
 | Chromium | `measured` | 本机 Google Chrome binary，通过 CDP 等待真实时钟执行完成 |
-| Firefox | `unavailable` | `/Applications/Firefox.app` 不存在；未生成替代数据 |
-| Safari/WebKit | `not-run` | Safari 26.5 已安装；未改变用户设置。WebDriver session 明确返回必须在 Safari Settings 启用 `Allow remote automation` |
 | Node | smoke only | 用于 correctness/validator，不冒充浏览器性能 |
 
-未使用 Playwright WebKit、其他引擎或推算结果冒充 Safari/Firefox。要关闭
-ADR-006 portability condition，只需在相应真实浏览器打开同一 loopback harness
-并保存通过 validator 的 JSON，不需要更改 benchmark contract。
+原始结果 JSON 是范围收敛前生成的，因此仍保留 Firefox `unavailable` 与 WebKit
+`not-run` 两条历史 availability；它们不被删除或改写，也不是当前待完成工作。
+新的 runner 只探测/报告 Chromium 与 Node。schema/validator 暂保留旧 engine 枚举，
+仅用于读取历史证据，不表示支持承诺。
 
 ## 6. 实现与机器门禁
 
@@ -128,5 +128,5 @@ Phase 0A/0B、4/4 Phase 0C、双构建 reproducibility 和 6-file manifest 全�
 
 fallback ladder 的逐级结论见 ADR-006：raw ABI 已选择；batch framebuffer/audio
 在本阶段不适用；memory/pixel/block pure-WASM control 已有数据但未触发下沉；
-audio 与 full-core WASM 均没有证据支持。下一独立阶段为 Phase 0D lossless
-`.p8.png`，不得继续扩张 `p8w0c_bench_*`。
+audio 与 full-core WASM 均没有证据支持。Phase 0D lossless `.p8.png` 现已独立
+完成；下一阶段为 Phase 0E。不得继续扩张 `p8w0c_bench_*`。

@@ -33,7 +33,9 @@ Codex 在实现或修复任何功能时，必须遵守以下规则：
 - 不为了让测试通过而扩大误差容限、删除输入帧、忽略失败或批量更新快照；这类变更需要单独解释并审阅。
 - 不把 fake-08 的结果当作官方结果。它与本项目一致、但与官方 PICO-8 不一致时，本项目仍判失败。
 - 不在 CI、测试脚本、fixture 更新器或开发工具中访问 Lexaloffle BBS。详见第 13 节。
-- 无法运行真实 Safari、移动真机或官方 PICO-8 时，明确标记“未运行”，不得用 Playwright WebKit、模拟器或 fake-08 冒充已验证。
+- 无法运行真实 Chrome/Chromium 或官方 PICO-8 时，明确标记“未运行”，不得用
+  其他引擎、模拟器或 fake-08 冒充已验证。Firefox、Safari/WebKit 不属于当前
+  支持矩阵，不要求维护其 `not-run` 状态。
 - 修改 package、public export、import 或 entrypoint 时必须运行 architecture boundary tests；code review 不能代替机器门禁。
 - 变更结束前运行与影响面相称的测试层级，并在交付说明中列出实际执行的命令、结果及未执行项。
 
@@ -410,22 +412,23 @@ Phase 0C 原始 contract 或结果。
 
 PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必须另外建立 CPU-budget conformance cart，验证 `stat(1)`、30/60 Hz 和超预算行为；宿主机器更快不能使 cart 获得无限制的逻辑 CPU。
 
-## 11. 浏览器与移动端矩阵
+## 11. Chrome/Chromium 支持矩阵
 
 ### 11.1 支持层级
 
 | 层级 | 平台 | 合并/发布要求 |
 | --- | --- | --- |
-| Tier A | Chrome stable、Firefox stable、Safari stable，桌面 | 发布阻断；核心播放、输入、音频、存储全部通过 |
-| Tier B | 上一稳定主版本 Chrome/Firefox/Safari | 发布阻断；允许有已记录的非核心 UI 差异 |
-| Tier M | iOS Safari 当前及上一主版本、Android Chrome stable | 发布阻断；至少一台真实 iPhone 和一台中端 Android 真机 |
-| Tier E | Playwright Chromium/Firefox/WebKit | 每 PR 自动回归；WebKit 结果不得替代 Safari 结果 |
+| Tier A | Google Chrome stable，桌面 | 发布阻断；核心播放、输入、音频、存储全部通过 |
+| Tier B | Chromium stable/headless，桌面或固定 CI image | PR/发布阻断；与 Tier A 使用同一行为 contract |
+| Tier M | Android Chrome stable（仅当该 release 声明移动支持） | 移动 release 阻断；至少一台中端 Android 真机 |
 
-若产品最终缩小支持范围，必须在用户文档和本表同步修改，不能只从 CI 移除浏览器。
+Firefox、Safari/WebKit、iOS Safari 及其他引擎明确不在当前支持、测试或发布承诺
+内。新增引擎属于产品范围变更，必须先更新本文、CI 与用户文档，不能仅增加一个
+偶发 smoke 后宣称支持。
 
 ### 11.2 浏览器用例
 
-每个 Tier A 浏览器至少覆盖：
+Chrome/Chromium 至少覆盖：
 
 - `WebAssembly.instantiateStreaming` 及 MIME 不正确时的 ArrayBuffer fallback。
 - module Worker 创建、加载、销毁、异常映射和 CSP 场景。
@@ -438,9 +441,8 @@ PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必�
 - 页面 visibility、后台节流、前进后退缓存和 tab 恢复。
 - 正常 HTTP header 与 COOP/COEP 环境各一次，避免可选优化改变行为。
 
-### 11.3 真机门禁
+### 11.3 Android Chrome 真机门禁（仅移动 release）
 
-- iOS：真实 Safari，当前与上一主版本至少各一次；设备池至少保留一台 RAM ≤ 4 GiB 的设备档位。
 - Android：真实 Chrome stable，至少一台 4–6 GiB RAM 的中端设备；不能只用桌面 DevTools throttling。
 - AudioContext 解锁/prebuffer 后连续播放 30 分钟：无 crash、无可感知音画漂移、audio underrun 为 0、输入不粘键；启动前事件单独记录。
 - 60 Hz 标准 cart：p95 runtime frame ≤ 12 ms，p99 ≤ 16.7 ms，missed frame ≤ 0.5%。
@@ -506,7 +508,7 @@ PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必�
 - build、typecheck、lint、license/fixture provenance 检查。
 - 全量 unit/property tests 和关键模块覆盖率。
 - `tier: core` conformance carts，全量 binary golden。
-- Playwright Chromium/Firefox/WebKit 各一个核心 smoke。
+- Chrome/Chromium 一个核心 smoke。
 - parser fuzz 每 target 60 秒或 10,000 cases。
 - Worker hang/recovery 基础用例。
 - microbench 相对 main 的快速回归；共享 runner 只告警，固定 runner 才阻断。
@@ -514,7 +516,7 @@ PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必�
 ### 14.2 Nightly gate（每日）
 
 - 全量 conformance、所有输入 traces 和所有 golden。
-- 全量 Playwright engine/browser matrix。
+- 全量 Chrome/Chromium 版本矩阵。
 - 每个 fuzz target 30 分钟；native z8lua ASan/UBSan。
 - 固定 runner 完整 performance suite。
 - 30 分钟运行时和音频 soak；20 次 hang/crash/reload 循环。
@@ -522,7 +524,7 @@ PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必�
 
 ### 14.3 Weekly/device gate（每周）
 
-- 真实 Safari stable、上一主版本 Safari（设备/云机）、iOS Safari 和 Android Chrome。
+- Chrome stable 桌面；声明移动支持时再加入 Android Chrome 真机。
 - 键盘、Gamepad、touch、音频 unlock、后台恢复、方向变化。
 - 30 分钟真机 soak、内存和温度/降频后的性能记录。
 - 本地外部授权 corpus 可以在私有 runner 上运行，但结果不得携带未授权 cart/artifact。
@@ -530,7 +532,8 @@ PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必�
 ### 14.4 Release candidate gate
 
 - 第 16 节 DoD 全部满足。
-- Tier A/B/M 矩阵无遗漏；所有“未运行”项有明确阻断或经负责人书面接受。
+- Tier A/B 无遗漏；声明移动支持时 Tier M 也必须无遗漏。支持范围内的“未运行”项
+  有明确阻断或经负责人书面接受。
 - 重放全部历史 regression 和最新 fuzz corpus。
 - 核验官方手册版本、Terms 更新时间、第三方依赖许可证和测试资产清单。
 - 对 reference golden 更新逐项人工审阅，不允许大批量无解释变化。
@@ -636,7 +639,7 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 - 至少一个最小 conformance cart；bugfix 保留 regression。
 - framebuffer/RAM/audio 中所有受影响观察面都有 assertion，不只检查“未抛异常”。
 - 若行为来自官方观察，记录 PICO-8 版本、平台、cart/input hash 和重复性。
-- 相关 Chromium/Firefox/WebKit 测试通过；Safari/移动影响项按矩阵执行或明确未运行。
+- 相关 Chrome/Chromium 测试通过；声明移动支持时按 Tier M 执行。
 - 性能场景无超过门限的退化，Worker/内存资源能够释放。
 - 兼容矩阵和已知差异已更新；没有通过放宽全局 tolerance 掩盖问题。
 - 测试数据来源与许可证清楚，不包含未授权第三方 cart/artifact。
@@ -646,7 +649,7 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 - 所有 `tier: core` conformance cases 100% 通过，无 skip。
 - 所有标记 `implemented` 的 API 都有行为映射；`exact + compatible` 覆盖 MVP 清单的 100%。
 - `.p8`/`.p8.png` parser、decompressor、fixed-point ABI、RAM 和 Worker state machine 达到关键模块覆盖率门禁。
-- Tier A 桌面和 Tier M 真机核心矩阵通过。
+- Tier A/B 桌面核心矩阵通过；声明移动支持时 Tier M 也通过。
 - 固定性能 runner 和移动性能满足第 10、11 节预算。
 - 恶意 parser/VM 输入不能逃逸 Worker；hang 在规定时间内恢复。
 - 0 个开放 P0/P1；P2 必须登记并体现在兼容性声明。

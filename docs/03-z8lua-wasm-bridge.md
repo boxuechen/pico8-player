@@ -436,7 +436,8 @@ count hook 的安全策略已经锁定：budget exhaustion **MUST** poison conte
 4. protected outer resume 无论 guest 是否尝试捕获 sentinel，都在返回路径优先检查 poison，并报告 `P8W_ERROR_BUDGET`。
 5. 所有新 coroutine 必须继承 hook；上游 `lua_newthread()` 当前会复制 hook fields，但仍需回归测试。[上游 thread 初始化](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lstate.c#L237-L250)
 
-`quantum`、默认 budget 与官方 CPU cost model 不是一回事。Phase 0 只保证安全和跨浏览器确定性，Phase 4 再校准兼容 CPU accounting。
+`quantum`、默认 budget 与官方 CPU cost model 不是一回事。Phase 0 只保证安全和
+目标 Chrome/Chromium 版本间的确定性，Phase 4 再校准兼容 CPU accounting。
 
 Window watchdog 是第二层：若 Worker 在 wall-clock deadline 内没有回复，Window 终止整个 Worker 并重建 session。它覆盖 C parser、host import、WASM trap 或 hook 无法中断的情况；它不能替代 instruction hook。deadline 必须考虑后台暂停和移动设备抖动，并在 browser test 后确定。
 
@@ -472,7 +473,7 @@ execution/growth off。binary descriptor 已验证 `initial=maximum=256` pages�
 
 z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try/throw`，
 因此不能使用 `-fno-exceptions`。Phase 0A 选择 native Wasm exceptions；正式浏览器
-支持结论仍须经过目标 Chromium/Firefox/Safari 矩阵。
+支持结论只须经过 Chrome/Chromium 目标矩阵。
 
 构建要求：
 
@@ -503,8 +504,8 @@ Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
 
 ### 12.1 必测 workload
 
-Phase 0C browser harness 在 Chromium、Firefox、Safari 使用同一 contract；缺失
-browser 必须记录 `not-run`/`unavailable`，不能生成替代值。bridge-only matrix 为：
+Phase 0C browser harness 只以 Chrome/Chromium 为浏览器门禁；缺失 Chromium
+必须记录 `not-run`/`unavailable`，不能生成替代值。bridge-only matrix 为：
 
 | Case | 规模 | 要回答的问题 |
 | --- | ---: | --- |
@@ -526,16 +527,17 @@ Phase 0E。
 - 代表性 60 Hz cart 的 VM + TS Runtime desktop p95 **SHOULD** ≤ 8 ms/frame，与 [系统架构预算](./02-system-architecture.md#11-初始性能预算)一致。
 - bridge-only 16K no-op/raw calls 不得产生每 call JS object/string allocation。
 - 16K `pset` stress 的 desktop p95 目标为 ≤ 5 ms，以给 VM/audio 留出总计 8 ms 的 core budget；超出时不能宣布 generic ABI Go。该数值与 [测试性能门禁](./06-testing-compatibility.md#102-场景预算) 同步维护。
-- Safari 不得比同设备 Chromium 出现数量级退化；实际支持设备/浏览器版本必须写入 ADR。
+- 实际 Chrome/Chromium 版本与设备必须写入 ADR/证据。
 - 所有 workload 在优化前后 output/RAM hash 必须一致。
 - steady state 不得 memory grow，不得随帧数线性增长 heap、message 或 buffer。
 
 若失败，必须按 [全局 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder) 从第 1 级逐级评估。某一级对当前 workload 不适用时，也必须记录 profile 与 `not-applicable` 理由后才能继续；不得用本节的 bridge 局部视角跳过 raw buffer、批量输出或 audio 层级，直接宣布 full-core WASM。每次升级只移动被 profile 证明的热点。
 
-Phase 0C 的已测 Chrome 结论为 conditional Go：16K `pset`、65,536
+Phase 0C 的已测 Chrome 结论为 Go：16K `pset`、65,536
 `peek_poke`、4K `spr_8x8` import p95 为 0.090/0.599/0.442 ms；80/80
-cross-path hash 与 fixed-buffer 门禁通过，未触发下沉。Firefox/Safari 尚无实测，
-因此 portability condition 和 representative-cart 8 ms gate 仍开放。见
+cross-path hash 与 fixed-buffer 门禁通过，未触发下沉。由于支持范围已收敛为
+Chrome/Chromium，浏览器 portability condition 已关闭；representative-cart 8 ms
+gate 仍留给后续完整 Runtime。见
 [ADR-006](./adr/006-interop-hot-path-boundary.md) 与
 [Phase 0C 证据](./14-phase-0c-evidence.md)。
 
@@ -592,7 +594,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 | `^` bit mismatch | 已知风险 | 接受 known difference 或带 conformance 的 patch |
 | callback 动态替换及 custom loop fps | 未定 | 30/60/custom conformance |
 | nested coroutine HostRequest | 不宣称通用支持 | root bubbling + resume tests；否则显式降级 |
-| count quantum/default budget | 未定 | 跨浏览器 determinism + representative corpus |
+| count quantum/default budget | 未定 | Chrome/Chromium determinism + representative corpus |
 | generated binding（ADR-008） | Proposed | 5–10 signature prototype/stack tests |
 | Emscripten exception/longjmp mode | Phase 0A 为 Wasm EH + `SUPPORT_LONGJMP=wasm` | browser matrix 后接受或替换 production mode |
 

@@ -4,7 +4,8 @@
 
 实现一个可嵌入网页、可离线运行用户提供 cart 的 PICO-8 player。它应当：
 
-- 在现代桌面和移动浏览器中载入 `.p8` 与 `.p8.png`。
+- 在现代 Chrome 或 Chromium 中载入 `.p8` 与 `.p8.png`；其他浏览器引擎不在
+  当前支持与测试范围内。
 - 正确执行 P8 Lua cart，并提供 PICO-8 player 所需的 graphics、audio、input、memory 和 persistence 行为。
 - 对错误、超时、缺失功能和版本不兼容给出结构化诊断。
 - 将不可信 cart 隔离在可终止的 Worker 中。

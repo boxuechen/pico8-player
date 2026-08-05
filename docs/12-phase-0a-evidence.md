@@ -102,8 +102,8 @@ pnpm run verify
 
 ## 7. 未覆盖与下一阶段
 
-- Node `worker_threads` 已验证 ES module Worker load；真实 Chromium/Firefox/Safari
-  浏览器矩阵尚未运行，不得据此宣称浏览器全面兼容。
+- Node `worker_threads` 已验证 ES module Worker load；Phase 0A 当时尚未运行真实
+  Chrome/Chromium 浏览器矩阵，不得据此宣称浏览器兼容。
 - 未运行正版 PICO-8 differential capture；`^` 仍是 Known Difference，其他
   baseline fixture 也继续接受后续 official golden 校准。
 - Lua heap cap/OOM 与 Phase 0B fixed artifact 参数已由

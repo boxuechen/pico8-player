@@ -1,12 +1,14 @@
 # PICO-8 Web Player
 
 Web-native PICO-8 player project using a z8lua WASM language core and a
-TypeScript runtime. Phase 0S and the Phase 0A z8lua WASM baseline are complete;
-cart hardware, Runtime behavior, and the player UI are not implemented yet.
+TypeScript runtime. Phase 0S–0D are complete, including shared Pico RAM,
+interop evidence and a bounded lossless `.p8.png` codec. Browser support and
+release testing target Chrome/Chromium only. Full cart hardware, Runtime
+behavior, and the player UI are not implemented yet.
 
 Start with [the engineering documentation](./docs/README.md), the
 [Phase 0S evidence](./docs/11-phase-0s-evidence.md), and the
-[Phase 0A evidence](./docs/12-phase-0a-evidence.md).
+[Phase 0D evidence](./docs/15-phase-0d-evidence.md).
 
 ```sh
 pnpm install --frozen-lockfile
