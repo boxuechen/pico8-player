@@ -31,6 +31,8 @@ export type RuntimeErrorCode =
   | "E_VM_INSTRUCTION_BUDGET"
   | "E_VM_OOM"
   | "E_VM_WATCHDOG"
+  | "E_CART_PARSE"
+  | "E_TIME_DISCONTINUITY"
   | "E_FEATURE_UNSUPPORTED"
   | "E_HOST_REQUEST"
   | "E_HOST_API"

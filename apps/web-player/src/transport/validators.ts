@@ -2,6 +2,10 @@ import type {
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
 } from "./worker-protocol.js";
+import type {
+  PlayerHostToRuntime,
+  PlayerRuntimeToHost,
+} from "./player-protocol.js";
 import {
   AUDIO_PROTOCOL_VERSION,
   PICO_CANONICAL_SAMPLE_RATE,
@@ -33,6 +37,135 @@ function isUint(value: unknown): boolean {
     Number(value) >= 0 &&
     Number(value) <= 0xffff_ffff
   );
+}
+
+function isPositiveUint(value: unknown): boolean {
+  return isUint(value) && Number(value) > 0;
+}
+
+function isPlayerEnvelope(value: unknown): value is Record<string, unknown> {
+  return (
+    isRecord(value) &&
+    value.v === 1 &&
+    isUint(value.requestId) &&
+    isPositiveUint(value.workerGeneration) &&
+    isUint(value.sessionGeneration)
+  );
+}
+
+function isPlayerError(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const codes = new Set([
+    "E_VM_SYNTAX",
+    "E_VM_RUNTIME",
+    "E_VM_INSTRUCTION_BUDGET",
+    "E_VM_OOM",
+    "E_VM_WATCHDOG",
+    "E_CART_PARSE",
+    "E_TIME_DISCONTINUITY",
+    "E_FEATURE_UNSUPPORTED",
+    "E_HOST_REQUEST",
+    "E_HOST_API",
+    "E_INVALID_STATE",
+    "E_INVARIANT",
+  ]);
+  const phases = new Set([
+    "none", "compile", "boot", "init", "update", "update60", "draw",
+    "custom-loop", "host-call",
+  ]);
+  const detailsValid = value.details === undefined || (
+    isRecord(value.details) &&
+    Object.values(value.details).every((detail) =>
+      typeof detail === "string" || typeof detail === "boolean" ||
+      (typeof detail === "number" && Number.isFinite(detail))
+    )
+  );
+  return (
+    typeof value.code === "string" &&
+    codes.has(value.code) &&
+    typeof value.message === "string" &&
+    typeof value.phase === "string" && phases.has(value.phase) &&
+    typeof value.recoverable === "boolean" &&
+    (value.line === undefined || Number.isSafeInteger(value.line)) &&
+    (value.trace === undefined || typeof value.trace === "string") &&
+    detailsValid
+  );
+}
+
+export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
+  if (!isPlayerEnvelope(value)) return false;
+  if (value.type === "input") {
+    return (
+      value.requestId === 0 &&
+      isPositiveUint(value.sessionGeneration) &&
+      isUint(value.sequence) &&
+      isRecord(value.input) &&
+      isUint(value.input.buttons) &&
+      Number(value.input.buttons) <= 0x3f
+    );
+  }
+  if (!isPositiveUint(value.requestId)) return false;
+  if (value.type === "loadCart") {
+    return (
+      isPositiveUint(value.sessionGeneration) &&
+      value.cartBytes instanceof ArrayBuffer &&
+      (value.instructionBudget === undefined ||
+        (isPositiveUint(value.instructionBudget)))
+    );
+  }
+  if (value.type === "vsync") {
+    return (
+      isPositiveUint(value.sessionGeneration) &&
+      isUint(value.sequence) &&
+      typeof value.timestampMs === "number" &&
+      Number.isFinite(value.timestampMs) &&
+      value.timestampMs >= 0
+    );
+  }
+  if (
+    value.type === "start" || value.type === "pause" || value.type === "resume" ||
+    value.type === "reset" || value.type === "stop"
+  ) {
+    return isPositiveUint(value.sessionGeneration);
+  }
+  return value.type === "dispose";
+}
+
+export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToHost {
+  if (!isPlayerEnvelope(value)) return false;
+  if (!isPositiveUint(value.requestId)) return false;
+  if (value.type === "state") {
+    if (value.state === "disposed") {
+      return value.mode === "none" && value.targetFps === 0;
+    }
+    return ["ready", "running", "paused", "stopped"].includes(
+      String(value.state),
+    ) &&
+      (value.mode === "callback" || value.mode === "custom") &&
+      (value.targetFps === 30 || value.targetFps === 60);
+  }
+  if (value.type === "frame") {
+    return (
+      isUint(value.frameId) &&
+      isDecimalUint(value.completedSlices) &&
+      Number.isInteger(value.timeRawBeforeStep) &&
+      Number(value.timeRawBeforeStep) >= -0x8000_0000 &&
+      Number(value.timeRawBeforeStep) <= 0x7fff_ffff &&
+      (value.targetFps === 30 || value.targetFps === 60) &&
+      value.packedScreen instanceof ArrayBuffer &&
+      value.packedScreen.byteLength === 0x2000
+    );
+  }
+  if (value.type === "heartbeat") {
+    return (
+      isUint(value.vsyncSequence) && isUint(value.tickCount) &&
+      Number(value.tickCount) <= 5 && isUint(value.droppedTicks)
+    );
+  }
+  if (value.type === "diagnostic" || value.type === "fault") {
+    return isPlayerError(value.error);
+  }
+  return false;
 }
 
 function isDecimalUint(value: unknown): boolean {

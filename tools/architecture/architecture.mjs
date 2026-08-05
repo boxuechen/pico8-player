@@ -104,6 +104,7 @@ const REQUIRED_FILES = [
   "apps/web-player/src/main/compose-player.ts",
   "apps/web-player/src/worker/runtime-worker.ts",
   "apps/web-player/src/worker/compose-runtime.ts",
+  "apps/web-player/src/worker/player-worker-entry.mjs",
   "apps/web-player/src/worklet/pico8-audio-processor.ts",
   "spec/pico-api-inventory.yaml",
   "spec/cart-codec-contract.json",

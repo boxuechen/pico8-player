@@ -20,7 +20,7 @@
 | ADR-008 | [Accepted](./adr/008-schema-generated-host-bindings.md) | production schema 单向生成 C/TS host bindings；prototype 不暴露未实现 API |
 | ADR-009 | [Accepted](./adr/009-canvas2d-frame-presenter.md) | Canvas2D 是唯一默认 presenter；WebGL fallback 未实现 |
 | ADR-010 | [Accepted](./adr/010-dedicated-messageport-audio-transport.md) | dedicated MessagePort 是唯一默认 PCM transport；不实现 relay/SAB |
-| ADR-011 | Proposed / later | hidden-tab 默认 pause、不追帧 |
+| ADR-011 | [Accepted](./adr/011-hidden-tab-pause.md) | hidden/blur 默认 pause、清输入并重建 scheduler anchor，不追墙钟 backlog |
 | ADR-012 | [Accepted](./adr/012-z8lua-source-and-phase-0a-wasm.md) | z8lua pin、patch manifest 与 reproducible WASM |
 | ADR-013 | [Accepted](./adr/013-shared-pico-ram-boundary.md) | context-owned 64 KiB RAM、canonical mapper、fixed memory |
 | ADR-014 | Accepted | canonical test PCM 为 22050 Hz mono signed PCM16LE |
@@ -32,8 +32,8 @@
 
 ### Active blockers
 
-当前没有 active phase blocker。Phase 1A–1D 已完成；下一 work unit 1E 由
-[`Phase 1`](./phases/1-l1-minimal-playable-loop.md) 展开并激活。
+当前没有 active phase blocker。Phase 1A–1E 已完成；下一 work unit 1F 需先由
+[`Phase 1`](./phases/1-l1-minimal-playable-loop.md) 展开后再激活。
 
 ### Deferred open questions
 
@@ -74,7 +74,7 @@ evidence，不在本表复制测试步骤。
 | R-09 | multi-cart 同步 API 需要 async host data | 预供给/同步 repository；L3 重评 |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | 默认禁止；独立授权和 resolver boundary |
-| R-12 | refresh/hidden policy 改变 simulation | logical scheduler；ADR-011 later |
+| R-12 | refresh/hidden policy 改变 simulation | logical scheduler；ADR-011 hidden/blur pause + re-anchor |
 | R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；0F-I integration 已通过 |
 | R-14 | API 广而不准、stub 堆积 | vertical slice + conformance gate |
 | R-15 | upper RAM/remap 语义回归 | ADR-013 canonical mapper tests |

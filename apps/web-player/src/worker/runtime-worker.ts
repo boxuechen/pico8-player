@@ -1,9 +1,14 @@
 import {
   isAudioPortAttachmentEnvelope,
+  isPlayerHostToRuntime,
   isPhase0EHostToRuntime,
+  type PlayerRuntimeToHost,
   type Phase0ERuntimeToHost,
 } from "../transport/public.js";
-import type { Phase0EWorkerController } from "./compose-runtime.js";
+import type {
+  Phase0EWorkerController,
+  PlayerWorkerController,
+} from "./compose-runtime.js";
 import type {
   WorkerAudioMessagePort,
   WorkerPcmTransport,
@@ -14,7 +19,18 @@ export interface RuntimeWorkerScope {
     type: "message",
     listener: (event: { readonly data: unknown }) => void,
   ): void;
-  postMessage(message: Phase0ERuntimeToHost, transfer?: readonly ArrayBuffer[]): void;
+  postMessage(
+    message: Phase0ERuntimeToHost | PlayerRuntimeToHost,
+    transfer?: readonly ArrayBuffer[],
+  ): void;
+}
+
+function postPlayerResponse(
+  scope: RuntimeWorkerScope,
+  response: PlayerRuntimeToHost,
+): void {
+  const transfer = response.type === "frame" ? [response.packedScreen] : [];
+  scope.postMessage(response, transfer);
 }
 
 function isWorkerAudioPort(value: unknown): value is WorkerAudioMessagePort {
@@ -93,6 +109,49 @@ export function installPhase0FAsyncRuntimeWorker(
       const response = (await controller).handle(command);
       postResponse(scope, response);
       if (response.type === "disposed") audioTransport.dispose();
+    });
+  });
+}
+
+/** Production Phase 1E Worker bootstrap with serialized command execution. */
+export function installPlayerRuntimeWorker(
+  scope: RuntimeWorkerScope,
+  controller: Promise<PlayerWorkerController> | PlayerWorkerController,
+  audioTransport?: WorkerPcmTransport,
+): void {
+  let queue = Promise.resolve();
+  scope.addEventListener("message", (event) => {
+    if (audioTransport !== undefined && attachAudioPort(event.data, audioTransport)) return;
+    if (!isPlayerHostToRuntime(event.data)) return;
+    const command = event.data;
+    queue = queue.then(async () => {
+      try {
+        const active = await controller;
+        const responses = active.handle(command);
+        for (const response of responses) postPlayerResponse(scope, response);
+        if (
+          command.type === "dispose" &&
+          responses.some((response) => response.type === "state" && response.state === "disposed")
+        ) {
+          audioTransport?.dispose();
+        }
+      } catch (error) {
+        postPlayerResponse(scope, {
+          v: 1,
+          type: "fault",
+          requestId: command.requestId,
+          workerGeneration: command.workerGeneration,
+          sessionGeneration: command.sessionGeneration,
+          error: {
+            code: "E_INVARIANT",
+            message: `Runtime Worker bootstrap failed: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            phase: "none",
+            recoverable: false,
+          },
+        });
+      }
     });
   });
 }

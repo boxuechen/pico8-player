@@ -4,9 +4,9 @@
   "name": "L1 minimal playable loop",
   "status": "active",
   "browserGate": ["chrome", "chromium"],
-  "completedWorkUnits": ["1A", "1B", "1C", "1D"],
+  "completedWorkUnits": ["1A", "1B", "1C", "1D", "1E"],
   "activeWorkUnit": null,
-  "nextWorkUnit": "1E",
+  "nextWorkUnit": "1F",
   "workUnits": {
     "1A": {
       "name": "Host API Boundary",
@@ -172,7 +172,69 @@
         "pnpm run verify"
       ]
     },
-    "1E": { "name": "Worker scheduling and minimal player shell", "status": "not-started" },
+    "1E": {
+      "name": "Worker scheduling and minimal player shell",
+      "status": "complete",
+      "executionDomains": {
+        "main": ["DOM", "File", "KeyboardEvent", "requestAnimationFrame", "Canvas2D", "AudioContext"],
+        "worker": ["protocol-validation", "CartSession-composition", "scheduler-orchestration", "z8lua-WASM"],
+        "runtimeCore": ["browser-neutral-frame-scheduler", "cart-session", "simulation-state"]
+      },
+      "protocol": {
+        "version": 1,
+        "commands": ["loadCart", "start", "input", "vsync", "pause", "resume", "reset", "stop", "dispose"],
+        "events": ["state", "frame", "heartbeat", "diagnostic", "fault"],
+        "workerGeneration": "increments-on-worker-spawn",
+        "sessionGeneration": "main-owned-monotonic-load-reset-token",
+        "coreGeneration": "worker-private-mapping",
+        "inputSequence": "monotonic-per-session-stale-ignored",
+        "frameTransport": "transferable-array-buffer"
+      },
+      "scheduler": {
+        "clockSource": "main-requestAnimationFrame-timestamp",
+        "decisionOwner": "RuntimeCore:FrameScheduler",
+        "executionOwner": "RuntimeWorker",
+        "targetFps": [30, 60],
+        "firstPulse": "anchor-only",
+        "maximumCatchUpTicks": 5,
+        "backlogOverflow": "execute-cap-drop-remainder-diagnostic",
+        "pauseResume": "clear-accumulator-reset-anchor",
+        "adaptiveFps": false
+      },
+      "keyboard": {
+        "player": 0,
+        "mapping": {
+          "left": ["ArrowLeft"],
+          "right": ["ArrowRight"],
+          "up": ["ArrowUp"],
+          "down": ["ArrowDown"],
+          "o": ["KeyZ", "KeyN", "KeyC"],
+          "x": ["KeyX", "KeyM", "KeyV"]
+        },
+        "clearOn": ["blur", "hidden", "pause", "reset", "stop", "fault", "dispose"]
+      },
+      "shellStates": ["idle", "loading", "ready", "running", "paused", "stopped", "faulted", "disposed"],
+      "deferred": [
+        "bbs-network-resolver",
+        "guest-load-cart-resolution",
+        "persistence",
+        "gamepad-touch-multiplayer",
+        "pause-menu",
+        "audio-synthesis",
+        "pico8-console",
+        "firefox-webkit"
+      ],
+      "verification": [
+        "pnpm run test:phase-1e",
+        "pnpm run test:phase-0e",
+        "pnpm run test:phase-0f",
+        "pnpm run test:phase-1c",
+        "pnpm run test:phase-1d",
+        "pnpm run test:architecture",
+        "pnpm run test:browser:chromium",
+        "pnpm run verify"
+      ]
+    },
     "1F": { "name": "L1 conformance and phase exit", "status": "not-started" }
   },
   "phase1AExcluded": [

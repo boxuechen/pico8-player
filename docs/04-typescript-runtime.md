@@ -12,9 +12,9 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 1D** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；generation-owned `CartSession`；RAM-backed L1 graphics；player 0 held/edge/repeat input |
+| **Implemented through Phase 1E** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；generation-owned `CartSession`；RAM-backed L1 graphics/input；bounded interactive scheduler、stable Worker protocol 和 minimal player shell |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
+| **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -69,7 +69,7 @@ TypeScript 负责：
 | PICO Base RAM allocation/pointer lifetime | z8lua bridge context | `PicoMemoryLease`；固定 typed views |
 | PICO Base RAM runtime 语义与 hardware writes | `PicoRam`（Worker 内） | 对同一 lease 的同步 typed views；不另分配 RAM |
 | 当前 normalized Cart ROM/code snapshot | RuntimeCore `CartSession` | session-private byte copies 用于无 payload `reset`；只暴露 frozen identity/format/version metadata |
-| 当前 cart 原始 source bytes | Worker loader/repository（1E+） | 用于 Worker watchdog 重建、重新 decode 与 future resolver；不进入逐帧 core state |
+| 当前 cart 原始 source bytes | main `PlayerRuntimeClient`（Phase 1E）/ future repository | 用于 Worker watchdog 重建、重新 decode 与 future resolver；不进入逐帧 core state |
 | Lua/协程/GC | z8lua WASM | ABI 命令，不直接读内部结构 |
 | 图形 draw state | RAM `0x5f00..` | `Graphics` 每次从 RAM 读取/写回 |
 | SFX/Music 播放状态 | `AudioSynth` | 只由逻辑 tick/采样推进 |
@@ -527,6 +527,10 @@ blur/visibility/device lifecycle、多玩家与 devkit input 仍由后续 work u
 
 ## 10. FrameScheduler
 
+> 状态：Phase 1E 已实现 `FrameScheduler` 的 browser-neutral interactive decision 子集：
+> 30/60Hz accumulator、首 pulse anchor、0..5 ticks、overflow drop/diagnostic 与 pause/resume
+> re-anchor。下方 `deterministic/stepExact`、slow-frame update/draw 合并仍是 Target。
+
 ### 10.1 双模式
 
 ```ts
@@ -620,12 +624,20 @@ type RuntimeEvent =
   | { v: 1; type: "fault"; error: SerializedRuntimeError };
 ```
 
+> 状态：上方仍是包含 future `supplyCart` 的 Target 示例。Phase 1E 当前 wire shape 只以
+> `player-protocol.ts` 和 `spec/phase-1-l1-contract.json#workUnits.1E` 为准；已实现命令为
+> load/start/input/vsync/pause/resume/reset/stop/dispose，事件为 state/frame/heartbeat/
+> diagnostic/fault。
+
 - 这是 [02-system-architecture.md](./02-system-architecture.md) 中方向性协议的 Runtime 实施命名：`loadCart` 只完成 load transaction 并进入 `ready`，Window 随后用 `start` 进入 `running`；guest `load()` 因官方语义在事务成功后自动 start。禁止再引入 `boot`/`host-response` 等同义命令。
 - `reset` 无 payload：Worker 必须调用当前 `CartSession`，使用其 private normalized
   ROM/code snapshot 创建全新 generation；`reset` 不得依赖主线程临时回传，也不得在原
   VM/RAM 上就地清零后继续。Worker 若被 watchdog 整体终止，则由 loader/repository 或主线程
   保留的原始 bytes 重建，不依赖已销毁 session。
-- 未知 `v` 必须 fail closed。`requestId` 在未完成请求中唯一；每次 load/swap/restart 有单调 `sessionGeneration`，`frameId`、vsync/input/audio sequence 各自在所属通道单调。主线程/Worklet 必须丢弃旧 generation 的 frame、audio 和 reply。
+- 未知 `v` 必须 fail closed。`requestId` 在未完成请求中唯一；每次 Worker spawn 有单调
+  `workerGeneration`，每次 load/reset transaction 有跨 Worker restart 单调的
+  `sessionGeneration`；`frameId`、vsync/input/audio sequence 各自在所属通道单调。主线程/
+  Worklet 必须丢弃旧 generation 的 frame、audio 和 reply。
 - bridge 的 request ID 是 handle-local `uint32`；Worker 协议必须将其编码为包含 `sessionGeneration` 的 opaque string（例如 `<generation>:<bridge-id>`），只通过映射表还原，禁止让旧 session 的同号 ID 命中新 handle。
 - `loadCart` 输入 bytes 应 transferable；Worker decode 后把 normalized `ParsedCart` 交给
   `CartSession` 复制，主线程或 Worker repository 还必须独立保留可在 watchdog 终止后重新发送

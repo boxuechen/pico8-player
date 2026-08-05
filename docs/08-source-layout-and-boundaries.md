@@ -9,15 +9,15 @@
 | --- | --- |
 | **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
-| **Implemented through Phase 1D** | RuntimeCore `frame-runtime` / `session` / `graphics` / `input` / `pico-api` / public barrel；generation lifecycle、RAM-backed L1 raster 与 input latch |
-| **Scaffold** | main Player UI、input frontend 与其余未激活 adapter 的文件位；文件存在不代表功能完成 |
+| **Implemented through Phase 1E** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate |
+| **Scaffold** | persistence/resolver adapters 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
 [`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；当前
-active phase 是 Phase 1，1D 已完成、下一 work unit 为 1E，范围以 phase 文档为准。
+active phase 是 Phase 1，1E 已完成、下一 work unit 为 1F，范围以 phase 文档为准。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -38,6 +38,7 @@ active phase 是 Phase 1，1D 已完成、下一 work unit 为 1E，范围以 ph
 │   └── web-player/
 │       ├── src/
 │       │   ├── transport/
+│       │   │   ├── player-protocol.ts
 │       │   │   ├── worker-protocol.ts
 │       │   │   ├── audio-protocol.ts
 │       │   │   └── validators.ts
@@ -45,11 +46,13 @@ active phase 是 Phase 1，1D 已完成、下一 work unit 为 1E，范围以 ph
 │       │   │   ├── main.ts
 │       │   │   ├── compose-player.ts
 │       │   │   ├── player-controller.ts
+│       │   │   ├── player-runtime-client.ts
 │       │   │   ├── runtime-client.ts
 │       │   │   ├── input-frontend.ts
 │       │   │   ├── render/
 │       │   │   └── ui/
 │       │   ├── worker/
+│       │   │   ├── player-worker-entry.mjs
 │       │   │   ├── runtime-worker.ts
 │       │   │   ├── compose-runtime.ts
 │       │   │   └── adapters/
@@ -83,7 +86,7 @@ active phase 是 Phase 1，1D 已完成、下一 work unit 为 1E，范围以 ph
 │   │   │   ├── graphics/l1-graphics.ts
 │   │   │   ├── audio/
 │   │   │   ├── input/l1-input.ts
-│   │   │   ├── scheduler/
+│   │   │   ├── scheduler/frame-scheduler.ts
 │   │   │   ├── persistence/
 │   │   │   ├── pico-api/pico-api-host.ts
 │   │   │   ├── ports/
@@ -174,13 +177,16 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 1D 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。Phase 1E 当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
-`input/l1-input.ts`、`pico-api/pico-api-host.ts` 和只负责 re-export 的 `public.ts`。
+`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、`pico-api/pico-api-host.ts` 和只负责
+re-export 的 `public.ts`。
 `FrameSliceRuntime` + `FrameVmPort` + browser-neutral `PicoApiHost` 拥有单 generation 的
 frame/time/HostRequest transaction 与 L1 graphics/input；`CartSession` 通过 RuntimeCore-owned
 runtime factory port 拥有 cart snapshot、generation、cold reset、stale response 和
-fault/stop/dispose lifecycle。完整 graphics/device input、audio/scheduler/persistence 仍未落地。
+fault/stop/dispose lifecycle；`FrameScheduler` 拥有 wall-clock accumulator/catch-up policy，但
+不拥有 clock source 或 simulation。完整 graphics/device input、audio/deterministic scheduler/
+persistence 仍未落地。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。
@@ -223,6 +229,10 @@ RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worke
 - `worklet/`：PCM queue、重采样所需的实时设备逻辑和 processor 注册；不得 import RuntimeCore 或 z8lua。
 
 `apps/web-player` 可以依赖 packages；任何 package **MUST NOT** import `apps/web-player`。
+
+Phase 1E 的 `player-worker-entry.mjs` 是异步 WASM bootstrap/bundle entry：它必须先调用
+`installPlayerRuntimeWorker` 注册 message listener，再等待 WASM/controller promise；esbuild 只
+解析 workspace specifier 生成 Chrome Module Worker artifact，不改变 execution-domain ownership。
 
 ## 3. 依赖 DAG
 

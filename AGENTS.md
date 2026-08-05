@@ -6,7 +6,7 @@ z8lua WASM and a TypeScript runtime.
 Before changing production code:
 
 1. Read [`docs/README.md`](docs/README.md).
-2. Read the active Phase 1 entry linked there. Phase 1C is complete; use that
+2. Read the active Phase 1 entry linked there. Phase 1E is complete; use that
    document to activate and route the next work unit.
 3. Read [`docs/08-source-layout-and-boundaries.md`](docs/08-source-layout-and-boundaries.md)
    and only the contract sections routed by the current phase document.

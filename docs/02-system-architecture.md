@@ -8,14 +8,15 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 0F** | WASM 内固定 64 KiB RAM、bounded `loadCart/step/hostResponse/dispose` Worker DTO、generation/watchdog、manual frame slice/startup clock、Canvas2D presenter、dedicated PCM port/bounded Worklet queue 和 browser composition |
-| **Target** | 完整 Session 状态机、完整 Worker 协议、boot/frame transaction、wall-clock scheduler 与完整 Graphics/AudioSynth/Input/Persistence |
+| **Implemented through Phase 1E** | Phase 0F browser boundary；text/PNG decode、CartSession/L1 graphics/input；versioned player protocol、双 generation/watchdog、bounded wall-clock scheduler、keyboard/DOM shell 和 Worker bundle |
+| **Target** | 完整 boot/frame transaction、cart resolver 与完整 Graphics/AudioSynth/Input/Persistence |
 | **Deferred** | persistence、完整 cart swap、BBS resolver 和完整 L3 host integration |
 
 第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
-当前 bounded Worker 协议由
-[`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json) 和
-[`worker-protocol.ts`](../apps/web-player/src/transport/worker-protocol.ts) 定义；已实现的
+当前 production player 协议由
+[`phase-1-l1-contract.json`](../spec/phase-1-l1-contract.json) 和
+[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；Phase 0E
+`worker-protocol.ts` 只保留为兼容 probe。已实现的
 browser boundary 由
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
 定义。
@@ -245,14 +246,16 @@ export type RuntimeToHost =
 
 ## 8. 时间模型
 
-> 状态：startup/manual slice 已实现；wall-clock scheduler Deferred。
+> 状态：startup/manual slice 与 Phase 1E bounded interactive scheduler 已实现；完整 slow-frame/conformance policy 仍是 Target。
 
 - Runtime 维护自己的 accumulator 和 logical simulation clock。
 - `_update()` 模式逻辑速率为 30 Hz；`_update60()` 模式为 60 Hz。
 - display refresh 只决定何时请求/显示最新 frame，不直接决定 update 数。
 - `time()` / `t()` 必须由 logical simulation clock 推导，不等同于 callback 调用计数。官方 Web Player 差分锁定 startup 为 `1/30s`；custom main loop 的首次 `flip()` commit 这个 startup epoch，之后从 continuation 到每个受控 `flip()` 再 commit 一个 30 Hz slice。callback 60 Hz 用 2 个 target-rate slices 表示同一 startup epoch。
-- scheduler 可以为追赶 wall time 执行多个 update，但必须限制最大 catch-up，避免 spiral of death。
-- tab hidden 策略必须显式：默认 pause simulation 与 audio；恢复时不补跑隐藏期间的所有帧。
+- Phase 1E scheduler 最多追赶 5 ticks/vsync；超出后丢弃 backlog 并发出
+  `E_TIME_DISCONTINUITY`，避免 spiral of death。
+- [ADR-011](./adr/011-hidden-tab-pause.md) 已锁定默认 hidden/blur pause：清输入并重建
+  scheduler anchor，恢复时不补跑隐藏期间的所有帧。
 - 测试模式必须允许手动逐帧推进，不依赖 wall clock。
 
 ## 9. Error 模型

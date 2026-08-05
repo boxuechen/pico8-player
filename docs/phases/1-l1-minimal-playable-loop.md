@@ -1,9 +1,9 @@
 # Phase 1：L1 最小可玩闭环
 
 - 状态：**Active**
-- 当前 checkpoint：**1D L1 graphics/input complete**
+- 当前 checkpoint：**1E Scheduler/player shell complete**
 - 当前 work unit：**None**
-- 下一 work unit：**1E Scheduler/player shell**
+- 下一 work unit：**1F L1 exit**
 - 机器契约：[`spec/phase-1-l1-contract.json`](../../spec/phase-1-l1-contract.json)
 - 浏览器范围：Chrome / Chromium only
 
@@ -34,7 +34,7 @@ Phase 1 从已通过的 Phase 0 exit gate 开始，并保持以下边界：
 | 1B Text `.p8` / ParsedCart | **Complete** | bytes-only `.p8` decode，统一 cart identity/diagnostic，不接网络 |
 | 1C CartSession lifecycle | **Complete** | cold reset、reload/fault dispose、RAM/input/placeholder-audio reset matrix |
 | 1D L1 graphics/input | **Complete** | `line/rect/circ`、normalized held/edge 与 `btnp` 最小闭环 |
-| 1E Scheduler/player shell | Not started | Worker tick、load/reset/fault UI 与 Phase 0F adapters 接通 |
+| 1E Scheduler/player shell | **Complete** | Worker tick、load/reset/fault UI 与 Phase 0F adapters 接通 |
 | 1F L1 exit | Not started | 30/60/custom original carts、Chrome gate、兼容矩阵和 phase evidence |
 
 后续 unit 启动前必须在本文件展开其 inputs、files、tests 和 exit gate；不得仅依据上表直接
@@ -416,3 +416,140 @@ Phase 1D 已交付 RAM-backed `L1Graphics`、逐 tick `L1Input` 与只负责组�
 packed pixels、pen/polyline hardware state、30/60Hz repeat、repeat register snapshot、
 HostRequest resume 与 CartSession generation reset。完整 draw state、剩余 graphics API、
 多人/device input 与 app physical mapping 仍按 6.1/6.2 deferred。下一 work unit 是 1E。
+
+## 7. 1E 执行契约
+
+### 7.1 目标、输入与明确排除
+
+1E 把已经完成的 `decodeCart`、`CartSession`、L1 graphics/input 和 Phase 0F Canvas/audio
+transport 组成第一个可交互 player path。用户选择的 `.p8` 或 `.p8.png` bytes 在 main thread
+保留一份 watchdog recovery snapshot，实际 decode、VM object graph 和 simulation tick 全部留在
+Runtime Worker。加载只进入 `ready`；只有显式 `start` 才进入 `running`。
+
+本 unit 交付：
+
+1. browser-neutral `FrameScheduler` accumulator：消费 wall-clock pulse，按 cart 的 30/60Hz
+   产生 `0..5` 个 tick decision；它不读取 Worker timer、DOM 或 `requestAnimationFrame`。
+2. production Worker composition 改为通过 `CartSession` factory 创建 fresh router/VM/runtime，
+   同时接受 `.p8` 与 `.p8.png`；Phase 0E direct-runtime controller 只作为冻结的 probe 兼容路径。
+3. versioned player protocol 与 main runtime client：覆盖 load/start/input/vsync/pause/resume/reset/
+   stop/dispose、frame/state/heartbeat/fault，并把 Worker incarnation 与 cart session generation 分开。
+4. main-thread keyboard frontend、Canvas presenter composition 和最小 DOM controller：load/reset/
+   pause/resume/stop/fault 状态由 DOM 表达，playfield 仍只由 Canvas presenter 绘制。
+5. fake-clock 单元/集成测试与真实 z8lua Chrome/Chromium smoke，验证 scheduling、input、reset、
+   presenter 和 fault containment 的完整路径。
+
+1E 不实现 BBS/network resolver、`load()` guest cart resolver、persistence、gamepad/touch、多人键位、
+pause menu、audio synthesis、完整 PICO-8 console 或 Firefox/WebKit。Phase 0F audio frontend 只接入
+session-generation/port lifecycle；没有 PCM producer 时保持静音是预期行为。
+
+### 7.2 Execution-domain 与 ownership
+
+```text
+DOM / KeyboardEvent / File / requestAnimationFrame (main)
+  -> normalized six-button snapshot + monotonic vsync pulse
+  -> versioned transport
+  -> Worker controller
+       -> FrameScheduler decision (RuntimeCore)
+       -> CartSession generation (RuntimeCore)
+       -> fresh router + Z8LuaFrameVm + FrameSliceRuntime (Worker composition)
+  -> immutable frame event
+  -> Canvas2DFramePresenter (main)
+```
+
+- main thread 不能计算 simulation backlog、直接 step VM 或把 Canvas 当作游戏状态；它只在可见且
+  running 时发送 rAF timestamp pulse。`visibilitychange`/blur 清除 held input 并暂停。
+- Worker controller 拥有当前 normalized input、scheduler run state 和外部 session token；
+  `CartSession` 继续独占 cart snapshot、core generation 和 runtime object graph。
+- `FrameScheduler` 只返回 tick count/discontinuity metadata；Worker controller 按 decision 顺序调用
+  `CartSession.step`。这样 scheduler policy 可用 fake clock 确定性测试，同时 RuntimeCore 不获得浏览器
+  capability。
+- renderer 只消费 generation-tagged packed frame；load/reset 先 reset presenter，旧 generation 或
+  非单调 frame id 必须丢弃。DOM status/diagnostic 是唯一 shell UI，不绘入 playfield。
+- composition/controller dispose 必须取消 rAF、移除 keyboard/DOM listener、清空 pending commands、
+  dispose presenter/audio、终止 Worker；任何层不得使用 module/global singleton 保存 session state。
+
+### 7.3 Protocol 与 generation
+
+`apps/web-player/src/transport/player-protocol.ts` 是 1E production transport source。所有 control
+command/event 固定 `v=1`、positive `requestId`、`workerGeneration` 和 `sessionGeneration`：
+
+- `workerGeneration` 由 main client 在每次 Worker spawn/watchdog restart 时递增，只用于拒绝旧
+  Worker reply。
+- `sessionGeneration` 由 main client 在每次 load/reset transaction 前递增，在 Worker restart 后
+  仍保持单调；Worker 把它映射到当前 `CartSession.generation`，不得假设二者数值相等。
+- `input` 是 requestless、sequence-tagged snapshot；同 generation 的 stale sequence 被忽略。每个
+  `vsync` control command 在零或多个 `frame` 后必须以一个 `heartbeat` 终止，供 main watchdog 收敛。
+- load/reset/start/pause/resume/stop/dispose 以 `state` 或 `fault` 终止；protocol validation fail-closed，
+  unknown version/type、NaN timestamp、错误 frame byte length 和不匹配 generation 不得进入 runtime。
+- packed framebuffer 使用 transferable `ArrayBuffer`。原始 cart bytes 只在 load command transfer；
+  main 保留自己的 copy，以便 Worker 被 watchdog 终止后显式 reset 能重建 session。
+
+`hostRequest`/`supplyCart` 保持 deferred：L1 cart 若在 boot/step 产生 HostRequest，1E 以稳定
+`E_FEATURE_UNSUPPORTED` fault 停止 scheduling，不能静默阻塞。Phase 0E prototype protocol 保持现有
+专项测试兼容，但新的 player shell 不 import 或发送该协议。
+
+### 7.4 Scheduler、input 与 shell policy
+
+- scheduler 首个 pulse 只建立 anchor；正常 delta 进入 accumulator，tick duration 为 `1000/fps`。
+  单个 pulse 最多 catch up 5 ticks；超过上限时执行 5 ticks并丢弃剩余 backlog，发 recoverable
+  `E_TIME_DISCONTINUITY` diagnostic。pause/resume/hidden recovery 清空 accumulator 并重建 anchor，
+  不追赶后台时间；不得自适应改变 cart 的 30/60Hz。
+- main 在每个 rAF 中先发送当前 input sequence/snapshot，再发送 vsync；只有实际 tick 才由
+  RuntimeCore 推进 edge/repeat。rAF pulse 为零 tick 时不得消费 `btnp` 或 frame clock。
+- Player 1 默认 physical mapping 与官方 v0.2.7 一致：cursor keys + `Z/X`，并接受同组别名
+  `N/M`、`C/V`；输出仍只是 bits `left/right/up/down/O/X = 0..5`。只在 player canvas/shell active
+  时 prevent mapped key default；repeat `keydown` 不重复制造边沿。
+- `blur`、hidden、pause、stop、fault、reset 与 dispose 都发送/本地设置 zero snapshot，防止 held key
+  跨 lifecycle 泄漏。reset cold-runs 后回到 ready；若 reset 前正在 running，DOM controller 可显式
+  再 start，但 protocol 不把 reset 和 start 合并。
+- shell 至少提供 file input、play/pause、reset、stop、focusable 128×128 Canvas、live status 和
+  diagnostic region。文件名/扩展名只用于显示；format detection 仍完全由 codec bytes magic 决定。
+
+### 7.5 Source、tests 与 exit gate
+
+- RuntimeCore：`packages/runtime-core/src/scheduler/frame-scheduler.ts` 与 public export。
+- Transport：`apps/web-player/src/transport/player-protocol.ts`、validators/public barrel；
+  `spec/phase-1-l1-contract.json#workUnits.1E` 锁定命令、generation、scheduler 和 key mapping。
+- Worker：`compose-runtime.ts` 只新增 stable `CartSession` composition；`runtime-worker.ts` 只做
+  validation、message serialization、transfer 和 audio-port lifecycle。
+- Main：stable runtime client、`compose-player.ts`、`input-frontend.ts`、`player-controller.ts`、
+  `main.ts` bootstrap；Canvas/audio browser APIs 不进入 Worker/RuntimeCore。
+- Tests：`tests/runtime/phase-1e-scheduler-player.test.mjs` 使用 fake clock/worker ports；
+  `tests/browser/phase-1e.*` 和 project-authored text cart 走真实 Worker、WASM、rAF、keyboard、Canvas。
+
+专项覆盖：30/60Hz accumulator、zero-tick、5-tick cap/backlog drop、pause/resume anchor、non-monotonic
+timestamp、request/worker/session/input sequence freshness、CartSession fresh graph、text/PNG detection、
+load→ready→start、keyboard aliases/blur clear、frame presentation、pause/reset/stop、malformed-cart/VM fault、
+watchdog byte retention、dispose/idempotence、architecture/ref/browser capability negative checks。
+
+完成命令：
+
+```text
+pnpm run test:phase-1e
+pnpm run test:phase-0e
+pnpm run test:phase-0f
+pnpm run test:phase-1c
+pnpm run test:phase-1d
+pnpm run test:architecture
+pnpm run test:browser:chromium
+pnpm run verify
+```
+
+完成后把 1E 标记 Complete、checkpoint 更新为 1E complete、active work unit 清空、next work unit
+保持 1F；同步 README/roadmap/02/04/08 的实际状态。1F 才运行 original-cart compatibility matrix、
+写 immutable phase evidence 并判定 L1 exit。最终提交后 `git status --short` 必须为空。
+
+### 7.6 完成结论
+
+Phase 1E 已交付 browser-neutral `FrameScheduler`、stable player protocol、main-owned
+Worker/session 双 generation、watchdog cart-byte recovery、`CartSession` production Worker
+composition、Player 1 keyboard normalization、minimal DOM controller、Canvas presenter 与可选
+Phase 0F audio lifecycle。esbuild 只在 build-time 生成 Chrome Module Worker bundle；WASM、VM、
+session 与 scheduling execution 仍在 Worker，DOM/Canvas/AudioContext 仍只在 main。
+
+fake-clock/real-WASM tests 锁定 30/60Hz、zero-tick、5-tick catch-up、backlog drop、pause anchor、
+protocol freshness、cold reset 和 bootstrap queue；Chrome gate 锁定真实 Worker+WASM+rAF、
+`ZX/NM/CV` aliases、blur clear/pause、frame presentation、stop 与 parse-fault UI。audio synthesis、
+BBS/resolver、persistence、gamepad/touch/multiplayer 和完整 conformance 仍未声明支持。下一 work
+unit 是 1F L1 exit。
