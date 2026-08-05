@@ -100,6 +100,11 @@ pnpm run verify
 - Phase 0B Shared RAM：9/9 passed。
 - TypeScript public adapter、architecture gates、artifact reproducibility 和 manifest
   在统一 `verify` 中执行。
+- clean checkout：从 `5adf08a717e8c18603438a28f8914d8bc3b7c01f` 执行
+  `git clone --no-local`，使用 Node 22.22.2、pnpm 10.8.0 运行
+  `pnpm install --frozen-lockfile` 与 `pnpm run verify`；16/16 architecture、
+  14/14 Phase 0A、9/9 Phase 0B、双构建 reproducibility 与 6-file manifest 全部
+  通过，验证后 checkout 的 `git status --short` 为空。
 
 ## 7. 未覆盖与下一阶段
 
