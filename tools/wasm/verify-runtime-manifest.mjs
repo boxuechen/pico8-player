@@ -50,9 +50,13 @@ function memoryLimits(bytes) {
 const abi = JSON.parse(
   await readFile(join(projectRoot, manifest.abiContract), "utf8"),
 );
+const generatedBindings = JSON.parse(
+  await readFile(join(projectRoot, manifest.generatedBindingsManifest), "utf8"),
+);
 
-assert.equal(manifest.phase, "1A");
+assert.equal(manifest.phase, "1D");
 assert.equal(manifest.abiVersion, abi.abiVersion);
+assert.equal(generatedBindings.source, manifest.hostApiContract);
 assert.deepEqual(manifest.compiledBridgeSources, RUNTIME_BRIDGE_SOURCES);
 assert.equal(
   createHash("sha256").update(JSON.stringify(Z8LUA_SOURCES)).digest("hex"),

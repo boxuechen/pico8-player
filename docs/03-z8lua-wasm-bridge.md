@@ -8,7 +8,7 @@
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
-实施状态：Phase 0A/0B、Phase 0E frame ABI 与 Phase 1A synchronous Host API boundary
+实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary 与 Phase 1D scalar API expansion
 已完成；Phase 0 历史证据见 [Phase 0 evidence](./evidence/phase-0/README.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
@@ -16,7 +16,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；Phase 1A module-local router、generated `cls/pset/btn` 与 host error containment |
+| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router、generated `cls/pset/btn/line/rect/rectfill/circ/circfill/btnp` 与 host error containment |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | 完整函数/值 binding、capability surface、剩余 lifecycle 与 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -344,7 +344,7 @@ Pending request 的完成契约：
 
 ## 7. WASM import 与 host-call frame
 
-Phase 1A 的 implemented import 以 binding id、operation id、presence mask、最多 6 个 raw
+Phase 1D 的 implemented scalar import 延续 Phase 1A binding，以 binding id、operation id、presence mask、最多 6 个 raw
 Q16.16 参数和 `int32` result pointer 同步调用 module-local TS dispatcher。它捕获 TS throw，
 并映射为 `P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。以下 generic call frame 是未来 strings、
 vectors 和 multi-return 的 target，不是当前 artifact layout：
@@ -616,7 +616,7 @@ Phase 0 Exit 前，本 bridge 至少满足：
 | callback 动态替换及 custom loop fps | 未定 | 30/60/custom conformance |
 | nested coroutine HostRequest | 不宣称通用支持 | root bubbling + resume tests；否则显式降级 |
 | count quantum/default budget | 未定 | Chrome/Chromium determinism + representative corpus |
-| generated binding（ADR-008） | Accepted；production 3 bindings + isolated 8-signature prototype | 新增 string/vector/multi-return shape 时扩 schema/prototype/lifetime tests |
+| generated binding（ADR-008） | Accepted；production 9 bindings + isolated 8-signature prototype | 新增 string/vector/multi-return shape 时扩 schema/prototype/lifetime tests |
 | Emscripten exception/longjmp mode | Phase 0A 为 Wasm EH + `SUPPORT_LONGJMP=wasm` | browser matrix 后接受或替换 production mode |
 
 实现者不得自行“顺手解决”这些问题并静默改变契约。每项必须以 fixture、benchmark 或官方依据关闭，并同步 [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md)。

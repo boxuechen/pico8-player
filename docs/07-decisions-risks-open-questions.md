@@ -32,7 +32,7 @@
 
 ### Active blockers
 
-当前没有 active phase blocker。Phase 1A–1B 已完成；下一 work unit 1C 由
+当前没有 active phase blocker。Phase 1A–1D 已完成；下一 work unit 1E 由
 [`Phase 1`](./phases/1-l1-minimal-playable-loop.md) 展开并激活。
 
 ### Deferred open questions

@@ -16,12 +16,42 @@ apis:
     status: partial
     owner: packages/runtime-core
     phase: 1A
-    note: synchronous generated binding to TS; bounds and explicit/default colour only; camera/clip/fillp deferred
+    note: synchronous generated binding to TS; Phase 1D stores explicit/default pen in RAM; camera/clip/fillp deferred
   - name: btn
     status: partial
     owner: packages/runtime-core
-    phase: 1A
-    note: synchronous generated binding to TS; P1 six-button held snapshot only; btnp/multi-player deferred
+    phase: 1D
+    note: synchronous generated binding to TS; player 0 six-button held snapshot and 0x5f4c register only; multi-player deferred
+  - name: line
+    status: partial
+    owner: packages/runtime-core
+    phase: 1D
+    note: integer L1 raster, optional colour and RAM-backed continuation; camera/clip/palette/fillp deferred
+  - name: rect
+    status: partial
+    owner: packages/runtime-core
+    phase: 1D
+    note: reversed inclusive integer L1 outline; camera/clip/palette/fillp deferred
+  - name: rectfill
+    status: partial
+    owner: packages/runtime-core
+    phase: 1D
+    note: reversed inclusive integer L1 fill bounded to physical screen; camera/clip/palette/fillp deferred
+  - name: circ
+    status: partial
+    owner: packages/runtime-core
+    phase: 1D
+    note: integer L1 outline with default and negative radius behavior; camera/clip/palette/fillp deferred
+  - name: circfill
+    status: partial
+    owner: packages/runtime-core
+    phase: 1D
+    note: integer L1 fill with default and negative radius behavior; camera/clip/palette/fillp deferred
+  - name: btnp
+    status: partial
+    owner: packages/runtime-core
+    phase: 1D
+    note: player 0 six-button tick edge and 30/60Hz repeat with 0x5f5c/0x5f5d overrides; multi-player/device mapping deferred
   - name: time
     aliases: [t]
     status: partial

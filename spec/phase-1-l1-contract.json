@@ -4,9 +4,9 @@
   "name": "L1 minimal playable loop",
   "status": "active",
   "browserGate": ["chrome", "chromium"],
-  "completedWorkUnits": ["1A", "1B", "1C"],
+  "completedWorkUnits": ["1A", "1B", "1C", "1D"],
   "activeWorkUnit": null,
-  "nextWorkUnit": "1D",
+  "nextWorkUnit": "1E",
   "workUnits": {
     "1A": {
       "name": "Host API Boundary",
@@ -118,7 +118,60 @@
         "pnpm run verify"
       ]
     },
-    "1D": { "name": "L1 graphics and input completion", "status": "not-started" },
+    "1D": {
+      "name": "L1 graphics and input completion",
+      "status": "complete",
+      "owner": "RuntimeCore",
+      "normalizedInput": {
+        "players": [0],
+        "buttonsPerPlayer": 6,
+        "physicalDeviceMapping": "deferred-to-1E-app-main",
+        "latch": "exactly-once-before-each-guest-step",
+        "hostRequestCompletion": "must-not-advance-input"
+      },
+      "graphicsApis": ["cls", "pset", "line", "rect", "rectfill", "circ", "circfill"],
+      "inputApis": ["btn", "btnp"],
+      "ramBackedState": {
+        "pen": "0x5f25-low-nibble",
+        "polylineInvalid": "0x5f35-bit0",
+        "polylineEndpoint": "0x5f3c..0x5f3f-int16le",
+        "player0Held": "0x5f4c-low-6-bits",
+        "btnpDelay": "0x5f5c",
+        "btnpInterval": "0x5f5d"
+      },
+      "repeat": {
+        "30Hz": { "delayTicks": 15, "intervalTicks": 4 },
+        "60Hz": { "delayTicks": 30, "intervalTicks": 8 },
+        "delay255": "disabled",
+        "registerSnapshot": "tick-start"
+      },
+      "deferredGraphicsState": [
+        "camera",
+        "clip-enforcement",
+        "palette",
+        "fillp",
+        "bitplane",
+        "screen-mode"
+      ],
+      "forbiddenCapabilities": [
+        "DOM",
+        "Canvas",
+        "KeyboardEvent",
+        "Gamepad",
+        "Worker-timer",
+        "network",
+        "filesystem",
+        "ref-import"
+      ],
+      "verification": [
+        "pnpm run test:phase-1d",
+        "pnpm run test:phase-1a",
+        "pnpm run test:phase-0e",
+        "pnpm run test:phase-1c",
+        "pnpm run test:architecture",
+        "pnpm run verify"
+      ]
+    },
     "1E": { "name": "Worker scheduling and minimal player shell", "status": "not-started" },
     "1F": { "name": "L1 conformance and phase exit", "status": "not-started" }
   },

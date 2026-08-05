@@ -1,12 +1,16 @@
 import type { ParsedCart } from "@pico8-web/cart-codec";
 import {
-  PICO_RAM_SIZE,
   type PicoInputSnapshot,
   type PicoMemoryLease,
   type RuntimeErrorCode,
   type RuntimePhase,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
+import { normalizeButtons } from "./input/l1-input.js";
+import {
+  createPicoApiHost,
+  type PicoApiHost,
+} from "./pico-api/pico-api-host.js";
 
 export type FrameVmMode = "none" | "callback" | "custom";
 export type FrameVmState =
@@ -57,20 +61,6 @@ export type VmOperationOutcome =
       readonly consumedInstructions: number;
       readonly error: VmFaultRecord;
     };
-
-/**
- * Browser-neutral synchronous PICO API surface called from z8lua imports.
- * Numeric arguments retain their signed Q16.16 bits across the ABI.
- */
-export interface PicoApiHost {
-  readonly memoryLeaseId: string;
-  reset(): void;
-  setInput(input: PicoInputSnapshot): void;
-  cls(colorRaw?: number): void;
-  pset(xRaw: number, yRaw: number, colorRaw?: number): void;
-  /** Returns a held-button mask when omitted, otherwise a boolean encoded as 0/1. */
-  btn(buttonRaw?: number, playerRaw?: number): number;
-}
 
 /** Runtime-neutral VM port. The concrete z8lua/Emscripten adapter lives elsewhere. */
 export interface FrameVmPort {
@@ -152,81 +142,6 @@ const CART_ROM_BYTES = 0x8000;
 const SCREEN_OFFSET = 0x6000;
 const SCREEN_BYTES = 0x2000;
 const STARTUP_TIME_RAW = Math.floor(65_536 / 30);
-const SCREEN_MAP_REGISTER = 0x5f55;
-
-function q16Integer(raw: number): number {
-  return raw >> 16;
-}
-
-function validVideoBase(value: number): boolean {
-  return value === 0x00 || value === 0x60 || value === 0x80 ||
-    value === 0xa0 || value === 0xc0 || value === 0xe0;
-}
-
-class RuntimePicoApiHost implements PicoApiHost {
-  readonly memoryLeaseId: string;
-  readonly #ram: Uint8Array;
-  #buttons = 0;
-  #drawColor = 6;
-
-  constructor(memory: PicoMemoryLease) {
-    if (
-      !(memory.buffer instanceof ArrayBuffer) ||
-      memory.byteLength !== PICO_RAM_SIZE ||
-      memory.byteOffset < 0 ||
-      memory.byteOffset + memory.byteLength > memory.buffer.byteLength
-    ) {
-      throw new RangeError("PicoApiHost requires a valid 64 KiB memory lease");
-    }
-    this.memoryLeaseId = memory.leaseId;
-    this.#ram = new Uint8Array(memory.buffer, memory.byteOffset, memory.byteLength);
-  }
-
-  reset(): void {
-    this.#buttons = 0;
-    this.#drawColor = 6;
-  }
-
-  setInput(input: PicoInputSnapshot): void {
-    this.#buttons = normalizeButtons(input);
-  }
-
-  cls(colorRaw?: number): void {
-    const color = colorRaw === undefined ? 0 : q16Integer(colorRaw) & 0x0f;
-    const packed = color | (color << 4);
-    const base = this.#screenBase();
-    this.#ram.fill(packed, base, base + SCREEN_BYTES);
-  }
-
-  pset(xRaw: number, yRaw: number, colorRaw?: number): void {
-    const x = q16Integer(xRaw);
-    const y = q16Integer(yRaw);
-    if (x < 0 || x >= 128 || y < 0 || y >= 128) return;
-    const color = colorRaw === undefined ? this.#drawColor : q16Integer(colorRaw) & 0x0f;
-    const address = this.#screenBase() + y * 64 + (x >> 1);
-    const shift = (x & 1) << 2;
-    const mask = 0x0f << shift;
-    this.#ram[address] = (this.#ram[address]! & ~mask) | (color << shift);
-  }
-
-  btn(buttonRaw?: number, playerRaw?: number): number {
-    if (buttonRaw === undefined) return this.#buttons & 0x3f;
-    const button = q16Integer(buttonRaw);
-    const player = playerRaw === undefined ? 0 : q16Integer(playerRaw);
-    return player === 0 && button >= 0 && button < 6 &&
-      (this.#buttons & (1 << button)) !== 0 ? 1 : 0;
-  }
-
-  #screenBase(): number {
-    const configured = this.#ram[SCREEN_MAP_REGISTER]!;
-    return (validVideoBase(configured) ? configured : 0x60) << 8;
-  }
-}
-
-/** Create the Phase 1A browser-neutral host over the VM's stable memory lease. */
-export function createPicoApiHost(memory: PicoMemoryLease): PicoApiHost {
-  return new RuntimePicoApiHost(memory);
-}
 
 function invalidState(message: string): SerializedRuntimeError {
   return {
@@ -247,13 +162,6 @@ function serializeFault(record: VmFaultRecord): SerializedRuntimeError {
     recoverable: record.code === "E_VM_SYNTAX",
     ...(record.details === undefined ? {} : { details: record.details }),
   };
-}
-
-function normalizeButtons(input: PicoInputSnapshot): number {
-  if (!Number.isInteger(input.buttons) || input.buttons < 0 || input.buttons > 0x3f) {
-    throw new RangeError("input buttons must be a six-bit P1 bitmask");
-  }
-  return input.buttons;
 }
 
 /** Exact signed Q16.16 logical time derived from completed simulation slices. */
@@ -325,7 +233,7 @@ export class FrameSliceRuntime {
     this.#vm.writeCartRom(cart.rom);
     const compiled = this.#vm.compile(cart.code);
     if (compiled.kind === "fault") return this.#acceptFault(compiled.error);
-    this.#picoApiHost.setInput({ buttons });
+    this.#picoApiHost.beginTick({ buttons }, 30);
     const outcome = this.#vm.boot(
       this.#instructionBudget,
       buttons,
@@ -353,7 +261,7 @@ export class FrameSliceRuntime {
       };
     }
     const timeRaw = logicalTimeRaw(this.#completedSlices + 1n, this.#targetFps);
-    this.#picoApiHost.setInput({ buttons });
+    this.#picoApiHost.beginTick({ buttons }, this.#targetFps);
     const outcome = this.#vm.step(this.#instructionBudget, buttons, timeRaw);
     return this.#acceptStepOutcome(
       outcome,

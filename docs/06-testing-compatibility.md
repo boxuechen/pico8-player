@@ -11,7 +11,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A Host API 和 aggregate verify scripts；已归档的 Phase 0 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D 和 aggregate verify scripts；已归档的 Phase 0 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Target** | 第 3 节完整测试资产布局、尚未落地的 unit/conformance/fuzz/differential/CI 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
@@ -674,6 +674,20 @@ Player UI 已实现。
 | dedicated PCM transport | 44.1/48 kHz 并发 10 分钟；steady underrun/overrun/drop/discontinuity 均为 `0` | `implemented-boundary` | AudioSynth 实现后保留同一 queue 门禁 |
 | queue/resource bound | capacity `66,150`，high water `44,100`；实测 peak `22,406` / `22,530` | `implemented-boundary` | 参数变更必须更新 spec/evidence |
 | watchdog/generation/dispose | Worker infinite loop 后 generation `1→2`，frame/audio reattach 与 AudioContext close 通过 | `implemented-integration` | Phase 1 CartSession/UI 复用 composition lifecycle |
+
+### 15.8 Phase 1D L1 Graphics/Input 矩阵
+
+本表只覆盖 Phase 1D 的 player 0 六键与基础 integer raster。测试 cart 和 framebuffer/input
+vectors 均为项目原创；完整官方 differential 属于 1F/Phase 2 compatibility gate。
+
+| 行为 | Phase 1D 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| `line/rect/rectfill/circ/circfill` generated dispatch | raw Q16.16、optional、stable id `4..9` 与 stack path passed | `partial` | 1F official representative cart；Phase 2 补完整 draw state |
+| packed mapped screen | `0x5f55=0xe0` project vector、nibble/corner/radius/physical bounds passed | `partial` | camera/clip/palette/fillp/bitplane/screen mode deferred |
+| pen/polyline state | `0x5f25`、`0x5f35`、`0x5f3c..0x5f3f` reset/readback passed | `implemented-l1` | Phase 2 交互矩阵与 official golden |
+| `btn` held / `0x5f4c` | player 0 six bits、update 前可见、invalid player/button passed | `implemented-l1` | multiplayer、pause/mouse/devkit input deferred |
+| `btnp` edge/repeat | release/repress、30Hz 15/4、60Hz 30/8、自定义寄存器和 255 disable passed | `implemented-l1` | 1F trace differential；完整 device input 属于后续阶段 |
+| input transaction | invalid snapshot 不消费；HostRequest resume 不 double-advance；generation reset passed | `implemented-l1` | 1E 接 physical mapping、Worker scheduling 和 lifecycle events |
 
 ## 16. Definition of Done
 

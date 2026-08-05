@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 1C** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；shared `CartIdentity` / `ParsedCart`；generation-owned `CartSession`、cold-run replacement 与 stale HostRequest containment |
+| **Implemented through Phase 1D** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；generation-owned `CartSession`；RAM-backed L1 graphics；player 0 held/edge/repeat input |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -396,7 +396,7 @@ v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值�
 
 ## 7. Graphics
 
-> 状态：完整 Graphics 是 Target；Phase 0F presenter boundary 已 Implemented（ADR-009）。
+> 状态：Phase 1D L1 raster 已 Implemented；完整 Graphics 是 Target；Phase 0F presenter boundary 已 Implemented（ADR-009）。
 
 ### 7.1 分层
 
@@ -426,6 +426,11 @@ interface ScreenEncoder {
 ```
 
 `Graphics` 在 Worker 内做确定性 software rendering，直接读写 packed RAM。`ScreenEncoder` 应用 screen palette 并生成 128×128 RGBA；主线程 `ScreenPresenter` 只负责最近邻缩放和 letterbox。
+
+Phase 1D 当前实现位于 `graphics/l1-graphics.ts`：支持 `cls/pset/line/rect/rectfill/circ/circfill`，
+使用 mapped packed screen，并把 pen 与 polyline continuation 放在 `0x5f25`、`0x5f35`、
+`0x5f3c..0x5f3f`。它只实施 physical 128×128 bounds；camera、clip enforcement、palette、
+fillp、bitplane、screen mode 和其余 API 仍是 Target，不得据此宣称完整 Graphics。
 
 ### 7.2 必须保持的行为
 
@@ -487,6 +492,8 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 ## 9. Input
 
+> 状态：Phase 1D player 0 六键 held/edge/repeat 已 Implemented；完整 device/multiplayer Input 是 Target。
+
 ```ts
 type NormalizedInputSnapshot = Readonly<{
   sequence: number;
@@ -505,6 +512,11 @@ interface PicoInput {
 ```
 
 主线程负责 DOM keyboard/pointer 事件与每次 rAF 的 Gamepad polling；Worker 负责 PICO 语义：
+
+Phase 1D 的 RuntimeCore input 只消费 `PicoInputSnapshot.buttons`，在每个 boot/step transaction
+前锁存一次，写 `0x5f4c` 并按 30/60Hz 与 `0x5f5c/0x5f5d` 计算 `btnp`。HostRequest completion
+复用当前 latch；CartSession generation reset 清除 held/edge/duration。physical keyboard mapping、
+blur/visibility/device lifecycle、多玩家与 devkit input 仍由后续 work unit 实现。
 
 - **MUST** 在每个 simulation slice 开始锁存输入；常规 callback 模式在 `_update`/`_update60` 前可见，自定义 loop 则在 resume 后直至下一 `flip()` boundary 保持稳定。同一 slice 内多次 `btn()` 结果相同；慢帧多 update 的重锁存细节由 conformance 固定。
 - `btnp()` edge/repeat 由 Worker 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效。

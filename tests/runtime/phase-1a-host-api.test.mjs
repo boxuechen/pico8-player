@@ -41,10 +41,21 @@ function wrapHost(memory, overrides = {}) {
   return {
     memoryLeaseId: base.memoryLeaseId,
     reset: () => base.reset(),
-    setInput: (input) => base.setInput(input),
+    beginTick: (input, targetFps) => base.beginTick(input, targetFps),
     cls: (colorRaw) => base.cls(colorRaw),
     pset: (xRaw, yRaw, colorRaw) => base.pset(xRaw, yRaw, colorRaw),
+    line: (x0Raw, y0Raw, x1OrColorRaw, y1Raw, colorRaw) =>
+      base.line(x0Raw, y0Raw, x1OrColorRaw, y1Raw, colorRaw),
+    rect: (x0Raw, y0Raw, x1Raw, y1Raw, colorRaw) =>
+      base.rect(x0Raw, y0Raw, x1Raw, y1Raw, colorRaw),
+    rectfill: (x0Raw, y0Raw, x1Raw, y1Raw, colorRaw) =>
+      base.rectfill(x0Raw, y0Raw, x1Raw, y1Raw, colorRaw),
+    circ: (xRaw, yRaw, radiusRaw, colorRaw) =>
+      base.circ(xRaw, yRaw, radiusRaw, colorRaw),
+    circfill: (xRaw, yRaw, radiusRaw, colorRaw) =>
+      base.circfill(xRaw, yRaw, radiusRaw, colorRaw),
     btn: (buttonRaw, playerRaw) => base.btn(buttonRaw, playerRaw),
+    btnp: (buttonRaw, playerRaw) => base.btnp(buttonRaw, playerRaw),
     ...overrides,
   };
 }
@@ -59,7 +70,9 @@ test("binding generator proves eight heterogeneous signatures without exposing p
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   )));
-  assert.deepEqual(production.bindings.map(({ guestName }) => guestName), ["cls", "pset", "btn"]);
+  assert.deepEqual(production.bindings.map(({ guestName }) => guestName), [
+    "cls", "pset", "btn", "line", "rect", "rectfill", "circ", "circfill", "btnp",
+  ]);
   assert.match(renderTypeScript(production), /argumentMask & 4/u);
   assert.match(renderCpp(production), /P8W_HOST_RESULT_INTEGER_OR_BOOLEAN/u);
   assert.equal(renderCpp(prototype).includes("probe_six"), true);
@@ -123,7 +136,7 @@ test("raw Q16.16 arguments, optional presence and btn results cross the synchron
   const base = createPicoApiHost(vm.memory);
   const host = wrapHost(vm.memory, {
     reset: () => base.reset(),
-    setInput: (input) => base.setInput(input),
+    beginTick: (input, targetFps) => base.beginTick(input, targetFps),
     cls(colorRaw) {
       calls.push(["cls", colorRaw]);
       base.cls(colorRaw);
@@ -215,7 +228,7 @@ test("synchronous host calls keep the Lua stack balanced and stay within the Pha
   const base = createPicoApiHost(vm.memory);
   const host = wrapHost(vm.memory, {
     reset: () => base.reset(),
-    setInput: (input) => base.setInput(input),
+    beginTick: (input, targetFps) => base.beginTick(input, targetFps),
     cls(colorRaw) {
       dispatchCount += 1;
       base.cls(colorRaw);

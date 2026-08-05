@@ -38,6 +38,79 @@
         { "name": "playerRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "integer-if-first-omitted-otherwise-boolean"
+    },
+    {
+      "id": 4,
+      "guestName": "line",
+      "hostMethod": "line",
+      "parameters": [
+        { "name": "x0Raw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "y0Raw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "x1OrColorRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "y1Raw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 5,
+      "guestName": "rect",
+      "hostMethod": "rect",
+      "parameters": [
+        { "name": "x0Raw", "type": "q16.16-raw-i32" },
+        { "name": "y0Raw", "type": "q16.16-raw-i32" },
+        { "name": "x1Raw", "type": "q16.16-raw-i32" },
+        { "name": "y1Raw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 6,
+      "guestName": "rectfill",
+      "hostMethod": "rectfill",
+      "parameters": [
+        { "name": "x0Raw", "type": "q16.16-raw-i32" },
+        { "name": "y0Raw", "type": "q16.16-raw-i32" },
+        { "name": "x1Raw", "type": "q16.16-raw-i32" },
+        { "name": "y1Raw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 7,
+      "guestName": "circ",
+      "hostMethod": "circ",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "radiusRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 8,
+      "guestName": "circfill",
+      "hostMethod": "circfill",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "radiusRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 9,
+      "guestName": "btnp",
+      "hostMethod": "btnp",
+      "parameters": [
+        { "name": "buttonRaw", "type": "q16.16-raw-i32" },
+        { "name": "playerRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "boolean"
     }
   ]
 }

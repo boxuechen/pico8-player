@@ -18,11 +18,13 @@ import {
 } from "@pico8-web/contracts";
 import {
   CartSession,
+  createPicoApiHost,
   FrameSliceRuntime,
   logicalTimeRaw,
   type CartSessionRuntimeContext,
   type CartSessionRuntimePort,
   type FrameVmPort,
+  type PicoApiHost,
 } from "@pico8-web/runtime-core";
 import {
   createPicoApiHostRouter,
@@ -53,6 +55,7 @@ const frameVm: FrameVmPort = new Z8LuaFrameVm(
   createPicoApiHostRouter(frameModule),
 );
 const frameRuntime = new FrameSliceRuntime(frameVm);
+const picoApiHost: PicoApiHost = createPicoApiHost(frameVm.memory);
 declare const runtimeFactory: (
   context: CartSessionRuntimeContext,
 ) => CartSessionRuntimePort;
@@ -69,6 +72,7 @@ void parsedCart;
 void cartIdentity;
 void codecErrorConstructor;
 void frameRuntime;
+void picoApiHost;
 void cartSession;
 void input;
 void serializedError;

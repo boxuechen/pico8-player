@@ -1,9 +1,9 @@
 # Phase 1：L1 最小可玩闭环
 
 - 状态：**Active**
-- 当前 checkpoint：**1C CartSession lifecycle complete**
+- 当前 checkpoint：**1D L1 graphics/input complete**
 - 当前 work unit：**None**
-- 下一 work unit：**1D L1 graphics/input**
+- 下一 work unit：**1E Scheduler/player shell**
 - 机器契约：[`spec/phase-1-l1-contract.json`](../../spec/phase-1-l1-contract.json)
 - 浏览器范围：Chrome / Chromium only
 
@@ -33,7 +33,7 @@ Phase 1 从已通过的 Phase 0 exit gate 开始，并保持以下边界：
 | 1A Host API Boundary | **Complete** | exactly-once synchronous WASM→TS binding；`cls/pset/btn` 迁入 RuntimeCore；ADR-008 关闭 |
 | 1B Text `.p8` / ParsedCart | **Complete** | bytes-only `.p8` decode，统一 cart identity/diagnostic，不接网络 |
 | 1C CartSession lifecycle | **Complete** | cold reset、reload/fault dispose、RAM/input/placeholder-audio reset matrix |
-| 1D L1 graphics/input | Not started | `line/rect/circ`、keyboard held/edge 与 `btnp` 最小闭环 |
+| 1D L1 graphics/input | **Complete** | `line/rect/circ`、normalized held/edge 与 `btnp` 最小闭环 |
 | 1E Scheduler/player shell | Not started | Worker tick、load/reset/fault UI 与 Phase 0F adapters 接通 |
 | 1F L1 exit | Not started | 30/60/custom original carts、Chrome gate、兼容矩阵和 phase evidence |
 
@@ -303,3 +303,116 @@ Cart ROM `0..0x42ff` copy、zero input 和 frame clock restart；fake runtime te
 object reuse、factory failure 与 exactly-once dispose。Worker/player 接线、audio simulation、
 input edge/repeat、persistence 和完整 `run/reload` compatibility 保持 deferred。下一 work unit 是
 1D L1 graphics/input。
+
+## 6. 1D 执行契约
+
+### 6.1 目标、输入与兼容边界
+
+1D 只补齐 L1 cart 在单个 simulation tick 内需要的 browser-neutral graphics/input 语义。
+输入仍是 `PicoInputSnapshot.buttons` 的玩家 0 六键 bitmask；它是 main thread 未来把
+keyboard/gamepad/touch 归一化后的逻辑输入，不是 DOM `KeyboardEvent`。物理键位、事件监听、
+焦点和默认按键映射属于 1E 的 `apps/web-player` input frontend，不进入 RuntimeCore。
+
+本 unit 交付：
+
+1. 在现有 `cls/pset` 之上增加同步 generated bindings：`line`、`rect`、`rectfill`、
+   `circ`、`circfill`；operation id 只追加，不重排 1A 的 `1..3`。
+2. graphics 直接写 leased 64 KiB RAM 的当前 mapped screen；当前画笔色存于 `0x5f25`，
+   `line` continuation 的 invalid flag/endpoint 存于 `0x5f35`、`0x5f3c..0x5f3f`，不得以
+   renderer 或 module singleton 作为权威状态。
+3. 每次 `FrameSliceRuntime.step` 在进入 guest 前恰好推进一次 input latch，写玩家 0 held
+   register `0x5f4c`，并计算该 tick 的 pressed/repeat mask；一次 suspended HostRequest 的
+   completion 不得再次推进 latch。
+4. `btn` 保持 held query；新增 `btnp(button[, player])` edge/repeat query。L1 只支持玩家 0、
+   button `0..5`；其他 player/button 返回 false，不扩大 multiplayer 声明。
+5. cold boot/reset 清除 held/edge/hold-duration，恢复 pen `6` 和 invalid polyline；这些状态
+   不得跨 1C generation 泄漏。
+
+官方 v0.2.7 语义锁定：`rect/rectfill` 坐标可逆序且 corner inclusive；`circ/circfill` 默认
+radius 为 4、负 radius 不画；`line()` 使下一次二/三参数 `line` 只建立 endpoint，显式五参数
+形式同时更新 endpoint。显式 color 参数更新 `0x5f25` 的低 nibble；`cls` 不改变 pen。
+
+本 unit 的 graphics 仍是 **partial**：camera、clip、draw palette、fillp、bitplane、screen mode、
+`pget/oval/spr/sspr/map/tline/print` 全部 deferred 到 Phase 2。`cls` 只恢复 full-screen clip
+register defaults，其他 L1 primitive 暂只受 128×128 physical bounds 限制。不得把目标 Graphics
+接口示例误标为已经实现。
+
+### 6.2 Input tick 与 repeat
+
+```text
+validate normalized snapshot
+  -> beginTick(buttons, targetFps) exactly once
+  -> write RAM held register / compute pressed mask
+  -> VM update/custom-loop + draw
+  -> optional HostRequest wait/resume without another beginTick
+  -> commit frame or fault
+```
+
+- 初次 held tick 的 `btnp` 为 true；释放 tick 清零该键 hold duration；重新按下重新产生 edge。
+- 默认 repeat 是 30Hz 下初次 edge 后等待 15 tick，再每 4 tick；60Hz 对应 30/8 tick。
+- `0x5f5c` 非零覆盖 delay，`0x5f5d` 非零覆盖 interval；两者在 60Hz 同样按 2 倍 tick
+  解释。delay `255` 禁止 repeat。寄存器在 tick 开始时 snapshot，本 tick 内 guest `poke`
+  只影响下一 tick。
+- boot 的 top-level/`_init` 使用全零 snapshot 和 30Hz startup epoch；正常 callback/custom
+  step 使用 VM 已确定的 `targetFps`。invalid input 在 beginTick 前拒绝，不消费 edge/repeat。
+- input latch 属于 RuntimeCore；WASM 仍接收同一个 held mask 供 frame ABI 使用，但不得另建
+  一套 `btnp` 状态机。
+
+这里的 keyboard-like repeat 是 L1 六键最小实现。完整多人输入、pause button、mouse、完整
+keyboard/gamepad/touch frontend 与 device remapping 仍 deferred；不得把 1D 标成完整 Input。
+
+### 6.3 Source 与 ownership
+
+- `packages/runtime-core/src/pico-api/pico-api-host.ts`：公开 facade/port，验证 lease，并组合
+  graphics/input；不拥有 frame scheduling。
+- `packages/runtime-core/src/graphics/l1-graphics.ts`：RAM-backed pen/polyline 与 packed 4bpp
+  raster；不 import Canvas、DOM 或 presenter。
+- `packages/runtime-core/src/input/l1-input.ts`：逐 tick held/edge/repeat 与 hardware registers；
+  不读取 physical keyboard。
+- `packages/runtime-core/src/frame-runtime.ts`：只在 boot/step transaction 边界调用
+  `beginTick`，HostRequest resume 复用 pending transaction。
+- `spec/abi/pico-host-api-v1.json` 是 guest binding 顺序/签名的唯一机器源，generated TS/C
+  和 hash manifest 由 generator 更新，不得手改。
+- `spec/phase-1-l1-contract.json` 与 `spec/pico-api-inventory.yaml` 记录范围和已知差异；
+  `ref/` 只用于人工交叉阅读，不进入 source、fixture、test 或 build。
+
+RuntimeCore 继续只依赖 contracts/cart-codec。z8lua bridge 对 RuntimeCore 保持 type-only runtime
+edge；新增 API 不允许在 bridge C++ 中实现 graphics/input 语义。
+
+### 6.4 Tests 与 exit gate
+
+新增 `tests/runtime/phase-1d-graphics-input.test.mjs`，使用 project-authored source carts 和
+真实 z8lua WASM，覆盖：
+
+- generated schema 顺序、全部新增签名、raw Q16.16/optional 参数和 synchronous dispatch；
+- mapped packed framebuffer、default/explicit pen、line reset/continuation/endpoint RAM、
+  reversed/inclusive rect、circle default/negative radius 和 screen clipping；
+- held RAM register、press/release/repress、30/60Hz repeat、custom delay/interval、255 disable、
+  invalid player/button；
+- input 在 update 前可见、draw 同 tick 可见、HostRequest completion 不 double-advance、
+  invalid snapshot 不消费状态、CartSession reset 后 input/draw state 不泄漏；
+- package public exports、browser-capability/ref negative checks 和既有 0E/1A/1C 回归。
+
+完成命令：
+
+```text
+pnpm run test:phase-1d
+pnpm run test:phase-1a
+pnpm run test:phase-0e
+pnpm run test:phase-1c
+pnpm run test:architecture
+pnpm run verify
+```
+
+完成后把 1D 标记 Complete、checkpoint 更新为 1D complete、active work unit 清空、next work
+unit 更新为 1E；README/roadmap/04/08 与 inventory 同步实际状态。最终提交后
+`git status --short` 必须为空。
+
+### 6.5 完成结论
+
+Phase 1D 已交付 RAM-backed `L1Graphics`、逐 tick `L1Input` 与只负责组合的
+`PicoApiHost` facade；production schema 以追加 id `4..9` 注册
+`line/rect/rectfill/circ/circfill/btnp`，旧 `1..3` 保持稳定。真实 z8lua 测试锁定 mapped
+packed pixels、pen/polyline hardware state、30/60Hz repeat、repeat register snapshot、
+HostRequest resume 与 CartSession generation reset。完整 draw state、剩余 graphics API、
+多人/device input 与 app physical mapping 仍按 6.1/6.2 deferred。下一 work unit 是 1E。

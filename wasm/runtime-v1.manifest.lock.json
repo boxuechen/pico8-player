@@ -1,7 +1,9 @@
 {
   "schemaVersion": 1,
-  "phase": "1A",
+  "phase": "1D",
   "abiContract": "spec/abi/p8w-v1.json",
+  "hostApiContract": "spec/abi/pico-host-api-v1.json",
+  "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
   "abiVersion": 65537,
   "upstream": {
     "repository": "https://github.com/samhocevar/z8lua.git",
@@ -36,13 +38,13 @@
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 181619,
-        "sha256": "d28178de13288623e5ce9c8a11970acf5fccd32aa1bbf12d822f72de820d9793"
+        "bytes": 181865,
+        "sha256": "0cc2f9e2523f85ea334392abec2a00c1ff360e4c9764a322e582031a63d660a6"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs",
     "chromium": "tests/browser/phase-0e.html",
     "fixtures": "project-owned synthetic source and p8.png only"
   }
