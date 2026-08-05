@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 2E** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font |
+| **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
 

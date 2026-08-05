@@ -9,7 +9,8 @@
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
 实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary、Phase 1D scalar API
-expansion、Phase 2A memory/call-frame 与 Phase 2B–2E typed graphics/text bindings 已完成；Phase 0 历史证据见
+expansion、Phase 2A memory/call-frame、Phase 2B–2E typed graphics/text bindings 与 Phase 2
+exit conformance 已完成；Phase 0 历史证据见
 [Phase 0 evidence](./evidence/phase-0/README.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
@@ -17,7 +18,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；Phase 2A 80-byte call frame/Base RAM API；Phase 2B–2E append-only graphics/sprite/map/text bindings、boolean scalar lowering、fixed-point result 与同步 byte-string view |
+| **Implemented through Phase 2 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；Phase 2A 80-byte call frame/Base RAM API；Phase 2B–2E append-only graphics/sprite/map/text bindings、boolean scalar lowering、fixed-point result、同步 byte-string view 与 2F real-WASM/Chrome conformance |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |

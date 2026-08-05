@@ -5,6 +5,7 @@
 
 - [`phase-0/`](./phase-0/)：Phase 0S–0F 完成记录。
 - [`phase-1/`](./phase-1/)：Phase 1A–1F L1 bounded-profile 完成记录。
+- [`phase-2/`](./phase-2/)：Phase 2A–2F Graphics/Memory/Text project-profile 完成记录。
 - [`phase-0e-official-clock.json`](./phase-0e-official-clock.json)：官方 Web Player
   startup-clock capture 的结构化记录。
 - `phase-0e-*.png`：对应 capture 的人工审阅 framebuffer。

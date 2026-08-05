@@ -27,8 +27,8 @@
 | 0E Coroutine Frame Slice | Complete | [Evidence](./evidence/phase-0/16-phase-0e-evidence.md) / [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md) |
 | 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
-| 2 Graphics、Memory、Text | **Active；2F；2A–2E complete** | [Active phase](./phases/2-graphics-memory-text.md) |
-| 3 Audio、完整 Input、Persistence | Not started | Phase 2 exit 后激活 |
+| 2 Graphics、Memory、Text | **Complete；2A–2F** | [Evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
+| 3 Audio、完整 Input、Persistence | Not started | 创建并激活首个 Phase 3 work unit 后实现 |
 | 4 L2 / MVP 兼容加固 | Not started | Phase 3 exit 后激活 |
 | 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
 
@@ -88,8 +88,8 @@ trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload �
 
 ### Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit 2F。以下仍只保存 roadmap headline；production 授权与
-> work-unit exit 由 [active phase](./phases/2-graphics-memory-text.md) 定义。
+> 状态：Complete；2A–2F。以下只保存 roadmap headline；完成细节见
+> [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)。
 
 目标：完成大多数可视 cart 所需 graphics/memory/text 行为。
 
@@ -97,6 +97,11 @@ trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload �
 memory API 和对应 framebuffer/RAM golden。
 
 Exit headline：图形与 remap conformance 覆盖关键交互，优化仍服从 ADR-006 ladder。
+
+**Status: Passed by Phase 2F.** 两个项目原创 60Hz cart 在 Node real-WASM fresh/reset 和
+Chrome production Worker/Canvas 路径得到相同的 frame、screen、palette、RGBA 与相关 RAM
+oracle；graphics/text p95 均约 `0.4ms`，资源故障、stale generation 拒绝和有效 cart 恢复通过。
+兼容声明严格限于 standard packed-4bpp project profile，开放 P0/P1 为 `0`。
 
 ### Phase 3 — Audio、完整 Input 与 Persistence
 

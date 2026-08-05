@@ -5,16 +5,17 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前 active phase 是 [Phase 2 — Graphics、Memory 与 Text](./phases/2-graphics-memory-text.md)，
-active work unit 为 **2F Conformance 与 Phase Exit**。Phase 1A–1F 和 Phase 2A–2E 已完成。
+Phase 2A–2F 已完成并归档；当前没有 active phase。下一次 production 实现开始前，必须从
+[Phase 2 exit evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)
+和 roadmap 基线创建并激活第一个 Phase 3 work unit。
 
 日常实现只读取以下入口，不通读已完成阶段的执行过程：
 
 1. 本页。
-2. [active Phase 2 文档](./phases/2-graphics-memory-text.md) 展开的当前 work unit。
-3. 它明确链接的 machine contract、owner 章节和 ADR。
+2. [`05-delivery-plan.md`](./05-delivery-plan.md) 的 Phase 3 headline 与 Phase 2 exit evidence。
+3. 新建 active phase 文档后，仅阅读它明确链接的 machine contract、owner 章节和 ADR。
 
-日常实现默认只读：本页 → active phase → 它明确链接的 contract
+日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract
 小节。不要把 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务

@@ -10,16 +10,16 @@
 | **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
 | **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
-| **Implemented through Phase 2E** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font 与 display-palette frame transport |
+| **Implemented through Phase 2 exit** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font、display-palette frame transport 与 project-owned production conformance gate |
 | **Scaffold** | persistence/resolver adapters 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
-[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1
-已完成，当前 active work unit 是 Phase 2F，入口位于
-[`phases/2-graphics-memory-text.md`](./phases/2-graphics-memory-text.md)。
+[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1/2
+已完成，当前没有 active work unit。Phase 3 实现前必须创建新的 active phase 文档；Phase 2
+边界由 [exit evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 锁定。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -179,7 +179,7 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 2E 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。Phase 2 exit 当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
 `graphics/map-memory.ts`、`graphics/p8scii-text.ts`、`graphics/p8scii-font.ts`、
 `memory/pico-ram.ts`、`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、

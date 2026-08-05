@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "phase": "2F",
+  "target": "PICO-8 0.2.7 Phase 2 standard packed-4bpp project profile",
+  "deterministic": [
+    {
+      "id": "phase-2/graphics-memory",
+      "mode": "callback",
+      "targetFps": 60,
+      "cartSha256": "79e732892e2b65990b59757e801cc872cc64c6354bb620d5525db9a83e35bc51",
+      "traceSha256": "b21c556b919d22314934438b35e2d924f187cdaf032fa8816e04ebb1275c9409",
+      "finalScreenSha256": "2730014d2d5a4ab93471a8c75beff80e771e3b53acadf4230f696a4355f5700c",
+      "displayPaletteSha256": "eb21b8561455a00fdea7eb82f12c6686b0241592b4b9cd9c44cb4404dec1a6c1",
+      "displayPaletteHex": "000e82030405060708090a0b0c0d0e0f",
+      "resetTraceSha256": "b21c556b919d22314934438b35e2d924f187cdaf032fa8816e04ebb1275c9409",
+      "resetScreenSha256": "2730014d2d5a4ab93471a8c75beff80e771e3b53acadf4230f696a4355f5700c",
+      "workerGeneration": 1,
+      "resetSessionGeneration": 2
+    },
+    {
+      "id": "phase-2/text-remap",
+      "mode": "callback",
+      "targetFps": 60,
+      "cartSha256": "24ee2fe402cf9b53967c739de846747070455f417248be3ecabba5c4819bbefa",
+      "traceSha256": "74dd42716a9d32439584cc57b9f31bba65ddc2d55625bf1c87c4e54755d20762",
+      "finalScreenSha256": "2f72bc98b7850d2b0b4b7a058c968c306c14584a2de86f6667b2cd71810e27bf",
+      "displayPaletteSha256": "cf9f01836a747d6bf04721f3dac1c8174a2d25349304882af7f71ad028c2caa2",
+      "displayPaletteHex": "008102030405060708090a0b0c0d0e0f",
+      "resetTraceSha256": "74dd42716a9d32439584cc57b9f31bba65ddc2d55625bf1c87c4e54755d20762",
+      "resetScreenSha256": "2f72bc98b7850d2b0b4b7a058c968c306c14584a2de86f6667b2cd71810e27bf",
+      "workerGeneration": 1,
+      "resetSessionGeneration": 2
+    }
+  ],
+  "canvas": [
+    {
+      "id": "phase-2/graphics-memory",
+      "frameCount": 4,
+      "finalFrameId": 3,
+      "screenSha256": "2730014d2d5a4ab93471a8c75beff80e771e3b53acadf4230f696a4355f5700c",
+      "displayPaletteSha256": "eb21b8561455a00fdea7eb82f12c6686b0241592b4b9cd9c44cb4404dec1a6c1",
+      "rgbaSha256": "176140851fa06760e87141daf85bb460b987489c533fa2b4ff703f285dc6a0ae"
+    },
+    {
+      "id": "phase-2/text-remap",
+      "frameCount": 4,
+      "finalFrameId": 3,
+      "screenSha256": "2f72bc98b7850d2b0b4b7a058c968c306c14584a2de86f6667b2cd71810e27bf",
+      "displayPaletteSha256": "cf9f01836a747d6bf04721f3dac1c8174a2d25349304882af7f71ad028c2caa2",
+      "rgbaSha256": "0db0886dd0a7f56a81ef7ae478c6ab4cdec055a7b263381b7f746ab55fac45f6"
+    }
+  ],
+  "performance": {
+    "cases": [
+      {
+        "id": "phase-2/graphics-memory",
+        "warmupTicks": 20,
+        "measuredTicks": 120,
+        "p50Ms": 0.3000001907348633,
+        "p95Ms": 0.40000009536743164,
+        "p99Ms": 0.5,
+        "minMs": 0.09999990463256836,
+        "maxMs": 1.0999999046325684,
+        "over16_67Ms": 0
+      },
+      {
+        "id": "phase-2/text-remap",
+        "warmupTicks": 20,
+        "measuredTicks": 120,
+        "p50Ms": 0.2999999523162842,
+        "p95Ms": 0.40000009536743164,
+        "p99Ms": 0.40000009536743164,
+        "minMs": 0.19999980926513672,
+        "maxMs": 0.40000009536743164,
+        "over16_67Ms": 0
+      }
+    ],
+    "maxP95Ms": 0.40000009536743164
+  },
+  "faultRecovery": {
+    "code": "E_HOST_API",
+    "caughtCode": "E_HOST_API",
+    "cartSha256": "de1318825be368c580236262d7887abfce24a2e253aec7ca6c9fd9238cfbcf47",
+    "mainThreadResponsive": true,
+    "faultSessionGeneration": 3,
+    "recoverySessionGeneration": 4,
+    "recoveredFrames": 1
+  },
+  "finalWorkerGeneration": 1,
+  "finalSessionGeneration": 4,
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "workerError": null,
+  "sourceRevision": "6a52387c46ceb246b32be39ea5e976d19e7928f5-dirty",
+  "sourceSha256": {
+    "apps/web-player/src/main/player-runtime-client.ts": "1a041bfb3ae611157bebbd81cffe2bc13bc04ed0b7590033aa35b4deea4e6bea",
+    "apps/web-player/src/main/player-controller.ts": "6833ab950098d1856c17ae5578495c2cdca6e41841da1d0fd55d8d946fb052a0",
+    "apps/web-player/src/main/render/pico-frame.ts": "8deada7ba9ba299e6dafb550e19f3fa22aad9fb2e58a72e647f4ddeb84e2cf77",
+    "apps/web-player/src/worker/compose-runtime.ts": "2271c137cc445f55617937dfca840c9c6347d4ccebd9afc999fe2597bd673464",
+    "packages/runtime-core/src/frame-runtime.ts": "a1743190fcdbec21833eaf8e436eea0281824e660663f43c579be46a7633a66e",
+    "tests/conformance/manifests/phase-2f-exit.json": "956590a1c408ed14eb33299eaaf77fff9d65e2cc8bb9997b0ce816d1dabdff1b",
+    "tests/conformance/carts/phase-2/graphics-memory.p8": "79e732892e2b65990b59757e801cc872cc64c6354bb620d5525db9a83e35bc51",
+    "tests/conformance/carts/phase-2/text-remap.p8": "24ee2fe402cf9b53967c739de846747070455f417248be3ecabba5c4819bbefa",
+    "tests/conformance/carts/phase-2/resource-limit-fault.p8": "de1318825be368c580236262d7887abfce24a2e253aec7ca6c9fd9238cfbcf47",
+    "tests/browser/phase-2f.mjs": "8b0b0ba78b31a01e9861580997ebd4778404de9795fc6695aea299701052a461"
+  },
+  "browser": "Google Chrome 150.0.7871.189",
+  "machine": {
+    "machineId": "fe2d5602ee3db315",
+    "os": "darwin 25.5.0",
+    "architecture": "arm64",
+    "cpuModel": "Apple M4 Pro",
+    "logicalCpuCount": 14,
+    "totalMemoryBytes": 51539607552
+  }
+}

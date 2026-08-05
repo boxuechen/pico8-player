@@ -11,9 +11,10 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、Phase 2A/2B/2C、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、Phase 2A–2F、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1/2 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
+| **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -821,6 +822,27 @@ golden 与 Chrome 页面均为项目原创；字体 bitmap 的固定来源、che
 Known Differences：P8SCII audio command 只被同步消费而不产生 AudioSynth side effect，timed delay/
 frame-skip commands 不引入 suspension；`tline(bits)`、advanced screen/bitplane mode 仍 deferred。
 project golden 不等于 official bit-exact。2E 没有开放 P0/P1。
+
+### 15.16 Phase 2F Graphics/Memory/Text Exit 矩阵
+
+本表汇总 Phase 2A–2F 的 project-owned standard packed-4bpp profile。它只证明机器合同列出的
+memory/draw/sprite/map/text 组合在相同 production path 中可复现，不表示第三方 playable rate、
+完整官方 differential、advanced video mode 或 Phase 3 audio/input/persistence 已完成。
+
+| 行为 | Phase 2F 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| corpus/provenance | `graphics-memory`、`text-remap` 和 resource fault 均为项目原创；source/cart hash 锁定；无 BBS、第三方或 `ref/` dependency | gate passed | Phase 4 代表 corpus 需要独立合法授权与口径 |
+| memory/draw/sprite/map | Base RAM widths/block、draw state/primitives、draw/display palette、sprite、map/flags/tline 和 remap 在一个 60Hz flow 中通过 | `compatible`（Phase 2 project profile） | `tline(bits)` 与 advanced video mode 保持 partial/deferred |
+| P8SCII/custom font | built-in/custom/one-off/outline/raw write、cursor/default attrs、GFX/SCREEN remap 与 extended display palette 在一个 60Hz flow 中通过 | `compatible`（同步 visual profile） | audio/timed controls 由后续已激活范围处理 |
+| Node determinism | 每 cart 两个 fresh real-WASM session；每个 session cold reset；4-frame trace、screen、palette、RGBA 和列出的 RAM region exact | gate passed | oracle 变更必须人工审阅 manifest diff |
+| Chrome production path | Worker initial/reset trace 与 Node hash 一致；Canvas RGBA `17614085…a0ae` / `0db0886d…45f6` exact；无 Worker error | gate passed（Chrome 150） | Chrome 版本升级时重跑 reviewed evidence |
+| performance | graphics/text 各 20 warm-up + 120 measured；p95 均 `0.4001ms` 以下；`>16.67ms` 均 `0/120` | gate passed（≤8ms） | 不是 Phase 4 stress 或长稳 soak 的替代品 |
+| fault/recovery | 65,537-byte print → structured `E_HOST_API`；main responsive；stale generation rejected；generation `3→4` 后有效 cart 出帧 | gate passed | hard hang/watchdog 继续由 Phase 0F/1E regression 覆盖 |
+
+Phase 2 exit 时开放 P0/P1 为 `0`。Known Differences：P8SCII audio/timed controls 不产生
+Phase 3 设备语义，`tline(bits)` precision overload 与 advanced screen/bitplane modes deferred；
+未记录的 invalid/overflow edge 和未运行的官方/第三方 cart 保持 `unknown`。这些是显式范围边界，
+不升级为 official bit-exact 或第三方兼容声明。
 
 ## 16. Definition of Done
 

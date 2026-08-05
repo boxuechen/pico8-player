@@ -1,8 +1,8 @@
 # 架构决定、风险与未决问题
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1 已完成；Phase 2 已激活，
-当前 work unit 为 2F。
+如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1/2 已完成；当前没有 active
+phase，Phase 3 实现前必须先创建并激活对应 work unit。
 
 ## 1. ADR registry
 
@@ -33,10 +33,9 @@
 
 ### Active blockers
 
-当前没有 active phase blocker。Phase 1A–1F 已通过 L1 bounded-profile exit，见
-[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。Phase 2A–2E 已完成；
-当前 2F 的授权范围与门禁由
-[active phase 文档](./phases/2-graphics-memory-text.md) 定义。
+当前没有 active phase blocker。Phase 1A–1F 已通过 L1 bounded-profile exit；Phase 2A–2F
+已通过 Graphics/Memory/Text project-profile exit，见
+[Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)。
 
 ### Deferred open questions
 
@@ -66,13 +65,13 @@ evidence，不在本表复制测试步骤。
 
 | ID | 风险 | 当前控制 / 下一 owner |
 | --- | --- | --- |
-| R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 ladder；Phase 2/4 profile |
+| R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 ladder；Phase 2 exit 通过，Phase 4 stress profile 重评 |
 | R-02 | z8lua 与 PICO-8 0.2.7 语义差异 | pinned patches + conformance |
 | R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；artifact verifier |
 | R-04 | PNG low-bit corruption / decompression bomb | ADR-005 limits、property/malformed tests |
 | R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + Chrome soak；AudioSynth/Phase 4 重跑 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
-| R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；2F conformance |
+| R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
 | R-08 | hard budget 与官方 CPU 不一致 | safety/compatibility 分离；Phase 4 calibration |
 | R-09 | multi-cart 同步 API 需要 async host data | 预供给/同步 repository；L3 重评 |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
