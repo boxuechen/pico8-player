@@ -11,10 +11,45 @@ import {
   type CartCodecErrorDetails,
   codecFailure,
 } from "./errors.js";
+import {
+  createParsedCart,
+  type CartFormat,
+  type CartIdentity,
+  type CartWarning,
+  type CartWarningCode,
+  type ParsedCart,
+} from "./model.js";
+import {
+  DEFAULT_P8_LIMITS,
+  P8_SECTION_NAMES,
+  decodeTextP8,
+  type P8DecodeLimits,
+  type P8DecodeOptions,
+  type P8LineEndings,
+  type P8SectionName,
+} from "./p8.js";
 import { decodeCartPng } from "./png.js";
 
-export { CART_CODEC_ERROR_CODES, CartCodecError };
-export type { CartCodecErrorCode, CartCodecErrorDetails, P8CodeCompression };
+export {
+  CART_CODEC_ERROR_CODES,
+  CartCodecError,
+  DEFAULT_P8_LIMITS,
+  P8_SECTION_NAMES,
+};
+export type {
+  CartCodecErrorCode,
+  CartCodecErrorDetails,
+  CartFormat,
+  CartIdentity,
+  CartWarning,
+  CartWarningCode,
+  P8CodeCompression,
+  P8DecodeLimits,
+  P8DecodeOptions,
+  P8LineEndings,
+  P8SectionName,
+  ParsedCart,
+};
 
 export const P8PNG_WIDTH = 160 as const;
 export const P8PNG_HEIGHT = 205 as const;
@@ -44,19 +79,26 @@ export interface P8PngDecodeOptions {
   readonly limits?: Partial<P8PngDecodeLimits>;
 }
 
-export interface DecodedP8PngCart {
+export interface DecodedP8PngCart extends ParsedCart {
   readonly format: "p8.png";
   readonly width: typeof P8PNG_WIDTH;
   readonly height: typeof P8PNG_HEIGHT;
-  readonly cartVersion: number;
-  readonly rom: Uint8Array;
-  readonly luaSource: Uint8Array;
   readonly codeCompression: P8CodeCompression;
   readonly declaredCodeBytes: number;
   readonly compressedCodeBytes: number;
-  readonly sourceBytes: number;
   readonly pngChunkCount: number;
   readonly pngIdatBytes: number;
+}
+
+export interface DecodedP8Cart extends ParsedCart {
+  readonly format: "p8";
+  readonly lineEndings: P8LineEndings;
+  readonly sectionRows: Readonly<Record<P8SectionName, number>>;
+}
+
+export interface CartDecodeOptions {
+  readonly p8?: P8DecodeOptions;
+  readonly p8Png?: P8PngDecodeOptions;
 }
 
 function positiveInteger(name: string, value: number, maximum = Number.MAX_SAFE_INTEGER): number {
@@ -127,18 +169,66 @@ export function decodeP8Png(
   }
   const rom = payload.slice(0, PICO_CART_ROM_SIZE);
   const code = decodeP8Code(rom.subarray(P8PNG_CODE_OFFSET), limits.maximumCodeBytes);
-  return Object.freeze({
+  return createParsedCart(input, {
     format: "p8.png",
+    version: cartVersion,
+    rom,
+    code: code.bytes,
+  }, {
     width: P8PNG_WIDTH,
     height: P8PNG_HEIGHT,
-    cartVersion,
-    rom,
-    luaSource: code.bytes,
     codeCompression: code.compression,
     declaredCodeBytes: code.declaredBytes,
     compressedCodeBytes: code.compressedBytes,
-    sourceBytes: input.length,
     pngChunkCount: png.chunkCount,
     pngIdatBytes: png.idatBytes,
   });
+}
+
+export function decodeP8(
+  input: Uint8Array,
+  options: P8DecodeOptions = {},
+): DecodedP8Cart {
+  if (!(input instanceof Uint8Array)) {
+    codecFailure("E_CART_ARGUMENT", "decodeP8 expects Uint8Array input");
+  }
+  const decoded = decodeTextP8(input, options);
+  return createParsedCart(input, {
+    format: "p8",
+    version: decoded.version,
+    rom: decoded.rom,
+    code: decoded.code,
+    warnings: decoded.warnings,
+  }, {
+    lineEndings: decoded.lineEndings,
+    sectionRows: decoded.sectionRows,
+  });
+}
+
+const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] as const;
+const TEXT_MAGIC = "pico-8 cartridge";
+
+function hasBytes(input: Uint8Array, expected: readonly number[], offset = 0): boolean {
+  return expected.every((byte, index) => input[offset + index] === byte);
+}
+
+function hasTextMagic(input: Uint8Array): boolean {
+  const offset = hasBytes(input, [0xef, 0xbb, 0xbf]) ? 3 : 0;
+  for (let index = 0; index < TEXT_MAGIC.length; index += 1) {
+    if (input[offset + index] !== TEXT_MAGIC.charCodeAt(index)) return false;
+  }
+  return true;
+}
+
+/** Detect a supported cart from raw bytes without trusting names or media types. */
+export function decodeCart(
+  input: Uint8Array,
+  options: CartDecodeOptions = {},
+): ParsedCart {
+  if (!(input instanceof Uint8Array)) {
+    codecFailure("E_CART_ARGUMENT", "decodeCart expects Uint8Array input");
+  }
+  if (hasBytes(input, PNG_SIGNATURE)) return decodeP8Png(input, options.p8Png ?? {});
+  if (hasTextMagic(input)) return decodeP8(input, options.p8 ?? {});
+  codecFailure("E_CART_FORMAT", "Cart bytes do not match a supported format", { offset: 0 });
 }

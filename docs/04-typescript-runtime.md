@@ -12,9 +12,9 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 1A** | Phase 0F baseline；browser-neutral `PicoApiHost`；session router/two-stage bind；TS-owned `cls/pset/btn` over leased RAM；`E_HOST_API` containment |
+| **Implemented through Phase 1B** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；shared `CartIdentity` / `ParsedCart`；bounded section packing 与 byte-offset diagnostics |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | 文本 `.p8`、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
+| **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -176,8 +176,6 @@ type CartSource = Readonly<{
 
 type CartIdentity = Readonly<{
   contentSha256: string;  // 对原始输入 bytes 计算
-  canonicalRef?: string;  // 如获授权 resolver 返回的 #id/revision
-  displayName: string;
 }>;
 
 type ParsedCart = Readonly<{
@@ -186,8 +184,8 @@ type ParsedCart = Readonly<{
   version: number;
   rom: Uint8Array;        // 内部 0x8000-byte container；guest 仅可读/写 < 0x4300
   code: Uint8Array;       // 解压后的 P8SCII bytes，不是 JS Unicode string
-  labelRgba?: Uint8Array; // 仅 UI 使用；不得作为 cart payload 的来源
   warnings: readonly CartWarning[];
+  sourceBytes: number;
 }>;
 
 interface CartParser {
@@ -199,7 +197,18 @@ interface IncludeResolver {
 }
 ```
 
-`CartParser` **MUST** 先检查文件 magic，而不是信任扩展名或 `mediaType`。解析结果的数组在交给 `CartSession` 后必须只读对待；需要 `cstore` 时创建 copy-on-write overlay。
+Phase 1B 已实现同步、无 I/O 的 `decodeCart(Uint8Array)`、`decodeP8(Uint8Array)` 和
+`decodeP8Png(Uint8Array)`；`CartParser`/`CartSource`/`IncludeResolver` 是后续 loader facade
+目标。`decodeCart` **MUST** 先检查文件 magic，而不是信任扩展名或 `mediaType`。
+
+`CartIdentity` 由 `@pico8-web/contracts` 拥有且只含内容 SHA-256。display name、locator、
+origin 和 future canonical resolver ref 是 loader/session metadata，不得污染 raw-byte content
+identity。`ParsedCart` 和 format-specific metadata 由 `@pico8-web/cart-codec` 拥有；Phase 0D
+字段 `cartVersion`/`luaSource` 暂作为 `version`/`code` 的兼容 alias。
+
+record、identity 和 warning records 在运行时 freeze；typed-array 元素受 JavaScript 限制不能
+freeze。每次 decode 返回无内部 alias 的 caller-owned snapshot，交给 `CartSession` 后必须
+只读对待；需要 `cstore` 时创建 copy-on-write overlay。
 
 ### 5.2 `.p8` 文本 cart
 
@@ -214,6 +223,12 @@ interface IncludeResolver {
 7. 处理 `#include` 时遵守官方的“相对当前 cart、非递归”语义。Player 无可用目录权限或 resolver 时返回 `E_CART_INCLUDE_UNRESOLVED`；不得猜路径或访问任意 URL。
 
 `__label__` 是展示数据，不得覆盖 `__gfx__`。空缺 section 对应 ROM 区域填零。所有 section 汇总后，`rom.byteLength` 必须严格为 `0x8000`。
+
+Phase 1B 已锁定的 ingestion policy 还包括：可选 UTF-8 BOM、LF/CRLF/mixed 输入统一为 LF；
+known section 不可重复；data row 使用官方完整宽度；label 以 base32 palette index 验证但
+不暴露 presentation buffer；map rows 32..63 与 gfx2 共享区按位 OR。非法 UTF-8、无法映射
+的 Unicode、lone CR、row 溢出均 fail closed，并以原始输入 byte offset 诊断。无 resolver
+时独占行 `#include` 返回 `E_CART_INCLUDE_UNRESOLVED`。
 
 ### 5.3 `.p8.png` 无损解码
 
@@ -236,7 +251,7 @@ interface IncludeResolver {
    - PXA：header `\0pxa`，原长度与压缩长度来自 header，bitstream 按格式定义解析。
 6. legacy/PXA 的每个 offset、length、bit read 和输出增长都必须先做边界检查；无效回引用返回 `E_CART_CODE_CORRUPT`，禁止读取负 offset、补零后继续或输出超出配置上限。
 
-Phase 0D 公共 API 只返回 ROM/source，不暴露 label/payload 的 live view。未来 PNG
+公共 API 只返回 ROM/source，不暴露 label/payload 的 live view。未来 PNG
 label 可以另行解码给 UI，但不得反向成为 cart payload 来源。解压算法已与锁定的
 fake-08/zepto8 参考路径做格式交叉检查；production 实现和 fixtures 均为项目原创，
 没有 import/copy `ref/`。

@@ -4,9 +4,9 @@
   "name": "L1 minimal playable loop",
   "status": "active",
   "browserGate": ["chrome", "chromium"],
-  "completedWorkUnits": ["1A"],
+  "completedWorkUnits": ["1A", "1B"],
   "activeWorkUnit": null,
-  "nextWorkUnit": "1B",
+  "nextWorkUnit": "1C",
   "workUnits": {
     "1A": {
       "name": "Host API Boundary",
@@ -41,7 +41,31 @@
         "pnpm run verify"
       ]
     },
-    "1B": { "name": "Text .p8 decode and ParsedCart normalization", "status": "next" },
+    "1B": {
+      "name": "Text .p8 decode and ParsedCart normalization",
+      "status": "complete",
+      "inputs": ["Uint8Array:.p8", "Uint8Array:.p8.png"],
+      "publicApi": ["decodeCart", "decodeP8", "decodeP8Png"],
+      "parsedCartFields": ["identity", "format", "version", "rom", "code", "warnings"],
+      "identity": "sha256-of-raw-input-bytes",
+      "textSections": ["lua", "gfx", "gff", "map", "sfx", "music", "label"],
+      "lineEndings": ["lf", "crlf", "mixed"],
+      "forbiddenCapabilities": [
+        "File",
+        "URL",
+        "network",
+        "filesystem",
+        "DOM",
+        "Canvas",
+        "RuntimeCore",
+        "ref-import"
+      ],
+      "verification": [
+        "pnpm run test:cart-codec",
+        "pnpm run test:architecture",
+        "pnpm run verify"
+      ]
+    },
     "1C": { "name": "CartSession reset and lifecycle", "status": "not-started" },
     "1D": { "name": "L1 graphics and input completion", "status": "not-started" },
     "1E": { "name": "Worker scheduling and minimal player shell", "status": "not-started" },

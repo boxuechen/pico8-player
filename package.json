@@ -16,7 +16,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "pnpm run test:architecture && pnpm run test:cart-codec && pnpm run test:wasm && pnpm run test:benchmark && pnpm run test:phase-0e && pnpm run test:phase-0f && pnpm run test:phase-1a",
     "test:architecture": "pnpm run build && node --test tests/architecture/architecture.test.mjs",
-    "test:cart-codec": "pnpm run build && node --test tests/cart-codec/p8png.test.mjs && node tools/cart-codec/verify-manifest.mjs",
+    "test:cart-codec": "pnpm run build && node --test tests/cart-codec/*.test.mjs && node tools/cart-codec/verify-manifest.mjs",
     "test:wasm": "pnpm run build && pnpm run build:wasm && node --test tests/wasm/phase-0a.test.mjs tests/wasm/phase-0b.test.mjs",
     "test:benchmark": "node --test tests/benchmark/phase-0c.test.mjs",
     "test:phase-0e": "pnpm run build && pnpm run build:wasm && node --test tests/runtime/phase-0e.test.mjs && node tools/browser/run-phase-0e.mjs",

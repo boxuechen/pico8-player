@@ -7,6 +7,12 @@ export const PICO_CART_ROM_SIZE = 0x8000 as const;
 /** Highest cart format version accepted by the PICO-8 0.2.7 target. */
 export const PICO8_0_2_7_CART_VERSION = 42 as const;
 
+/** Stable content identity shared by codec, RuntimeCore and app transports. */
+export interface CartIdentity {
+  /** Lower-case SHA-256 of the exact caller-provided cart input bytes. */
+  readonly contentSha256: string;
+}
+
 /**
  * Runtime-neutral lease for a stable 64 KiB region in an adapter-owned buffer.
  * It intentionally exposes neither WebAssembly.Memory nor an Emscripten module.

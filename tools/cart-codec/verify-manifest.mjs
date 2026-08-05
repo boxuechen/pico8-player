@@ -17,14 +17,22 @@ async function digest(path) {
 const manifest = await readJson("packages/cart-codec/manifest.lock.json");
 const contract = await readJson(manifest.contract.path);
 const fixtures = await readJson(manifest.fixtures.manifest);
+const textFixtures = await readJson(manifest.textFixtures.manifest);
 const packageManifest = await readJson("packages/cart-codec/package.json");
 
-assert.equal(manifest.phase, "0D");
+assert.equal(manifest.phase, "1B");
 assert.equal(manifest.target.pico8Version, contract.target.pico8Version);
 assert.equal(manifest.target.maximumCartVersion, contract.target.maximumCartVersion);
+assert.deepEqual(manifest.target.formats, contract.formats.map((format) => `.${format}`));
 assert.equal(await digest(manifest.contract.path), manifest.contract.sha256);
 assert.equal(await digest(manifest.fixtures.manifest), manifest.fixtures.manifestSha256);
+assert.equal(
+  await digest(manifest.textFixtures.manifest),
+  manifest.textFixtures.manifestSha256,
+);
 assert.equal(fixtures.ownership, manifest.fixtures.ownership);
+assert.equal(textFixtures.ownership, manifest.textFixtures.ownership);
+assert.equal(textFixtures.generator, manifest.textFixtures.generator);
 assert.equal(manifest.thirdPartyCodeIncorporated, false);
 assert.deepEqual(Object.keys(packageManifest.dependencies ?? {}).sort(), manifest.runtimeDependencies);
 
@@ -41,5 +49,5 @@ assert.ok(manifest.normativeSources.every((source) => source.startsWith("https:/
 assert.ok(manifest.referenceCrossChecks.every(({ use }) => use.includes("no source copied or imported")));
 
 process.stdout.write(
-  `Verified Phase 0D cart-codec manifest and ${manifest.productionSources.length} production sources\n`,
+  `Verified Phase 1B cart-codec manifest and ${manifest.productionSources.length} production sources\n`,
 );

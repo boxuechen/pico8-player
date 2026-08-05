@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "ownership": "Project-authored synthetic text vectors; no third-party cart content",
+  "generator": "tests/fixtures/p8/fixture-builder.mjs",
+  "vectors": [
+    {
+      "id": "all-sections-lf",
+      "inputSha256": "95af9afa2f1fe25e0de524185a943bcf8b50d4adc75b2d31d3ebbc93304a5989",
+      "romSha256": "ce06c8077928cdddd5ed46e52ffa5a696ec30bf0e918d4fed59c6db00a0e02c3",
+      "codeSha256": "fe3209d6d4f51935b391288a43df48d9ddece1a992597ae53387ca16611a9179"
+    },
+    {
+      "id": "all-sections-crlf-bom",
+      "inputSha256": "177c360e85f790e7f7bb03bdf745c566c28b30fceff3de6ce4596bbecdeaff5b",
+      "romSha256": "ce06c8077928cdddd5ed46e52ffa5a696ec30bf0e918d4fed59c6db00a0e02c3",
+      "codeSha256": "fe3209d6d4f51935b391288a43df48d9ddece1a992597ae53387ca16611a9179"
+    }
+  ]
+}

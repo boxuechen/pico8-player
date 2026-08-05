@@ -15,8 +15,8 @@
 
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
-[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；当前没有
-active phase。
+[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；当前
+active phase 是 Phase 1，1B 已完成、下一 work unit 为 1C，范围以 phase 文档为准。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -150,20 +150,23 @@ active phase。
   lease 只携带 `ArrayBuffer` range 和 opaque ID，不携带 WASM/module/handle。
 - Phase 0E 加入 `PicoInputSnapshot`、`SerializedRuntimeError` 和 stable error/phase
   unions；versioned Worker command/event 仍留在 app transport。
+- Phase 1B 加入只含 raw-input `contentSha256` 的 `CartIdentity`；display name、locator、
+  origin 和 resolver metadata 不属于 content identity。
 
 ### `@pico8-web/cart-codec`
 
-最终负责纯 bytes → immutable `ParsedCart`：`.p8`、`.p8.png`、code decompression、
-section packing、校验和诊断。Phase 0D 当前只落地 `.p8.png` 的
-`decodeP8Png(Uint8Array)` → caller-owned ROM/source snapshots；`.p8`、统一
-`ParsedCart`/identity 与 loader integration 仍是后续增量。
+负责纯 bytes → immutable-record `ParsedCart`：`.p8`、`.p8.png`、code decompression、
+section packing、校验和诊断。Phase 1B 已落地 bytes-magic `decodeCart`、text `decodeP8`
+和 lossless `decodeP8Png`，两种格式统一返回 content identity、32 KiB ROM、P8SCII code、
+version 和 warnings。typed arrays 是独立 caller-owned snapshots，由 consumer 只读对待；
+loader/include resolution 仍是后续增量。
 
 允许依赖：`@pico8-web/contracts`。
 禁止依赖：RuntimeCore、z8lua bridge、DOM、Canvas、File API、IndexedDB、网络 resolver。
 
 `CartSource` 的 bytes 由调用方提供；codec 不自行取得资源。
 
-Phase 0D 的 PNG/code internals 只在 package 内部，public consumer 只能从 package
+text/PNG/code internals 只在 package 内部，public consumer 只能从 package
 root 取得 typed API 与 `CartCodecError`。`spec/cart-codec-contract.json` 锁定格式、
 limits/error inventory，`packages/cart-codec/manifest.lock.json` 锁定 source hashes、
 runtime dependency、fixture ownership 与 reference provenance；统一 verify 会验证二者。

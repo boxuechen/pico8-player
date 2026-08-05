@@ -1,0 +1,65 @@
+import type { CartIdentity } from "@pico8-web/contracts";
+
+import { sha256Hex } from "./sha256.js";
+
+export type CartFormat = "p8" | "p8.png";
+
+export type { CartIdentity };
+
+export type CartWarningCode = "W_CART_UNKNOWN_SECTION";
+
+export interface CartWarning {
+  readonly code: CartWarningCode;
+  readonly message: string;
+  /** Byte offset in the original encoded input. */
+  readonly offset: number;
+  readonly section?: string;
+}
+
+export interface ParsedCart {
+  readonly identity: CartIdentity;
+  readonly format: CartFormat;
+  readonly version: number;
+  readonly rom: Uint8Array;
+  readonly code: Uint8Array;
+  readonly warnings: readonly CartWarning[];
+  readonly sourceBytes: number;
+
+  /** Phase 0D compatibility alias; new code should use `version`. */
+  readonly cartVersion: number;
+  /** Phase 0D compatibility alias; new code should use `code`. */
+  readonly luaSource: Uint8Array;
+}
+
+interface ParsedCartFields<Format extends CartFormat> {
+  readonly format: Format;
+  readonly version: number;
+  readonly rom: Uint8Array;
+  readonly code: Uint8Array;
+  readonly warnings?: readonly CartWarning[];
+}
+
+export function createParsedCart<Format extends CartFormat, Metadata extends object>(
+  input: Uint8Array,
+  fields: ParsedCartFields<Format>,
+  metadata: Metadata,
+): ParsedCart & Readonly<{ format: Format }> & Metadata {
+  const rom = fields.rom.slice();
+  const code = fields.code.slice();
+  const warnings = Object.freeze(
+    (fields.warnings ?? []).map((warning) => Object.freeze({ ...warning })),
+  );
+  const identity = Object.freeze({ contentSha256: sha256Hex(input) });
+  return Object.freeze({
+    ...metadata,
+    identity,
+    format: fields.format,
+    version: fields.version,
+    rom,
+    code,
+    warnings,
+    sourceBytes: input.length,
+    cartVersion: fields.version,
+    luaSource: code,
+  }) as ParsedCart & Readonly<{ format: Format }> & Metadata;
+}

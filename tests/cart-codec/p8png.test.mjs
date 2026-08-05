@@ -62,9 +62,13 @@ test("project-owned raw/legacy/PXA vectors decode byte-exact across stored/fixed
     assert.equal(decoded.width, 160);
     assert.equal(decoded.height, 205);
     assert.equal(decoded.cartVersion, vector.cartVersion);
+    assert.equal(decoded.version, vector.cartVersion);
     assert.equal(decoded.codeCompression, vector.compression);
     assert.deepEqual(decoded.rom, fixture.rom, `${vector.id} ROM`);
     assert.deepEqual(decoded.luaSource, fixture.code, `${vector.id} source`);
+    assert.equal(decoded.code, decoded.luaSource);
+    assert.equal(decoded.identity.contentSha256, sha256(fixture.png));
+    assert.deepEqual(decoded.warnings, []);
     assert.equal(sha256(decoded.rom), vector.romSha256, `${vector.id} ROM hash`);
     assert.equal(sha256(decoded.luaSource), vector.luaSha256, `${vector.id} source hash`);
     assert.ok(decoded.pngChunkCount >= 4);
