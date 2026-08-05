@@ -67,8 +67,8 @@ function pixelAt(bytes, x, y) {
   return (packed >> ((x & 1) << 2)) & 0x0f;
 }
 
-function delegateHost(memory, calls) {
-  const base = createPicoApiHost(memory);
+function delegateHost(memory, logicalMemory, calls) {
+  const base = createPicoApiHost(memory, logicalMemory);
   return {
     memoryLeaseId: base.memoryLeaseId,
     reset: () => base.reset(),
@@ -122,7 +122,9 @@ test("Phase 1D appends stable generated host operations and preserves raw option
 
   const vm = createVm();
   const calls = [];
-  const runtime = new FrameSliceRuntime(vm, { picoApiHost: delegateHost(vm.memory, calls) });
+  const runtime = new FrameSliceRuntime(vm, {
+    picoApiHost: delegateHost(vm.memory, vm.logicalMemory, calls),
+  });
   const boot = runtime.boot(sourceCart(`
 function _init()
  line()

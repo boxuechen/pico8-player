@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 1 exit** | Phase 1A Runtime baseline；bytes-only text `.p8` / `.p8.png` decode；generation-owned `CartSession`；RAM-backed L1 graphics/input；bounded interactive scheduler、stable Worker protocol、minimal player shell 与 project-owned 30/60/custom Chrome conformance |
+| **Implemented through Phase 2A** | Phase 1 Runtime baseline；Phase 2A internal `PicoRam`、public `PicoLogicalMemoryPort`、mapped frame snapshot 与完整 in-session Base RAM API |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -56,7 +56,8 @@ TypeScript 负责：
 
 - cart 识别、解析、依赖解析与 ROM 生命周期；
 - 64KiB PICO RAM 的宿主视图；
-- graphics、map、audio、input、memory host API；
+- graphics、map、audio、input 和高层 hardware API；低层 Base RAM API 使用 bridge 内的
+  dedicated wrapper，但与 RuntimeCore 共用同一个 canonical mapper；
 - 帧调度、持久化、多 cart、Worker 协议和播放器状态机；
 - Canvas/WebGL 呈现与 AudioWorklet 输出。
 
@@ -372,9 +373,20 @@ Phase 0B 已在 `@pico8-web/contracts` 落地 `PICO_RAM_SIZE` / `PicoMemoryLease
 只证明 adapter 内 zero-copy views、lease freshness 与 canonical mapper，不是完整
 `PicoRam`、`VmPort` 或 production `p8w_*` lifecycle。
 
+Phase 2A 已在 production `FrameVmPort` 增加 browser-neutral
+`PicoLogicalMemoryPort { memoryLeaseId, mapAddress() }`。z8lua adapter 对每次 mapping 验证
+固定 lease、handle 与 buffer identity，再调用 `_p8w_map_address`；RuntimeCore internal
+`PicoRam` 组合 lease 和该 port，提供 logical read/write/fill/copy。`FrameSliceRuntime` 的
+packed-screen snapshot 与 `L1Graphics` pixel path 均使用这条路径。Emscripten module、handle
+和 `WebAssembly.Memory` 仍不越过 adapter boundary。
+
 v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值，并对 z8lua heap 设置经 Phase 0 校准的上限，避免 `memory.grow()` 使 JS typed views 失效。真实 `WebAssembly.Memory` 只由 z8lua bridge 持有；RuntimeCore 只接收 runtime-neutral `PicoMemoryLease`，验证固定长度、范围和 session-local `leaseId`。Bridge 可以在 debug/test build 比较 `memory.buffer` identity 并在变化时立即触发 `E_INVARIANT`，但不能把 view 重建当成 production growth 支持；不满足固定内存的 artifact 不得发布。
 
 `PicoRam` 的 layout views 是物理 64KiB，不把 raw `DataView` 连续访问伪装成 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还会绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。Phase 0B 已用 `P0-RT-08` 证明 upper RAM、`0x5f54/0x5f55` 与 direct operators 收敛；未来实现不得把 raw physical `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
+
+Phase 2A 已关闭上述 production gap：`peek/poke` family、`memcpy/memset`、direct operators、
+RuntimeCore graphics 与 frame snapshot 均由同一 mapper 决定 physical byte；`copyRam()` 继续只作
+明确命名的 physical diagnostic snapshot，不可用于 guest/remapped semantics。
 
 所有多 byte PICO 数据 **MUST** 显式使用 little-endian。不得依赖宿主 CPU endian，也不得用 JS `number` 先转换 Q16.16 再写回。ABI 层传 `int32` raw bits。
 

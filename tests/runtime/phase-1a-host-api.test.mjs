@@ -36,8 +36,8 @@ function createVm() {
   return { router, vm: new Z8LuaFrameVm(module, router) };
 }
 
-function wrapHost(memory, overrides = {}) {
-  const base = createPicoApiHost(memory);
+function wrapHost(memory, logicalMemory, overrides = {}) {
+  const base = createPicoApiHost(memory, logicalMemory);
   return {
     memoryLeaseId: base.memoryLeaseId,
     reset: () => base.reset(),
@@ -60,12 +60,12 @@ function wrapHost(memory, overrides = {}) {
   };
 }
 
-test("binding generator proves eight heterogeneous signatures without exposing prototype APIs", async () => {
+test("binding generator proves Phase 2 scalar and byte-string frames without exposing prototype APIs", async () => {
   const prototype = validateBindingContract(JSON.parse(await readFile(
     new URL("../../spec/abi/pico-host-binding-prototype.json", import.meta.url),
     "utf8",
   )), { runtimeExposed: false });
-  assert.equal(prototype.bindings.length, 8);
+  assert.equal(prototype.bindings.length, 10);
   const production = validateBindingContract(JSON.parse(await readFile(
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
@@ -74,9 +74,22 @@ test("binding generator proves eight heterogeneous signatures without exposing p
     "cls", "pset", "btn", "line", "rect", "rectfill", "circ", "circfill", "btnp",
   ]);
   assert.match(renderTypeScript(production), /argumentMask & 4/u);
+  assert.match(renderTypeScript(prototype), /byteString!/u);
   assert.match(renderCpp(production), /P8W_HOST_RESULT_INTEGER_OR_BOOLEAN/u);
   assert.equal(renderCpp(prototype).includes("probe_six"), true);
+  assert.equal(renderCpp(prototype).includes("probe_twelve"), true);
+  assert.match(renderCpp(prototype), /probe_bytes", 1u, 2u, 1u/u);
 });
+
+function writeScalarCallFrame(pointer, operationId, argumentMask, args) {
+  module.HEAPU8.fill(0, pointer, pointer + 80);
+  const view = new DataView(module.HEAPU8.buffer);
+  view.setUint32(pointer, 80, true);
+  view.setUint32(pointer + 4, operationId, true);
+  view.setUint32(pointer + 8, argumentMask, true);
+  view.setUint32(pointer + 16, args.length, true);
+  args.forEach((value, index) => view.setInt32(pointer + 20 + index * 4, value, true));
+}
 
 test("WASM compile is gated by an exactly-once nonzero host binding", () => {
   const handle = module._p8w_create(0) >>> 0;
@@ -100,32 +113,29 @@ test("session routers reject double bind, rebind and stale dispatch without cros
   const first = createVm();
   const second = createVm();
   assert.notEqual(first.router.bindingId, second.router.bindingId);
-  const firstHost = createPicoApiHost(first.vm.memory);
-  const secondHost = createPicoApiHost(second.vm.memory);
+  const firstHost = createPicoApiHost(first.vm.memory, first.vm.logicalMemory);
+  const secondHost = createPicoApiHost(second.vm.memory, second.vm.logicalMemory);
   first.vm.bindHost(firstHost);
   second.vm.bindHost(secondHost);
   assert.equal(first.vm.hostBindingState, "bound");
   assert.throws(() => first.vm.bindHost(firstHost), /cannot bind from bound/u);
 
-  const resultPointer = module._p8w_alloc(4) >>> 0;
+  const callFramePointer = module._p8w_alloc(80) >>> 0;
   try {
-    assert.equal(module.p8wHostCall(
-      first.router.bindingId, 1, 1, 0x0003_0000, 0, 0, 0, 0, 0, resultPointer,
-    ), 0);
+    writeScalarCallFrame(callFramePointer, 1, 1, [0x0003_0000]);
+    assert.equal(module.p8wHostCall(first.router.bindingId, callFramePointer), 0);
     assert.equal(first.vm.copyRam(0x6000, 1)[0], 0x33);
     assert.equal(second.vm.copyRam(0x6000, 1)[0], 0);
     first.vm.destroy();
     assert.equal(first.vm.hostBindingState, "released");
-    assert.equal(module.p8wHostCall(
-      first.router.bindingId, 1, 0, 0, 0, 0, 0, 0, 0, resultPointer,
-    ), 1);
+    writeScalarCallFrame(callFramePointer, 1, 0, []);
+    assert.equal(module.p8wHostCall(first.router.bindingId, callFramePointer), 1);
     assert.throws(() => first.router.bind(firstHost), /cannot bind from released/u);
-    assert.equal(module.p8wHostCall(
-      second.router.bindingId, 1, 1, 0x0004_0000, 0, 0, 0, 0, 0, resultPointer,
-    ), 0);
+    writeScalarCallFrame(callFramePointer, 1, 1, [0x0004_0000]);
+    assert.equal(module.p8wHostCall(second.router.bindingId, callFramePointer), 0);
     assert.equal(second.vm.copyRam(0x6000, 1)[0], 0x44);
   } finally {
-    module._p8w_free(resultPointer);
+    module._p8w_free(callFramePointer);
     second.vm.destroy();
   }
 });
@@ -133,8 +143,8 @@ test("session routers reject double bind, rebind and stale dispatch without cros
 test("raw Q16.16 arguments, optional presence and btn results cross the synchronous ABI exactly", () => {
   const { vm } = createVm();
   const calls = [];
-  const base = createPicoApiHost(vm.memory);
-  const host = wrapHost(vm.memory, {
+  const base = createPicoApiHost(vm.memory, vm.logicalMemory);
+  const host = wrapHost(vm.memory, vm.logicalMemory, {
     reset: () => base.reset(),
     beginTick: (input, targetFps) => base.beginTick(input, targetFps),
     cls(colorRaw) {
@@ -201,8 +211,8 @@ end`));
 
 test("host throws become a contained E_HOST_API fault and poison the VM", () => {
   const { vm } = createVm();
-  const base = createPicoApiHost(vm.memory);
-  const host = wrapHost(vm.memory, {
+  const base = createPicoApiHost(vm.memory, vm.logicalMemory);
+  const host = wrapHost(vm.memory, vm.logicalMemory, {
     pset() {
       throw new Error("phase-1a-test-host-failure");
     },
@@ -225,8 +235,8 @@ function _draw() end`));
 test("synchronous host calls keep the Lua stack balanced and stay within the Phase 1A budget", () => {
   const { vm } = createVm();
   let dispatchCount = 0;
-  const base = createPicoApiHost(vm.memory);
-  const host = wrapHost(vm.memory, {
+  const base = createPicoApiHost(vm.memory, vm.logicalMemory);
+  const host = wrapHost(vm.memory, vm.logicalMemory, {
     reset: () => base.reset(),
     beginTick: (input, targetFps) => base.beginTick(input, targetFps),
     cls(colorRaw) {

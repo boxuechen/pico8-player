@@ -8,17 +8,18 @@
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
-实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary 与 Phase 1D scalar API expansion
-已完成；Phase 0 历史证据见 [Phase 0 evidence](./evidence/phase-0/README.md)。
+实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary、Phase 1D scalar API
+expansion 与 Phase 2A memory/call-frame 已完成；Phase 0 历史证据见
+[Phase 0 evidence](./evidence/phase-0/README.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
 只有机器契约、public adapter 与测试共同覆盖的部分才算 Implemented。
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router、generated `cls/pset/btn/line/rect/rectfill/circ/circfill/btnp` 与 host error containment |
+| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；generated scalar APIs；Phase 2A 80-byte call frame、byte-string argument view 与完整 in-session Base RAM API |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
-| **Proposed** | 完整函数/值 binding、capability surface、剩余 lifecycle 与 host API 扩展 |
+| **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
 
 机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter；
@@ -223,6 +224,12 @@ memory probes 和 `Phase0BMemoryBinding` 都调用它；未来 graphics/memory f
 不得复制 remap switch。非法 video base 当前防御性回退默认值，因手册未定义该
 输入，其兼容状态保持 unknown。
 
+Phase 2A production `p8w_*` 已注册 `peek/peek2/peek4`、`poke/poke2/poke4`、
+`memcpy/memset`。只有 `peek/poke` 是最多 8192 项的 variadic API；width variants 为单值。
+`memcpy` 先建立 source snapshot 以保持 remap 后的重叠复制语义。RuntimeCore 通过
+`PicoLogicalMemoryPort` 调 production `_p8w_map_address`，frame snapshot 和 software raster
+不再复制 video-base switch。
+
 ### 5.3 Phase 0B bounded ABI（已实现）
 
 Phase 0B 只新增 `p8w0b_*` probe：context create/destroy/run/result、RAM
@@ -232,7 +239,7 @@ state machine，不得被 RuntimeCore 当作 production `VmPort`。
 
 ## 6. C ABI v1
 
-> 状态：机器契约中的 Phase 1A subset 已实现；下方 capability/step-vector 草图仍是 Target。
+> 状态：机器契约中的 Phase 2A subset 已实现；下方 capability/step-vector 草图仍是 Target。
 
 当前事实只由 [`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)、public adapter 与真实
 artifact tests 共同定义。下方较宽接口保留为未来能力草图，不能据此调用不存在的 symbol。
@@ -344,49 +351,42 @@ Pending request 的完成契约：
 
 ## 7. WASM import 与 host-call frame
 
-Phase 1D 的 implemented scalar import 延续 Phase 1A binding，以 binding id、operation id、presence mask、最多 6 个 raw
-Q16.16 参数和 `int32` result pointer 同步调用 module-local TS dispatcher。它捕获 TS throw，
-并映射为 `P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。以下 generic call frame 是未来 strings、
-vectors 和 multi-return 的 target，不是当前 artifact layout：
+Phase 2A 将 scalar import 升级为 ABI minor `0x00010002`：binding id 加一个 bridge-owned
+80-byte call frame，同步调用 module-local TS dispatcher。它捕获 TS throw，并映射为
+`P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。当前 artifact layout 为：
 
 ```c
 int32_t p8_host_call(uint32_t host_context_id,
                      uint32_t call_frame_ptr);
 ```
 
-`call_frame_ptr` 指向 WASM memory 中 bridge-owned、固定布局的小 frame。Proposed v1 布局：
+`call_frame_ptr` 指向 WASM memory 中 bridge-owned、固定布局的小 frame：
 
 ```c
 struct p8w_host_call_frame {
   uint32_t byte_size;       /* forward-compatible size */
-  uint32_t opcode;
+  uint32_t operation_id;
   uint32_t presence_bits;   /* optional arg: present vs nil */
   uint32_t flags;
   uint32_t scalar_count;
-  int32_t  slots[12];       /* common scalar fast path */
-
-  uint32_t arg_vector_ptr;  /* bridge-owned int32/raw-fix vector */
-  uint32_t arg_vector_count;
-
-  uint32_t result_vector_ptr;
-  uint32_t result_vector_capacity;
-  uint32_t result_vector_count;
-
-  uint32_t byte_buffer_ptr; /* byte string / bounded bulk result */
-  uint32_t byte_buffer_capacity;
+  int32_t  scalar_slots[12];
+  uint32_t byte_buffer_ptr; /* one borrowed Lua byte string */
   uint32_t byte_buffer_len;
+  int32_t result;
 };
 ```
 
-具体 opcode 到 slot/vector 的映射 **SHOULD** 由 machine-readable API schema 同时生成 C wrapper、TS decoder 和 stack-balance tests。一个 opcode 的 layout 一旦进入 ABI v1 就不能静默改变。
+offset、descriptor、operation 到参数的映射由 machine-readable API schema 同时生成 C header
+和 TS dispatcher，并由 hash manifest 锁定。一个 operation layout 进入 ABI v1 后不能静默改变。
+byte-string view 只在同步调用期间有效；embedded NUL 不改变 `byte_buffer_len`。
 
-`slots[12]` 只是常见 scalar fast path，不是 PICO-8 vararg/multi-return 上限。`peek(addr,n)`（官方最大 8192 results）、`poke(addr,val...)` 等必须使用 bridge-owned bounded vector 或专用 wrapper：
+`scalar_slots[12]` 不是 PICO-8 vararg/multi-return 上限。Phase 2A 的 `peek(addr,n)` 和
+`poke(addr,val...)` 使用 dedicated C wrapper，因此不会穿过 host frame：
 
-- host 不得修改 vector pointer/capacity，只能在 cap 内写内容和 result count。
 - bridge 在 push 大量 Lua return values 前必须 `lua_checkstack()`，失败转 OOM/runtime error。
-- 超过 PICO API limit、scratch cap 或 Lua stack cap 时结构化失败；禁止静默截断到 12、截断到 scratch 大小或部分执行 side effect。
-- scratch buffer 可复用但不得在 reentrant call 中别名；steady state 不得 per-element malloc。
-- 1K/8K vararg 与 multi-return 必须进入 stack correctness 和 interop benchmark。
+- 超过 8192 或 Lua stack cap 时结构化失败；`poke` 在写入前验证总 arity，禁止部分 side effect。
+- 8192-result/value 路径必须进入 stack correctness 与 interop regression。
+- 未来 host-facing multi-return/result vector 仍需新 machine contract，不得借用 scalar slots 截断。
 
 Host adapter **MUST**：
 

@@ -1,11 +1,17 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contractName": "pico-host-api-v1",
   "dispatchAbi": {
     "argumentEncoding": "signed-q16.16-raw-int32",
     "presenceEncoding": "uint32-bit-mask",
-    "maximumArguments": 6,
-    "resultEncoding": "signed-int32-out-parameter",
+    "maximumArguments": 12,
+    "callFrame": {
+      "byteSize": 80,
+      "scalarSlots": 12,
+      "byteStringArguments": 1,
+      "byteStringEncoding": "wasm-pointer-plus-byte-length"
+    },
+    "resultEncoding": "signed-int32-call-frame-slot",
     "failureEncoding": "nonzero-status"
   },
   "bindings": [

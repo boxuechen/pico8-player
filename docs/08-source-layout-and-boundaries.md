@@ -10,6 +10,7 @@
 | **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
 | **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
+| **Implemented through Phase 2A** | RuntimeCore internal `PicoRam`、public logical-memory port、adapter-owned canonical mapping、80-byte generated host call frame 与 production Base RAM API |
 | **Scaffold** | persistence/resolver adapters 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -17,7 +18,7 @@
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
 [`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1
-已完成，当前 active work unit 是 Phase 2A，入口位于
+已完成，当前 active work unit 是 Phase 2B，入口位于
 [`phases/2-graphics-memory-text.md`](./phases/2-graphics-memory-text.md)。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
@@ -178,12 +179,13 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 1E 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。Phase 2A 当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
-`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、`pico-api/pico-api-host.ts` 和只负责
+`memory/pico-ram.ts`、`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、
+`pico-api/pico-api-host.ts` 和只负责
 re-export 的 `public.ts`。
 `FrameSliceRuntime` + `FrameVmPort` + browser-neutral `PicoApiHost` 拥有单 generation 的
-frame/time/HostRequest transaction 与 L1 graphics/input；`CartSession` 通过 RuntimeCore-owned
+frame/time/HostRequest transaction、canonical logical RAM access 与 L1 graphics/input；`CartSession` 通过 RuntimeCore-owned
 runtime factory port 拥有 cart snapshot、generation、cold reset、stale response 和
 fault/stop/dispose lifecycle；`FrameScheduler` 拥有 wall-clock accumulator/catch-up policy，但
 不拥有 clock source 或 simulation。完整 graphics/device input、audio/deterministic scheduler/
@@ -194,7 +196,9 @@ persistence 仍未落地。
 
 所有 core 所需外部能力由 `ports/` 定义。Port contract 由 RuntimeCore package 拥有，concrete adapter 在外层实现：
 
-- outbound `VmPort`：compile/resume/reset/destroy、runtime-neutral `PicoMemoryLease`、错误/request 读取；真实 `WebAssembly.Memory` 不越过 adapter 边界。
+- outbound `VmPort`：compile/resume/reset/destroy、runtime-neutral `PicoMemoryLease`、
+  `PicoLogicalMemoryPort` 与错误/request 读取；真实 `WebAssembly.Memory`、module 和 handle
+  不越过 adapter 边界。
 - inbound `PicoApiHost`：RuntimeCore 暴露给 VM adapter 的同步 PICO API surface。
 - outbound `PersistencePort`：hydrate/commit/flush。
 - outbound `CartResolverPort`：把 opaque ref 解析为 caller-authorized cart bytes/capability，不暴露任意 URL fetch。
@@ -217,6 +221,11 @@ Phase 1A 的 production public adapter 还包含 session-local `PicoApiHostRoute
 module-local dispatcher 只负责按 binding id 路由，不保存跨 module global delegate。
 linear-memory binding/view 保持 package-private。adapter 只实现 RuntimeCore 的 `FrameVmPort`，编译 artifact
 为 `z8lua-runtime-v1`；`p8w0c_bench_*` 不得出现在该 artifact 或 adapter interface。
+
+Phase 2A 的 package-private production memory binding 同时实现 RuntimeCore-owned
+`PicoLogicalMemoryPort`，每次 map 都检查 lease freshness 并调用 C++ canonical mapper。host
+dispatcher 读取 schema-generated 80-byte frame，复用固定 scalar scratch；byte-string 只借用当前
+同步调用的 WASM view。该 adapter 不实现 graphics/memory hardware semantics，也不把 module 暴露给 core。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
 

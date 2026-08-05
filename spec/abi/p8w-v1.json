@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "abiName": "p8w",
-  "abiVersion": 65537,
+  "abiVersion": 65538,
   "numberEncoding": "signed-q16.16-raw-int32",
   "stringEncoding": "byte-string-pointer-length",
   "memory": {
@@ -88,7 +88,7 @@
   "invariants": [
     "one p8w_step completes at most one simulation slice",
     "p8w_compile is invalid until a nonzero host binding is installed exactly once",
-    "synchronous host calls preserve raw Q16.16 argument bits and use an int32 out-parameter",
+    "synchronous host calls use an 80-byte frame with twelve raw Q16.16 slots, one pointer-length byte string and an int32 result slot",
     "instruction exhaustion poisons the context and is never a resumable yield",
     "p8w_boot preserves its supplied time_raw through top-level and _init or the first custom-loop FLIP",
     "HOST_REQUEST payload and response are copied byte strings",

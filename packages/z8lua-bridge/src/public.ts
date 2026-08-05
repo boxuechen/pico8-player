@@ -6,11 +6,15 @@ import type {
   FrameVmMode,
   FrameVmPort,
   FrameVmState,
+  PicoLogicalMemoryPort,
   PicoApiHost,
   VmFaultRecord,
   VmOperationOutcome,
 } from "@pico8-web/runtime-core";
-import { dispatchPicoHostCall } from "./generated/pico-host-bindings.js";
+import {
+  dispatchPicoHostCall,
+  PICO_HOST_CALL_FRAME,
+} from "./generated/pico-host-bindings.js";
 
 const INVALID_MAPPED_ADDRESS = 0xffff_ffff;
 const moduleIds = new WeakMap<object, number>();
@@ -30,19 +34,13 @@ interface HostBindingSlot {
 interface HostDispatcherState {
   nextBindingId: number;
   readonly slots: Map<number, HostBindingSlot>;
+  readonly memoryView: DataView;
+  readonly scalarArguments: Int32Array;
 }
 
 type HostDispatchCallback = (
   bindingId: number,
-  operationId: number,
-  argumentMask: number,
-  argument0: number,
-  argument1: number,
-  argument2: number,
-  argument3: number,
-  argument4: number,
-  argument5: number,
-  resultPointer: number,
+  callFramePointer: number,
 ) => number;
 
 /** Minimal Emscripten surface consumed by the Phase 0B memory adapter. */
@@ -234,7 +232,7 @@ export interface Z8LuaFrameVmOptions {
   readonly luaHeapLimit?: number;
 }
 
-const FRAME_ABI_VERSION = 0x0001_0001;
+const FRAME_ABI_VERSION = 0x0001_0002;
 const STATUS_OK = 0;
 const STATUS_YIELDED = 1;
 const STATUS_INVALID_HANDLE = 2;
@@ -275,18 +273,15 @@ function dispatcherState(module: FrameRuntimeModule): HostDispatcherState {
   if (module.p8wHostCall !== undefined) {
     throw new Error("frame runtime module already owns a foreign host dispatcher");
   }
-  const state: HostDispatcherState = { nextBindingId: 1, slots: new Map() };
+  const state: HostDispatcherState = {
+    nextBindingId: 1,
+    slots: new Map(),
+    memoryView: new DataView(module.HEAPU8.buffer),
+    scalarArguments: new Int32Array(PICO_HOST_CALL_FRAME.SCALAR_CAPACITY),
+  };
   const callback: HostDispatchCallback = (
     bindingId,
-    operationId,
-    argumentMask,
-    argument0,
-    argument1,
-    argument2,
-    argument3,
-    argument4,
-    argument5,
-    resultPointer,
+    callFramePointer,
   ) => {
     const slot = state.slots.get(bindingId >>> 0);
     if (slot === undefined || slot.state !== "bound" || slot.host === undefined) {
@@ -294,17 +289,52 @@ function dispatcherState(module: FrameRuntimeModule): HostDispatcherState {
       return HOST_DISPATCH_FAILED;
     }
     try {
-      const pointer = resultPointer >>> 0;
-      if (pointer === 0 || pointer + 4 > module.HEAPU8.byteLength) {
-        throw new RangeError("host dispatch returned an invalid result pointer");
+      const pointer = callFramePointer >>> 0;
+      if (
+        pointer === 0 ||
+        pointer + PICO_HOST_CALL_FRAME.BYTE_SIZE > module.HEAPU8.byteLength ||
+        state.memoryView.getUint32(pointer, true) !== PICO_HOST_CALL_FRAME.BYTE_SIZE
+      ) {
+        throw new RangeError("host dispatch received an invalid call frame");
       }
+      const scalarCount = state.memoryView.getUint32(
+        pointer + PICO_HOST_CALL_FRAME.SCALAR_COUNT,
+        true,
+      );
+      if (scalarCount > PICO_HOST_CALL_FRAME.SCALAR_CAPACITY) {
+        throw new RangeError("host dispatch scalar count exceeds call-frame capacity");
+      }
+      for (let index = 0; index < PICO_HOST_CALL_FRAME.SCALAR_CAPACITY; index += 1) {
+        state.scalarArguments[index] = state.memoryView.getInt32(
+          pointer + PICO_HOST_CALL_FRAME.SCALAR_SLOTS + index * 4,
+          true,
+        );
+      }
+      const bytePointer = state.memoryView.getUint32(
+        pointer + PICO_HOST_CALL_FRAME.BYTE_BUFFER_POINTER,
+        true,
+      );
+      const byteLength = state.memoryView.getUint32(
+        pointer + PICO_HOST_CALL_FRAME.BYTE_BUFFER_LENGTH,
+        true,
+      );
+      if (
+        (bytePointer === 0 && byteLength !== 0) ||
+        bytePointer + byteLength > module.HEAPU8.byteLength
+      ) {
+        throw new RangeError("host dispatch received an invalid byte-string view");
+      }
+      const byteString = bytePointer === 0
+        ? undefined
+        : module.HEAPU8.subarray(bytePointer, bytePointer + byteLength);
       const result = dispatchPicoHostCall(
         slot.host,
-        operationId,
-        argumentMask,
-        [argument0 | 0, argument1 | 0, argument2 | 0, argument3 | 0, argument4 | 0, argument5 | 0],
+        state.memoryView.getUint32(pointer + PICO_HOST_CALL_FRAME.OPERATION_ID, true),
+        state.memoryView.getUint32(pointer + PICO_HOST_CALL_FRAME.PRESENCE_BITS, true),
+        state.scalarArguments,
+        byteString,
       );
-      new DataView(module.HEAPU8.buffer).setInt32(pointer, result | 0, true);
+      state.memoryView.setInt32(pointer + PICO_HOST_CALL_FRAME.RESULT, result | 0, true);
       slot.error = undefined;
       return HOST_DISPATCH_OK;
     } catch (error) {
@@ -459,7 +489,7 @@ function checkedButtons(value: number): number {
 }
 
 /** Adapter-owned stable view over the production frame runtime's Base RAM. */
-class FrameRuntimeMemoryBinding {
+class FrameRuntimeMemoryBinding implements PicoLogicalMemoryPort {
   readonly bytes: Uint8Array;
   readonly lease: PicoMemoryLease;
   readonly #module: FrameRuntimeModule;
@@ -495,12 +525,32 @@ class FrameRuntimeMemoryBinding {
       throw new Error("stale or detached frame runtime Pico RAM lease");
     }
   }
+
+  get memoryLeaseId(): string {
+    return this.lease.leaseId;
+  }
+
+  mapAddress(logicalAddress: number): number {
+    this.assertBound();
+    if (!Number.isInteger(logicalAddress) || !Number.isSafeInteger(logicalAddress)) {
+      throw new RangeError("logical Pico RAM address must be a safe integer");
+    }
+    const mapped = this.#module._p8w_map_address(
+      this.#handle,
+      logicalAddress >>> 0,
+    ) >>> 0;
+    if (mapped === INVALID_MAPPED_ADDRESS || mapped >= PICO_RAM_SIZE) {
+      throw new RangeError("unable to map frame runtime Pico RAM address");
+    }
+    return mapped;
+  }
 }
 
 type FrameOperation = "compile" | "boot" | "step" | "complete-host";
 
 export class Z8LuaFrameVm implements FrameVmPort {
   readonly memory: PicoMemoryLease;
+  readonly logicalMemory: PicoLogicalMemoryPort;
   readonly #module: FrameRuntimeModule;
   readonly #binding: FrameRuntimeMemoryBinding;
   readonly #hostRouter: PicoApiHostRouter;
@@ -532,6 +582,7 @@ export class Z8LuaFrameVm implements FrameVmPort {
       this.#hostRouter = hostRouter;
       this.#binding = new FrameRuntimeMemoryBinding(module, handle);
       this.memory = this.#binding.lease;
+      this.logicalMemory = this.#binding;
     } catch (error) {
       module._p8w_destroy(handle);
       hostRouter.release();

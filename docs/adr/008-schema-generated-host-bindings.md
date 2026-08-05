@@ -35,12 +35,17 @@ spec/abi/pico-host-api-v1.json
 presence、integer/boolean return、host failure、20,002 次 stack-balance/hot-path 调用、
 exactly-once binding 和 stale isolation。既有 Phase 0C benchmark 继续作为 boundary baseline。
 
+Phase 2A 在相同生成方向上把 ABI minor 升至 `0x00010002`：schema v2 同时生成 80-byte
+call-frame layout、12-slot descriptor 与 TS decoder，capability prototype 覆盖 12 scalar 和一个
+byte-string 参数；production Base RAM API 继续使用 dedicated C wrapper，不伪装成 host binding。
+
 ## Consequences
 
 - 新增 binding 必须先更新 production schema、重新生成、实现 typed host 语义并补测试。
 - generator 能力不足时先扩 prototype；禁止直接手改 generated wrapper 绕过。
-- strings、multi-return、table lowering 尚未被本 ADR 证明；首次需要时必须扩 schema、
-  prototype 和 stack/lifetime tests。
+- byte-string argument 的 pointer/length lowering 已由 Phase 2A schema/prototype 与 bounded-view
+  tests 覆盖；首次 production consumer 仍须补 guest lifetime/embedded-NUL behavior。byte-string
+  result、multi-return 与 table lowering 尚未证明，首次需要时必须扩 schema、prototype 和测试。
 - `flip()` 等控制流 API 与 direct-memory primitive 不因采用生成器而强制迁移。
 
 ## Rejected alternatives

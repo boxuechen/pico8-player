@@ -2,18 +2,18 @@
   "schemaVersion": 1,
   "generator": "tools/wasm/generate-host-bindings.mjs",
   "source": "spec/abi/pico-host-api-v1.json",
-  "sourceHash": "d85bc34d581582eeab8f7bbf9e34ee0c466b0396ed0e6428d919308f508d3cc5",
+  "sourceHash": "30e3c866ea02a8a39eedbc90e0c9024276bea7fb85ea6d933a04178ce10bc032",
   "prototype": "spec/abi/pico-host-binding-prototype.json",
-  "prototypeHash": "aaad48efad227e6c1f5e8224ac95bacc15f5d0e1154945aa72b9bcf7b300d7d7",
-  "prototypeSignatureCount": 8,
+  "prototypeHash": "14c97727b6c4031a7b818c01cf36e836f7dae52c05bbd7712ca9e476b0d7002b",
+  "prototypeSignatureCount": 10,
   "files": [
     {
       "path": "packages/z8lua-bridge/src/generated/pico-host-bindings.ts",
-      "sha256": "ddb2d8690f057b5c2bd05ccf614bb8b04f9bf8ed9bee09875453406fad1b1123"
+      "sha256": "96314a83503b91c57ab572c48ffd542a664975a1790bfa61e12e45e0eb6eeace"
     },
     {
       "path": "wasm/bridge/generated/p8w_host_bindings.generated.h",
-      "sha256": "87a735144660d2eec7d6a072e048d4c9911153ad3cfab3eefb1f10593c0b572a"
+      "sha256": "977cc774d27c2e85d2005d070ebb1870f12cc63b8e161385e471e209bc8668ff"
     }
   ]
 }

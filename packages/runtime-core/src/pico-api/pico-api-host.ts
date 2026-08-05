@@ -5,6 +5,8 @@ import {
 } from "@pico8-web/contracts";
 import { L1Graphics } from "../graphics/l1-graphics.js";
 import { L1Input } from "../input/l1-input.js";
+import type { PicoLogicalMemoryPort } from "../frame-runtime.js";
+import { PicoRam } from "../memory/pico-ram.js";
 
 /**
  * Browser-neutral synchronous PICO API surface called from z8lua imports.
@@ -38,7 +40,7 @@ class RuntimePicoApiHost implements PicoApiHost {
   readonly #graphics: L1Graphics;
   readonly #input: L1Input;
 
-  constructor(memory: PicoMemoryLease) {
+  constructor(memory: PicoMemoryLease, logicalMemory: PicoLogicalMemoryPort) {
     if (
       !(memory.buffer instanceof ArrayBuffer) ||
       memory.byteLength !== PICO_RAM_SIZE ||
@@ -48,8 +50,9 @@ class RuntimePicoApiHost implements PicoApiHost {
       throw new RangeError("PicoApiHost requires a valid 64 KiB memory lease");
     }
     this.memoryLeaseId = memory.leaseId;
-    const ram = new Uint8Array(memory.buffer, memory.byteOffset, memory.byteLength);
-    this.#graphics = new L1Graphics(ram);
+    const picoRam = new PicoRam(memory, logicalMemory);
+    const ram = picoRam.physicalBytes;
+    this.#graphics = new L1Graphics(picoRam);
     this.#input = new L1Input(ram);
   }
 
@@ -112,6 +115,9 @@ class RuntimePicoApiHost implements PicoApiHost {
 }
 
 /** Create the browser-neutral host over the VM's stable memory lease. */
-export function createPicoApiHost(memory: PicoMemoryLease): PicoApiHost {
-  return new RuntimePicoApiHost(memory);
+export function createPicoApiHost(
+  memory: PicoMemoryLease,
+  logicalMemory: PicoLogicalMemoryPort,
+): PicoApiHost {
+  return new RuntimePicoApiHost(memory, logicalMemory);
 }

@@ -1,6 +1,6 @@
 # Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit：2A
+> 状态：Active；当前 work unit：2B
 > 机器合同：[`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
 > 前置证据：[`Phase 1 L1 exit`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -29,77 +29,89 @@ Non-goals：
 
 | Unit | 名称 | 状态 | 主要可观察结果 |
 | --- | --- | --- | --- |
-| 2A | Canonical Memory 与 Host ABI | **Active** | Base RAM API 与所有 runtime access 共用唯一 mapper；ABI 可承载 Phase 2 参数和 byte strings |
-| 2B | Draw State 与基础图元 | Planned | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
+| 2A | Canonical Memory 与 Host ABI | Complete | Base RAM API 与所有 runtime access 共用唯一 mapper；ABI 可承载 Phase 2 参数和 byte strings |
+| 2B | Draw State 与基础图元 | **Active** | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
 | 2C | Sprite Sheet 与 Blitter | Planned | `sget/sset/spr/sspr` 产生确定 framebuffer |
 | 2D | Map、Flags 与 `tline` | Planned | map remap、layer flags 和 fixed-point texture sampling 可复现 |
 | 2E | P8SCII 与 Custom Font | Planned | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
 | 2F | Conformance 与 Phase Exit | Planned | Node real-WASM 和 Chrome production 路径通过 golden、性能与恢复门禁 |
 
-## Active work unit：2A
+## Completed work unit：2A
+
+结果由 [`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
+的 2A record、`tests/runtime/phase-2a-memory-abi.test.mjs`、generated binding manifest 和
+`wasm/runtime-v1.manifest.lock.json` 锁定。`pnpm run test:phase-2a` 与 aggregate verify 通过；
+后续阶段不得重新引入 TypeScript video-base switch 或固定六参数 import。
+
+## Active work unit：2B
 
 ### Observable behavior
 
-1. Production VM 注册 `peek/peek2/peek4`、`poke/poke2/poke4`、`memcpy/memset`；
-   `peek/poke` 的 bounded variadic 形式不静默截断，`memcpy` 支持重叠区域。
-2. direct `@/%/$`、Lua memory API 和 RuntimeCore logical access 对同一地址得到相同结果；
-   GFX/SCREEN remap、16-bit wrap 与 multi-byte 逐 byte mapping 只由
-   `wasm/bridge/p8w_pico_memory.*` 定义。
-3. `FrameVmPort` 只暴露 runtime-neutral logical-memory capability，不暴露 Emscripten module、
-   `WebAssembly.Memory` 或 raw handle；stale lease/已销毁 session 访问被拒绝。
-4. Host binding schema/generator/import 使用固定 layout call frame，至少支持 12 个 scalar slots
-   和 byte-string pointer/length；已有 binding 的 Q16.16、presence、result、host-failure 和
-   exactly-once lifecycle 保持不变。
-5. steady-state scalar host call 不创建逐调用对象，不从 import 重入 export，也不调用 malloc。
+1. 注册并实现 `color/camera/clip/pal/palt/fillp/pget/oval/ovalfill`；production schema 只在
+   typed host method 与 conformance test 同时存在时加入对应 binding。
+2. `cls/pset/line/rect/rectfill/circ/circfill/oval/ovalfill` 统一应用 RAM-backed camera、clip、
+   draw palette 和 fill pattern；explicit/default color 继续正确更新 pen state。
+3. draw/display palette、transparency、clip、camera、fill pattern 与 secondary-palette state
+   可以由 API 和 direct RAM writes 双向观察；cold reset 恢复官方标准模式默认值。
+4. `pget` 返回 logical screen pixel index，不应用 draw/display palette；out-of-bounds 行为由
+   project conformance vector 锁定。
+5. `RuntimeFrame` 与 production Player frame DTO 携带 16-entry display-palette snapshot；main
+   Canvas presenter 只执行 index→RGBA 映射，不读取 RAM、camera、clip 或其他 draw state。
+6. standard 128×128 packed 4bpp mode 是本 unit 的兼容声明；advanced bitplane/screen modes
+   未经独立激活不得以不完整实现混入。
 
 ### 允许修改的范围
 
 - `spec/phase-2-graphics-memory-text-contract.json`
-- `spec/pico-api-inventory.yaml`、`spec/abi/**`
+- `spec/pico-api-inventory.yaml`、production host binding schema/generated files
 - `tools/wasm/generate-host-bindings.mjs`
-- `wasm/bridge/p8w_frame_runtime.*`、`wasm/bridge/p8w_pico_memory.*` 与生成 header
-- `packages/runtime-core/src/{memory,frame-runtime.ts,pico-api,public.ts}`
+- `wasm/bridge/p8w_frame_runtime.*` 与 generated header
+- `packages/runtime-core/src/{graphics,memory,frame-runtime.ts,pico-api,public.ts}`
 - `packages/z8lua-bridge/src/**`
-- `tests/{wasm,runtime,architecture}/**`、`package.json`
+- `apps/web-player/src/{transport,worker,main/render}/**`
+- `tests/{runtime,phase-0f,browser,architecture}/**`、`tools/browser/**`、`package.json`
 - 本 work unit 直接拥有的文档状态和 compatibility matrix
 
-不得修改 `docs/evidence/**`；不得添加未来 Phase 2 API stub 到 production schema。
+不得修改 `docs/evidence/**`；不得实现 sprite/map/text；不得让 Canvas 成为 draw-state owner。
 
 ### Routed contracts
 
-- [Shared Pico RAM、host-call frame 与值编码](../03-z8lua-wasm-bridge.md#5-shared-pico-ram)
-- [PicoRam layout、生命周期与地址语义](../04-typescript-runtime.md#6-picoram64kib-共享地址空间)
+- [Shared Pico RAM 与 raw fixed encoding](../03-z8lua-wasm-bridge.md#5-shared-pico-ram)
+- [Graphics layering 与必须保持的行为](../04-typescript-runtime.md#7-graphics)
+- [所有权与 frame transaction](../02-system-architecture.md#2-所有权与共享内存)
+- [Composition roots 与 render ownership](../08-source-layout-and-boundaries.md#4-composition-roots-与实例生命周期)
 - [确定性模型](../04-typescript-runtime.md#14-确定性契约)
-- [WASM/spec/generated ownership](../08-source-layout-and-boundaries.md#7-wasmspec-与生成物)
-- [测试执行模型、WASM 专项与 golden](../06-testing-compatibility.md#4-确定性执行模型)
+- [Framebuffer/RAM golden](../06-testing-compatibility.md#7-goldenframebufferram-与-audio)
+- [Chrome/Chromium gate](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
 - [interop 性能门禁](../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
-- [ADR-006](../adr/006-interop-hot-path-boundary.md)、[ADR-008](../adr/008-schema-generated-host-bindings.md)、[ADR-013](../adr/013-shared-pico-ram-boundary.md)
+- [ADR-006](../adr/006-interop-hot-path-boundary.md)、[ADR-008](../adr/008-schema-generated-host-bindings.md)、[ADR-009](../adr/009-canvas2d-frame-presenter.md)、[ADR-013](../adr/013-shared-pico-ram-boundary.md)
 
 ### Verification
 
-2A 必须新增 `pnpm run test:phase-2a`，覆盖：
+2B 必须新增 `pnpm run test:phase-2b`，覆盖：
 
-- negative/fractional/16-bit wrap、unaligned width、remap crossing 和 upper RAM。
-- direct/API/RuntimeCore logical-memory path equality。
-- variadic 上限、Lua stack capacity、重叠 `memcpy` 与 bounded `memset`。
-- 12 scalar slots、embedded NUL byte string、pointer lifetime、host throw 与 stack balance。
-- fixed-memory buffer identity、cold reset、destroy/stale capability 与 64 KiB RAM hash。
-- Phase 1 host bindings、frame runtime、architecture 和 interop benchmark regression。
+- API/default/direct-poke 的 draw-state RAM readback 与 cold reset。
+- camera→clip→palette/fillp ordering、fractional/reversed/off-screen shape vectors。
+- `pal/palt` reset、draw/display palette distinction、secondary palette 与 pattern inversion。
+- existing primitives 与 `oval/ovalfill` framebuffer/RAM golden；`pget` boundaries。
+- Worker frame DTO palette snapshot、validator/transfer ownership 和 Canvas pixel result。
+- real Chrome production Worker/Canvas smoke、ordinary tick/present performance 与 Phase 1 regressions。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-2a
+pnpm run test:phase-2b
+pnpm run test:browser:chromium
 pnpm run verify
 git status --short
 ```
 
-### 2A exit gate
+### 2B exit gate
 
-- 上述 observable behavior 全部有 production source 和 real-WASM 测试证据。
-- `pico-api-inventory.yaml` 不再把单参数 memory wrapper 误报为完整实现。
-- generator manifest、WASM runtime manifest 和 reproducibility gate 已更新并通过。
-- 2A 独立提交后 worktree 干净；随后才折叠本节并激活 2B。
+- standard 4bpp 下的 draw state、基础图元和 display palette 全链路有 deterministic evidence。
+- presenter 仍无 RuntimeCore/WASM/RAM dependency，transport validator 拒绝 malformed palette。
+- API inventory/compatibility matrix 不把未覆盖 advanced modes 标为 compatible。
+- 2B 独立提交后 worktree 干净；随后才折叠本节并激活 2C。
 
 ## Phase exit gate
 

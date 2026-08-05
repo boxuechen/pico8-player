@@ -1,7 +1,9 @@
+import type { PicoRam } from "../memory/pico-ram.js";
+
 const SCREEN_WIDTH = 128;
 const SCREEN_HEIGHT = 128;
 const SCREEN_BYTES = 0x2000;
-const SCREEN_MAP_REGISTER = 0x5f55;
+const SCREEN_ADDRESS = 0x6000;
 const CLIP_LEFT = 0x5f20;
 const CLIP_TOP = 0x5f21;
 const CLIP_RIGHT = 0x5f22;
@@ -15,12 +17,18 @@ const POLYLINE_Y = 0x5f3e;
 
 /** RAM-backed L1 rasterizer. Presentation remains outside RuntimeCore. */
 export class L1Graphics {
+  readonly #memory: PicoRam;
   readonly #ram: Uint8Array;
   readonly #view: DataView;
 
-  constructor(ram: Uint8Array) {
-    this.#ram = ram;
-    this.#view = new DataView(ram.buffer, ram.byteOffset, ram.byteLength);
+  constructor(memory: PicoRam) {
+    this.#memory = memory;
+    this.#ram = memory.physicalBytes;
+    this.#view = new DataView(
+      this.#ram.buffer,
+      this.#ram.byteOffset,
+      this.#ram.byteLength,
+    );
   }
 
   reset(): void {
@@ -32,8 +40,7 @@ export class L1Graphics {
   cls(colorRaw?: number): void {
     const color = colorRaw === undefined ? 0 : q16Integer(colorRaw) & 0x0f;
     const packed = color | (color << 4);
-    const base = this.#screenBase();
-    this.#ram.fill(packed, base, base + SCREEN_BYTES);
+    this.#memory.fill(SCREEN_ADDRESS, SCREEN_BYTES, packed);
     this.#resetClipAndCursor();
   }
 
@@ -221,15 +228,11 @@ export class L1Graphics {
 
   #plot(x: number, y: number, color: number): void {
     if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return;
-    const address = this.#screenBase() + y * 64 + (x >> 1);
+    const address = SCREEN_ADDRESS + y * 64 + (x >> 1);
     const shift = (x & 1) << 2;
     const mask = 0x0f << shift;
-    this.#ram[address] = (this.#ram[address]! & ~mask) | (color << shift);
-  }
-
-  #screenBase(): number {
-    const configured = this.#ram[SCREEN_MAP_REGISTER]!;
-    return (validVideoBase(configured) ? configured : 0x60) << 8;
+    const packed = this.#memory.readU8(address);
+    this.#memory.writeU8(address, (packed & ~mask) | (color << shift));
   }
 
   #resetClipAndCursor(): void {
@@ -279,11 +282,6 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function roundAwayFromZero(value: number): number {
   return value < 0 ? -Math.round(-value) : Math.round(value);
-}
-
-function validVideoBase(value: number): boolean {
-  return value === 0x00 || value === 0x60 || value === 0x80 ||
-    value === 0xa0 || value === 0xc0 || value === 0xe0;
 }
 
 function circleBoundsTouchScreen(centerX: number, centerY: number, radius: number): boolean {

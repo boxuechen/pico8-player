@@ -15,7 +15,7 @@
 
 namespace {
 
-constexpr uint32_t kAbiVersion = 0x00010001u;
+constexpr uint32_t kAbiVersion = 0x00010002u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
@@ -24,22 +24,19 @@ constexpr uint32_t kMinimumLuaHeapLimit = 32u * 1024u;
 constexpr uint32_t kMaxMessageLength = 1023;
 constexpr uint32_t kMaxTraceLength = 2047;
 constexpr uint32_t kMaxHostBytes = 4096;
+constexpr int32_t kMaxMemoryVector = 8192;
+constexpr int32_t kMaxMemoryBlock = static_cast<int32_t>(p8w::kPicoRamSize);
 constexpr char kContextRegistryKey[] = "__p8w_runtime_context";
 constexpr char kBudgetSentinel[] = "__p8w_instruction_budget_exceeded__";
 constexpr char kNestedSentinel[] = "__p8w_nested_host_suspend__";
 constexpr char kChunkName[] = "@cart.p8";
 
 EM_JS(uint32_t, dispatch_host_call,
-      (uint32_t binding_id, uint32_t operation_id, uint32_t argument_mask,
-       int32_t argument0, int32_t argument1, int32_t argument2,
-       int32_t argument3, int32_t argument4, int32_t argument5,
-       int32_t *result), {
+      (uint32_t binding_id, P8wHostCallFrame *frame), {
         const dispatch = Module['p8wHostCall'];
         if (typeof dispatch !== 'function') return 1;
         try {
-          return dispatch(binding_id, operation_id, argument_mask, argument0,
-                          argument1, argument2, argument3, argument4,
-                          argument5, result) >>> 0;
+          return dispatch(binding_id, frame) >>> 0;
         } catch (error) {
           return 1;
         }
@@ -249,17 +246,62 @@ uint32_t logical_address(lua_State *state, int index) {
       static_cast<int32_t>(luaL_checknumber(state, index)));
 }
 
+uint32_t integer_value(lua_State *state, int index) {
+  return static_cast<uint32_t>(
+      static_cast<int32_t>(luaL_checknumber(state, index)));
+}
+
 int p8_peek(lua_State *state) {
   Context *context = context_from_lua(state);
-  lua_pushinteger(state, p8w::read8(context->ram, logical_address(state, 1)));
+  const uint32_t address = logical_address(state, 1);
+  const int32_t count = lua_isnoneornil(state, 2)
+                            ? 1
+                            : static_cast<int32_t>(luaL_checknumber(state, 2));
+  if (count <= 0) return 0;
+  if (count > kMaxMemoryVector) {
+    return luaL_error(state, "peek result count exceeds 8192");
+  }
+  if (!lua_checkstack(state, count)) {
+    context->host_oom = true;
+    return luaL_error(state, "peek result stack capacity exceeded");
+  }
+  for (int32_t index = 0; index < count; ++index) {
+    lua_pushinteger(state, p8w::read8(context->ram, address + index));
+  }
+  return count;
+}
+
+int p8_peek2(lua_State *state) {
+  Context *context = context_from_lua(state);
+  const uint32_t raw =
+      static_cast<uint32_t>(p8w::read16(context->ram, logical_address(state, 1)))
+      << 16u;
+  lua_pushnumber(state, lua_Number::frombits(static_cast<int32_t>(raw)));
   return 1;
 }
 
 int p8_poke(lua_State *state) {
   Context *context = context_from_lua(state);
-  p8w::write8(context->ram, logical_address(state, 1),
-              static_cast<uint8_t>(
-                  static_cast<int32_t>(luaL_checknumber(state, 2))));
+  const uint32_t address = logical_address(state, 1);
+  const int value_count = lua_gettop(state) - 1;
+  if (value_count <= 0) {
+    luaL_checknumber(state, 2);
+    return 0;
+  }
+  if (value_count > kMaxMemoryVector) {
+    return luaL_error(state, "poke value count exceeds 8192");
+  }
+  for (int index = 0; index < value_count; ++index) {
+    p8w::write8(context->ram, address + static_cast<uint32_t>(index),
+                static_cast<uint8_t>(integer_value(state, index + 2)));
+  }
+  return 0;
+}
+
+int p8_poke2(lua_State *state) {
+  Context *context = context_from_lua(state);
+  p8w::write16(context->ram, logical_address(state, 1),
+               static_cast<uint16_t>(integer_value(state, 2)));
   return 0;
 }
 
@@ -278,22 +320,82 @@ int p8_poke4(lua_State *state) {
   return 0;
 }
 
+int p8_memcpy(lua_State *state) {
+  Context *context = context_from_lua(state);
+  const uint32_t destination = logical_address(state, 1);
+  const uint32_t source = logical_address(state, 2);
+  const int32_t signed_length =
+      static_cast<int32_t>(luaL_checknumber(state, 3));
+  if (signed_length <= 0) return 0;
+  if (signed_length > kMaxMemoryBlock) {
+    return luaL_error(state, "memcpy length exceeds 65536");
+  }
+  if (destination == source) return 0;
+  const uint32_t length = static_cast<uint32_t>(signed_length);
+  auto *snapshot = static_cast<uint8_t *>(std::malloc(length));
+  if (snapshot == nullptr) {
+    context->host_oom = true;
+    return luaL_error(state, "memcpy snapshot allocation failed");
+  }
+  for (uint32_t index = 0; index < length; ++index) {
+    snapshot[index] = p8w::read8(context->ram, source + index);
+  }
+  for (uint32_t index = 0; index < length; ++index) {
+    p8w::write8(context->ram, destination + index, snapshot[index]);
+  }
+  std::free(snapshot);
+  return 0;
+}
+
+int p8_memset(lua_State *state) {
+  Context *context = context_from_lua(state);
+  const uint32_t destination = logical_address(state, 1);
+  const uint8_t value = static_cast<uint8_t>(integer_value(state, 2));
+  const int32_t signed_length =
+      static_cast<int32_t>(luaL_checknumber(state, 3));
+  if (signed_length <= 0) return 0;
+  if (signed_length > kMaxMemoryBlock) {
+    return luaL_error(state, "memset length exceeds 65536");
+  }
+  for (int32_t index = 0; index < signed_length; ++index) {
+    p8w::write8(context->ram, destination + static_cast<uint32_t>(index), value);
+  }
+  return 0;
+}
+
 int p8_host_call(lua_State *state) {
   auto *descriptor = static_cast<const P8wHostBindingDescriptor *>(
       lua_touserdata(state, lua_upvalueindex(1)));
   if (descriptor == nullptr) return luaL_error(state, "host binding invariant failed");
-  int32_t arguments[6] = {};
-  uint32_t argument_mask = 0;
+  P8wHostCallFrame frame = {};
+  frame.byte_size = sizeof(frame);
+  frame.operation_id = descriptor->operation_id;
   for (uint8_t index = 0; index < descriptor->maximum_arguments; ++index) {
     const int stack_index = static_cast<int>(index) + 1;
     if (lua_isnoneornil(state, stack_index)) {
       if (index < descriptor->minimum_arguments) {
-        luaL_checknumber(state, stack_index);
+        if ((descriptor->byte_string_mask & (1u << index)) != 0) {
+          luaL_checklstring(state, stack_index, nullptr);
+        } else {
+          luaL_checknumber(state, stack_index);
+        }
       }
       continue;
     }
-    arguments[index] = luaL_checknumber(state, stack_index).bits();
-    argument_mask |= 1u << index;
+    frame.presence_bits |= 1u << index;
+    if ((descriptor->byte_string_mask & (1u << index)) != 0) {
+      size_t length = 0;
+      const char *bytes = luaL_checklstring(state, stack_index, &length);
+      if (frame.byte_buffer_ptr != 0 || length > UINT32_MAX) {
+        return luaL_error(state, "host byte-string frame invariant failed");
+      }
+      frame.byte_buffer_ptr =
+          static_cast<uint32_t>(reinterpret_cast<uintptr_t>(bytes));
+      frame.byte_buffer_len = static_cast<uint32_t>(length);
+    } else {
+      frame.scalar_slots[index] = luaL_checknumber(state, stack_index).bits();
+      frame.scalar_count += 1u;
+    }
   }
   Context *context = context_from_lua(state);
   if (context == nullptr || !context->host_bound) {
@@ -301,11 +403,7 @@ int p8_host_call(lua_State *state) {
   }
   const P8wPhase previous_phase = context->phase;
   context->phase = P8W_PHASE_HOST_CALL;
-  int32_t result = 0;
-  const uint32_t status = dispatch_host_call(
-      context->host_binding_id, descriptor->operation_id, argument_mask,
-      arguments[0], arguments[1], arguments[2], arguments[3], arguments[4],
-      arguments[5], &result);
+  const uint32_t status = dispatch_host_call(context->host_binding_id, &frame);
   if (status != 0) {
     context->host_api_failed = true;
     return luaL_error(state, "synchronous PicoApiHost call failed");
@@ -314,11 +412,11 @@ int p8_host_call(lua_State *state) {
   if (descriptor->result_kind == P8W_HOST_RESULT_VOID) return 0;
   if (descriptor->result_kind == P8W_HOST_RESULT_BOOLEAN ||
       (descriptor->result_kind == P8W_HOST_RESULT_INTEGER_OR_BOOLEAN &&
-       (argument_mask & 1u) != 0)) {
-    lua_pushboolean(state, result != 0);
+       (frame.presence_bits & 1u) != 0)) {
+    lua_pushboolean(state, frame.result != 0);
     return 1;
   }
-  lua_pushinteger(state, static_cast<int16_t>(result));
+  lua_pushinteger(state, static_cast<int16_t>(frame.result));
   return 1;
 }
 
@@ -423,9 +521,13 @@ void open_guest_environment(lua_State *state) {
   }
   register_function(state, "print", quiet_print);
   register_function(state, "peek", p8_peek);
+  register_function(state, "peek2", p8_peek2);
   register_function(state, "peek4", p8_peek4);
   register_function(state, "poke", p8_poke);
+  register_function(state, "poke2", p8_poke2);
   register_function(state, "poke4", p8_poke4);
+  register_function(state, "memcpy", p8_memcpy);
+  register_function(state, "memset", p8_memset);
   register_host_functions(state);
   register_function(state, "time", p8_time);
   register_function(state, "t", p8_time);

@@ -1,5 +1,8 @@
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { dispatchPicoHostCall } from "../../packages/z8lua-bridge/dist/generated/pico-host-bindings.js";
+import {
+  dispatchPicoHostCall,
+  PICO_HOST_CALL_FRAME,
+} from "../../packages/z8lua-bridge/dist/generated/pico-host-bindings.js";
 
 const modulePromise = createZ8LuaModule();
 let module;
@@ -12,6 +15,7 @@ let nextBindingId = 0;
 let bindingId = 0;
 let picoApiHost;
 let hostButtons = 0;
+const scalarArguments = new Int32Array(PICO_HOST_CALL_FRAME.SCALAR_CAPACITY);
 
 function q16Integer(raw) {
   return raw >> 16;
@@ -108,22 +112,42 @@ function destroy() {
 
 self.addEventListener("message", async ({ data: command }) => {
   module ??= await modulePromise;
-  module.p8wHostCall ??= (
-    requestedBindingId,
-    operationId,
-    argumentMask,
-    ...values
-  ) => {
-    const resultPointer = values.pop();
+  module.p8wHostCall ??= (requestedBindingId, callFramePointer) => {
     if (requestedBindingId !== bindingId || picoApiHost === undefined) return 1;
     try {
+      const pointer = callFramePointer >>> 0;
+      const view = new DataView(module.HEAPU8.buffer);
+      if (
+        pointer === 0 ||
+        pointer + PICO_HOST_CALL_FRAME.BYTE_SIZE > module.HEAPU8.byteLength ||
+        view.getUint32(pointer, true) !== PICO_HOST_CALL_FRAME.BYTE_SIZE
+      ) return 1;
+      for (let index = 0; index < PICO_HOST_CALL_FRAME.SCALAR_CAPACITY; index += 1) {
+        scalarArguments[index] = view.getInt32(
+          pointer + PICO_HOST_CALL_FRAME.SCALAR_SLOTS + index * 4,
+          true,
+        );
+      }
+      const bytePointer = view.getUint32(
+        pointer + PICO_HOST_CALL_FRAME.BYTE_BUFFER_POINTER,
+        true,
+      );
+      const byteLength = view.getUint32(
+        pointer + PICO_HOST_CALL_FRAME.BYTE_BUFFER_LENGTH,
+        true,
+      );
+      if ((bytePointer === 0 && byteLength !== 0) ||
+          bytePointer + byteLength > module.HEAPU8.byteLength) return 1;
       const result = dispatchPicoHostCall(
         picoApiHost,
-        operationId,
-        argumentMask,
-        values,
+        view.getUint32(pointer + PICO_HOST_CALL_FRAME.OPERATION_ID, true),
+        view.getUint32(pointer + PICO_HOST_CALL_FRAME.PRESENCE_BITS, true),
+        scalarArguments,
+        bytePointer === 0
+          ? undefined
+          : module.HEAPU8.subarray(bytePointer, bytePointer + byteLength),
       );
-      new DataView(module.HEAPU8.buffer).setInt32(resultPointer, result, true);
+      view.setInt32(pointer + PICO_HOST_CALL_FRAME.RESULT, result, true);
       return 0;
     } catch {
       return 1;

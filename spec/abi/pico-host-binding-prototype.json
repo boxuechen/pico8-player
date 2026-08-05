@@ -1,13 +1,19 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contractName": "pico-host-binding-prototype",
   "purpose": "Generator capability fixture; none of these names are runtime-exposed.",
   "runtimeExposed": false,
   "dispatchAbi": {
     "argumentEncoding": "signed-q16.16-raw-int32",
     "presenceEncoding": "uint32-bit-mask",
-    "maximumArguments": 6,
-    "resultEncoding": "signed-int32-out-parameter",
+    "maximumArguments": 12,
+    "callFrame": {
+      "byteSize": 80,
+      "scalarSlots": 12,
+      "byteStringArguments": 1,
+      "byteStringEncoding": "wasm-pointer-plus-byte-length"
+    },
+    "resultEncoding": "signed-int32-call-frame-slot",
     "failureEncoding": "nonzero-status"
   },
   "bindings": [
@@ -18,6 +24,8 @@
     { "id": 105, "guestName": "probe_optional_tail", "hostMethod": "probeOptionalTail", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32", "optional": true }, { "name": "c", "type": "q16.16-raw-i32", "optional": true }], "result": "void" },
     { "id": 106, "guestName": "probe_integer", "hostMethod": "probeInteger", "parameters": [], "result": "integer" },
     { "id": 107, "guestName": "probe_boolean", "hostMethod": "probeBoolean", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }], "result": "boolean" },
-    { "id": 108, "guestName": "probe_six", "hostMethod": "probeSix", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }, { "name": "c", "type": "q16.16-raw-i32" }, { "name": "d", "type": "q16.16-raw-i32" }, { "name": "e", "type": "q16.16-raw-i32" }, { "name": "f", "type": "q16.16-raw-i32" }], "result": "integer" }
+    { "id": 108, "guestName": "probe_six", "hostMethod": "probeSix", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }, { "name": "c", "type": "q16.16-raw-i32" }, { "name": "d", "type": "q16.16-raw-i32" }, { "name": "e", "type": "q16.16-raw-i32" }, { "name": "f", "type": "q16.16-raw-i32" }], "result": "integer" },
+    { "id": 109, "guestName": "probe_twelve", "hostMethod": "probeTwelve", "parameters": [{ "name": "a", "type": "q16.16-raw-i32" }, { "name": "b", "type": "q16.16-raw-i32" }, { "name": "c", "type": "q16.16-raw-i32" }, { "name": "d", "type": "q16.16-raw-i32" }, { "name": "e", "type": "q16.16-raw-i32" }, { "name": "f", "type": "q16.16-raw-i32" }, { "name": "g", "type": "q16.16-raw-i32" }, { "name": "h", "type": "q16.16-raw-i32" }, { "name": "i", "type": "q16.16-raw-i32" }, { "name": "j", "type": "q16.16-raw-i32" }, { "name": "k", "type": "q16.16-raw-i32" }, { "name": "l", "type": "q16.16-raw-i32" }], "result": "integer" },
+    { "id": 110, "guestName": "probe_bytes", "hostMethod": "probeBytes", "parameters": [{ "name": "bytes", "type": "byte-string" }, { "name": "x", "type": "q16.16-raw-i32", "optional": true }], "result": "integer" }
   ]
 }

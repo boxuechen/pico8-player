@@ -11,7 +11,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、Phase 2A、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
@@ -729,6 +729,23 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
 以上均为已声明后续范围，不是开放 P0/P1；Phase 1 exit 时开放 P0/P1 为 `0`。
+
+### 15.11 Phase 2A Memory/Host ABI 矩阵
+
+本表覆盖 in-session Base RAM 和 Phase 2 host-call foundation，不包含 Phase 3 的
+`reload/cstore/cartdata`，也不把项目 vector 升级为官方 bit-exact。
+
+| 行为 | Phase 2A 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| `peek/poke` variadic | scalar 与 8192 result/value 通过；8193 在 side effect 前结构化失败 | `compatible`（手册边界） | 代表 cart differential 留 Phase 4 |
+| width/block memory | unaligned/cross-wrap `peek2/4`、`poke2/4`、overlap-safe `memcpy`、`memset` 通过 | `compatible`（project vectors） | 非法/溢出参数 edge 仍 `unknown` |
+| canonical remap | direct/API/RuntimeCore graphics/frame snapshot 在 GFX/SCREEN remap 下收敛 | `compatible`（documented bases） | invalid video base defensive fallback 继续 `unknown` |
+| logical-memory port | stable lease、buffer identity、destroy 后 stale rejection、无 browser/WASM concrete type leak | `compatible`（architecture contract） | map resolver 属于 2D，不混入 low-level mapper |
+| Host call frame | ABI `0x00010002`、80 bytes、12 scalar slots、presence、byte pointer/length、result/error passed | `implemented-foundation` | byte-string guest behavior由 2E `print` 完成；multi-return 仍 deferred |
+| regression/performance | reproducible artifact、Phase 0C benchmark、Phase 0E/1A/1D 与 Chrome production gates passed | gate passed | graphics stress 从 2B/2C 建立 |
+
+Known Differences：memory API 的未定义 invalid inputs 沿用 defensive/structured error，不宣称
+official exact；`reload/cstore/cartdata` 仍 unsupported/deferred。2A 没有开放 P0/P1。
 
 ## 16. Definition of Done
 

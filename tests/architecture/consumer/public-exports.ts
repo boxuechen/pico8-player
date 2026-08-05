@@ -55,7 +55,10 @@ const frameVm: FrameVmPort = new Z8LuaFrameVm(
   createPicoApiHostRouter(frameModule),
 );
 const frameRuntime = new FrameSliceRuntime(frameVm);
-const picoApiHost: PicoApiHost = createPicoApiHost(frameVm.memory);
+const picoApiHost: PicoApiHost = createPicoApiHost(
+  frameVm.memory,
+  frameVm.logicalMemory,
+);
 declare const runtimeFactory: (
   context: CartSessionRuntimeContext,
 ) => CartSessionRuntimePort;

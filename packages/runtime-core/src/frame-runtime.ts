@@ -11,6 +11,7 @@ import {
   createPicoApiHost,
   type PicoApiHost,
 } from "./pico-api/pico-api-host.js";
+import { PicoRam } from "./memory/pico-ram.js";
 
 export type FrameVmMode = "none" | "callback" | "custom";
 export type FrameVmState =
@@ -63,8 +64,14 @@ export type VmOperationOutcome =
     };
 
 /** Runtime-neutral VM port. The concrete z8lua/Emscripten adapter lives elsewhere. */
+export interface PicoLogicalMemoryPort {
+  readonly memoryLeaseId: string;
+  mapAddress(logicalAddress: number): number;
+}
+
 export interface FrameVmPort {
   readonly memory: PicoMemoryLease;
+  readonly logicalMemory: PicoLogicalMemoryPort;
   readonly hostBindingState: "unbound" | "bound" | "released";
   bindHost(host: PicoApiHost): void;
   resetRam(): void;
@@ -174,6 +181,7 @@ export function logicalTimeRaw(completedSlices: bigint, targetFps: 30 | 60): num
 export class FrameSliceRuntime {
   readonly #vm: FrameVmPort;
   readonly #picoApiHost: PicoApiHost;
+  readonly #ram: PicoRam;
   readonly #instructionBudget: number;
   #state: RuntimeSessionState = "empty";
   #mode: FrameVmMode = "none";
@@ -189,7 +197,8 @@ export class FrameSliceRuntime {
     }
     this.#vm = vm;
     this.#instructionBudget = budget;
-    const host = options.picoApiHost ?? createPicoApiHost(vm.memory);
+    this.#ram = new PicoRam(vm.memory, vm.logicalMemory);
+    const host = options.picoApiHost ?? createPicoApiHost(vm.memory, vm.logicalMemory);
     if (host.memoryLeaseId !== vm.memory.leaseId) {
       throw new Error("PicoApiHost is bound to a different memory lease");
     }
@@ -418,7 +427,7 @@ export class FrameSliceRuntime {
       completedSlices: this.#completedSlices.toString(),
       timeRawBeforeStep: timeRaw,
       targetFps: this.#targetFps as 30 | 60,
-      screen: this.#vm.copyRam(SCREEN_OFFSET, SCREEN_BYTES),
+      screen: this.#ram.copy(SCREEN_OFFSET, SCREEN_BYTES),
     };
     this.#state = "ready";
     return { ok: true, value: { kind: "frame", frame } };

@@ -9,13 +9,13 @@
     "phase1Evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
     "baselineCommit": "916de2a"
   },
-  "completedWorkUnits": [],
-  "activeWorkUnit": "2A",
-  "nextWorkUnit": "2B",
+  "completedWorkUnits": ["2A"],
+  "activeWorkUnit": "2B",
+  "nextWorkUnit": "2C",
   "workUnits": {
     "2A": {
       "name": "Canonical Memory and Host ABI",
-      "status": "active",
+      "status": "complete",
       "memoryApis": ["peek", "peek2", "peek4", "poke", "poke2", "poke4", "memcpy", "memset"],
       "canonicalMapper": "wasm/bridge/p8w_pico_memory.*",
       "runtimeCapability": "logical-memory-port-over-stable-lease",
@@ -24,7 +24,7 @@
         "argumentEncoding": "signed-q16.16-raw-int32",
         "optionalEncoding": "uint32-presence-mask",
         "byteStringEncoding": "wasm-pointer-plus-byte-length",
-        "resultEncoding": "signed-int32-out-parameter",
+        "resultEncoding": "signed-int32-call-frame-slot",
         "failureEncoding": "nonzero-status"
       },
       "exit": [
@@ -33,9 +33,59 @@
         "phase2-capable-generated-host-call-frame",
         "real-wasm-and-regression-tests-pass",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "abiVersion": 65538,
+        "hostCallFrameBytes": 80,
+        "scalarSlots": 12,
+        "memoryVectorLimit": 8192,
+        "logicalMemoryPort": "PicoLogicalMemoryPort",
+        "verification": [
+          "pnpm run test:phase-2a",
+          "pnpm run test:phase-0e",
+          "pnpm run test:phase-1a",
+          "pnpm run test:phase-1d",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "2B": {
+      "name": "Draw State and Primitive Completion",
+      "status": "active",
+      "graphicsApis": [
+        "color",
+        "camera",
+        "clip",
+        "pal",
+        "palt",
+        "fillp",
+        "pget",
+        "oval",
+        "ovalfill"
+      ],
+      "retrofittedApis": [
+        "cls",
+        "pset",
+        "line",
+        "rect",
+        "rectfill",
+        "circ",
+        "circfill"
+      ],
+      "renderBoundary": {
+        "runtimeOwns": ["packed-screen", "draw-state", "display-palette-snapshot"],
+        "mainOwns": ["index-to-rgba", "nearest-neighbor-canvas-presentation"],
+        "mainForbidden": ["pico-ram-read", "draw-state-semantics", "guest-rasterization"]
+      },
+      "compatibilityMode": "standard-128x128-packed-4bpp",
+      "exit": [
+        "ram-backed-draw-state-conformance",
+        "primitive-framebuffer-and-ram-golden",
+        "display-palette-worker-to-canvas",
+        "chrome-production-gate",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "2B": { "name": "Draw State and Primitive Completion", "status": "planned" },
     "2C": { "name": "Sprite Sheet and Blitter", "status": "planned" },
     "2D": { "name": "Map, Flags and tline", "status": "planned" },
     "2E": { "name": "P8SCII and Custom Font", "status": "planned" },

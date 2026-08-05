@@ -64,45 +64,45 @@ apis:
     phase: 0E
     note: root top-level continuation implemented; guest-nested suspension unsupported
   - name: peek
-    status: partial
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: canonical mapper and scalar read implemented; bounded variadic results activate in 2A
+    phase: 2A
+    note: canonical scalar and bounded 8192-result reads
   - name: peek2
-    status: unimplemented
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 2A
-    note: production registration and bounded variadic results required
+    note: unaligned little-endian read through the canonical per-byte mapper
   - name: peek4
-    status: partial
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: signed Q16.16 raw bits over canonical byte-wise mapper; bounded variadic results required
+    phase: 2A
+    note: signed Q16.16 raw bits over canonical byte-wise mapper
   - name: poke
-    status: partial
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: canonical scalar write implemented; bounded variadic values activate in 2A
+    phase: 2A
+    note: canonical scalar and bounded 8192-value writes with preflight arity validation
   - name: poke2
-    status: unimplemented
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 2A
-    note: production registration and bounded variadic values required
+    note: unaligned little-endian write through the canonical per-byte mapper
   - name: poke4
-    status: partial
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: raw Q16.16 bits over canonical byte-wise mapper; bounded variadic values required
+    phase: 2A
+    note: raw Q16.16 bits over canonical byte-wise mapper
   - name: memcpy
-    status: unimplemented
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 2A
-    note: canonical logical mapping and overlap-safe copy required
+    note: canonical logical mapping with overlap-safe source snapshot
   - name: memset
-    status: unimplemented
+    status: implemented
     owner: wasm/bridge/p8w_frame_runtime.cpp
     phase: 2A
-    note: canonical logical mapping and bounded length required
+    note: canonical logical mapping and bounded deterministic fill
   - name: color
     status: unimplemented
     owner: packages/runtime-core

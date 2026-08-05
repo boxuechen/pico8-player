@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "phase": "1D",
+  "phase": "2A",
   "abiContract": "spec/abi/p8w-v1.json",
   "hostApiContract": "spec/abi/pico-host-api-v1.json",
   "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
-  "abiVersion": 65537,
+  "abiVersion": 65538,
   "upstream": {
     "repository": "https://github.com/samhocevar/z8lua.git",
     "commit": "8575dfbc524003c869c0aa05e109819302c576f9",
@@ -24,6 +24,7 @@
     "minimumLuaHeapBytes": 32768,
     "picoRamBytes": 65536,
     "hostRequestBytes": 4096,
+    "memoryVectorValues": 8192,
     "errorMessageBytes": 1023,
     "errorTraceBytes": 2047
   },
@@ -33,18 +34,18 @@
     "files": [
       {
         "path": "z8lua-runtime-v1.mjs",
-        "bytes": 8075,
-        "sha256": "bc701ba4e6b647c8b75d8c25dea81de8b97ef167277decfd9c5ae9e3ce896a13"
+        "bytes": 7899,
+        "sha256": "54a5e530d5a87b4e0b01dda625d9cb6abbe20d8a57d66b0ee20fbad2cd82c10d"
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 181865,
-        "sha256": "0cc2f9e2523f85ea334392abec2a00c1ff360e4c9764a322e582031a63d660a6"
+        "bytes": 183231,
+        "sha256": "e06d016035d9c75b9feab52cbe2a4d0cf1d7d43a2f299bb37eba13adaf6670c7"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs",
     "chromium": "tests/browser/phase-0e.html",
     "fixtures": "project-owned synthetic source and p8.png only"
   }
