@@ -2,7 +2,7 @@
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
 如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1 已完成；Phase 2 已激活，
-当前 work unit 为 2D。
+当前 work unit 为 2E。
 
 ## 1. ADR registry
 
@@ -34,8 +34,8 @@
 ### Active blockers
 
 当前没有 active phase blocker。Phase 1A–1F 已通过 L1 bounded-profile exit，见
-[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。Phase 2A–2C 已完成，
-当前 2D 的授权范围与门禁由 [active phase 文档](./phases/2-graphics-memory-text.md) 定义。
+[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。Phase 2A–2D 已完成，
+当前 2E 的授权范围与门禁由 [active phase 文档](./phases/2-graphics-memory-text.md) 定义。
 
 ### Deferred open questions
 

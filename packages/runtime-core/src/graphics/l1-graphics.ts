@@ -1,4 +1,5 @@
 import type { PicoRam } from "../memory/pico-ram.js";
+import { PicoMapMemory } from "./map-memory.js";
 
 const SCREEN_WIDTH = 128;
 const SCREEN_HEIGHT = 128;
@@ -21,11 +22,17 @@ const FILL_FLAGS = 0x5f33;
 const COLOR_SETTING_FLAGS = 0x5f34;
 const POLYLINE_FLAG = 0x5f35;
 const MISC_FEATURES = 0x5f36;
+const TLINE_MASK_X = 0x5f38;
+const TLINE_MASK_Y = 0x5f39;
+const TLINE_OFFSET_X = 0x5f3a;
+const TLINE_OFFSET_Y = 0x5f3b;
 const POLYLINE_X = 0x5f3c;
 const POLYLINE_Y = 0x5f3e;
 const SGET_OUT_OF_BOUNDS = 0x5f59;
+const MGET_OUT_OF_BOUNDS = 0x5f5a;
 const PGET_OUT_OF_BOUNDS = 0x5f5b;
 const SECONDARY_PALETTE = 0x5f60;
+const SPRITE_FLAGS = 0x3000;
 
 interface RasterColor {
   readonly primary: number;
@@ -38,6 +45,7 @@ interface RasterColor {
 /** RAM-backed standard 128x128 packed-4bpp rasterizer. */
 export class L1Graphics {
   readonly #memory: PicoRam;
+  readonly #mapMemory: PicoMapMemory;
   readonly #ram: Uint8Array;
   readonly #view: DataView;
   readonly #shapeMask = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT);
@@ -45,6 +53,7 @@ export class L1Graphics {
 
   constructor(memory: PicoRam) {
     this.#memory = memory;
+    this.#mapMemory = new PicoMapMemory(memory);
     this.#ram = memory.physicalBytes;
     this.#view = new DataView(
       this.#ram.buffer,
@@ -284,6 +293,151 @@ export class L1Graphics {
       flipX,
       flipY,
     );
+  }
+
+  mget(xRaw: number, yRaw: number): number {
+    return this.#readMapTile(
+      toInt16(q16Integer(xRaw)),
+      toInt16(q16Integer(yRaw)),
+    );
+  }
+
+  mset(xRaw: number, yRaw: number, valueRaw: number): void {
+    this.#mapMemory.write(
+      toInt16(q16Integer(xRaw)),
+      toInt16(q16Integer(yRaw)),
+      q16Integer(valueRaw),
+    );
+  }
+
+  fget(spriteRaw: number, flagRaw?: number): number {
+    const sprite = toInt16(q16Integer(spriteRaw));
+    if (sprite < 0 || sprite > 255) return 0;
+    const flags = this.#ram[SPRITE_FLAGS + sprite]!;
+    if (flagRaw === undefined) return flags;
+    const flag = toInt16(q16Integer(flagRaw));
+    return flag >= 0 && flag < 8 && (flags & (1 << flag)) !== 0 ? 1 : 0;
+  }
+
+  fset(spriteRaw: number, flagOrValueRaw: number, value?: boolean): void {
+    const sprite = toInt16(q16Integer(spriteRaw));
+    if (sprite < 0 || sprite > 255) return;
+    const address = SPRITE_FLAGS + sprite;
+    if (value === undefined) {
+      this.#ram[address] = q16Integer(flagOrValueRaw) & 0xff;
+      return;
+    }
+    const flag = toInt16(q16Integer(flagOrValueRaw));
+    if (flag < 0 || flag >= 8) return;
+    this.#ram[address] = value
+      ? this.#ram[address]! | (1 << flag)
+      : this.#ram[address]! & ~(1 << flag);
+  }
+
+  map(
+    tileXRaw?: number,
+    tileYRaw?: number,
+    screenXRaw?: number,
+    screenYRaw?: number,
+    tileWidthRaw?: number,
+    tileHeightRaw?: number,
+    layersRaw?: number,
+  ): void {
+    const layout = this.#mapMemory.layout();
+    const tileX = toInt16(q16Integer(tileXRaw ?? 0));
+    const tileY = toInt16(q16Integer(tileYRaw ?? 0));
+    const destinationX = toInt16(q16Integer(screenXRaw ?? 0)) - this.#cameraX();
+    const destinationY = toInt16(q16Integer(screenYRaw ?? 0)) - this.#cameraY();
+    const tileWidth = tileWidthRaw === undefined
+      ? layout.width
+      : toInt16(q16Integer(tileWidthRaw));
+    const tileHeight = tileHeightRaw === undefined
+      ? layout.height
+      : toInt16(q16Integer(tileHeightRaw));
+    if (tileWidth <= 0 || tileHeight <= 0) return;
+    const layers = layersRaw === undefined ? 0 : q16Integer(layersRaw) & 0xff;
+    const firstTileX = Math.max(
+      0,
+      Math.floor((this.#ram[CLIP_LEFT]! - destinationX) / 8),
+    );
+    const finalTileX = Math.min(
+      tileWidth,
+      Math.ceil((this.#ram[CLIP_RIGHT]! - destinationX) / 8),
+    );
+    const firstTileY = Math.max(
+      0,
+      Math.floor((this.#ram[CLIP_TOP]! - destinationY) / 8),
+    );
+    const finalTileY = Math.min(
+      tileHeight,
+      Math.ceil((this.#ram[CLIP_BOTTOM]! - destinationY) / 8),
+    );
+    for (let offsetY = firstTileY; offsetY < finalTileY; offsetY += 1) {
+      for (let offsetX = firstTileX; offsetX < finalTileX; offsetX += 1) {
+        const sprite = this.#readMapTile(tileX + offsetX, tileY + offsetY);
+        if (!this.#tileSelected(sprite, layers)) continue;
+        this.#blitSprite(
+          (sprite & 0x0f) * 8,
+          (sprite >>> 4) * 8,
+          8,
+          8,
+          destinationX + offsetX * 8,
+          destinationY + offsetY * 8,
+          8,
+          8,
+          false,
+          false,
+        );
+      }
+    }
+  }
+
+  tline(
+    x0Raw: number,
+    y0Raw: number,
+    x1Raw: number,
+    y1Raw: number,
+    mxRaw: number,
+    myRaw: number,
+    mdxRaw?: number,
+    mdyRaw?: number,
+    layersRaw?: number,
+  ): void {
+    const x0 = toInt16(q16Integer(x0Raw)) - this.#cameraX();
+    const y0 = toInt16(q16Integer(y0Raw)) - this.#cameraY();
+    const x1 = toInt16(q16Integer(x1Raw)) - this.#cameraX();
+    const y1 = toInt16(q16Integer(y1Raw)) - this.#cameraY();
+    const deltaX = (mdxRaw ?? 0x0000_2000) | 0;
+    const deltaY = (mdyRaw ?? 0) | 0;
+    const layers = layersRaw === undefined ? 0 : q16Integer(layersRaw) & 0xff;
+    const maskX = tlineMask(this.#ram[TLINE_MASK_X]!);
+    const maskY = tlineMask(this.#ram[TLINE_MASK_Y]!);
+    const horizontal = Math.abs(x1 - x0) >= Math.abs(y1 - y0);
+    const major0 = horizontal ? x0 : y0;
+    const major1 = horizontal ? x1 : y1;
+    const minor0 = horizontal ? y0 : x0;
+    const minor1 = horizontal ? y1 : x1;
+    const direction = major0 <= major1 ? 1 : -1;
+    let major = clamp(major0, -1, SCREEN_WIDTH);
+    const majorEnd = clamp(major1, -1, SCREEN_WIDTH);
+    const skipped = Math.abs(major - major0);
+    let mapX = advanceTlineQ16(mxRaw, deltaX, skipped, maskX);
+    let mapY = advanceTlineQ16(myRaw, deltaY, skipped, maskY);
+
+    for (;;) {
+      const minor = major0 === major1
+        ? minor0
+        : roundAwayFromZero(
+          minor0 + ((minor1 - minor0) * (major - major0)) / (major1 - major0),
+        );
+      const x = horizontal ? major : minor;
+      const y = horizontal ? minor : major;
+      this.#plotTlineSample(x, y, mapX, mapY, maskX, maskY, layers);
+      if (major === majorEnd) break;
+      major += direction;
+      mapX = advanceTlineQ16(mapX, deltaX, 1, maskX);
+      mapY = advanceTlineQ16(mapY, deltaY, 1, maskY);
+    }
   }
 
   pset(xRaw: number, yRaw: number, colorRaw?: number): void {
@@ -644,6 +798,40 @@ export class L1Graphics {
     return insideSpriteSheet(x, y) ? this.#readSpritePixel(x, y) : 0;
   }
 
+  #readMapTile(x: number, y: number): number {
+    const tile = this.#mapMemory.read(x, y);
+    if (tile !== undefined) return tile;
+    return (this.#ram[MISC_FEATURES]! & 0x10) !== 0
+      ? this.#ram[MGET_OUT_OF_BOUNDS]!
+      : 0;
+  }
+
+  #tileSelected(sprite: number, layers: number): boolean {
+    if (sprite === 0 && (this.#ram[MISC_FEATURES]! & 0x08) === 0) return false;
+    return layers === 0 || (this.#ram[SPRITE_FLAGS + sprite]! & layers) !== 0;
+  }
+
+  #plotTlineSample(
+    x: number,
+    y: number,
+    mapXRaw: number,
+    mapYRaw: number,
+    maskX: number,
+    maskY: number,
+    layers: number,
+  ): void {
+    if (!this.#insideClip(x, y)) return;
+    const maskedX = (mapXRaw & maskX) >>> 0;
+    const maskedY = (mapYRaw & maskY) >>> 0;
+    const mapX = (maskedX >>> 16) + this.#ram[TLINE_OFFSET_X]!;
+    const mapY = (maskedY >>> 16) + this.#ram[TLINE_OFFSET_Y]!;
+    const sprite = this.#readMapTile(mapX, mapY);
+    if (!this.#tileSelected(sprite, layers)) return;
+    const sourceX = (sprite & 0x0f) * 8 + ((maskedX >>> 13) & 0x07);
+    const sourceY = (sprite >>> 4) * 8 + ((maskedY >>> 13) & 0x07);
+    this.#plotSprite(x, y, this.#readSpritePixel(sourceX, sourceY));
+  }
+
   #readSpritePixel(x: number, y: number): number {
     const address = GFX_ADDRESS + y * 64 + (x >> 1);
     return (this.#memory.readU8(address) >>> ((x & 1) << 2)) & 0x0f;
@@ -824,6 +1012,20 @@ function q16Integer(raw: number): number {
 
 function q16ScaledInteger(raw: number, scale: number): number {
   return Math.floor((raw | 0) * scale / 65_536);
+}
+
+function advanceTlineQ16(
+  value: number,
+  delta: number,
+  count: number,
+  mask: number,
+): number {
+  return ((value & ~mask) | ((value + Math.imul(delta, count)) & mask)) | 0;
+}
+
+function tlineMask(register: number): number {
+  const tiles = register === 0 ? 256 : register;
+  return (tiles * 65_536 - 1) >>> 0;
 }
 
 function toInt16(value: number): number {

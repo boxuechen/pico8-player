@@ -8,6 +8,8 @@ namespace p8w {
 constexpr uint32_t kPicoRamSize = 0x10000u;
 constexpr uint16_t kGfxMapRegister = 0x5f54u;
 constexpr uint16_t kScreenMapRegister = 0x5f55u;
+constexpr uint16_t kMapBaseRegister = 0x5f56u;
+constexpr uint16_t kMapWidthRegister = 0x5f57u;
 
 uint16_t normalize_address(int32_t address);
 uint16_t map_address(const uint8_t *ram, uint32_t logical_address);

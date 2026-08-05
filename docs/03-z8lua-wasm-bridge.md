@@ -9,7 +9,7 @@
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
 实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary、Phase 1D scalar API
-expansion、Phase 2A memory/call-frame 与 Phase 2B–2C typed graphics bindings 已完成；Phase 0 历史证据见
+expansion、Phase 2A memory/call-frame 与 Phase 2B–2D typed graphics bindings 已完成；Phase 0 历史证据见
 [Phase 0 evidence](./evidence/phase-0/README.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
@@ -17,7 +17,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；Phase 2A 80-byte call frame/Base RAM API；Phase 2B–2C append-only graphics/sprite bindings、boolean scalar lowering 与 fixed-point result |
+| **Implemented** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；Phase 2A 80-byte call frame/Base RAM API；Phase 2B–2D append-only graphics/sprite/map bindings、boolean scalar lowering 与 fixed-point result |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -384,6 +384,11 @@ Phase 2B 不改变 frame byte layout 或 ABI minor：boolean 参数仍占一个 
 boolean mask 决定 C 侧 Lua truthiness lowering；`q16.16-raw-i32` result 直接以 raw bits 返回。
 `pal(table,[p])` 是 bounded dedicated wrapper：最多读取 16 个 table entry，再同步复用 operation
 `13` 的 typed host method；它不在 bridge 实现 palette mapping。
+
+Phase 2C–2D 继续 append operation id `19..28`，最多 10 个 scalar；sprite/map/flags/tline
+均只使用既有 presence、boolean 与 Q16 lowering。map resolver、upper conflict arbitration 以外的
+hardware semantics 和 texture sampling 不进入 bridge。Phase 2E 的 `print` 是 production
+byte-string slot 的首个语义 consumer，仍必须遵守当前同步借用 lifetime。
 
 `scalar_slots[12]` 不是 PICO-8 vararg/multi-return 上限。Phase 2A 的 `peek(addr,n)` 和
 `poke(addr,val...)` 使用 dedicated C wrapper，因此不会穿过 host frame：

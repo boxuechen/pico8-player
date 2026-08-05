@@ -232,6 +232,8 @@ void reset_ram(Context *context) {
   std::memset(context->ram, 0, sizeof(context->ram));
   context->ram[p8w::kGfxMapRegister] = 0x00u;
   context->ram[p8w::kScreenMapRegister] = 0x60u;
+  context->ram[p8w::kMapBaseRegister] = 0x20u;
+  context->ram[p8w::kMapWidthRegister] = 0x80u;
 }
 
 void remove_global(lua_State *state, const char *name) {

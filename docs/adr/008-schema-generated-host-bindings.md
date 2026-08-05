@@ -46,6 +46,9 @@ kind。production schema append operation id `10..18`；`pal(table,[p])` 是 bou
 Phase 2C 继续复用同一 frame，append `sget/sset/spr/sspr` operation id `19..22`；10 参数
 `sspr` 和两个 boolean flip 位由既有 descriptor 表达，未扩 ABI 或在 bridge 复制 blitter 语义。
 
+Phase 2D append `mget/mset/fget/fset/map/tline` operation id `23..28`；`fget/fset` 的
+optional boolean/result type 继续由 presence/boolean mask 表达，9 参数 `tline` 仍不改变 80-byte frame。
+
 ## Consequences
 
 - 新增 binding 必须先更新 production schema、重新生成、实现 typed host 语义并补测试。

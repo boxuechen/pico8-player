@@ -723,8 +723,8 @@ logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与�
 三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
 corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
 
-- Phase 2C 已关闭 standard-4bpp palette/clip/camera/基础图元与 sprite blitter；map/tline/text
-  与 advanced screen/bitplane mode 仍 `partial`，由 2D–2E 持续关闭。
+- Phase 2D 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map 与 tile-precision
+  `tline`；text、`tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
 - AudioSynth、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
@@ -763,7 +763,7 @@ official exact；`reload/cstore/cartdata` 仍 unsupported/deferred。2A 没有�
 | regression/performance | Phase 1D/1E/1F passed；ordinary Worker p95 `0.4001ms`，`>16.67ms` `0/120` | gate passed | sprite stress 从 2C 建立 |
 
 Known Differences：camera/clip 的 undocumented multi-return 不是当前 v0.2.7 manual claim；bitplane、
-advanced screen modes、map/tline/text 尚未实现。2B 没有开放 P0/P1。
+advanced screen modes 与 text 尚未实现；map/tile-precision tline 后续由 2D 关闭。2B 没有开放 P0/P1。
 
 ### 15.13 Phase 2C Sprite Sheet/Blitter 矩阵
 
@@ -781,7 +781,25 @@ Chrome 页面均为项目原创；advanced screen/bitplane mode 不在本 unit �
 | framebuffer/Chrome | packed golden `337c0b37…07180`；production Worker/Canvas pattern 与 negative-scale pixels passed | gate passed（Chrome 150） | 2D 继续保持 transport/presenter 无 tile dependency |
 
 Known Differences：advanced screen/bitplane mode 和 undocumented invalid/overflow input 仍不声明
-official exact；map、flags、tline 与 text 尚未实现。2C 没有开放 P0/P1。
+official exact；map、flags 与 tile-precision `tline` 已由 2D 关闭，text 尚未实现。2C 没有开放 P0/P1。
+
+### 15.14 Phase 2D Map/Flags/Tline 矩阵
+
+本表只声明 standard packed-4bpp、tile-coordinate Q16.16 `tline` profile。测试 cart、RAM/
+framebuffer golden 与 Chrome 页面均为项目原创；不存在 Canvas/Worker tile-state dependency。
+
+| 行为 | Phase 2D 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| typed map bindings | append-only id `23..28`；`fget/fset` boolean presence 与 9 参数 `tline` 沿用 80-byte frame | `compatible`（2D profile） | `print/cursor` 从 2E 首次消费 byte-string slot |
+| map resolver | default/shared lower ring、`0x30..0x3f` alias、upper base、width `128/256/4`、derived height/OOB/direct RAM passed | `compatible`（documented bases） | invalid lower base fallback 仅 defensive，不声明 official exact |
+| flags | `0x3000..0x30ff` whole-byte/bit、boolean lowering、direct poke 与 invalid boundaries passed | `compatible`（manual API） | 无第二份 flag cache |
+| `map` raster | defaults/explicit range、tile 0 override、layer masks、upper source、camera/clip 与 bounded visible work passed | `compatible`（standard 4bpp） | advanced screen/bitplane mode deferred |
+| `tline` sampler | horizontal/diagonal/reversed、default/positive/zero/negative delta、mask/offset、layers、draw state passed | `partial` | v0.2.7 one-argument precision mode `tline(bits)` 留后续兼容阶段 |
+| upper arbitration | MAP overlap 使冲突 GFX/SCREEN 回退默认；不重叠 upper video mapping 保持生效 | `compatible`（documented bases） | undocumented invalid register values 仍 `unknown` |
+| framebuffer/Chrome | packed golden `c99d9aaf…24e60`；Chrome 150 production Worker/Canvas map+tline pixels passed | gate passed（Chrome 150） | 2F 汇总 project conformance 与性能/恢复门禁 |
+
+Known Differences：`tline(bits)` precision-setting overload、advanced screen/bitplane mode 和未记录
+invalid/overflow edge 不在 2D compatible claim；project golden 不等于 official bit-exact。2D 没有开放 P0/P1。
 
 ## 16. Definition of Done
 

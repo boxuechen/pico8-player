@@ -1,6 +1,6 @@
 # Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit：2D
+> 状态：Active；当前 work unit：2E
 > 机器合同：[`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
 > 前置证据：[`Phase 1 L1 exit`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -32,8 +32,8 @@ Non-goals：
 | 2A | Canonical Memory 与 Host ABI | Complete | Base RAM API 与所有 runtime access 共用唯一 mapper；ABI 可承载 Phase 2 参数和 byte strings |
 | 2B | Draw State 与基础图元 | Complete | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
 | 2C | Sprite Sheet 与 Blitter | Complete | `sget/sset/spr/sspr` 产生确定 framebuffer |
-| 2D | Map、Flags 与 `tline` | **Active** | map remap、layer flags 和 fixed-point texture sampling 可复现 |
-| 2E | P8SCII 与 Custom Font | Planned | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
+| 2D | Map、Flags 与 `tline` | Complete | map remap、layer flags 和 fixed-point texture sampling 可复现 |
+| 2E | P8SCII 与 Custom Font | **Active** | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
 | 2F | Conformance 与 Phase Exit | Planned | Node real-WASM 和 Chrome production 路径通过 golden、性能与恢复门禁 |
 
 ## Completed work unit：2A
@@ -59,26 +59,35 @@ binding manifest 和 runtime manifest 锁定。`sget/sset/spr/sspr` 共用 canon
 standard-4bpp scaling/flip/palette/transparency/fill-pattern 与 Chrome production path 均已通过；
 presenter 和 Worker frame DTO 未增加 sprite-specific dependency。
 
-## Active work unit：2D
+## Completed work unit：2D
+
+结果由 [`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
+的 2D record、`tests/runtime/phase-2d-map-tline.test.mjs`、`tests/browser/phase-2d.*`、generated
+binding manifest 和两个 WASM artifact manifest 锁定。独立 `PicoMapMemory` 解释 lower ring/
+upper region，canonical C++ mapper 只增加 upper-map/video arbitration；`map/tline` 复用 2C
+sprite raster，Chrome frame DTO 未增加 tile state。`tline(bits)` precision overload 不在 2D claim。
+
+## Active work unit：2E
 
 ### Observable behavior
 
-1. 注册并实现 `mget/mset/fget/fset/map/tline`；binding id 只 append，不重排 1–22。`fget`
-   的 bitfield/boolean result 与 `fset` 的 optional boolean 必须保持 Lua 类型和 presence 精确。
-2. RuntimeCore 新增唯一 map address resolver：即时读取 `0x5f56` base 与 `0x5f57` width
-   （0 表示 256），只允许 `0x1000..0x2fff`、`0x8000..0xffff`，并从剩余连续区域推导 height。
-   map remap 不得被塞入通用 `PicoRam.mapAddress()`，也不得缓存第二份 map。
-3. `mget/mset` 锁定 fractional/negative/out-of-bounds、custom return `0x5f5a`、width/height 和
-   direct physical RAM equality；base `0x30..0x3f` 按共享区 alias 到 `0x10..0x1f`。
-4. `fget/fset` 以 `0x3000..0x30ff` 为唯一 flag storage，覆盖整 byte 与单 bit read/write、
-   flag index 边界、boolean lowering 和 direct poke 双向可见。
-5. `map` 支持默认/显式 source/destination/size、camera/clip、sprite 0 skip override、layer-mask
-   filtering，并复用 2C sprite raster path；不得复制 palette、transparency 或 fillp 语义。
-6. `tline` 使用 signed Q16.16 `mx/my/mdx/mdy`，默认 delta `(0.125,0)`，按整数 line raster 每
-   pixel 采样 map tile 与 sprite texel；实现 `0x5f38..0x5f39` mask、`0x5f3a..0x5f3b` offset、
-   layer filter、palette/transparency/fillp 和 camera/clip 的确定顺序。
-7. map/GFX/screen upper-memory 冲突必须由一个经过测试的 resolver/arbitration 规则处理；
-   standard packed 4bpp 仍是声明边界，Canvas/Worker 不接触 map/tile state。
+1. 注册 `print` 与 `cursor`，append binding id `29..30`，不重排 1–28。`print` 首次把 production
+   byte-string slot 用于 guest Lua string，embedded NUL、非 UTF-8 byte、empty string 与同步 view
+   lifetime 必须精确；不得先解码为 JS Unicode。
+2. 删除 quiet `print` placeholder；`print(str,x,y,[col])`、`print(str,[col])` overload、返回最右
+   x、implicit newline、explicit NUL termination、cursor RAM `0x5f26/27` 与 pen side effect 必须可测。
+3. RuntimeCore 新增唯一 byte-oriented text renderer。内建 256 glyph font 数据必须有仓库内
+   provenance/license，按 packed bit rows software raster；不得调用 Canvas `fillText/measureText`。
+4. 实现同步 visual P8SCII parser：printable bytes、terminate/repeat/background、cursor shift、
+   backspace/tab/newline/decorate/foreground/carriage-return、default/custom font switch，以及视觉
+   special commands、render modes、one-off glyph/outline/raw-memory-write。每次 `print` 重置临时属性，
+   只保留手册规定的 cursor/foreground side effect；malformed/truncated sequence 必须 bounded。
+5. 实现 `0x5600..0x5dff` custom font 8×8 rows、font-wide attributes、per-character width/y adjustment、
+   custom tab，以及 `0x5f58..0x5f5b` default attributes；所有读取即时来自 shared Pico RAM。
+6. implicit cursor output 超过 y=122 时滚动 mapped screen；`0x5f36 & 0x40` 禁用 scroll。
+   camera/clip、foreground/background palette 与 text raster ordering 必须确定并留 framebuffer/RAM golden。
+7. P8SCII audio command 与 timed delay/frame-skip command 不得在 Phase 2 偷渡 AudioSynth 或新的
+   suspension path；登记为 partial/known difference。Canvas/Worker DTO 不增加 glyph/text state。
 
 ### 允许修改的范围
 
@@ -91,11 +100,12 @@ presenter 和 Worker frame DTO 未增加 sprite-specific dependency。
 - `tests/{runtime,browser,architecture}/**`、`tools/browser/**`、`package.json`
 - 本 work unit 直接拥有的文档状态和 compatibility matrix
 
-不得修改 `docs/evidence/**`；不得实现 text/audio/persistence；不得让 Canvas 知道 map、tile 或 tline。
+不得修改 `docs/evidence/**`；不得实现 AudioSynth/persistence；不得让 Canvas 知道 glyph、font 或 P8SCII。
 
 ### Routed contracts
 
 - [Shared Pico RAM 与 raw fixed encoding](../03-z8lua-wasm-bridge.md#5-shared-pico-ram)
+- [Byte string / P8SCII ABI](../03-z8lua-wasm-bridge.md#82-byte-string--p8scii)
 - [Graphics layering 与必须保持的行为](../04-typescript-runtime.md#7-graphics)
 - [PicoRam layout 与 remap](../04-typescript-runtime.md#6-picoram64kib-共享地址空间)
 - [所有权与 frame transaction](../02-system-architecture.md#2-所有权与共享内存)
@@ -108,30 +118,31 @@ presenter 和 Worker frame DTO 未增加 sprite-specific dependency。
 
 ### Verification
 
-2D 必须新增 `pnpm run test:phase-2d`，覆盖：
+2E 必须新增 `pnpm run test:phase-2e`，覆盖：
 
-- map default/shared/custom/upper base、width `128/256/other`、derived height、invalid/OOB 和 direct RAM vectors。
-- `fget/fset` byte/bit/boolean/direct-poke 与 invalid sprite/flag boundaries。
-- `map` defaults、tile 0 override、layer combinations、remapped source、camera/clip 与 2C draw-state regression。
-- `tline` horizontal/diagonal/reversed line、default/explicit deltas、mask/offset wrap、layer filter 和 fixed-point golden。
-- GFX/screen/map upper-memory conflict arbitration，不读取或构建 `ref/`。
-- real Chrome production Worker/Canvas map+tline smoke、bounded visible work、Phase 0C/1/2B/2C regressions。
+- binding ids、byte-string `0/embedded-NUL/non-UTF8/1024` 与 malformed type/arity/lifetime。
+- explicit/implicit `print` overload、return value、cursor/pen RAM、newline/NUL termination、scroll enable/disable。
+- built-in ASCII/high P8SCII glyph bitmap、camera/clip/palette/background 和 deterministic framebuffer golden。
+- visual control parser 的每类 opcode、nested repeat/decorate/one-off/outline/raw write 与 truncated-input bounds。
+- custom font rows/attributes/adjustments/default registers/direct poke equality 和 custom/default switch。
+- 至少 10,000 个 deterministic byte arrays 不 crash/hang/OOB；repeat/outline/work 与 input length 有硬上限。
+- real Chrome production Worker/Canvas text smoke、无 Canvas text API、Phase 0C/1/2B/2C/2D regressions。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-2d
-pnpm run test:phase-2d:chrome
+pnpm run test:phase-2e
+pnpm run test:phase-2e:chrome
 pnpm run verify
 git status --short
 ```
 
-### 2D exit gate
+### 2E exit gate
 
-- map resolver、flag storage、layer selection 与 tline sampler 有 deterministic RAM/frame evidence。
-- `map/tline` 复用 shared `PicoRam` 与 sprite raster，presenter/transport 没有新增 tile dependency。
-- API inventory/compatibility matrix 不把 bitplane/advanced screen mode 标为 compatible。
-- 2D 独立提交后 worktree 干净；随后才折叠本节并激活 2E。
+- byte-string ABI、built-in/custom glyph raster、cursor/scroll 与 visual controls 有 deterministic RAM/frame evidence。
+- renderer 全程使用 shared `PicoRam` 和 existing pixel path，presenter/transport 没有新增 text dependency。
+- compatibility matrix 明确 audio/timed controls、bitplane/advanced screen 与 `tline(bits)` 的 partial 状态。
+- 2E 独立提交后 worktree 干净；随后才折叠本节并激活 2F。
 
 ## Phase exit gate
 

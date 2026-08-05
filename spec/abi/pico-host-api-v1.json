@@ -269,6 +269,80 @@
         { "name": "flipY", "type": "boolean-i32", "optional": true }
       ],
       "result": "void"
+    },
+    {
+      "id": 23,
+      "guestName": "mget",
+      "hostMethod": "mget",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" }
+      ],
+      "result": "integer"
+    },
+    {
+      "id": 24,
+      "guestName": "mset",
+      "hostMethod": "mset",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "valueRaw", "type": "q16.16-raw-i32" }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 25,
+      "guestName": "fget",
+      "hostMethod": "fget",
+      "parameters": [
+        { "name": "spriteRaw", "type": "q16.16-raw-i32" },
+        { "name": "flagRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "integer-unless-second-present-then-boolean"
+    },
+    {
+      "id": 26,
+      "guestName": "fset",
+      "hostMethod": "fset",
+      "parameters": [
+        { "name": "spriteRaw", "type": "q16.16-raw-i32" },
+        { "name": "flagOrValueRaw", "type": "q16.16-raw-i32" },
+        { "name": "value", "type": "boolean-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 27,
+      "guestName": "map",
+      "hostMethod": "map",
+      "parameters": [
+        { "name": "tileXRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "tileYRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "screenXRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "screenYRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "tileWidthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "tileHeightRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "layersRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 28,
+      "guestName": "tline",
+      "hostMethod": "tline",
+      "parameters": [
+        { "name": "x0Raw", "type": "q16.16-raw-i32" },
+        { "name": "y0Raw", "type": "q16.16-raw-i32" },
+        { "name": "x1Raw", "type": "q16.16-raw-i32" },
+        { "name": "y1Raw", "type": "q16.16-raw-i32" },
+        { "name": "mxRaw", "type": "q16.16-raw-i32" },
+        { "name": "myRaw", "type": "q16.16-raw-i32" },
+        { "name": "mdxRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "mdyRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "layersRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

@@ -169,29 +169,35 @@ apis:
     phase: 2C
     note: deterministic nearest source sampling with scaling, negative destination dimensions and sprite draw state
   - name: mget
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2D
+    note: RAM-backed lower-ring and upper-region map resolver with width, alias and custom out-of-bounds behavior
   - name: mset
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2D
+    note: bounded physical map write through the same live base/width resolver as mget/map/tline
   - name: fget
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2D
+    note: whole-byte and boolean bit reads over canonical 0x3000 sprite flags
   - name: fset
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2D
+    note: whole-byte and optional-boolean bit writes with invalid index no-op behavior
   - name: map
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2D
+    note: bounded visible tile raster with defaults, camera, clip, layers, sprite-zero override and shared sprite draw state
   - name: tline
-    status: unimplemented
+    status: partial
     owner: packages/runtime-core
     phase: 2D
+    note: signed Q16.16 tile-coordinate sampler with default/explicit deltas, RAM masks/offsets and layers; one-argument precision mode deferred
   - name: print
     status: unimplemented
     owner: packages/runtime-core

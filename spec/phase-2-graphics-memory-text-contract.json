@@ -9,9 +9,9 @@
     "phase1Evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
     "baselineCommit": "916de2a"
   },
-  "completedWorkUnits": ["2A", "2B", "2C"],
-  "activeWorkUnit": "2D",
-  "nextWorkUnit": "2E",
+  "completedWorkUnits": ["2A", "2B", "2C", "2D"],
+  "activeWorkUnit": "2E",
+  "nextWorkUnit": "2F",
   "workUnits": {
     "2A": {
       "name": "Canonical Memory and Host ABI",
@@ -139,7 +139,7 @@
     },
     "2D": {
       "name": "Map, Flags and tline",
-      "status": "active",
+      "status": "complete",
       "graphicsApis": ["mget", "mset", "fget", "fset", "map", "tline"],
       "mapResolver": {
         "baseRegister": "0x5f56",
@@ -165,9 +165,48 @@
         "map-and-tline-framebuffer-golden",
         "chrome-production-gate",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingIds": "23..28",
+        "mapResolver": "PicoMapMemory-live-base-width-over-physical-pico-ram",
+        "lowerMapOrdering": "8KiB-ring-0x1000..0x2fff",
+        "upperMapOrdering": "base-page-through-0xffff",
+        "maximumVisibleMapPixels": 16384,
+        "maximumTlineCandidates": 130,
+        "tlineGoldenSha256": "c99d9aaff66b4922a3926d691e169bff231976dde51292e9e8921f87ae024e60",
+        "knownDifference": "one-argument-tline-precision-mode-deferred",
+        "verification": [
+          "pnpm run test:phase-2d",
+          "pnpm run test:phase-2d:chrome",
+          "pnpm run test:phase-2c",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "2E": {
+      "name": "P8SCII and Custom Font",
+      "status": "active",
+      "graphicsApis": ["print", "cursor"],
+      "textEncoding": "byte-string-p8scii",
+      "fontSources": {
+        "builtin": "repository-owned-provenance-locked-256-glyph-bit-rows",
+        "customRange": "0x5600..0x5dff",
+        "defaultAttributeRange": "0x5f58..0x5f5b"
+      },
+      "renderBoundary": {
+        "runtimeOwns": ["p8scii-parser", "glyph-metrics", "software-text-raster", "cursor-scroll"],
+        "mainForbidden": ["canvas-text-api", "font-state", "p8scii-decoding"]
+      },
+      "compatibilityProfile": "synchronous-visual-p8scii-standard-4bpp",
+      "deferredControls": ["audio", "timed-delay-and-frame-skip"],
+      "exit": [
+        "production-byte-string-binding-conformance",
+        "builtin-and-custom-font-framebuffer-golden",
+        "visual-control-parser-and-bounds",
+        "chrome-production-gate",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "2E": { "name": "P8SCII and Custom Font", "status": "planned" },
     "2F": { "name": "Conformance and Phase Exit", "status": "planned" }
   },
   "scope": [

@@ -57,7 +57,7 @@ test("Phase 2C appends sprite bindings and sget/sset obey nibble, palette and bo
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.slice(18).map(({ id, guestName }) => [id, guestName]), [
+  assert.deepEqual(contract.bindings.slice(18, 22).map(({ id, guestName }) => [id, guestName]), [
     [19, "sget"],
     [20, "sset"],
     [21, "spr"],

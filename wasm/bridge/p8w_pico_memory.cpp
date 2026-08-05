@@ -20,10 +20,21 @@ bool is_valid_video_base(uint8_t base) {
   }
 }
 
-uint16_t mapped_video_address(uint8_t configured_base, uint8_t fallback_base,
-                              uint16_t offset) {
-  const uint8_t base =
-      is_valid_video_base(configured_base) ? configured_base : fallback_base;
+bool conflicts_with_upper_map(const uint8_t *ram, uint8_t video_base) {
+  const uint8_t map_base = ram[kMapBaseRegister];
+  if (map_base < 0x80u || video_base < 0x80u) return false;
+  const uint32_t map_start = static_cast<uint32_t>(map_base) << 8u;
+  const uint32_t video_start = static_cast<uint32_t>(video_base) << 8u;
+  return video_start < kPicoRamSize &&
+         video_start + kVideoBlockSize > map_start;
+}
+
+uint16_t mapped_video_address(const uint8_t *ram, uint8_t configured_base,
+                              uint8_t fallback_base, uint16_t offset) {
+  const uint8_t base = is_valid_video_base(configured_base) &&
+                               !conflicts_with_upper_map(ram, configured_base)
+                           ? configured_base
+                           : fallback_base;
   return static_cast<uint16_t>((static_cast<uint16_t>(base) << 8u) + offset);
 }
 
@@ -39,11 +50,11 @@ uint16_t map_address(const uint8_t *ram, uint32_t logical_address) {
     return address;
   }
   if (address < kVideoBlockSize) {
-    return mapped_video_address(ram[kGfxMapRegister], 0x00u, address);
+    return mapped_video_address(ram, ram[kGfxMapRegister], 0x00u, address);
   }
   if (address >= kScreenWindow &&
       address < static_cast<uint16_t>(kScreenWindow + kVideoBlockSize)) {
-    return mapped_video_address(ram[kScreenMapRegister], 0x60u,
+    return mapped_video_address(ram, ram[kScreenMapRegister], 0x60u,
                                 static_cast<uint16_t>(address - kScreenWindow));
   }
   return address;

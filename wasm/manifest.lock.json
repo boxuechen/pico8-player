@@ -229,8 +229,8 @@
       },
       {
         "path": "z8lua-phase-0c.wasm",
-        "bytes": 182176,
-        "sha256": "94d4133e08d6a01bcfdb2762686585f799c8f0ab010415ac5160019c9fde2b73"
+        "bytes": 183120,
+        "sha256": "cb1d472203df9794fdf94bdccc3caf2c9e3ffaa6b8f8758bc06f2a2e6d734191"
       }
     ],
     "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."

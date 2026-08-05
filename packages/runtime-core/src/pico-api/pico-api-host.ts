@@ -53,6 +53,31 @@ export interface PicoApiHost {
     flipX?: boolean,
     flipY?: boolean,
   ): void;
+  mget(xRaw: number, yRaw: number): number;
+  mset(xRaw: number, yRaw: number, valueRaw: number): void;
+  /** Returns a flag byte when omitted, otherwise a boolean encoded as 0/1. */
+  fget(spriteRaw: number, flagRaw?: number): number;
+  fset(spriteRaw: number, flagOrValueRaw: number, value?: boolean): void;
+  map(
+    tileXRaw?: number,
+    tileYRaw?: number,
+    screenXRaw?: number,
+    screenYRaw?: number,
+    tileWidthRaw?: number,
+    tileHeightRaw?: number,
+    layersRaw?: number,
+  ): void;
+  tline(
+    x0Raw: number,
+    y0Raw: number,
+    x1Raw: number,
+    y1Raw: number,
+    mxRaw: number,
+    myRaw: number,
+    mdxRaw?: number,
+    mdyRaw?: number,
+    layersRaw?: number,
+  ): void;
   pset(xRaw: number, yRaw: number, colorRaw?: number): void;
   line(
     x0Raw?: number,
@@ -190,6 +215,66 @@ class RuntimePicoApiHost implements PicoApiHost {
       destinationHeightRaw,
       flipX,
       flipY,
+    );
+  }
+
+  mget(xRaw: number, yRaw: number): number {
+    return this.#graphics.mget(xRaw, yRaw);
+  }
+
+  mset(xRaw: number, yRaw: number, valueRaw: number): void {
+    this.#graphics.mset(xRaw, yRaw, valueRaw);
+  }
+
+  fget(spriteRaw: number, flagRaw?: number): number {
+    return this.#graphics.fget(spriteRaw, flagRaw);
+  }
+
+  fset(spriteRaw: number, flagOrValueRaw: number, value?: boolean): void {
+    this.#graphics.fset(spriteRaw, flagOrValueRaw, value);
+  }
+
+  map(
+    tileXRaw?: number,
+    tileYRaw?: number,
+    screenXRaw?: number,
+    screenYRaw?: number,
+    tileWidthRaw?: number,
+    tileHeightRaw?: number,
+    layersRaw?: number,
+  ): void {
+    this.#graphics.map(
+      tileXRaw,
+      tileYRaw,
+      screenXRaw,
+      screenYRaw,
+      tileWidthRaw,
+      tileHeightRaw,
+      layersRaw,
+    );
+  }
+
+  tline(
+    x0Raw: number,
+    y0Raw: number,
+    x1Raw: number,
+    y1Raw: number,
+    mxRaw: number,
+    myRaw: number,
+    mdxRaw?: number,
+    mdyRaw?: number,
+    layersRaw?: number,
+  ): void {
+    this.#graphics.tline(
+      x0Raw,
+      y0Raw,
+      x1Raw,
+      y1Raw,
+      mxRaw,
+      myRaw,
+      mdxRaw,
+      mdyRaw,
+      layersRaw,
     );
   }
 
