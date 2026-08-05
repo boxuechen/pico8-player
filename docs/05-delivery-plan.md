@@ -27,7 +27,7 @@
 | 0E Coroutine Frame Slice | Complete | [Evidence](./evidence/phase-0/16-phase-0e-evidence.md) / [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md) |
 | 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
-| 2 Graphics、Memory、Text | **Active；2C；2A–2B complete** | [Active phase](./phases/2-graphics-memory-text.md) |
+| 2 Graphics、Memory、Text | **Active；2D；2A–2C complete** | [Active phase](./phases/2-graphics-memory-text.md) |
 | 3 Audio、完整 Input、Persistence | Not started | Phase 2 exit 后激活 |
 | 4 L2 / MVP 兼容加固 | Not started | Phase 3 exit 后激活 |
 | 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
@@ -88,7 +88,7 @@ trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload �
 
 ### Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit 2C。以下仍只保存 roadmap headline；production 授权与
+> 状态：Active；当前 work unit 2D。以下仍只保存 roadmap headline；production 授权与
 > work-unit exit 由 [active phase](./phases/2-graphics-memory-text.md) 定义。
 
 目标：完成大多数可视 cart 所需 graphics/memory/text 行为。

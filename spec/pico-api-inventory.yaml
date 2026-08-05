@@ -129,10 +129,10 @@ apis:
     phase: 2B
     note: scalar boolean and 16-bit mask forms share draw-palette transparency bits
   - name: fillp
-    status: partial
+    status: implemented
     owner: packages/runtime-core
-    phase: 2B
-    note: primitives, transparency, global secondary and colour override/inversion implemented; apply-to-sprites activates in 2C
+    phase: 2C
+    note: primitives and sprites share RAM-backed pattern, transparency, apply-to-sprites, secondary-global and colour override/inversion flags
   - name: pget
     status: implemented
     owner: packages/runtime-core
@@ -149,21 +149,25 @@ apis:
     phase: 2B
     note: deterministic standard-4bpp fill with Phase 2B draw state and inversion
   - name: sget
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2C
+    note: canonical mapped GFX nibble read with fractional/bounds and custom out-of-bounds behavior
   - name: sset
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2C
+    note: canonical mapped GFX nibble write with optional pen and draw-palette mapping
   - name: spr
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2C
+    note: standard-4bpp fractional sprite extents, camera, clip, flip, palette, transparency and fill-pattern path
   - name: sspr
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 2C
+    note: deterministic nearest source sampling with scaling, negative destination dimensions and sprite draw state
   - name: mget
     status: unimplemented
     owner: packages/runtime-core

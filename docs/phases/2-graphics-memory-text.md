@@ -1,6 +1,6 @@
 # Phase 2 — Graphics、Memory 与 Text
 
-> 状态：Active；当前 work unit：2C
+> 状态：Active；当前 work unit：2D
 > 机器合同：[`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
 > 前置证据：[`Phase 1 L1 exit`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -31,8 +31,8 @@ Non-goals：
 | --- | --- | --- | --- |
 | 2A | Canonical Memory 与 Host ABI | Complete | Base RAM API 与所有 runtime access 共用唯一 mapper；ABI 可承载 Phase 2 参数和 byte strings |
 | 2B | Draw State 与基础图元 | Complete | camera/clip/palette/fillp 与现有图元、display palette 端到端一致 |
-| 2C | Sprite Sheet 与 Blitter | **Active** | `sget/sset/spr/sspr` 产生确定 framebuffer |
-| 2D | Map、Flags 与 `tline` | Planned | map remap、layer flags 和 fixed-point texture sampling 可复现 |
+| 2C | Sprite Sheet 与 Blitter | Complete | `sget/sset/spr/sspr` 产生确定 framebuffer |
+| 2D | Map、Flags 与 `tline` | **Active** | map remap、layer flags 和 fixed-point texture sampling 可复现 |
 | 2E | P8SCII 与 Custom Font | Planned | byte-oriented `print/cursor`、内建字体和 custom font 可复现 |
 | 2F | Conformance 与 Phase Exit | Planned | Node real-WASM 和 Chrome production 路径通过 golden、性能与恢复门禁 |
 
@@ -51,24 +51,34 @@ binding manifest 和 runtime manifest 锁定。standard packed-4bpp 下的 RAM-b
 图元、display palette Worker DTO 与 Chrome Canvas 路径均已通过；advanced screen/bitplane mode
 仍不在兼容声明内。
 
-## Active work unit：2C
+## Completed work unit：2C
+
+结果由 [`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
+的 2C record、`tests/runtime/phase-2c-sprites.test.mjs`、`tests/browser/phase-2c.*`、generated
+binding manifest 和 runtime manifest 锁定。`sget/sset/spr/sspr` 共用 canonical mapped GFX，
+standard-4bpp scaling/flip/palette/transparency/fill-pattern 与 Chrome production path 均已通过；
+presenter 和 Worker frame DTO 未增加 sprite-specific dependency。
+
+## Active work unit：2D
 
 ### Observable behavior
 
-1. 注册并实现 `sget/sset/spr/sspr`；binding id 只 append，不重排 1–18，boolean flip 参数继续
-   使用 2B 已验证的 fixed call frame lowering。
-2. sprite sheet 的 logical `0x0000..0x1fff` 通过 `PicoRam` 和 adapter canonical mapper 访问；
-   GFX remap 到 screen/upper RAM 后，API、direct memory 与 blitter 必须看到同一像素。
-3. `sget/sset` 锁定 negative/fractional/out-of-bounds、packed nibble、default/explicit color 与 draw
-   palette 行为；不得缓存一份独立 sprite sheet。
-4. `spr` 支持 sprite id、fractional `w/h`、camera、clip、flip、draw palette 与 `palt`；sprite
-   source rectangle 跨 16-column row 的行为由 project vector 锁定。
-5. `sspr` 支持 source rectangle、default/explicit destination size、positive/negative scaling 与
-   flip；source sampling 和 destination raster 均为 deterministic integer/fixed-point 规则。
-6. 当 fillp 的 apply-to-sprites flag 生效时，sprite pixel 先应用 draw palette，再以 secondary
-   palette 取得 pattern pair；global-secondary primitive 行为不得回归。
-7. standard 128×128 packed 4bpp 是本 unit 的兼容声明；bitplane/screen mode 不随 sprite API
-   偷渡进入 scope，Canvas/Worker frame boundary 不变。
+1. 注册并实现 `mget/mset/fget/fset/map/tline`；binding id 只 append，不重排 1–22。`fget`
+   的 bitfield/boolean result 与 `fset` 的 optional boolean 必须保持 Lua 类型和 presence 精确。
+2. RuntimeCore 新增唯一 map address resolver：即时读取 `0x5f56` base 与 `0x5f57` width
+   （0 表示 256），只允许 `0x1000..0x2fff`、`0x8000..0xffff`，并从剩余连续区域推导 height。
+   map remap 不得被塞入通用 `PicoRam.mapAddress()`，也不得缓存第二份 map。
+3. `mget/mset` 锁定 fractional/negative/out-of-bounds、custom return `0x5f5a`、width/height 和
+   direct physical RAM equality；base `0x30..0x3f` 按共享区 alias 到 `0x10..0x1f`。
+4. `fget/fset` 以 `0x3000..0x30ff` 为唯一 flag storage，覆盖整 byte 与单 bit read/write、
+   flag index 边界、boolean lowering 和 direct poke 双向可见。
+5. `map` 支持默认/显式 source/destination/size、camera/clip、sprite 0 skip override、layer-mask
+   filtering，并复用 2C sprite raster path；不得复制 palette、transparency 或 fillp 语义。
+6. `tline` 使用 signed Q16.16 `mx/my/mdx/mdy`，默认 delta `(0.125,0)`，按整数 line raster 每
+   pixel 采样 map tile 与 sprite texel；实现 `0x5f38..0x5f39` mask、`0x5f3a..0x5f3b` offset、
+   layer filter、palette/transparency/fillp 和 camera/clip 的确定顺序。
+7. map/GFX/screen upper-memory 冲突必须由一个经过测试的 resolver/arbitration 规则处理；
+   standard packed 4bpp 仍是声明边界，Canvas/Worker 不接触 map/tile state。
 
 ### 允许修改的范围
 
@@ -81,7 +91,7 @@ binding manifest 和 runtime manifest 锁定。standard packed-4bpp 下的 RAM-b
 - `tests/{runtime,browser,architecture}/**`、`tools/browser/**`、`package.json`
 - 本 work unit 直接拥有的文档状态和 compatibility matrix
 
-不得修改 `docs/evidence/**`；不得实现 map/tline/text；不得让 Canvas 知道 sprite sheet 或 blit。
+不得修改 `docs/evidence/**`；不得实现 text/audio/persistence；不得让 Canvas 知道 map、tile 或 tline。
 
 ### Routed contracts
 
@@ -98,30 +108,30 @@ binding manifest 和 runtime manifest 锁定。standard packed-4bpp 下的 RAM-b
 
 ### Verification
 
-2C 必须新增 `pnpm run test:phase-2c`，覆盖：
+2D 必须新增 `pnpm run test:phase-2d`，覆盖：
 
-- `sget/sset` logical GFX、nibble order、boundary、fractional coordinate 与 draw-palette vectors。
-- direct poke/API/blitter equality；GFX↔SCREEN 与 upper-RAM remap/alias，不读取 `ref/`。
-- `spr` multi-sprite row crossing、fractional size、flip、camera/clip、palette/transparency golden。
-- `sspr` up/down scale、negative destination dimensions、source clipping 与 deterministic sampling。
-- fillp apply-to-sprites、secondary palette pair 和 global-secondary primitive regression。
-- real Chrome production Worker/Canvas sprite smoke、ordinary performance 与 Phase 0C/1/2B regressions。
+- map default/shared/custom/upper base、width `128/256/other`、derived height、invalid/OOB 和 direct RAM vectors。
+- `fget/fset` byte/bit/boolean/direct-poke 与 invalid sprite/flag boundaries。
+- `map` defaults、tile 0 override、layer combinations、remapped source、camera/clip 与 2C draw-state regression。
+- `tline` horizontal/diagonal/reversed line、default/explicit deltas、mask/offset wrap、layer filter 和 fixed-point golden。
+- GFX/screen/map upper-memory conflict arbitration，不读取或构建 `ref/`。
+- real Chrome production Worker/Canvas map+tline smoke、bounded visible work、Phase 0C/1/2B/2C regressions。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-2c
-pnpm run test:phase-2c:chrome
+pnpm run test:phase-2d
+pnpm run test:phase-2d:chrome
 pnpm run verify
 git status --short
 ```
 
-### 2C exit gate
+### 2D exit gate
 
-- standard 4bpp 下的 sprite source、blit result 与 remap alias 有 deterministic evidence。
-- `spr/sspr` 只消费 shared `PicoRam`，presenter/transport 没有新增 sprite-specific dependency。
+- map resolver、flag storage、layer selection 与 tline sampler 有 deterministic RAM/frame evidence。
+- `map/tline` 复用 shared `PicoRam` 与 sprite raster，presenter/transport 没有新增 tile dependency。
 - API inventory/compatibility matrix 不把 bitplane/advanced screen mode 标为 compatible。
-- 2C 独立提交后 worktree 干净；随后才折叠本节并激活 2D。
+- 2D 独立提交后 worktree 干净；随后才折叠本节并激活 2E。
 
 ## Phase exit gate
 

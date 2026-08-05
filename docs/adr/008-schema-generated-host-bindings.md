@@ -43,6 +43,9 @@ Phase 2B 在不改变 frame layout/minor 的前提下加入 descriptor boolean m
 kind。production schema append operation id `10..18`；`pal(table,[p])` 是 bounded C wrapper，最多
 展开 16 次同一个 typed operation `13`，不把一般 Lua table 宣称为 ABI capability。
 
+Phase 2C 继续复用同一 frame，append `sget/sset/spr/sspr` operation id `19..22`；10 参数
+`sspr` 和两个 boolean flip 位由既有 descriptor 表达，未扩 ABI 或在 bridge 复制 blitter 语义。
+
 ## Consequences
 
 - 新增 binding 必须先更新 production schema、重新生成、实现 typed host 语义并补测试。

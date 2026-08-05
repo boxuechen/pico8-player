@@ -11,7 +11,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、Phase 2A/2B、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、Phase 2A/2B/2C、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
@@ -723,8 +723,8 @@ logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与�
 三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
 corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
 
-- Phase 2B 已关闭 standard-4bpp palette/clip/camera/基础图元；sprite/map/text 与 advanced
-  screen/bitplane mode 仍 `partial`，由 2C–2E 持续关闭。
+- Phase 2C 已关闭 standard-4bpp palette/clip/camera/基础图元与 sprite blitter；map/tline/text
+  与 advanced screen/bitplane mode 仍 `partial`，由 2D–2E 持续关闭。
 - AudioSynth、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
@@ -755,15 +755,33 @@ official exact；`reload/cstore/cartdata` 仍 unsupported/deferred。2A 没有�
 
 | 行为 | Phase 2B 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
-| typed graphics bindings | append-only id `10..18`；boolean scalar、Q16 result、`pal(table)` bounded wrapper passed | `compatible`（2B profile） | sprite flip 从 2C 复用 boolean lowering |
+| typed graphics bindings | append-only id `10..18`；boolean scalar、Q16 result、`pal(table)` bounded wrapper passed | `compatible`（2B profile） | sprite flip 已在 2C 复用 boolean lowering |
 | RAM-backed draw state | `0x5f00..0x5f3f`、secondary `0x5f60..0x5f6f` default/API/direct-poke 双向 passed | `compatible`（standard 4bpp） | advanced mode 明确 deferred |
-| raster ordering | camera→clip→draw palette→fillp、pattern transparency/global secondary/inversion passed | `compatible`（project vectors） | sprite apply-pattern 属于 2C |
+| raster ordering | camera→clip→draw palette→fillp、pattern transparency/global secondary/inversion passed | `compatible`（project vectors） | sprite apply-pattern 已由 2C 关闭 |
 | primitive golden | existing primitives + reversed/fractional/off-screen oval hash `0f5af6e7…39dcc` deterministic | `compatible`（project golden） | official edge differential 留 2F/Phase 4 |
 | display palette boundary | 16-byte RuntimeFrame/Worker DTO、validator/dual transfer、standard+extended RGBA Canvas passed | `compatible`（Chrome 150） | Canvas 禁止读取 RAM/draw state |
 | regression/performance | Phase 1D/1E/1F passed；ordinary Worker p95 `0.4001ms`，`>16.67ms` `0/120` | gate passed | sprite stress 从 2C 建立 |
 
 Known Differences：camera/clip 的 undocumented multi-return 不是当前 v0.2.7 manual claim；bitplane、
-advanced screen modes、sprite/map/text 尚未实现。2B 没有开放 P0/P1。
+advanced screen modes、map/tline/text 尚未实现。2B 没有开放 P0/P1。
+
+### 15.13 Phase 2C Sprite Sheet/Blitter 矩阵
+
+本表只声明 standard 128×128 packed-4bpp sprite path。测试 cart、RAM/framebuffer golden 与
+Chrome 页面均为项目原创；advanced screen/bitplane mode 不在本 unit 的兼容声明内。
+
+| 行为 | Phase 2C 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| typed sprite bindings | append-only id `19..22`；`sspr` 10 scalar/boolean 参数沿用 80-byte frame | `compatible`（2C profile） | map/tline 从 2D 复用同一 host boundary |
+| `sget/sset` 与 mapper | low/high nibble、fractional/bounds/custom return、default/explicit palette、direct poke equality passed | `compatible`（documented GFX bases） | invalid remap bases 仍 `unknown` |
+| GFX alias | default、screen 与 upper-RAM remap 下 API/direct/frame 共用 canonical mapper | `compatible`（documented bases） | MAP base/width resolver 属于 2D |
+| `spr` raster | fractional `w/h`、sheet row boundary、camera/clip、flip、palette/transparency passed | `compatible`（project vectors） | official edge differential 留 2F/Phase 4 |
+| `sspr` sampling | up/down scale、negative destination dimensions、source clipping 与 bounded visible iteration passed | `compatible`（project vectors） | negative source dimensions 未作 official-exact 声明 |
+| sprite fill pattern | draw palette→secondary pair、pattern transparency；global-secondary primitive regression passed | `compatible`（manual ordering） | map/tline 在 2D 复用同一 sprite pixel path |
+| framebuffer/Chrome | packed golden `337c0b37…07180`；production Worker/Canvas pattern 与 negative-scale pixels passed | gate passed（Chrome 150） | 2D 继续保持 transport/presenter 无 tile dependency |
+
+Known Differences：advanced screen/bitplane mode 和 undocumented invalid/overflow input 仍不声明
+official exact；map、flags、tline 与 text 尚未实现。2C 没有开放 P0/P1。
 
 ## 16. Definition of Done
 

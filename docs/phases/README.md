@@ -2,7 +2,7 @@
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
 phase 预建愿望清单。当前入口是
-[`Phase 2 — Graphics、Memory 与 Text`](./2-graphics-memory-text.md)，active work unit 为 2C。
+[`Phase 2 — Graphics、Memory 与 Text`](./2-graphics-memory-text.md)，active work unit 为 2D。
 Phase 1 的完成事实位于 [`spec/phase-1-l1-contract.json`](../../spec/phase-1-l1-contract.json)
 和不可变的 [`Phase 1 evidence`](../evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
 

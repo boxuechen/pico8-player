@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "2B",
+  "phase": "2C",
   "abiContract": "spec/abi/p8w-v1.json",
   "hostApiContract": "spec/abi/pico-host-api-v1.json",
   "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
@@ -39,14 +39,14 @@
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 183806,
-        "sha256": "83662901296be1ba84577a96ce4a318db41d84bbd14dfcb0aad0deb854738702"
+        "bytes": 183885,
+        "sha256": "e4aea6dbdeeaa1095b75dbbf266a702f61b46eb9cb11b3d1633c9b7ccfd8e279"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs",
-    "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs",
+    "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html",
     "fixtures": "project-owned synthetic source and p8.png only"
   }
 }

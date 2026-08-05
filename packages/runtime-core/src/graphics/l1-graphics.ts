@@ -3,6 +3,7 @@ import type { PicoRam } from "../memory/pico-ram.js";
 const SCREEN_WIDTH = 128;
 const SCREEN_HEIGHT = 128;
 const SCREEN_BYTES = 0x2000;
+const GFX_ADDRESS = 0x0000;
 const SCREEN_ADDRESS = 0x6000;
 const DRAW_PALETTE = 0x5f00;
 const DISPLAY_PALETTE = 0x5f10;
@@ -22,6 +23,7 @@ const POLYLINE_FLAG = 0x5f35;
 const MISC_FEATURES = 0x5f36;
 const POLYLINE_X = 0x5f3c;
 const POLYLINE_Y = 0x5f3e;
+const SGET_OUT_OF_BOUNDS = 0x5f59;
 const PGET_OUT_OF_BOUNDS = 0x5f5b;
 const SECONDARY_PALETTE = 0x5f60;
 
@@ -186,6 +188,102 @@ export class L1Graphics {
     if (!this.#insideClip(x, y)) return this.#outOfBoundsPixel();
     const address = SCREEN_ADDRESS + y * 64 + (x >> 1);
     return (this.#memory.readU8(address) >>> ((x & 1) << 2)) & 0x0f;
+  }
+
+  sget(xRaw: number, yRaw: number): number {
+    const x = toInt16(q16Integer(xRaw));
+    const y = toInt16(q16Integer(yRaw));
+    if (!insideSpriteSheet(x, y)) return this.#outOfBoundsSpritePixel();
+    return this.#readSpritePixel(x, y);
+  }
+
+  sset(xRaw: number, yRaw: number, colorRaw?: number): void {
+    const x = toInt16(q16Integer(xRaw));
+    const y = toInt16(q16Integer(yRaw));
+    if (!insideSpriteSheet(x, y)) return;
+    const color = colorRaw === undefined
+      ? this.#ram[PEN_REGISTER]!
+      : (colorRaw >>> 16) & 0xff;
+    const mapped = this.#ram[DRAW_PALETTE + (color & 0x0f)]! & 0x0f;
+    this.#writeSpritePixel(x, y, mapped);
+  }
+
+  spr(
+    spriteRaw: number,
+    xRaw: number,
+    yRaw: number,
+    widthRaw?: number,
+    heightRaw?: number,
+    flipX = false,
+    flipY = false,
+  ): void {
+    const sprite = toInt16(q16Integer(spriteRaw));
+    const sourceX = (sprite % 16) * 8;
+    const sourceY = Math.trunc(sprite / 16) * 8;
+    const width = q16ScaledInteger(widthRaw ?? 0x0001_0000, 8);
+    const height = q16ScaledInteger(heightRaw ?? 0x0001_0000, 8);
+    const destinationX = toInt16(q16Integer(xRaw)) - this.#cameraX();
+    const destinationY = toInt16(q16Integer(yRaw)) - this.#cameraY();
+    this.#blitSprite(
+      sourceX,
+      sourceY,
+      width,
+      height,
+      destinationX,
+      destinationY,
+      width,
+      height,
+      flipX,
+      flipY,
+    );
+  }
+
+  sspr(
+    sourceXRaw: number,
+    sourceYRaw: number,
+    sourceWidthRaw: number,
+    sourceHeightRaw: number,
+    destinationXRaw: number,
+    destinationYRaw: number,
+    destinationWidthRaw?: number,
+    destinationHeightRaw?: number,
+    flipX = false,
+    flipY = false,
+  ): void {
+    const sourceX = toInt16(q16Integer(sourceXRaw));
+    const sourceY = toInt16(q16Integer(sourceYRaw));
+    const sourceWidth = toInt16(q16Integer(sourceWidthRaw));
+    const sourceHeight = toInt16(q16Integer(sourceHeightRaw));
+    let destinationX = toInt16(q16Integer(destinationXRaw)) - this.#cameraX();
+    let destinationY = toInt16(q16Integer(destinationYRaw)) - this.#cameraY();
+    let destinationWidth = destinationWidthRaw === undefined
+      ? sourceWidth
+      : toInt16(q16Integer(destinationWidthRaw));
+    let destinationHeight = destinationHeightRaw === undefined
+      ? sourceHeight
+      : toInt16(q16Integer(destinationHeightRaw));
+    if (destinationWidth < 0) {
+      destinationWidth = -destinationWidth;
+      destinationX -= destinationWidth - 1;
+      flipX = !flipX;
+    }
+    if (destinationHeight < 0) {
+      destinationHeight = -destinationHeight;
+      destinationY -= destinationHeight - 1;
+      flipY = !flipY;
+    }
+    this.#blitSprite(
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      destinationX,
+      destinationY,
+      destinationWidth,
+      destinationHeight,
+      flipX,
+      flipY,
+    );
   }
 
   pset(xRaw: number, yRaw: number, colorRaw?: number): void {
@@ -473,6 +571,108 @@ export class L1Graphics {
     return this.#view.getInt16(CAMERA_Y, true);
   }
 
+  #blitSprite(
+    sourceX: number,
+    sourceY: number,
+    sourceWidth: number,
+    sourceHeight: number,
+    destinationX: number,
+    destinationY: number,
+    destinationWidth: number,
+    destinationHeight: number,
+    flipX: boolean,
+    flipY: boolean,
+  ): void {
+    if (
+      destinationWidth <= 0 || destinationHeight <= 0 ||
+      sourceWidth === 0 || sourceHeight === 0 ||
+      destinationX + destinationWidth <= 0 || destinationX >= SCREEN_WIDTH ||
+      destinationY + destinationHeight <= 0 || destinationY >= SCREEN_HEIGHT
+    ) {
+      return;
+    }
+    const firstDestinationOffsetX = Math.max(
+      0,
+      -destinationX,
+      this.#ram[CLIP_LEFT]! - destinationX,
+    );
+    const finalDestinationOffsetX = Math.min(
+      destinationWidth,
+      SCREEN_WIDTH - destinationX,
+      this.#ram[CLIP_RIGHT]! - destinationX,
+    );
+    const firstDestinationOffsetY = Math.max(
+      0,
+      -destinationY,
+      this.#ram[CLIP_TOP]! - destinationY,
+    );
+    const finalDestinationOffsetY = Math.min(
+      destinationHeight,
+      SCREEN_HEIGHT - destinationY,
+      this.#ram[CLIP_BOTTOM]! - destinationY,
+    );
+    for (
+      let destinationOffsetY = firstDestinationOffsetY;
+      destinationOffsetY < finalDestinationOffsetY;
+      destinationOffsetY += 1
+    ) {
+      const sampleOffsetY = flipY
+        ? destinationHeight - 1 - destinationOffsetY
+        : destinationOffsetY;
+      const sampleY = sourceY + Math.floor(
+        sourceHeight * sampleOffsetY / destinationHeight,
+      );
+      const y = destinationY + destinationOffsetY;
+      for (
+        let destinationOffsetX = firstDestinationOffsetX;
+        destinationOffsetX < finalDestinationOffsetX;
+        destinationOffsetX += 1
+      ) {
+        const sampleOffsetX = flipX
+          ? destinationWidth - 1 - destinationOffsetX
+          : destinationOffsetX;
+        const sampleX = sourceX + Math.floor(
+          sourceWidth * sampleOffsetX / destinationWidth,
+        );
+        const x = destinationX + destinationOffsetX;
+        this.#plotSprite(x, y, this.#readSpritePixelSafe(sampleX, sampleY));
+      }
+    }
+  }
+
+  #readSpritePixelSafe(x: number, y: number): number {
+    return insideSpriteSheet(x, y) ? this.#readSpritePixel(x, y) : 0;
+  }
+
+  #readSpritePixel(x: number, y: number): number {
+    const address = GFX_ADDRESS + y * 64 + (x >> 1);
+    return (this.#memory.readU8(address) >>> ((x & 1) << 2)) & 0x0f;
+  }
+
+  #writeSpritePixel(x: number, y: number, color: number): void {
+    const address = GFX_ADDRESS + y * 64 + (x >> 1);
+    const shift = (x & 1) << 2;
+    const mask = 0x0f << shift;
+    const packed = this.#memory.readU8(address);
+    this.#memory.writeU8(address, (packed & ~mask) | ((color & 0x0f) << shift));
+  }
+
+  #plotSprite(x: number, y: number, sourceColor: number): void {
+    if (!this.#insideClip(x, y)) return;
+    const drawEntry = this.#ram[DRAW_PALETTE + (sourceColor & 0x0f)]!;
+    if ((drawEntry & 0x10) !== 0) return;
+    let color = drawEntry & 0x0f;
+    const flags = this.#ram[FILL_FLAGS]!;
+    if ((flags & 0x02) !== 0) {
+      const secondary = this.#ram[SECONDARY_PALETTE + color]!;
+      const patternBit = (this.#view.getUint16(FILL_PATTERN, true) >>>
+        (15 - (x & 3) - 4 * (y & 3))) & 1;
+      if (patternBit !== 0 && (flags & 0x01) !== 0) return;
+      color = patternBit === 0 ? secondary & 0x0f : (secondary >>> 4) & 0x0f;
+    }
+    this.#writeScreenPixel(x, y, color);
+  }
+
   #drawFilled(color: RasterColor, inverted: boolean, drawShape: () => void): void {
     if (!inverted) {
       drawShape();
@@ -560,6 +760,10 @@ export class L1Graphics {
     const patternBit = (color.pattern >>> (15 - (x & 3) - 4 * (y & 3))) & 1;
     if (patternBit !== 0 && color.alternateTransparent) return;
     const pixel = patternBit === 0 ? color.primary : color.alternate;
+    this.#writeScreenPixel(x, y, pixel);
+  }
+
+  #writeScreenPixel(x: number, y: number, pixel: number): void {
     const address = SCREEN_ADDRESS + y * 64 + (x >> 1);
     const shift = (x & 1) << 2;
     const mask = 0x0f << shift;
@@ -575,6 +779,10 @@ export class L1Graphics {
 
   #outOfBoundsPixel(): number {
     return (this.#ram[MISC_FEATURES]! & 0x10) !== 0 ? this.#ram[PGET_OUT_OF_BOUNDS]! : 0;
+  }
+
+  #outOfBoundsSpritePixel(): number {
+    return (this.#ram[MISC_FEATURES]! & 0x10) !== 0 ? this.#ram[SGET_OUT_OF_BOUNDS]! : 0;
   }
 
   #resetClip(): void {
@@ -614,8 +822,16 @@ function q16Integer(raw: number): number {
   return raw >> 16;
 }
 
+function q16ScaledInteger(raw: number, scale: number): number {
+  return Math.floor((raw | 0) * scale / 65_536);
+}
+
 function toInt16(value: number): number {
   return (value << 16) >> 16;
+}
+
+function insideSpriteSheet(x: number, y: number): boolean {
+  return x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT;
 }
 
 function ordered(first: number, second: number): readonly [number, number] {

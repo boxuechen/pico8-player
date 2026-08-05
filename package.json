@@ -15,7 +15,7 @@
     "build:wasm": "pnpm run generate:host-bindings && node tools/wasm/build.mjs",
     "build:player-worker": "node tools/browser/build-player-worker.mjs",
     "typecheck": "tsc -b --pretty false",
-    "test": "pnpm run test:architecture && pnpm run test:cart-codec && pnpm run test:wasm && pnpm run test:benchmark && pnpm run test:phase-0e && pnpm run test:phase-0f && pnpm run test:phase-1a && pnpm run test:phase-1c && pnpm run test:phase-1d && pnpm run test:phase-1e && pnpm run test:phase-1f && pnpm run test:phase-2a && pnpm run test:phase-2b",
+    "test": "pnpm run test:architecture && pnpm run test:cart-codec && pnpm run test:wasm && pnpm run test:benchmark && pnpm run test:phase-0e && pnpm run test:phase-0f && pnpm run test:phase-1a && pnpm run test:phase-1c && pnpm run test:phase-1d && pnpm run test:phase-1e && pnpm run test:phase-1f && pnpm run test:phase-2a && pnpm run test:phase-2b && pnpm run test:phase-2c",
     "test:architecture": "pnpm run build && node --test tests/architecture/architecture.test.mjs",
     "test:cart-codec": "pnpm run build && node --test tests/cart-codec/*.test.mjs && node tools/cart-codec/verify-manifest.mjs",
     "test:wasm": "pnpm run build && pnpm run build:wasm && node --test tests/wasm/phase-0a.test.mjs tests/wasm/phase-0b.test.mjs",
@@ -30,6 +30,8 @@
     "test:phase-2a": "pnpm run build && pnpm run build:wasm && node --test tests/runtime/phase-2a-memory-abi.test.mjs",
     "test:phase-2b": "pnpm run build && pnpm run build:wasm && pnpm run build:player-worker && node --test tests/runtime/phase-2b-draw-state.test.mjs && node tools/browser/run-phase-2b.mjs",
     "test:phase-2b:chrome": "pnpm run build && pnpm run build:wasm && pnpm run build:player-worker && node tools/browser/run-phase-2b.mjs",
+    "test:phase-2c": "pnpm run build && pnpm run build:wasm && pnpm run build:player-worker && node --test tests/runtime/phase-2c-sprites.test.mjs && node tools/browser/run-phase-2c.mjs",
+    "test:phase-2c:chrome": "pnpm run build && pnpm run build:wasm && pnpm run build:player-worker && node tools/browser/run-phase-2c.mjs",
     "test:phase-0f:unit": "pnpm run build && node --test tests/phase-0f/*.test.mjs",
     "test:phase-0f:renderer": "pnpm run test:phase-0f:unit && node tools/browser/run-phase-0f-render.mjs",
     "test:phase-0f:audio": "pnpm run test:phase-0f:unit && node tools/browser/run-phase-0f-audio.mjs",
@@ -47,7 +49,7 @@
     "benchmark:interop:compare": "node benchmarks/interop/compare.mjs",
     "test:public-exports": "pnpm run build && tsc -p tests/architecture/consumer/tsconfig.json --pretty false",
     "verify:wasm": "pnpm run test:wasm && pnpm run test:benchmark && pnpm run test:wasm:repro && node tools/wasm/verify-manifest.mjs && node tools/wasm/verify-runtime-manifest.mjs",
-    "verify": "pnpm run generate:host-bindings && pnpm run typecheck && pnpm run build && pnpm run test:architecture && pnpm run test:cart-codec && pnpm run verify:wasm && pnpm run test:phase-0e && pnpm run test:phase-0f && pnpm run test:phase-1a && pnpm run test:phase-1c && pnpm run test:phase-1d && pnpm run test:phase-1e && pnpm run test:phase-1f && pnpm run test:phase-2a && pnpm run test:phase-2b"
+    "verify": "pnpm run generate:host-bindings && pnpm run typecheck && pnpm run build && pnpm run test:architecture && pnpm run test:cart-codec && pnpm run verify:wasm && pnpm run test:phase-0e && pnpm run test:phase-0f && pnpm run test:phase-1a && pnpm run test:phase-1c && pnpm run test:phase-1d && pnpm run test:phase-1e && pnpm run test:phase-1f && pnpm run test:phase-2a && pnpm run test:phase-2b && pnpm run test:phase-2c"
   },
   "devDependencies": {
     "@babel/parser": "8.0.4",

@@ -9,9 +9,9 @@
     "phase1Evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md",
     "baselineCommit": "916de2a"
   },
-  "completedWorkUnits": ["2A", "2B"],
-  "activeWorkUnit": "2C",
-  "nextWorkUnit": "2D",
+  "completedWorkUnits": ["2A", "2B", "2C"],
+  "activeWorkUnit": "2D",
+  "nextWorkUnit": "2E",
   "workUnits": {
     "2A": {
       "name": "Canonical Memory and Host ABI",
@@ -102,7 +102,7 @@
     },
     "2C": {
       "name": "Sprite Sheet and Blitter",
-      "status": "active",
+      "status": "complete",
       "graphicsApis": ["sget", "sset", "spr", "sspr"],
       "sourceBoundary": {
         "logicalRange": "0x0000..0x1fff",
@@ -124,9 +124,49 @@
         "screen-gfx-remap-alias-vectors",
         "chrome-production-gate",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingIds": "19..22",
+        "spriteGoldenSha256": "337c0b373ba82b7b1f6e8239ce0eb1da46b7a854e4066d994793520582707180",
+        "maximumVisibleBlitPixels": 16384,
+        "verification": [
+          "pnpm run test:phase-2c",
+          "pnpm run test:phase-2c:chrome",
+          "pnpm run test:phase-2b",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "2D": {
+      "name": "Map, Flags and tline",
+      "status": "active",
+      "graphicsApis": ["mget", "mset", "fget", "fset", "map", "tline"],
+      "mapResolver": {
+        "baseRegister": "0x5f56",
+        "widthRegister": "0x5f57",
+        "allowedPhysicalRanges": ["0x1000..0x2fff", "0x8000..0xffff"],
+        "zeroWidthMeans": 256,
+        "outOfBoundsRegister": "0x5f5a"
+      },
+      "flagRange": "0x3000..0x30ff",
+      "tlineState": {
+        "maskRegisters": "0x5f38..0x5f39",
+        "offsetRegisters": "0x5f3a..0x5f3b",
+        "coordinateEncoding": "signed-q16.16"
+      },
+      "renderBoundary": {
+        "runtimeOwns": ["map-address-resolution", "tile-selection", "texture-sampling", "sprite-raster-reuse"],
+        "mainForbidden": ["map-ram-read", "tile-layer-semantics", "texture-sampling"]
+      },
+      "compatibilityMode": "standard-128x128-packed-4bpp",
+      "exit": [
+        "map-base-width-and-bounds-conformance",
+        "flag-bitfield-and-layer-filter-conformance",
+        "map-and-tline-framebuffer-golden",
+        "chrome-production-gate",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "2D": { "name": "Map, Flags and tline", "status": "planned" },
     "2E": { "name": "P8SCII and Custom Font", "status": "planned" },
     "2F": { "name": "Conformance and Phase Exit", "status": "planned" }
   },

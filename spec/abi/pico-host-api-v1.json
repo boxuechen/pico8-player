@@ -215,6 +215,60 @@
         { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "void"
+    },
+    {
+      "id": 19,
+      "guestName": "sget",
+      "hostMethod": "sget",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" }
+      ],
+      "result": "integer"
+    },
+    {
+      "id": 20,
+      "guestName": "sset",
+      "hostMethod": "sset",
+      "parameters": [
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 21,
+      "guestName": "spr",
+      "hostMethod": "spr",
+      "parameters": [
+        { "name": "spriteRaw", "type": "q16.16-raw-i32" },
+        { "name": "xRaw", "type": "q16.16-raw-i32" },
+        { "name": "yRaw", "type": "q16.16-raw-i32" },
+        { "name": "widthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "heightRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "flipX", "type": "boolean-i32", "optional": true },
+        { "name": "flipY", "type": "boolean-i32", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 22,
+      "guestName": "sspr",
+      "hostMethod": "sspr",
+      "parameters": [
+        { "name": "sourceXRaw", "type": "q16.16-raw-i32" },
+        { "name": "sourceYRaw", "type": "q16.16-raw-i32" },
+        { "name": "sourceWidthRaw", "type": "q16.16-raw-i32" },
+        { "name": "sourceHeightRaw", "type": "q16.16-raw-i32" },
+        { "name": "destinationXRaw", "type": "q16.16-raw-i32" },
+        { "name": "destinationYRaw", "type": "q16.16-raw-i32" },
+        { "name": "destinationWidthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "destinationHeightRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "flipX", "type": "boolean-i32", "optional": true },
+        { "name": "flipY", "type": "boolean-i32", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

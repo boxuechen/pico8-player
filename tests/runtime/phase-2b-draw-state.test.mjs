@@ -81,7 +81,7 @@ test("Phase 2B appends typed graphics bindings and resets RAM-backed draw state"
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.slice(9).map(({ id, guestName }) => [id, guestName]), [
+  assert.deepEqual(contract.bindings.slice(9, 18).map(({ id, guestName }) => [id, guestName]), [
     [10, "color"],
     [11, "camera"],
     [12, "clip"],

@@ -30,6 +30,29 @@ export interface PicoApiHost {
   palt(colorOrMaskRaw?: number, transparent?: boolean): number;
   fillp(patternRaw?: number): number;
   pget(xRaw: number, yRaw: number): number;
+  sget(xRaw: number, yRaw: number): number;
+  sset(xRaw: number, yRaw: number, colorRaw?: number): void;
+  spr(
+    spriteRaw: number,
+    xRaw: number,
+    yRaw: number,
+    widthRaw?: number,
+    heightRaw?: number,
+    flipX?: boolean,
+    flipY?: boolean,
+  ): void;
+  sspr(
+    sourceXRaw: number,
+    sourceYRaw: number,
+    sourceWidthRaw: number,
+    sourceHeightRaw: number,
+    destinationXRaw: number,
+    destinationYRaw: number,
+    destinationWidthRaw?: number,
+    destinationHeightRaw?: number,
+    flipX?: boolean,
+    flipY?: boolean,
+  ): void;
   pset(xRaw: number, yRaw: number, colorRaw?: number): void;
   line(
     x0Raw?: number,
@@ -122,6 +145,52 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   pget(xRaw: number, yRaw: number): number {
     return this.#graphics.pget(xRaw, yRaw);
+  }
+
+  sget(xRaw: number, yRaw: number): number {
+    return this.#graphics.sget(xRaw, yRaw);
+  }
+
+  sset(xRaw: number, yRaw: number, colorRaw?: number): void {
+    this.#graphics.sset(xRaw, yRaw, colorRaw);
+  }
+
+  spr(
+    spriteRaw: number,
+    xRaw: number,
+    yRaw: number,
+    widthRaw?: number,
+    heightRaw?: number,
+    flipX?: boolean,
+    flipY?: boolean,
+  ): void {
+    this.#graphics.spr(spriteRaw, xRaw, yRaw, widthRaw, heightRaw, flipX, flipY);
+  }
+
+  sspr(
+    sourceXRaw: number,
+    sourceYRaw: number,
+    sourceWidthRaw: number,
+    sourceHeightRaw: number,
+    destinationXRaw: number,
+    destinationYRaw: number,
+    destinationWidthRaw?: number,
+    destinationHeightRaw?: number,
+    flipX?: boolean,
+    flipY?: boolean,
+  ): void {
+    this.#graphics.sspr(
+      sourceXRaw,
+      sourceYRaw,
+      sourceWidthRaw,
+      sourceHeightRaw,
+      destinationXRaw,
+      destinationYRaw,
+      destinationWidthRaw,
+      destinationHeightRaw,
+      flipX,
+      flipY,
+    );
   }
 
   pset(xRaw: number, yRaw: number, colorRaw?: number): void {

@@ -12,7 +12,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 2B** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B RAM-backed standard-4bpp draw state/primitives 与 display-palette frame snapshot |
+| **Implemented through Phase 2C** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet 与 standard-4bpp blitter |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
 
@@ -439,12 +439,14 @@ interface ScreenEncoder {
 
 `Graphics` 在 Worker 内做确定性 software rendering，直接读写 packed RAM。`ScreenEncoder` 应用 screen palette 并生成 128×128 RGBA；主线程 `ScreenPresenter` 只负责最近邻缩放和 letterbox。
 
-Phase 2B 当前实现位于 `graphics/l1-graphics.ts`：支持
+Phase 2B–2C 当前实现位于 `graphics/l1-graphics.ts`：支持
 `cls/color/camera/clip/pal/palt/fillp/pget/pset/line/rect/rectfill/circ/circfill/oval/ovalfill`，
 使用 mapped packed screen，并从 `0x5f00..0x5f3f` 与 `0x5f60..0x5f6f` 即时读写 draw state。
+`sget/sset/spr/sspr` 通过同一个 `PicoRam` logical mapper 访问 GFX，blitter 在 RuntimeCore 内
+执行 scaling、flip、palette/transparency 和 apply-to-sprites fill pattern；不存在独立 sprite sheet。
 `RuntimeFrame` 另外快照 `0x5f10..0x5f1f` 的 16-byte display palette，main Canvas 只把
 palette index 映射到标准/extended RGBA。当前兼容声明仅是 standard 128×128 packed 4bpp；
-sprite/map/text、bitplane 和 advanced screen mode 仍是 Target。
+map/tline/text、bitplane 和 advanced screen mode 仍是 Target。
 
 ### 7.2 必须保持的行为
 
