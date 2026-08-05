@@ -89,6 +89,11 @@ pnpm run verify
 - reproducibility：两个全新 output directory 的 `.mjs`、`.wasm`、NOTICE 和三份
   license 全部 byte-identical。
 - unified `verify` 同时运行 Phase 0S architecture gates 和 Phase 0A gates。
+- clean checkout：从 `df6159376ab59792743f87387a2a48e1f37da3f4` 执行
+  `git clone --no-local`，使用 Node 22.22.2、pnpm 10.8.0 运行
+  `pnpm install --frozen-lockfile` 与 `pnpm run verify`；16/16 architecture、
+  14/14 WASM、reproducibility 和 6-file manifest 全部通过，验证后 checkout 的
+  `git status --short` 为空。
 
 ## 7. 未覆盖与下一阶段
 
