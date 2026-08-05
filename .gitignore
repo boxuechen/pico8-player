@@ -12,3 +12,5 @@
 # Local benchmark smoke output; reviewed browser evidence is tracked explicitly.
 /benchmarks/interop/results/*-smoke.json
 /benchmarks/interop/results/node-full.json
+/benchmarks/phase-0f/results/*-smoke.json
+/benchmarks/phase-0f/results/*-smoke.png

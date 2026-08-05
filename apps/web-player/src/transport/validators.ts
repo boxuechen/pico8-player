@@ -2,6 +2,14 @@ import type {
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
 } from "./worker-protocol.js";
+import {
+  AUDIO_PROTOCOL_VERSION,
+  PICO_CANONICAL_SAMPLE_RATE,
+  type AudioDeviceStatsMessage,
+  type AudioPortAttachmentEnvelope,
+  type AudioTransportMessage,
+  type AudioWorkletControlMessage,
+} from "./audio-protocol.js";
 
 function isEnvelope(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null) return false;
@@ -24,6 +32,79 @@ function isUint(value: unknown): boolean {
     Number.isSafeInteger(value) &&
     Number(value) >= 0 &&
     Number(value) <= 0xffff_ffff
+  );
+}
+
+function isDecimalUint(value: unknown): boolean {
+  return typeof value === "string" && /^(?:0|[1-9][0-9]*)$/u.test(value);
+}
+
+function isAudioEnvelope(value: unknown): value is Record<string, unknown> {
+  return (
+    isRecord(value) &&
+    value.v === AUDIO_PROTOCOL_VERSION &&
+    isUint(value.sessionGeneration)
+  );
+}
+
+export function isAudioPortAttachmentEnvelope(
+  value: unknown,
+): value is AudioPortAttachmentEnvelope {
+  return isAudioEnvelope(value) && value.type === "attachAudioPort";
+}
+
+export function isAudioTransportMessage(value: unknown): value is AudioTransportMessage {
+  if (!isAudioEnvelope(value)) return false;
+  if (value.type === "audioReset") {
+    return isUint(value.nextSequence) && isDecimalUint(value.firstSample);
+  }
+  if (value.type !== "audioChunk") return false;
+  return (
+    isUint(value.sequence) &&
+    isDecimalUint(value.firstSample) &&
+    value.sampleRate === PICO_CANONICAL_SAMPLE_RATE &&
+    isUint(value.frameCount) &&
+    Number(value.frameCount) > 0 &&
+    Number(value.frameCount) <= 0x10000 &&
+    value.pcm16le instanceof ArrayBuffer &&
+    value.pcm16le.byteLength === Number(value.frameCount) * 2
+  );
+}
+
+export function isAudioDeviceStatsMessage(
+  value: unknown,
+): value is AudioDeviceStatsMessage {
+  if (!isAudioEnvelope(value) || value.type !== "audioStats") return false;
+  const uintFields = [
+    "queuedSourceFrames",
+    "queueHighWaterFrames",
+    "configuredLowWaterFrames",
+    "configuredHighWaterFrames",
+    "startupUnderruns",
+    "steadyUnderruns",
+    "overruns",
+    "droppedSourceFrames",
+    "discontinuities",
+    "staleChunks",
+    "receivedChunks",
+    "renderedDeviceFrames",
+  ];
+  return (
+    typeof value.deviceSampleRate === "number" &&
+    Number.isFinite(value.deviceSampleRate) &&
+    value.deviceSampleRate > 0 &&
+    uintFields.every((field) => isUint(value[field])) &&
+    typeof value.playing === "boolean"
+  );
+}
+
+export function isAudioWorkletControlMessage(
+  value: unknown,
+): value is AudioWorkletControlMessage {
+  return (
+    isRecord(value) &&
+    value.v === AUDIO_PROTOCOL_VERSION &&
+    (value.type === "requestAudioStats" || value.type === "disposeAudio")
   );
 }
 

@@ -25,8 +25,8 @@
 | 0C Interop Microbenchmark | Complete | [Evidence](./evidence/phase-0/14-phase-0c-evidence.md) / [ADR-006](./adr/006-interop-hot-path-boundary.md) |
 | 0D Lossless `.p8.png` | Complete | [Evidence](./evidence/phase-0/15-phase-0d-evidence.md) / [ADR-005](./adr/005-lossless-p8png.md) |
 | 0E Coroutine Frame Slice | Complete | [Evidence](./evidence/phase-0/16-phase-0e-evidence.md) / [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md) |
-| 0F Browser Render / Audio Transport | **Ready / current** | [执行文档](./phases/0f-browser-render-audio-transport.md) |
-| 1 L1 最小可玩闭环 | Not started | Phase 0 exit 后激活 |
+| 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
+| 1 L1 最小可玩闭环 | **Next / not activated** | 激活时创建独立 phase 文档 |
 | 2 Graphics、Memory、Text | Not started | Phase 1 exit 后激活 |
 | 3 Audio、完整 Input、Persistence | Not started | Phase 2 exit 后激活 |
 | 4 L2 / MVP 兼容加固 | Not started | Phase 3 exit 后激活 |
@@ -35,23 +35,23 @@
 ## 3. Phase 0 — 架构验证
 
 Phase 0 用最小、可丢弃或可重写的 spike 证明混合架构、ABI、memory、codec、frame
-control 和浏览器设备边界成立。0S–0E 已完成；不要继续向旧 spike ABI 添加新产品
+control 和浏览器设备边界成立。0S–0F 已完成；不要继续向旧 spike ABI 添加新产品
 行为。
 
-### 当前阶段：0F
+### Phase 0F 完成结论
 
-Phase 0F 拆为三个独立交付单元：
+- Canvas2D 是唯一默认 presenter；pixel/DPR/resize/performance 门禁已通过。
+- dedicated Worker → `MessagePort` → AudioWorklet 是唯一默认 PCM transport；
+  44.1/48 kHz 并发 10 分钟 soak 中 steady underrun/overrun/drop 均为 0。
+- composition 已覆盖 trusted gesture、watchdog/recreate、generation reattach 和 dispose。
 
-1. 0F-R：renderer fixture、Chrome pixel/performance evidence、ADR-009。
-2. 0F-A：dedicated MessagePort、bounded AudioWorklet queue、10-minute soak、ADR-010。
-3. 0F-I：唯一默认路径的 composition、协议/文档同步和 Phase 0 exit。
-
-范围、稳定输入、禁止提前实现项和精确验收全部见
-[`0f-browser-render-audio-transport.md`](./phases/0f-browser-render-audio-transport.md)。
+详细数据与历史执行契约见
+[`17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)。
 
 ### Phase 0 Exit Gate
 
-进入 Phase 1 前必须全部满足：
+**Status: Passed by Phase 0F.** 以下进入 Phase 1 前的条件已全部由自动测试、
+Chrome device-run、Accepted ADR 和归档 evidence 覆盖：
 
 - 0S–0F 自动测试通过；真实 Chrome 手势/音频 evidence 可作为版本化 device-run。
 - z8lua pin、patch、license、fixed memory、interop hot-path 和 HostRequest 限制已有

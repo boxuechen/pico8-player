@@ -1,22 +1,24 @@
 # 系统架构
 
-> 文档角色：稳定的系统边界与目标拓扑。当前实现状态以
-> [当前阶段文档](./phases/0f-browser-render-audio-transport.md)、机器契约和源码为准。
+> 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码和
+> [Phase 0F 完成证据](./evidence/phase-0/17-phase-0f-evidence.md)为准。
 
 ## 状态路由
 
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 0E** | WASM 内固定 64 KiB RAM、bounded `loadCart/step/hostResponse/dispose` Worker DTO、generation/watchdog、manual frame slice 与 startup clock |
-| **Target** | 完整 Session 状态机、完整 Worker 协议、boot/frame transaction、renderer/audio 数据路径和 wall-clock scheduler |
+| **Implemented through Phase 0F** | WASM 内固定 64 KiB RAM、bounded `loadCart/step/hostResponse/dispose` Worker DTO、generation/watchdog、manual frame slice/startup clock、Canvas2D presenter、dedicated PCM port/bounded Worklet queue 和 browser composition |
+| **Target** | 完整 Session 状态机、完整 Worker 协议、boot/frame transaction、wall-clock scheduler 与完整 Graphics/AudioSynth/Input/Persistence |
 | **Deferred** | persistence、完整 cart swap、BBS resolver 和完整 L3 host integration |
 
 第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
 当前 bounded Worker 协议由
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json) 和
-[`worker-protocol.ts`](../apps/web-player/src/transport/worker-protocol.ts) 定义；Phase 0F
-只扩展 presenter/audio transport 所需的最小边界。
+[`worker-protocol.ts`](../apps/web-player/src/transport/worker-protocol.ts) 定义；已实现的
+browser boundary 由
+[`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
+定义。
 
 ## 1. 架构总览
 
@@ -47,7 +49,8 @@ flowchart LR
 - keyboard、pointer、gamepad、touch 状态采样。
 - Canvas/WebGL 呈现和 fullscreen。
 - AudioContext / AudioWorklet 生命周期。
-- 建立专用 `MessageChannel`，把两个端口分别转交 Runtime Worker 与 AudioWorklet；该路径须经 Phase 0 浏览器 spike 确认。
+- 建立专用 `MessageChannel`，把两个端口分别转交 Runtime Worker 与 AudioWorklet；
+  [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) 已接受该唯一默认路径。
 - Worker watchdog、终止和重建。
 
 禁止：
@@ -200,7 +203,8 @@ export type RuntimeToHost =
 协议要求：
 
 - `ArrayBuffer` SHOULD 使用 transferable，避免复制大 buffer。
-- `attachAudioPort` 的 port 必须放入 transfer list；PCM 只走该专用 port，不混入控制协议。若 Phase 0 证明目标浏览器不可靠，必须先用 ADR 改成 Window relay。
+- `attachAudioPort` 的 port 必须放入 transfer list；PCM 只走该专用 port，不混入控制协议。
+  Window relay 和 SAB 已被 ADR-010 拒绝为默认 fallback；改变路径必须有新 evidence 并取代该 ADR。
 - `sessionGeneration`、`frameId`、vsync/input/audio `sequence` 和 request IDs 必须在各自作用域单调/唯一，支持丢弃 stale message。
 - 未知协议版本必须失败关闭，不得猜测。
 - 输入消息传 snapshot，而不是把 DOM event 原样传进 Runtime。

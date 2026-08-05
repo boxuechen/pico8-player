@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "phase": "0F",
+  "browserGate": ["chrome", "chromium"],
+  "renderer": {
+    "default": "canvas2d",
+    "fallbacks": [],
+    "width": 128,
+    "height": 128,
+    "packedFrameBytes": 8192,
+    "rgbaFrameBytes": 65536,
+    "backingStore": "fixed-128x128",
+    "cssScaling": "pixelated",
+    "p95BudgetMs": 4
+  },
+  "audio": {
+    "defaultTransport": "worker-dedicated-messageport-audioworklet",
+    "fallbacks": [],
+    "crossOriginIsolationRequired": false,
+    "canonicalSampleRate": 22050,
+    "channels": 1,
+    "encoding": "signed-pcm16le",
+    "deviceSampleRates": [44100, 48000],
+    "queue": {
+      "capacityFrames": 66150,
+      "prebufferFrames": 11025,
+      "lowWaterFrames": 5512,
+      "highWaterFrames": 44100,
+      "overrunPolicy": "drop-oldest-and-report",
+      "underrunPolicy": "silence-rebuffer-and-report"
+    }
+  },
+  "protocol": {
+    "version": 1,
+    "chunkFields": [
+      "sessionGeneration",
+      "sequence",
+      "firstSample",
+      "sampleRate",
+      "frameCount",
+      "pcm16le"
+    ],
+    "firstSampleEncoding": "decimal-uint-string"
+  },
+  "evidence": {
+    "renderer": "benchmarks/phase-0f/results/chromium-macos-arm64-render.json",
+    "audio": "benchmarks/phase-0f/results/chromium-macos-arm64-audio.json",
+    "integration": "benchmarks/phase-0f/results/chromium-macos-arm64-integration.json"
+  }
+}

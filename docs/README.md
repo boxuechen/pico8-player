@@ -5,17 +5,20 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前阶段是 **Phase 0F：Browser Render / Audio Transport**。
+当前没有 active phase。**Phase 0F：Browser Render / Audio Transport** 已完成，
+Phase 1 尚未激活。开始下一阶段实现前，先在 [`docs/phases/`](./phases/)
+创建唯一的 active phase 执行文档。
 
-开始实现前只需按顺序阅读：
+查看当前实现基线时按顺序阅读：
 
-1. [Phase 0F 执行文档](./phases/0f-browser-render-audio-transport.md)：范围、稳定输入、
-   三个交付单元和 exit gate。
+1. [Phase 0F 完成证据](./evidence/phase-0/17-phase-0f-evidence.md)：浏览器边界、
+   唯一默认路径和 Phase 0 exit gate。
 2. [源码目录与边界契约](./08-source-layout-and-boundaries.md)：package DAG、execution
    domains、composition roots 和 import 门禁。
-3. Phase 文档明确路由的 04/06 章节；不要默认通读所有历史 evidence。
+3. 未来 active phase 文档明确路由的 owner 章节；不要默认通读所有历史
+   evidence。
 
-根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。当前任务
+根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务
 细节不得复制回 AGENTS、README、roadmap 和 Codex 协议。
 
 ## 文档权威边界

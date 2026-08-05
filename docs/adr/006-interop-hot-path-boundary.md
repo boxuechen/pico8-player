@@ -56,10 +56,10 @@ checksum/RAM hash 必须一致，buffer identity 必须稳定。
 | --- | --- |
 | 1. 去 boundary allocation/object conversion | ABI/harness 结构上已应用；Chrome DedicatedWorker 不暴露 `performance.memory`，allocation 数值仍标记 unavailable，后续 Runtime profile 不得据此豁免 |
 | 2. raw numeric/string buffer | 已选择并实测；raw `int32` 与 pointer + length 是 production schema 的约束 |
-| 3. 批量只读输出 | 本阶段没有 framebuffer/audio transport，`not-applicable`；在 renderer/audio 阶段单独测 |
+| 3. 批量只读输出 | Phase 0C 为 `not-applicable`；Phase 0F 已实测 frame snapshot 与 PCM chunks，当前无需更高层级 |
 | 4. memory/pixel primitive 下沉 | pure-WASM control 已测；Chrome 的 import 路径未超预算，当前不下沉 |
 | 5. block operation 下沉 | `spr_8x8` control 已测；4K import p95 未超预算，当前不下沉 |
-| 6. audio inner loop 下沉 | Phase 0C 无 audio，`not-applicable`；Phase 0F 依据 PCM profile 决定 |
+| 6. audio inner loop 下沉 | Phase 0C 为 `not-applicable`；Phase 0F dedicated-port/Worklet profile 已通过，ADR-010 不下沉 AudioSynth |
 | 7. full-core WASM | Rejected for now；没有阻塞数据支持 |
 
 ## 4. 触发重新决策

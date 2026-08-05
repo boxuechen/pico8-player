@@ -6,8 +6,8 @@ z8lua WASM and a TypeScript runtime.
 Before changing production code:
 
 1. Read [`docs/README.md`](docs/README.md).
-2. Read the current phase entry linked there. The active phase is
-   [`docs/phases/0f-browser-render-audio-transport.md`](docs/phases/0f-browser-render-audio-transport.md).
+2. Read the active phase entry linked there, if one exists. Phase 0F is complete;
+   Phase 1 has not been activated yet.
 3. Read [`docs/08-source-layout-and-boundaries.md`](docs/08-source-layout-and-boundaries.md)
    and only the contract sections routed by the current phase document.
 
@@ -24,5 +24,5 @@ Repository rules:
 - Run verification proportional to the change and finish with `pnpm run verify`
   when production behavior or a public contract changes.
 
-Keep this file short. Detailed task requirements belong in the current phase
+Keep this file short. Detailed task requirements belong in the active phase
 document, not here.

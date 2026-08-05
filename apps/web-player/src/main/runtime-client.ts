@@ -1,4 +1,5 @@
 import type {
+  AudioPortAttachmentEnvelope,
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
 } from "../transport/public.js";
@@ -9,7 +10,12 @@ import type {
 } from "@pico8-web/contracts";
 
 export interface RuntimeWorkerPort {
-  postMessage(message: Phase0EHostToRuntime, transfer?: readonly ArrayBuffer[]): void;
+  postMessage(
+    message:
+      | Phase0EHostToRuntime
+      | (AudioPortAttachmentEnvelope & { readonly port: MessagePort }),
+    transfer?: readonly Transferable[],
+  ): void;
   addEventListener(
     type: "message",
     listener: (event: { readonly data: unknown }) => void,
@@ -18,6 +24,7 @@ export interface RuntimeWorkerPort {
 }
 
 export type RuntimeWorkerFactory = () => RuntimeWorkerPort;
+export type SessionGenerationListener = (sessionGeneration: number) => void;
 
 export interface RuntimeClientOptions {
   readonly commandTimeoutMs?: number;
@@ -48,7 +55,8 @@ export class Phase0ERuntimeClient {
   readonly #factory: RuntimeWorkerFactory;
   readonly #timeoutMs: number;
   readonly #pending = new Map<number, PendingCommand>();
-  #worker: RuntimeWorkerPort;
+  readonly #generationListeners = new Set<SessionGenerationListener>();
+  #worker!: RuntimeWorkerPort;
   #generation = 0;
   #nextRequestId = 1;
   #disposed = false;
@@ -60,7 +68,7 @@ export class Phase0ERuntimeClient {
     }
     this.#factory = factory;
     this.#timeoutMs = timeoutMs;
-    this.#worker = this.#spawn();
+    this.#spawn();
   }
 
   get sessionGeneration(): number {
@@ -98,6 +106,25 @@ export class Phase0ERuntimeClient {
     );
   }
 
+  attachAudioPort(port: MessagePort): void {
+    if (this.#disposed) throw new Error("runtime client is disposed");
+    this.#worker.postMessage(
+      {
+        v: 1,
+        type: "attachAudioPort",
+        sessionGeneration: this.#generation,
+        port,
+      },
+      [port],
+    );
+  }
+
+  onSessionGenerationChange(listener: SessionGenerationListener): () => void {
+    if (this.#disposed) throw new Error("runtime client is disposed");
+    this.#generationListeners.add(listener);
+    return () => this.#generationListeners.delete(listener);
+  }
+
   async dispose(): Promise<void> {
     if (this.#disposed) return;
     try {
@@ -109,14 +136,16 @@ export class Phase0ERuntimeClient {
         globalThis.clearTimeout(pending.timer);
       }
       this.#pending.clear();
+      this.#generationListeners.clear();
     }
   }
 
-  #spawn(): RuntimeWorkerPort {
+  #spawn(): void {
     this.#generation += 1;
     const worker = this.#factory();
     worker.addEventListener("message", (event) => this.#receive(event.data));
-    return worker;
+    this.#worker = worker;
+    for (const listener of this.#generationListeners) listener(this.#generation);
   }
 
   #receive(value: unknown): void {
@@ -178,6 +207,6 @@ export class Phase0ERuntimeClient {
       this.#pending.delete(id);
       pending.reject(error);
     }
-    if (!this.#disposed) this.#worker = this.#spawn();
+    if (!this.#disposed) this.#spawn();
   }
 }

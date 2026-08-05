@@ -12,13 +12,14 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 0E** | `.p8.png` bounded decode；`FrameSliceRuntime` / `FrameVmPort`；production z8lua adapter；bounded Worker DTO、watchdog/generation、startup clock |
+| **Implemented through Phase 0F** | `.p8.png` bounded decode；`FrameSliceRuntime` / `FrameVmPort`；production z8lua adapter；bounded Worker DTO、watchdog/generation、startup clock；Canvas2D presenter；dedicated audio `MessagePort`、bounded Worklet queue 与 browser composition |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Proposed in Phase 0F** | main-thread presenter、dedicated audio `MessagePort`、bounded Worklet queue；执行细节见[当前阶段文档](./phases/0f-browser-render-audio-transport.md) |
 | **Deferred** | 文本 `.p8`、完整 Graphics/AudioSynth/Input/Scheduler/Persistence、完整 cart swap 与 multicart |
 
-Phase 0E 当前协议以 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)
-为准。本文不得被用来提前实现当前阶段范围外的完整 Runtime。
+Phase 0E control 协议以
+[`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
+boundary 以 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)为准。
+本文不得被用来提前实现未激活 phase 范围外的完整 Runtime。
 
 ## 1. 文档目的与规范用语
 
@@ -88,7 +89,7 @@ TypeScript 负责：
 |---|---|---|---|
 | `P0-RT-01` | Accepted（ADR-013；Phase 0B passed） | WASM memory 固定 `initial === maximum`，不增长；Phase 0B artifact 为 16 MiB / 默认 1 MiB Lua cap | binary descriptor、heap/OOM、64-context 与 typed-view identity 已通过；production corpus sizing 后续继续测 |
 | `P0-RT-02` | Accepted / Phase 0D passed（ADR-005） | `.p8.png` 不经 Canvas；项目自有 bounded TS PNG/zlib/DEFLATE/code decoder | raw/legacy/PXA ROM/source hash、malformed/limit、architecture、manifest 与许可证证据已通过 |
-| `P0-RT-03` | Proposed | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM | Chrome/Chromium 的 transferable `MessagePort` 与 10 分钟队列测试 |
+| `P0-RT-03` | Accepted / Phase 0F passed（ADR-010） | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM；不实现 relay/SAB fallback | Chrome/Chromium transferable `MessagePort`、44.1/48 kHz 并发 10 分钟 bounded-queue soak 已通过 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
 | `P0-RT-05` | Proposed（Phase 1） | cold boot/cart run 的 RAM reset matrix | 依赖 Cart ROM/Runtime lifecycle 与官方 golden；fake-08 只能作为候选行为 |
 | `P0-RT-06` | Accepted with constraints（ADR-017；Phase 0E） | root host-call 可恢复；nested guest coroutine 固定 unsupported，L3 外部数据只用预供给/同步 cache | root byte-string continuation 与 nested sentinel tests 已通过；一般 bubbling 需新 ADR |
@@ -97,7 +98,9 @@ TypeScript 负责：
 | `P0-RT-09` | Accepted（ADR-015） | 四 package DAG + main/worker/worklet execution domains | Phase 0S exports/project references、architecture tests 与 negative fixtures |
 | `P0-RT-10` | Accepted（ADR-017；Phase 0E passed） | `FrameSliceRuntime` 通过 `FrameVmPort` 驱动 callback/custom loop；startup epoch 和后续 logical time 只按 committed slice 推进 | 官方 Web Player clock capture、60-step counts、Q16.16 time、input/frame RAM hash、budget/error/HostRequest 与 Chrome Worker gate |
 
-其中 `P0-RT-03` 是与系统架构图一致的目标数据路径。若目标浏览器不能可靠转交 port，允许的 fallback 是 Worker → Window → `AudioWorkletNode.port`，但必须先更新 ADR、背压测试和本文；两条路径不得同时作为无规则的运行时分支。
+`P0-RT-03` 现为与系统架构图一致的唯一默认数据路径。Window relay
+与 SAB 未实现；任何 fallback 都必须有可复现失败、新背压证据并取代 ADR-010，
+不得成为无规则运行时分支。
 
 ## 3. 运行拓扑与数据流
 
@@ -116,7 +119,8 @@ AudioWorklet <──────── port B : bounded PCM queue ────�
 - **MUST NOT** 从 WASM import 中操作 DOM、Canvas、AudioContext、`fetch()` 或 IndexedDB Promise。
 - 所有 Lua 调用的 PICO API 都是同步的。需要异步资源时，ABI 必须产生可恢复的 `HostRequest`，Runtime 暂停 VM，资源就绪后显式 resume；不得伪造同步网络读取。
 - Canvas/WebGL 只是呈现器，AudioWorklet 只是设备适配器。二者不得反向决定游戏状态或逻辑 tick。
-- Window 只负责创建 AudioContext/AudioWorklet 和转交专用 port；完成握手后，PCM 数据 **SHOULD** 走 Worker ↔ AudioWorklet 的专用 `MessagePort`，不混入 Window↔Worker 控制协议。此项以 `P0-RT-03` 的浏览器 spike 为准。
+- Window 只负责创建 AudioContext/AudioWorklet 和转交专用 port；完成握手后，PCM 数据
+  **MUST** 走 Worker ↔ AudioWorklet 的专用 `MessagePort`，不混入 Window↔Worker 控制协议。
 
 ## 4. 依赖方向
 
@@ -368,7 +372,7 @@ v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值�
 
 ## 7. Graphics
 
-> 状态：Target；Phase 0F 只验证 presenter boundary。
+> 状态：完整 Graphics 是 Target；Phase 0F presenter boundary 已 Implemented（ADR-009）。
 
 ### 7.1 分层
 
@@ -407,13 +411,14 @@ interface ScreenEncoder {
 - `spr/sspr/map/tline` 必须看到同一时刻 RAM 中的数据，包括共享 `GFX2/MAP2`。
 - `print` 内部使用 P8SCII bytes，支持控制码和 `0x5600` custom font；不得先转 JS Unicode 再测长度。
 - display palette 只影响呈现，不应破坏 screen RAM 中的 4-bit color index。
-- WebGL 可以替换 `ScreenPresenter`，但不得替换核心 raster 语义；Context Lost 后必须能从下一帧 8KiB screen 重建。
+- Canvas2D 是 ADR-009 选定的唯一默认 `ScreenPresenter`。未来若改用 WebGL，
+  必须先提供新 Chrome evidence 并取代 ADR-009；不得改变核心 raster 语义。
 
 热点优化顺序固定为：先 conformance 正确，再 profile；只下沉被测量证明的 `pset/pget/spr/sspr/map/tline/memcpy` 热点。任何 WASM 下沉实现必须继续以同一块 RAM 和同一组 golden 为准。
 
 ## 8. AudioSynth 与 AudioWorklet
 
-> 状态：Target；Phase 0F 只验证 transport。
+> 状态：完整 AudioSynth 是 Target；Phase 0F transport/queue/device adapter 已 Implemented（ADR-010）。
 
 ### 8.1 责任边界
 
@@ -425,20 +430,12 @@ interface AudioSynth {
   renderLogicalTicks(ticks: number, fps: 30 | 60): Int16Array;
   snapshotStats(): AudioStats;
 }
-
-type AudioChunkMessage = Readonly<{
-  type: "audio-chunk";
-  sessionGeneration: number;
-  firstSample: bigint;
-  sampleRate: 22050;
-  monoPcm16le: ArrayBuffer;
-}>;
-
-type AudioTransportMessage =
-  | AudioChunkMessage
-  | { type: "reset-audio"; sessionGeneration: number }
-  | { type: "audio-stats"; sessionGeneration: number; underruns: number; queuedFrames: number };
 ```
+
+已实现 transport DTO 不在本文复制；精确的 version、generation、sequence、
+decimal sample index、frame count、stats 与 control fields 由
+[`audio-protocol.ts`](../apps/web-player/src/transport/audio-protocol.ts) 和
+[`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json) 拥有。
 
 AudioSynth 在 Worker 内从 `0x3100..0x42ff` 和音频硬件寄存器生成规范采样；按 ADR-014 **MUST** 输出固定 `22050Hz`、mono、signed PCM16LE canonical bytes。官方 capture 是时序/频谱校准源，fake-08 只能作为带 provenance 的辅助对照。AudioWorklet 负责：
 
@@ -447,7 +444,11 @@ AudioSynth 在 Worker 内从 `0x3100..0x42ff` 和音频硬件寄存器生成规�
 - mono 到设备 channel 的复制；
 - underrun 时输出静音并上报计数。
 
-Window 初始化时创建 `MessageChannel`：一个 port 作为 transferable 交给 Runtime Worker，另一个通过 `AudioWorkletNode.port` 再转交给 `AudioWorkletProcessor`。握手完成后，`AudioTransportMessage` 只走该专用 channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM。此路径仍须通过 `P0-RT-03` 后才由 SHOULD 升为 MUST。
+Window 初始化时创建 `MessageChannel`：一个 port 作为 transferable 交给
+Runtime Worker，另一个通过 `AudioWorkletNode.port` 再转交给
+`AudioWorkletProcessor`。握手完成后，audio transport DTO **MUST** 只走该专用
+channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM。该路径已通过
+`P0-RT-03` 和 ADR-010。
 
 ### 8.2 时序与确定性
 

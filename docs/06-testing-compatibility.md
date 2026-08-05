@@ -11,8 +11,8 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E 和 aggregate verify scripts；已归档的 Phase 0 evidence |
-| **Current Phase 0F gates** | framebuffer/presenter、audio transport/queue、Chrome benchmark 与 soak；具体命令和阈值由[当前阶段文档](./phases/0f-browser-render-audio-transport.md)收敛 |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F 和 aggregate verify scripts；已归档的 Phase 0 evidence |
+| **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Target** | 第 3 节完整测试资产布局、尚未落地的 unit/conformance/fuzz/differential/CI 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -659,7 +659,21 @@ Player capture 锁定；custom 60 Hz/fps-selection 仍留给后续 conformance�
 | instruction budget | infinite Lua loop → poisoned fault；不可再 step | `implemented-safety` | Phase 4 校准官方 CPU cost，不改变 hard limit |
 | Worker watchdog | Chrome JS stall → terminate/recreate/generation passed | `implemented-safety` | boot/step deadline 与 background policy 后续校准 |
 | Lua error record | phase/line/safe trace passed | `implemented-baseline` | Wasm trap/JS import/OOM 分类 corpus 继续扩充 |
-| minimal framebuffer | packed screen golden SHA-256 locked | `implemented-probe` | Phase 0F renderer；Phase 1 graphics conformance |
+| minimal framebuffer | packed screen golden SHA-256 locked | `implemented-probe` | Phase 0F presenter 已通过；Phase 1 graphics conformance |
+
+### 15.7 Phase 0F Browser Boundary 矩阵
+
+本表只覆盖 [Phase 0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) 的 browser
+presenter、PCM transport 和 lifecycle composition，不代表完整 Graphics、AudioSynth 或
+Player UI 已实现。
+
+| 行为 | Phase 0F 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| packed 4bpp → RGBA / Canvas2D | 128×128 exact RGBA hash；DPR 1/2/1.25 与 fractional resize 无 blended colors | `implemented-boundary` | Phase 1/2 graphics golden 复用 presenter contract |
+| present performance/lifetime | 10,000 frames p95 `0.0388 ms`；heap delta `15,156 B`；stale generation/dispose passed | `implemented-boundary` | Chrome 升级时重跑 evidence |
+| dedicated PCM transport | 44.1/48 kHz 并发 10 分钟；steady underrun/overrun/drop/discontinuity 均为 `0` | `implemented-boundary` | AudioSynth 实现后保留同一 queue 门禁 |
+| queue/resource bound | capacity `66,150`，high water `44,100`；实测 peak `22,406` / `22,530` | `implemented-boundary` | 参数变更必须更新 spec/evidence |
+| watchdog/generation/dispose | Worker infinite loop 后 generation `1→2`，frame/audio reattach 与 AudioContext close 通过 | `implemented-integration` | Phase 1 CartSession/UI 复用 composition lifecycle |
 
 ## 16. Definition of Done
 

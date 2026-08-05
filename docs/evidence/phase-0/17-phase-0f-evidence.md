@@ -1,9 +1,34 @@
-# Phase 0F — Browser Render / Audio Transport
+# Phase 0F — Browser Render / Audio Transport 完成证据
 
-> 状态：Ready
-> 当前实现基线：Phase 0E，commit `c19a112`
+> 状态：Complete
+> 阶段输入实现基线：Phase 0E，commit `c19a112`
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 阶段性质：browser boundary spike；不实现完整 Graphics、AudioSynth 或 Player UI
+
+## 0. 完成结论
+
+Phase 0F 已选择并集成唯一 browser boundary：
+
+- Renderer：[ADR-009](../../adr/009-canvas2d-frame-presenter.md) 接受 Canvas2D；
+  WebGL fallback 未实现。
+- Audio：[ADR-010](../../adr/010-dedicated-messageport-audio-transport.md) 接受
+  Worker → dedicated MessagePort → AudioWorklet；Window relay 与 SAB 未实现。
+- 机器契约：[`phase-0f-browser-boundary.json`](../../../spec/phase-0f-browser-boundary.json)。
+
+| Gate | Result |
+| --- | --- |
+| Renderer | 128×128 RGBA hash exact；DPR 1/2/1.25；10,000 frames p95 `0.0388 ms`；heap delta `15,156 B` |
+| Audio | 44.1/48 kHz concurrent 10-minute soak；underrun/overrun/drop/discontinuity `0`；rAF missed `0/72,002` |
+| Integration | trusted gesture、generation `1→2`、watchdog/recreate、frame/audio reattach、dispose 全通过 |
+
+Raw evidence：
+
+- [renderer JSON](../../../benchmarks/phase-0f/results/chromium-macos-arm64-render.json)
+  与 [review screenshot](../phase-0f-render-chrome.png)
+- [audio JSON](../../../benchmarks/phase-0f/results/chromium-macos-arm64-audio.json)
+- [integration JSON](../../../benchmarks/phase-0f/results/chromium-macos-arm64-integration.json)
+
+以下保留完成时的原始执行契约，作为历史审计资料。
 
 ## 1. 阶段目标
 
@@ -22,14 +47,14 @@ Phase 0F 只回答两个浏览器边界问题，并把答案固定为 ADR 和可
 按以下顺序读取，除此之外不要求通读全部历史文档：
 
 1. 本文。
-2. [`08-source-layout-and-boundaries.md`](../08-source-layout-and-boundaries.md) 的
+2. [`08-source-layout-and-boundaries.md`](../../08-source-layout-and-boundaries.md) 的
    `apps/web-player`、composition root 和跨执行域 ownership。
-3. Renderer：[`04-typescript-runtime.md`](../04-typescript-runtime.md#7-graphics)
-   与 [`06-testing-compatibility.md`](../06-testing-compatibility.md#72-framebuffer)。
-4. Audio：[`04-typescript-runtime.md`](../04-typescript-runtime.md#8-audiosynth-与-audioworklet)
-   与 [`06-testing-compatibility.md`](../06-testing-compatibility.md#74-audio)。
-5. 浏览器与性能：[`06-testing-compatibility.md`](../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
-   和 [Chrome/Chromium 支持矩阵](../06-testing-compatibility.md#11-chromechromium-支持矩阵)。
+3. Renderer：[`04-typescript-runtime.md`](../../04-typescript-runtime.md#7-graphics)
+   与 [`06-testing-compatibility.md`](../../06-testing-compatibility.md#72-framebuffer)。
+4. Audio：[`04-typescript-runtime.md`](../../04-typescript-runtime.md#8-audiosynth-与-audioworklet)
+   与 [`06-testing-compatibility.md`](../../06-testing-compatibility.md#74-audio)。
+5. 浏览器与性能：[`06-testing-compatibility.md`](../../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
+   和 [Chrome/Chromium 支持矩阵](../../06-testing-compatibility.md#11-chromechromium-支持矩阵)。
 
 机器可读的 Phase 0E ABI/Runtime contract 继续由 `spec/` 拥有，不在本文复制字段清单。
 

@@ -1,7 +1,7 @@
 # 架构决定、风险与未决问题
 
-本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。当前阶段
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。
+本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
+如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义；当前没有 active phase。
 
 ## 1. ADR registry
 
@@ -18,8 +18,8 @@
 | ADR-006 | [Accepted](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length hybrid ABI 与 profile-driven fallback |
 | ADR-007 | Accepted | 首版只接受 caller-provided/local cart bytes |
 | ADR-008 | Proposed / Phase 1+ | API schema 是否生成 bindings |
-| ADR-009 | **Proposed / Phase 0F-R** | Canvas2D 或 WebGL 默认 presenter |
-| ADR-010 | **Proposed / Phase 0F-A** | dedicated MessagePort、relay 或 SAB audio transport |
+| ADR-009 | [Accepted](./adr/009-canvas2d-frame-presenter.md) | Canvas2D 是唯一默认 presenter；WebGL fallback 未实现 |
+| ADR-010 | [Accepted](./adr/010-dedicated-messageport-audio-transport.md) | dedicated MessagePort 是唯一默认 PCM transport；不实现 relay/SAB |
 | ADR-011 | Proposed / later | hidden-tab 默认 pause、不追帧 |
 | ADR-012 | [Accepted](./adr/012-z8lua-source-and-phase-0a-wasm.md) | z8lua pin、patch manifest 与 reproducible WASM |
 | ADR-013 | [Accepted](./adr/013-shared-pico-ram-boundary.md) | context-owned 64 KiB RAM、canonical mapper、fixed memory |
@@ -30,15 +30,11 @@
 
 ## 2. 当前未决问题
 
-### Phase 0F blockers
+### Active blockers
 
-| ID | 问题 | 决策证据与 owner |
-| --- | --- | --- |
-| Q-06 | 默认 presenter 是 Canvas2D 还是 WebGL？ | Phase 0F-R；同一 fixture 的 pixel/resize/context/p95；输出 ADR-009 |
-| Q-07 | audio queue 是否需要 SAB？ | Phase 0F-A；先 dedicated port，再有证据地测试 relay/SAB；输出 ADR-010 |
-
-精确 workload、fallback 顺序和 exit gate 只见
-[`0f-browser-render-audio-transport.md`](./phases/0f-browser-render-audio-transport.md)。
+当前没有 active phase blocker。Phase 0F 的 browser-boundary 决策、composition 和生命周期
+门禁已完成，见
+[`17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)。
 
 ### Deferred open questions
 
@@ -56,6 +52,8 @@
 | Q-01 | Chrome/Chromium interop boundary 为 Go；未触发 full-core WASM | [ADR-006](./adr/006-interop-hot-path-boundary.md) / [0C evidence](./evidence/phase-0/14-phase-0c-evidence.md) |
 | Q-03 | P8 number 过 ABI 使用 signed Q16.16 raw `int32` | `spec/abi/p8w-v1.json` / [0E evidence](./evidence/phase-0/16-phase-0e-evidence.md) |
 | Q-05 | 使用项目自有 bounded TS PNG/zlib/DEFLATE decoder | [ADR-005](./adr/005-lossless-p8png.md) / [0D evidence](./evidence/phase-0/15-phase-0d-evidence.md) |
+| Q-06 | Canvas2D 通过 pixel/resize/DPR/p95 门禁；不实现 WebGL fallback | [ADR-009](./adr/009-canvas2d-frame-presenter.md) |
+| Q-07 | dedicated MessagePort 双速率 10 分钟 soak 通过；不需要 SAB/relay | [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | Q-09 | z8lua pin/patch、upper RAM mapper 和 benchmark boundary 已锁定 | [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
 
@@ -70,7 +68,7 @@ evidence，不在本表复制测试步骤。
 | R-02 | z8lua 与 PICO-8 0.2.7 语义差异 | pinned patches + conformance |
 | R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；artifact verifier |
 | R-04 | PNG low-bit corruption / decompression bomb | ADR-005 limits、property/malformed tests |
-| R-05 | AudioWorklet underrun 或 queue 增长 | **Phase 0F-A / ADR-010** |
+| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + Chrome soak；AudioSynth/Phase 4 重跑 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | Phase 2 byte-oriented text contract |
 | R-08 | hard budget 与官方 CPU 不一致 | safety/compatibility 分离；Phase 4 calibration |
@@ -78,7 +76,7 @@ evidence，不在本表复制测试步骤。
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | 默认禁止；独立授权和 resolver boundary |
 | R-12 | refresh/hidden policy 改变 simulation | logical scheduler；ADR-011 later |
-| R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；0F-I |
+| R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；0F-I integration 已通过 |
 | R-14 | API 广而不准、stub 堆积 | vertical slice + conformance gate |
 | R-15 | upper RAM/remap 语义回归 | ADR-013 canonical mapper tests |
 | R-16 | nested coroutine 吞掉 host suspension | ADR-017 explicit unsupported |

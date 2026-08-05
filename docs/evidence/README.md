@@ -3,7 +3,7 @@
 本目录保存已完成阶段和非 hermetic differential 的不可变证据。它用于审计、回归和
 追溯，不属于每个实现任务的默认阅读集合。
 
-- [`phase-0/`](./phase-0/)：Phase 0S–0E 完成记录。
+- [`phase-0/`](./phase-0/)：Phase 0S–0F 完成记录。
 - [`phase-0e-official-clock.json`](./phase-0e-official-clock.json)：官方 Web Player
   startup-clock capture 的结构化记录。
 - `phase-0e-*.png`：对应 capture 的人工审阅 framebuffer。

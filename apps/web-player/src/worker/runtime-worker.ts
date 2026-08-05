@@ -1,8 +1,13 @@
 import {
+  isAudioPortAttachmentEnvelope,
   isPhase0EHostToRuntime,
   type Phase0ERuntimeToHost,
 } from "../transport/public.js";
 import type { Phase0EWorkerController } from "./compose-runtime.js";
+import type {
+  WorkerAudioMessagePort,
+  WorkerPcmTransport,
+} from "./audio-transport.js";
 
 export interface RuntimeWorkerScope {
   addEventListener(
@@ -10,6 +15,26 @@ export interface RuntimeWorkerScope {
     listener: (event: { readonly data: unknown }) => void,
   ): void;
   postMessage(message: Phase0ERuntimeToHost, transfer?: readonly ArrayBuffer[]): void;
+}
+
+function isWorkerAudioPort(value: unknown): value is WorkerAudioMessagePort {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<WorkerAudioMessagePort>;
+  return (
+    typeof candidate.postMessage === "function" &&
+    typeof candidate.close === "function"
+  );
+}
+
+function attachAudioPort(
+  value: unknown,
+  audioTransport: WorkerPcmTransport,
+): boolean {
+  if (!isAudioPortAttachmentEnvelope(value)) return false;
+  const port = (value as { readonly port?: unknown }).port;
+  if (!isWorkerAudioPort(port)) return true;
+  audioTransport.attach(port, value.sessionGeneration);
+  return true;
 }
 
 function postResponse(
@@ -54,4 +79,20 @@ export function installPhase0EAsyncRuntimeWorker(
   });
 }
 
-export { createPhase0EWorkerController } from "./compose-runtime.js";
+export function installPhase0FAsyncRuntimeWorker(
+  scope: RuntimeWorkerScope,
+  controller: Promise<Phase0EWorkerController>,
+  audioTransport: WorkerPcmTransport,
+): void {
+  let queue = Promise.resolve();
+  scope.addEventListener("message", (event) => {
+    if (attachAudioPort(event.data, audioTransport)) return;
+    if (!isPhase0EHostToRuntime(event.data)) return;
+    const command = event.data;
+    queue = queue.then(async () => {
+      const response = (await controller).handle(command);
+      postResponse(scope, response);
+      if (response.type === "disposed") audioTransport.dispose();
+    });
+  });
+}
