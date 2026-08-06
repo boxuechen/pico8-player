@@ -9,9 +9,9 @@
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A", "4B"],
-  "activeWorkUnit": "4C",
-  "nextWorkUnit": "4D",
+  "completedWorkUnits": ["4A", "4B", "4C"],
+  "activeWorkUnit": "4D",
+  "nextWorkUnit": "4E",
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -64,8 +64,55 @@
         ]
       }
     },
-    "4C": { "name": "P8 Lua and Core Library Compatibility", "status": "active" },
-    "4D": { "name": "Graphics, Memory and Text Hardening", "status": "planned" },
+    "4C": {
+      "name": "P8 Lua and Core Library Compatibility",
+      "status": "complete",
+      "result": {
+        "requiredApis": [
+          "add", "del", "deli", "count", "all", "foreach", "rnd", "srand", "sub",
+          "cocreate", "coresume", "costatus", "yield"
+        ],
+        "compatibilityLibrary": "wasm/bridge/p8w_pico8_compat.cpp",
+        "conformanceManifest": "tests/conformance/manifests/phase-4c-core-library.json",
+        "projectCarts": 2,
+        "observationBytes": 60,
+        "screenSha256": "1427e153f0c79ddc61eededeb1d960c9515d34a0b4a26a53ed4d5b3f91ec9b16",
+        "structuredFault": "E_VM_INSTRUCTION_BUDGET",
+        "chrome": "Google Chrome 150.0.7871.189",
+        "hostAbiBindings": 38,
+        "runtimeWasmSha256": "9fe3cae43c6e3a0dd5123ceaca37edf7699a88ba26e9ea7c77bcbaf88ccb9820",
+        "inventoryCounts": {
+          "implementationCounts": {
+            "implemented": 89,
+            "partial": 7,
+            "unimplemented": 8,
+            "unsupported": 8
+          },
+          "conformanceCounts": {
+            "compatible": 54,
+            "partial": 7,
+            "unknown": 43,
+            "unsupported": 8
+          }
+        },
+        "verification": [
+          "pnpm run test:phase-4c",
+          "pnpm run test:phase-4c:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "4D": {
+      "name": "Graphics, Memory and Text Hardening",
+      "status": "active",
+      "requiredApis": [
+        "rrect", "rrectfill", "tline", "tostr", "tonum", "chr", "ord", "split", "type"
+      ],
+      "scopeDecisions": [
+        "timed-p8scii-controls",
+        "advanced-screen-and-bitplane-modes"
+      ]
+    },
     "4E": { "name": "System, Audio, Input, Persistence and Player Integration", "status": "planned" },
     "4F": { "name": "CPU Cost, Slow-frame and Scheduler Calibration", "status": "planned" },
     "4G": { "name": "Resource Sizing and Chrome Long-run", "status": "planned" },

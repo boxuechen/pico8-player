@@ -9,7 +9,8 @@
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
 实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1 Host boundary、Phase 2
-memory/graphics/text bindings 与 Phase 3 audio/input/persistence/current-cart bindings 已完成；
+memory/graphics/text bindings、Phase 3 audio/input/persistence/current-cart bindings 与 Phase 4C
+project-owned VM compatibility library 已完成；
 当前生产边界和 Chrome 退出结果见
 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
@@ -19,6 +20,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 | 状态 | 本文内容 |
 | --- | --- |
 | **Implemented through Phase 3 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；80-byte call frame/Base RAM API；append-only operation `1..38` 覆盖 Phase 2 graphics/text 与 Phase 3 audio/input/cartdata/current-cart bindings；boolean/presence/Q16/string lowering、structured host faults 与 real-WASM/Chrome conformance |
+| **Implemented in Phase 4C** | VM-local table helpers、P8 `sub`、guest coroutine aliases，以及使用 shared Pico RAM PRNG state 的 deterministic `rnd/srand`；host ABI 仍为 `1..38` |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -99,7 +101,9 @@ Bridge **MUST** 使用带限额的 `lua_newstate(customAllocator, context)`，�
 Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 
 1. 创建 main state，安装受限 allocator。
-2. 只打开实现 P8 Lua 所需的 base、PICO pure math/string、table 与 coroutine 子集；`rnd/srand` 等有 Runtime state 的函数仍走受控 host wrapper。
+2. 只打开实现 P8 Lua 所需的 base、PICO pure math/string、table 与 coroutine 子集；
+   project-owned table/string/coroutine helpers 保持在 VM 内，`rnd/srand` 直接使用 shared Pico
+   RAM `0x5f44..0x5f4b` 的 PRNG state，不跨 JS↔WASM host binding。
 3. 删除或从不注册 `debug`、`io`、`os`、`package`、`require`、`dofile`、`loadfile` 和 native module 能力。
 4. 按目标 PICO-8 API inventory 删除多余 base globals，并注册 PICO aliases 与 generated host wrappers。
 5. 安装不可由 guest 修改的 count hook。

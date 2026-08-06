@@ -11,12 +11,12 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4C、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| **Active Phase 4 baseline** | 112 项 API 四维清单、38 binding 对账、7-case 项目原创 corpus；Node/Chrome baseline 为 `C3=7`、playable `100%`；当前 P8 Lua/core library 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
+| **Active Phase 4 baseline** | 112 项 API 四维清单、38 binding 对账、7-case 项目原创 corpus；Node/Chrome baseline 为 `C3=7`、playable `100%`；4C 的 13 项 P8 Lua/core API 已由 real-WASM/Chrome oracle 关闭，当前 graphics/memory/text 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -798,6 +798,23 @@ gitignored smoke；受审 Node/Chrome 结果及 SHA-256 由
 
 Phase 4B 没有改变 production behavior。它证明冻结 corpus 的既有覆盖稳定，不代表 inventory 中
 未实现的 required VM/library API 已完成；这些 gap 从 4C 起按 surface 收敛。
+
+### 15.14 Phase 4C P8 Lua/Core Library 矩阵
+
+4C 以项目原创 `p8lua-core` 和 nested-budget fault cart 锁定 VM/library surface；table、string、
+function 值不离开 z8lua，PRNG state 只通过 shared Pico RAM `0x5f44..0x5f4b` 与内存 API 共享，
+host ABI 保持 38 entries。
+
+| 行为 | Phase 4C 结果 | 兼容口径 | 后续边界 |
+| --- | --- | --- | --- |
+| table helpers | `add/del/deli/count/all/foreach` 的 1-based sequence、hole、删除中迭代与 identity 通过 | `compatible`（项目 oracle） | 未记录的 invalid/非 sequence edge 不外推 exact |
+| random/string | `srand`、numeric/table `rnd`、PRNG RAM state、正负位置和 single-byte `sub` 可复现 | `compatible`（显式 seed/profile） | fresh VM 使用确定性项目 seed，不声明官方启动随机源 |
+| guest coroutine | aliases、status、yield/resume multi-return 通过；root frame coroutine 仍由 bridge 独占 | `compatible`（nested guest coroutine） | nested host suspension 继续 unsupported |
+| fault/recovery | nested infinite coroutine 无法用 `coresume` 吞掉 budget fault；Chrome 后续有效 cart 恢复 | safety gate passed | CPU 数值和慢帧策略属于 4F |
+| Node/Chrome | real-WASM 与 production Worker 的 60-byte RAM/screen oracle、reset/recovery hash exact | gate passed；Chrome 150 desktop | 不等于未测试官方/第三方 cart bit-exact |
+
+13 项 API 从 `unimplemented/unknown` 更新为 `implemented/compatible`；inventory 当前为
+implementation `89/7/8/8`、conformance `54/7/43/8`（按各自状态顺序）。4C 无开放 P0/P1。
 
 ## 16. Definition of Done
 

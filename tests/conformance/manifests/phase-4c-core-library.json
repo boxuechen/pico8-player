@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "ownership": "Project-authored PICO-8 conformance carts; no third-party, BBS, network or ref content",
+  "target": "PICO-8 0.2.7 Phase 4C P8 Lua/core-library profile",
+  "manual": "https://www.lexaloffle.com/dl/docs/pico-8_manual.html",
+  "requiredApis": [
+    "add", "del", "deli", "count", "all", "foreach", "rnd", "srand", "sub",
+    "cocreate", "coresume", "costatus", "yield"
+  ],
+  "faultCase": {
+    "id": "phase-4/p8lua-core-budget",
+    "source": "tests/conformance/carts/phase-4/p8lua-core-budget.p8",
+    "sourceSha256": "6a7660d476e0be669d49eef0a630665cb00afcef69a79e33e1be7e29f6dd0e57",
+    "cartSha256": "6a7660d476e0be669d49eef0a630665cb00afcef69a79e33e1be7e29f6dd0e57",
+    "instructionBudget": 2000,
+    "expectedCode": "E_VM_INSTRUCTION_BUDGET"
+  },
+  "cases": [
+    {
+      "id": "phase-4/p8lua-core",
+      "source": "tests/conformance/carts/phase-4/p8lua-core.p8",
+      "format": "p8",
+      "mode": "callback",
+      "targetFps": 60,
+      "sourceSha256": "6eca2385937d32378e707aab0f14b37221c9f306824b28a1671e40b36e27a7ef",
+      "cartSha256": "6eca2385937d32378e707aab0f14b37221c9f306824b28a1671e40b36e27a7ef",
+      "instructionBudget": 200000,
+      "coverage": [
+        "table-sequence-insert-delete-count-and-iteration",
+        "deterministic-prng-and-shared-pico-ram-state",
+        "p8-string-sub",
+        "guest-coroutine-aliases-yield-multi-return-and-status",
+        "invalid-arguments-reset-and-root-budget-containment"
+      ],
+      "expected": {
+        "address": 20992,
+        "length": 60,
+        "hex": "0901090203020109030901030103020201030a0b0c0a0b0c27920c00008afb020008010101717569636b636b62010101010b0c010117010101010100",
+        "screenSha256": "1427e153f0c79ddc61eededeb1d960c9515d34a0b4a26a53ed4d5b3f91ec9b16"
+      }
+    }
+  ]
+}

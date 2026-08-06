@@ -65,3 +65,11 @@ notice。项目把固定 2048 bytes 转写为 RuntimeCore 内部 hex constant，
 SHA-256 `a36a2826466ec5e8834462d8d438ddffa617b7bf938b46260eb7f80dfa4c5ea6`；
 许可正文与改写说明位于 `packages/runtime-core/THIRD_PARTY_NOTICES.md`。production/test
 不会读取 `ref/`。
+
+## Phase 4C P8 Lua/PRNG 交叉检查记录
+
+4C 先按官方手册建立项目原创 table/string/coroutine/random carts，再用锁定的 zepto8
+`b2929a4…/src/pico8/bios.p8` 与 `src/pico8/vm.cpp`、fake-08
+`814991a…/source/p8GlobalLuaFunctions.h` 与 `source/vm.cpp` 交叉检查 table 删除中迭代和
+`0x5f44..0x5f4b` PRNG state transition。相关文件采用 WTFPL-2.0 或仓库登记的适用 notice；
+项目 bridge 是按行为合同独立编写的 C++，没有引入 reference build/test dependency。

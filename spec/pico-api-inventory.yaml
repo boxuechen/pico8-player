@@ -60,12 +60,12 @@
     { "name": "sspr", "category": "graphics", "surface": "host-binding", "hostBindingId": 22, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
     { "name": "fillp", "category": "graphics", "surface": "host-binding", "hostBindingId": 15, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
 
-    { "name": "add", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
-    { "name": "del", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
-    { "name": "deli", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
-    { "name": "count", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
-    { "name": "all", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
-    { "name": "foreach", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "add", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "del", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "deli", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "count", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "all", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "foreach", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
     { "name": "pairs", "category": "table", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
 
     { "name": "btn", "category": "input", "surface": "host-binding", "hostBindingId": 3, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
@@ -100,8 +100,8 @@
     { "name": "sqrt", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "abs", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "sgn", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
-    { "name": "rnd", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
-    { "name": "srand", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "rnd", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json", "note": "fresh load and reset use a deterministic project seed; explicit srand and shared 0x5f44 state are compatible" },
+    { "name": "srand", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
     { "name": "band", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "bor", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "bxor", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
@@ -117,7 +117,7 @@
     { "name": "tonum", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "chr", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "ord", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
-    { "name": "sub", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "sub", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
     { "name": "split", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "type", "category": "string", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
 
@@ -134,9 +134,9 @@
     { "name": "rawequal", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "rawlen", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
     { "name": "select", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
-    { "name": "cocreate", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.create exists but the documented PICO global alias does not" },
-    { "name": "coresume", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.resume exists but the documented PICO global alias does not" },
-    { "name": "costatus", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.status exists but the documented PICO global alias does not" },
-    { "name": "yield", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.yield exists but the documented PICO global alias does not" }
+    { "name": "cocreate", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json", "note": "guest coroutine alias; root frame-slice coroutine remains bridge-owned" },
+    { "name": "coresume", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json", "note": "nested budget exhaustion remains a structured root runtime fault" },
+    { "name": "costatus", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "yield", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json", "note": "guest nested-coroutine yield only; root flip/host suspension remains controlled by the bridge" }
   ]
 }

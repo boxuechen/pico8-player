@@ -121,11 +121,10 @@ test("Phase 4B classifications and triage cover the complete frozen corpus", () 
   );
 });
 
-test("Phase 4B contract hash-locks reviewed evidence and advances to 4C", async () => {
+test("Phase 4B contract hash-locks reviewed evidence and remains in completed history", async () => {
   const result = contract.workUnits["4B"].result;
-  assert.equal(contract.activeWorkUnit, "4C");
-  assert.equal(contract.nextWorkUnit, "4D");
-  assert.deepEqual(contract.completedWorkUnits, ["4A", "4B"]);
+  assert.deepEqual(contract.completedWorkUnits.slice(0, 2), ["4A", "4B"]);
+  assert.equal(contract.completedWorkUnits.includes("4B"), true);
   assert.equal(contract.workUnits["4B"].status, "complete");
   assert.equal(result.runner, "phase4-l2-runner@1");
   assert.equal(result.projectCorpusCases, 7);
@@ -141,7 +140,8 @@ test("Phase 4B contract hash-locks reviewed evidence and advances to 4C", async 
   );
 });
 
-test("current smoke results cannot silently drift from the reviewed baseline", async () => {
+test("current smoke results cannot silently drift from the reviewed case oracle", async () => {
+  const productionAdvanced = contract.completedWorkUnits.includes("4C");
   for (const [path, reviewed] of [
     [paths.smokeNode, reviewedNode],
     [paths.smokeChrome, reviewedChrome],
@@ -153,7 +153,11 @@ test("current smoke results cannot silently drift from the reviewed baseline", a
     }
     const smoke = JSON.parse(await readFile(path, "utf8"));
     assert.equal(smoke.target, reviewed.target);
-    assert.equal(smoke.build.playerBuildId, reviewed.build.playerBuildId);
+    if (productionAdvanced) {
+      assert.match(smoke.build.playerBuildId, /^[a-f0-9]{64}$/u);
+    } else {
+      assert.equal(smoke.build.playerBuildId, reviewed.build.playerBuildId);
+    }
     assert.deepEqual(
       smoke.cases.map(({ id, classification, crossOracleSha256 }) => ({
         id, classification, crossOracleSha256,

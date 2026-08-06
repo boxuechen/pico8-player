@@ -1,6 +1,6 @@
 # Phase 4 — L2 / MVP Compatibility Hardening
 
-> 状态：Active；4A–4B complete，4C active
+> 状态：Active；4A–4C complete，4D active
 > 机器合同：[`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 3 exit](../evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
@@ -27,8 +27,8 @@ serial、Firefox/WebKit 和移动 release。外部合法 cart 可以本地研究
 | --- | --- | --- |
 | 4A Capability Inventory & Corpus Contract | Complete | 112 项四维 API 事实、38 ABI 对账、7-case 原创 corpus 与本地外部隔离合同 |
 | 4B Compatibility Runner & Baseline Triage | Complete | Node/Chrome 可重复 baseline；7/7 C3，无开放 issue |
-| 4C P8 Lua & Core Library Compatibility | **Active** | 常用 P8 Lua/core library gap 关闭，sandbox 不扩大 |
-| 4D Graphics / Memory / Text Hardening | Planned | corpus 驱动的视觉、RAM、文本差异关闭 |
+| 4C P8 Lua & Core Library Compatibility | Complete | 13 项 VM/core API、确定性 PRNG 与 nested budget containment 关闭 |
+| 4D Graphics / Memory / Text Hardening | **Active** | corpus 驱动的视觉、RAM、文本差异关闭 |
 | 4E System / Audio / Input / Persistence / Player | Planned | 剩余 player 集成 P0/P1 关闭 |
 | 4F CPU / Slow-frame / Scheduler Calibration | Planned | 4M VM inst/s 成本模型与慢帧策略可复现 |
 | 4G Resource Sizing & Chrome Long-run | Planned | fixed memory、30 分钟 soak、多 cart lifecycle 通过 |
@@ -47,51 +47,67 @@ IndexedDB 路径得到一致的 7-case cross-oracle；分类为 `C3=7`、其余�
 `7/7 = 100%`，开放 P0/P1 为 `0`。受审结果、hash 与 runner/schema 路径由机器合同
 `workUnits.4B.result` 锁定；普通测试只生成 gitignored smoke artifact。
 
-## Active work unit：4C P8 Lua & Core Library Compatibility
+## 已完成：4C
+
+项目自有 WASM compatibility library 实现 `add/del/deli/count/all/foreach`、`rnd/srand` 和
+P8 `sub`；四个 coroutine global aliases 保持 guest-only。Node real-WASM 与 Chrome production
+Worker 对 60-byte RAM/screen oracle、cold reset、nested instruction-budget fault 和 fault 后恢复
+一致；38-entry host ABI 未改变。机器结果由 `workUnits.4C.result` 和
+[`phase-4c-core-library.json`](../../tests/conformance/manifests/phase-4c-core-library.json) 锁定。
+
+## Active work unit：4D Graphics / Memory / Text Hardening
 
 ### Observable behavior
 
-- 在 z8lua/WASM 内提供 PICO-8 必需的 table helpers：`add/del/deli/count/all/foreach`；
-  明确 1-based sequence、hole、删除中迭代、identity 与 multi-return 行为。
-- 提供 deterministic `rnd/srand`，fresh load/reset/replay 得到一致序列；种子和 table/string/
-  fixed-point 参数行为由项目原创 conformance cart 锁定，不把宿主随机源引入 VM。
-- 提供 P8 string `sub` 与 guest coroutine helpers：`cocreate/coresume/costatus/yield`；nested
-  coroutine 不得接管 root frame-slice coroutine，也不得绕开 instruction budget/fault containment。
-- 新能力属于 VM/library surface，不新增 JS↔WASM host binding，不把 table/function handle 或
-  guest library 语义移到 TypeScript Runtime。
-- 对正常、invalid argument、reset 和 instruction-budget 路径建立 real-WASM/Chrome regression，
-  随实现同步 API inventory 的 implementation/conformance 状态；不把未测 edge 标成 exact。
+- 建立项目原创 graphics/memory/text edge cart，先锁定 Node real-WASM 的 framebuffer、display
+  palette、相关 RAM 和返回值，再由 Chrome production Worker/Canvas 交叉验证；不得从 4B
+  组合 flow 推断未测 overload 已兼容。
+- 补齐 required `rrect/rrectfill`，并关闭 `tline` one-argument precision overload；新增 host
+  binding 必须 append 到 v1 ABI、走 generated wrappers，既有 `1..38` id 不变。
+- 为 `tostr/tonum/chr/ord/split/type` 建立 P8 fixed-point/P8SCII、nil/default、byte-length 和
+  multi-return conformance；pure VM string 值不得为了测试或实现跨到 TypeScript。
+- 对 memory wrap、overlapping block copy、GFX/SCREEN remap、palette/clip/camera/fillp、sprite/map/
+  text interaction 做差异回归；修复必须落在 canonical mapper/RuntimeCore graphics owner，不在
+  Canvas presenter 复制 hardware 语义。
+- 对 timed P8SCII controls、advanced screen/bitplane modes 做本单元 MVP 决策：实现并锁定，或
+  以明确 Known Difference/accepted scope 留在 partial；不得继续用含糊的 deferred 标签替代结论。
+- invalid/overflow behavior 若没有官方依据，只锁定 fail-safe、无越界和 structured recovery，
+  不把项目自身输出升级为 official exact。
 
 ### 允许修改
 
-- `wasm/z8lua/`、WASM build/patch manifest 中与 P8 Lua library/bootstrap 直接相关的源文件。
-- `tests/wasm/`、`tests/conformance/` 的 Phase 4C 原创 carts/oracles，以及
-  `tests/browser/phase-4c*`、对应 browser runner。
-- `spec/pico-api-inventory.yaml`、本 phase 文档、Phase 4 machine contract、兼容矩阵与脚本。
+- `packages/runtime-core/src/graphics/` 及其同 owner 的 browser-neutral tests；必要时修改
+  `packages/z8lua-bridge`、`wasm/bridge/generated/` 和 append-only host API spec/generator input。
+- `tests/conformance/` 的 Phase 4D 原创 carts/oracles、`tests/browser/phase-4d*`、对应 Chrome runner。
+- `spec/pico-api-inventory.yaml`、ABI/runtime manifest、本 phase 文档、机器合同、兼容矩阵与脚本。
 
-4C 默认不改 `packages/runtime-core`、`apps/web-player`、transport schema 或 38-entry host ABI。
-如果实现需要新增 host binding 或改变 root coroutine/ABI，先停下并新增 ADR，不在本单元隐式扩边界。
+4D 不改 Canvas presenter ownership、Worker transport、AudioContext/AudioWorklet、persistence 或
+scheduler policy。若 advanced video mode 需要改变 `RuntimeFrame`/presenter schema 或 renderer
+ownership，先停下并新增 ADR，不在本单元隐式扩边界。
 
 ### 精确 contract routing
 
-- [03 §3 VM 初始化与库白名单](../03-z8lua-wasm-bridge.md#3-vm-初始化与库白名单)
-- [03 §4 生命周期与控制流](../03-z8lua-wasm-bridge.md#4-生命周期与控制流)
-- [03 §8 值编解码](../03-z8lua-wasm-bridge.md#8-值编解码)
-- [03 §9 Yield、HostRequest 与错误](../03-z8lua-wasm-bridge.md#9-yieldhostrequest-与错误)
+- [04 §6 PicoRam](../04-typescript-runtime.md#6-picoram64kib-共享地址空间)
+- [04 §7 Graphics](../04-typescript-runtime.md#7-graphics)
 - [06 §4 确定性执行模型](../06-testing-compatibility.md#4-确定性执行模型)
 - [06 §6 Conformance carts](../06-testing-compatibility.md#6-conformance-carts)
-- [08 §2 z8lua-bridge](../08-source-layout-and-boundaries.md#pico8-webz8lua-bridge)
+- [06 §7 framebuffer/RAM golden](../06-testing-compatibility.md#7-goldenframebufferram-与-audio)
+- [08 §2 RuntimeCore / z8lua-bridge](../08-source-layout-and-boundaries.md#2-package-职责)
 - [08 §7 WASM、spec 与生成物](../08-source-layout-and-boundaries.md#7-wasmspec-与生成物)
 
 ### Verification / exit
 
-- `pnpm run test:phase-4c`：real-WASM library semantics、reset/replay、invalid/fault regression。
-- `pnpm run test:phase-4c:chrome`：production Worker 的原创 cart cross-oracle。
+- Proposed `pnpm run test:phase-4d`：本单元创建 real-WASM/RuntimeCore graphics、memory、string
+  semantics 与 fault regression 后启用。
+- Proposed `pnpm run test:phase-4d:chrome`：本单元创建 production Worker/Canvas 原创 cart
+  cross-oracle 后启用。
 - `pnpm run verify`：全量回归。
-- 13 个 required VM builtins 不再是 `unimplemented/unknown`；正常路径为 compatible，未覆盖 edge
-  仍显式登记，不以 label 替代测试。
-- guest nested coroutine 不破坏 root frame scheduling、structured fault、fixed memory 或 sandbox。
-- Node/Chrome oracle 一致，38-entry host ABI/hash 不变；repo 以独立提交结束且干净。
+- `rrect/rrectfill` 不再 unimplemented，`tline` 与六个 string globals 的已测 bounded profile 有
+  明确 conformance 状态；未关闭 overload/edge 进入 Known Differences。
+- canonical mapper、fixed WASM memory、browser-neutral RuntimeCore 和 presenter ownership 不变；
+  append ABI 通过 4A inventory reconciliation 与旧 id regression。
+- Node/Chrome framebuffer/palette/RAM oracle 一致，structured fault 后有效 cart 可恢复；repo 以
+  独立提交结束且干净。
 
 ## Phase exit gate
 

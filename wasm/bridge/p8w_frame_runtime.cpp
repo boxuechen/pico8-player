@@ -11,6 +11,7 @@
 #include "lua.h"
 #include "lualib.h"
 #include "generated/p8w_host_bindings.generated.h"
+#include "p8w_pico8_compat.h"
 #include "p8w_pico_memory.h"
 
 namespace {
@@ -603,6 +604,7 @@ void open_guest_environment(lua_State *state) {
   register_function(state, "time", p8_time);
   register_function(state, "t", p8_time);
   register_function(state, "flip", p8_flip);
+  p8w::open_pico8_compat(state, context_from_lua(state)->ram);
   // Phase 0E-only control-flow probe. It is deliberately not a PICO-8 API.
   register_function(state, "__p8w_probe_host_request", p8_probe_host_request);
   alias_coroutine_function(state, "create", "cocreate");

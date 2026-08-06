@@ -58,8 +58,11 @@ test("Phase 4 API inventory has orthogonal status dimensions and unique names", 
       inventory.apis.filter((api) => api.conformanceStatus === status).length,
     ]),
   );
-  assert.deepEqual(implementationCounts, phase.workUnits["4A"].result.implementationCounts);
-  assert.deepEqual(conformanceCounts, phase.workUnits["4A"].result.conformanceCounts);
+  const expectedCounts = phase.completedWorkUnits.includes("4C")
+    ? phase.workUnits["4C"].result.inventoryCounts
+    : phase.workUnits["4A"].result;
+  assert.deepEqual(implementationCounts, expectedCounts.implementationCounts);
+  assert.deepEqual(conformanceCounts, expectedCounts.conformanceCounts);
 });
 
 test("all 38 append-only host bindings reconcile with the inventory", () => {

@@ -15,6 +15,7 @@ export const BRIDGE_SOURCES = [
 
 export const RUNTIME_BRIDGE_SOURCES = [
   "wasm/bridge/p8w_pico_memory.cpp",
+  "wasm/bridge/p8w_pico8_compat.cpp",
   "wasm/bridge/p8w_frame_runtime.cpp",
 ];
 

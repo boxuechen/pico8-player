@@ -8,7 +8,7 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
-| **Implemented through Phase 3 exit** | browser-neutral session/scheduler/RAM/graphics/text/audio/input/cartdata/current-cart core；stable main/Worker/Worklet transport；Canvas/AudioWorklet/IndexedDB/COW adapters 与 lifecycle；project-owned production conformance gates |
+| **Implemented through Phase 4C** | Phase 3 browser-neutral Runtime/app 边界；WASM VM-local P8 table/string/random helpers；shared-RAM PRNG state；project-owned Node/Chrome conformance gates |
 | **Scaffold** | host cart resolver adapter 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -17,8 +17,9 @@
 [`evidence/`](./evidence/) 与机器合同中保存；当前 Phase 4 的唯一授权入口是
 [`4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md)。最新 production 边界仍由
 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) 锁定；
-4A–4B 只新增 contract、corpus、runner 与受审 baseline，没有扩大 production surface；4C
-仅授权 VM/library surface，不授权新的浏览器依赖或 host binding。
+4A–4B 只新增 contract、corpus、runner 与受审 baseline；4C 新增 `wasm/bridge` 内的 VM/library
+surface，未引入浏览器依赖或 host binding。4D 只可按 active phase append host binding，并保持
+RuntimeCore/Canvas ownership 不变。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -250,6 +251,10 @@ presence/boolean/Q16 lowering，map resolver、flags、tile selection 与 textur
 
 Phase 2E append `print/cursor` operation id `29..30`；bridge 只同步借出 Lua byte string view 并
 lower optional Q16 arguments，P8SCII parsing、font state、cursor/scroll 与 software glyph raster 均留在 RuntimeCore。
+
+Phase 4C 的 `p8w_pico8_compat.*` 只注册 VM-local table/string/random helpers；table/function
+handle 不进入 TypeScript，PRNG state 直接位于 shared Pico RAM `0x5f44..0x5f4b`，不新增 host
+binding。Phase 4D 如需 `rrect/rrectfill`，只能在现有 `1..38` 后 append generated operation。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
 
