@@ -426,6 +426,30 @@
         { "name": "valueRaw", "type": "q16.16-raw-i32" }
       ],
       "result": "void"
+    },
+    {
+      "id": 37,
+      "guestName": "reload",
+      "hostMethod": "reload",
+      "parameters": [
+        { "name": "destinationRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "sourceRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "lengthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "reference", "type": "byte-string", "optional": true }
+      ],
+      "result": "void"
+    },
+    {
+      "id": 38,
+      "guestName": "cstore",
+      "hostMethod": "cstore",
+      "parameters": [
+        { "name": "destinationRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "sourceRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "lengthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "reference", "type": "byte-string", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

@@ -1,5 +1,6 @@
 import type { ParsedCart } from "@pico8-web/cart-codec";
 import {
+  PICO_CART_DATA_ROM_SIZE,
   type PicoInputSnapshot,
   type PicoCartDataCommit,
   type PicoCartDataSeed,
@@ -12,6 +13,7 @@ import { normalizeInputSnapshot, ZERO_PICO_INPUT } from "./input/l1-input.js";
 import type { CanonicalAudioSlice } from "./audio/sfx-synth.js";
 import {
   createPicoApiHost,
+  type CurrentCartDataContext,
   type PicoApiHost,
 } from "./pico-api/pico-api-host.js";
 import { PicoRam } from "./memory/pico-ram.js";
@@ -149,6 +151,7 @@ export interface FrameRuntimeOptions {
   readonly instructionBudget?: number;
   readonly picoApiHost?: PicoApiHost;
   readonly cartDataSeeds?: readonly PicoCartDataSeed[];
+  readonly currentCart?: CurrentCartDataContext;
 }
 
 interface PendingTransaction {
@@ -199,6 +202,7 @@ export class FrameSliceRuntime {
   readonly #picoApiHost: PicoApiHost;
   readonly #ram: PicoRam;
   readonly #instructionBudget: number;
+  readonly #currentCart: CurrentCartDataContext | undefined;
   #state: RuntimeSessionState = "empty";
   #mode: FrameVmMode = "none";
   #targetFps: 0 | 30 | 60 = 0;
@@ -214,13 +218,26 @@ export class FrameSliceRuntime {
     this.#vm = vm;
     this.#instructionBudget = budget;
     this.#ram = new PicoRam(vm.memory, vm.logicalMemory);
-    if (options.picoApiHost !== undefined && options.cartDataSeeds !== undefined) {
-      throw new TypeError("cartDataSeeds cannot be combined with a custom PicoApiHost");
+    if (
+      options.picoApiHost !== undefined &&
+      (options.cartDataSeeds !== undefined || options.currentCart !== undefined)
+    ) {
+      throw new TypeError(
+        "cartDataSeeds/currentCart cannot be combined with a custom PicoApiHost",
+      );
     }
+    this.#currentCart = options.currentCart;
     const host = options.picoApiHost ?? createPicoApiHost(
       vm.memory,
       vm.logicalMemory,
-      options.cartDataSeeds === undefined ? {} : { cartDataSeeds: options.cartDataSeeds },
+      {
+        ...(options.cartDataSeeds === undefined
+          ? {}
+          : { cartDataSeeds: options.cartDataSeeds }),
+        ...(options.currentCart === undefined
+          ? {}
+          : { currentCart: options.currentCart }),
+      },
     );
     if (host.memoryLeaseId !== vm.memory.leaseId) {
       throw new Error("PicoApiHost is bound to a different memory lease");
@@ -260,9 +277,36 @@ export class FrameSliceRuntime {
     if (cart.rom.byteLength !== CART_ROM_BYTES) {
       return { ok: false, error: invalidState("cart ROM must be exactly 0x8000 bytes") };
     }
+    let bootRom = cart.rom;
+    if (this.#currentCart !== undefined) {
+      try {
+        const data = this.#currentCart.repository.readData(
+          this.#currentCart.identity,
+          0,
+          PICO_CART_DATA_ROM_SIZE,
+        );
+        if (!(data instanceof Uint8Array) || data.byteLength !== PICO_CART_DATA_ROM_SIZE) {
+          throw new Error("current-cart repository returned an invalid boot snapshot");
+        }
+        bootRom = cart.rom.slice();
+        bootRom.set(data, 0);
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: "E_INVARIANT",
+            message: `current-cart boot snapshot failed: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+            phase: "none",
+            recoverable: false,
+          },
+        };
+      }
+    }
     this.#vm.resetRam();
     this.#picoApiHost.reset();
-    this.#vm.writeCartRom(cart.rom);
+    this.#vm.writeCartRom(bootRom);
     const compiled = this.#vm.compile(cart.code);
     if (compiled.kind === "fault") return this.#acceptFault(compiled.error);
     const controllers = normalizedInput.controllers;

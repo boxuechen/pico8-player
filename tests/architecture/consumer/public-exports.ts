@@ -16,6 +16,7 @@ import {
   PICO_CART_DATA_BYTES,
   PICO_CART_DATA_ID_MAX_BYTES,
   PICO_CART_DATA_NUMBER_COUNT,
+  PICO_CART_DATA_ROM_SIZE,
   PICO_RAM_SIZE,
   type CartIdentity,
   type PicoCartDataCommit,
@@ -30,6 +31,7 @@ import {
   FrameSliceRuntime,
   logicalTimeRaw,
   type CartDataPersistencePort,
+  type CurrentCartDataRepositoryPort,
   type CartSessionRuntimeContext,
   type CartSessionRuntimePort,
   type FrameVmPort,
@@ -55,6 +57,7 @@ const exactButtonMask: 63 = PICO_CONTROLLER_BUTTON_MASK;
 const exactCartDataBytes: 256 = PICO_CART_DATA_BYTES;
 const exactCartDataNumbers: 64 = PICO_CART_DATA_NUMBER_COUNT;
 const exactCartDataIdBytes: 64 = PICO_CART_DATA_ID_MAX_BYTES;
+const exactCartDataRomBytes: 17152 = PICO_CART_DATA_ROM_SIZE;
 declare const pngBytes: Uint8Array;
 declare const textBytes: Uint8Array;
 const decodeOptions: P8PngDecodeOptions = { limits: { maximumCartVersion: 42 } };
@@ -97,6 +100,7 @@ const input: PicoInputSnapshot = {
 declare const serializedError: SerializedRuntimeError;
 declare const cartDataCommit: PicoCartDataCommit;
 declare const cartDataPersistence: CartDataPersistencePort;
+declare const currentCartRepository: CurrentCartDataRepositoryPort;
 const oneSecondRaw = logicalTimeRaw(60n, 60);
 
 void lease;
@@ -107,6 +111,7 @@ void exactButtonMask;
 void exactCartDataBytes;
 void exactCartDataNumbers;
 void exactCartDataIdBytes;
+void exactCartDataRomBytes;
 void decodedCart;
 void decodedTextCart;
 void parsedCart;
@@ -119,6 +124,7 @@ void input;
 void serializedError;
 void cartDataCommit;
 void cartDataPersistence;
+void currentCartRepository;
 void oneSecondRaw;
 
 export {};

@@ -28,7 +28,12 @@ export type HostBindingState = "unbound" | "bound" | "released";
 interface HostBindingSlot {
   state: HostBindingState;
   host: PicoApiHost | undefined;
-  error: string | undefined;
+  error: HostDispatchFailure | undefined;
+}
+
+interface HostDispatchFailure {
+  readonly message: string;
+  readonly code?: "E_FEATURE_UNSUPPORTED";
 }
 
 interface HostDispatcherState {
@@ -285,7 +290,9 @@ function dispatcherState(module: FrameRuntimeModule): HostDispatcherState {
   ) => {
     const slot = state.slots.get(bindingId >>> 0);
     if (slot === undefined || slot.state !== "bound" || slot.host === undefined) {
-      if (slot !== undefined) slot.error = `host binding ${bindingId >>> 0} is ${slot.state}`;
+      if (slot !== undefined) {
+        slot.error = { message: `host binding ${bindingId >>> 0} is ${slot.state}` };
+      }
       return HOST_DISPATCH_FAILED;
     }
     try {
@@ -338,7 +345,12 @@ function dispatcherState(module: FrameRuntimeModule): HostDispatcherState {
       slot.error = undefined;
       return HOST_DISPATCH_OK;
     } catch (error) {
-      slot.error = safeErrorMessage(error);
+      slot.error = {
+        message: safeErrorMessage(error),
+        ...(error instanceof Error && error.name === "PicoFeatureUnsupportedError"
+          ? { code: "E_FEATURE_UNSUPPORTED" as const }
+          : {}),
+      };
       return HOST_DISPATCH_FAILED;
     }
   };
@@ -393,9 +405,13 @@ export class PicoApiHostRouter {
   }
 
   consumeError(): string | undefined {
-    const error = this.#slot.error;
+    return this.consumeFailure()?.message;
+  }
+
+  consumeFailure(): HostDispatchFailure | undefined {
+    const failure = this.#slot.error;
     this.#slot.error = undefined;
-    return error;
+    return failure;
   }
 }
 
@@ -746,15 +762,18 @@ export class Z8LuaFrameVm implements FrameVmPort {
       this.#module._p8w_error_message_ptr(this.#handle),
       this.#module._p8w_error_message_length(this.#handle),
     );
+    const hostFailure = status === STATUS_HOST_API_ERROR
+      ? this.#hostRouter.consumeFailure()
+      : undefined;
     const message = status === STATUS_HOST_API_ERROR
-      ? (this.#hostRouter.consumeError() ?? bridgeMessage) || `p8w status ${status}`
+      ? (hostFailure?.message ?? bridgeMessage) || `p8w status ${status}`
       : bridgeMessage || `p8w status ${status}`;
     const trace = this.#text(
       this.#module._p8w_error_trace_ptr(this.#handle),
       this.#module._p8w_error_trace_length(this.#handle),
     );
     const line = this.#module._p8w_error_line(this.#handle) | 0;
-    const code = failureCode(status);
+    const code = hostFailure?.code ?? failureCode(status);
     return {
       code,
       message,

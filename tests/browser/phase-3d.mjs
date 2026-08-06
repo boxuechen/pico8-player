@@ -5,7 +5,19 @@ const resultNode = document.querySelector("#result");
 const workerErrors = [];
 window.__phase3dCdpDone = false;
 window.__phase3dPointerLockErrors = 0;
+window.__phase3dPointerLockRejections = [];
 window.__phase3dGesture = null;
+const requestPointerLock = HTMLCanvasElement.prototype.requestPointerLock;
+HTMLCanvasElement.prototype.requestPointerLock = function (...args) {
+  const pending = requestPointerLock.apply(this, args);
+  if (pending === undefined) return pending;
+  return pending.catch((error) => {
+    window.__phase3dPointerLockRejections.push(
+      error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+    );
+    throw error;
+  });
+};
 document.addEventListener("pointerlockerror", () => {
   window.__phase3dPointerLockErrors += 1;
 });

@@ -103,7 +103,7 @@ test("operations 34..36 return boolean and raw Q16 values through real WASM", as
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.slice(-3), [
+  assert.deepEqual(contract.bindings.filter(({ id }) => id >= 34 && id <= 36), [
     {
       id: 34,
       guestName: "cartdata",

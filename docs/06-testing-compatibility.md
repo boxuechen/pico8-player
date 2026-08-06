@@ -730,7 +730,7 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
 - Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；Phase 3C/3D 已实现固定八玩家
   controller、keyboard/Gamepad/multitouch、input-only devkit `stat()` 与 trusted pointer-lock production
   flow；同步 cartdata core 与 IndexedDB persistence 已由 Phase 3E/3F 实现；current-cart
-  `reload/cstore` 由 active 3G 授权，resolver 仍
+  `reload/cstore` 已由 3G 完成，resolver 仍
   `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
@@ -823,7 +823,8 @@ Known Differences：deterministic input trace 是项目 oracle，不是官方 de
 
 本表覆盖官方 `0x5f2d` devkit input 子集。项目 golden 位于
 `tests/golden/phase-3d-devkit-input.json`；完整 `stat()`、IME、clipboard 和 extended Unicode 不在
-本 work unit。Chrome pointer-lock gate 使用 headful CDP，因为 Chrome 150 headless 会拒绝该 API。
+本 work unit。Chrome pointer-lock gate 使用 CDP focus emulation，使隔离的 headless document 保持
+fully active，同时仍由 trusted primary mouse event 触发 pointer lock。
 
 | 行为 | Phase 3D 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
@@ -831,11 +832,11 @@ Known Differences：deterministic input trace 是项目 oracle，不是官方 de
 | RuntimeCore | `0x5f2d` enable/button/pointer-lock flags、64-byte FIFO、consume/empty/drop-newest、per-slice wheel/relative latch、P0 `btn(4)..btn(6)` overlay passed | `compatible`（project profile） | extended P8SCII/IME Deferred |
 | DTO/Worker | controller 8×6-bit shape 保持；fixed devkit batch validator、latest state、accept-once events、3-slice catch-up no-duplicate、stale sequence 和 generation clear passed | gate passed | 事件不使用 DOM timestamp |
 | main adapter | CSS client→logical `0..127`、3-button field、wheel direction、Latin-1/control keys、bounded queue、blur/visibility/pointer-lock cleanup passed | gate passed | clipboard/mobile touch-as-mouse Deferred |
-| Chrome production gate | Chrome `150.0.7871.189` headful；真实 mouse move/wheel/key/三键、trusted primary gesture、pointer-lock relative movement、pause exit、generation `1→2`、Worker errors `0` | gate passed | Chrome/Chromium only；headless pointer lock 不作为产品差异 |
+| Chrome production gate | Chrome `150.0.7871.189` headless + focus emulation；真实 mouse move/wheel/key/三键、trusted primary gesture、pointer-lock relative movement、pause exit、generation `1→2`、Worker errors `0` | gate passed | Chrome/Chromium only；focus emulation 只稳定自动化 document activation |
 | golden | trace `a80fa7fe…b1d51`；16-tick fresh replay exact | gate passed | oracle 变化必须人工审阅 DTO/latch diff |
 
 Known Differences：golden 是项目 device oracle，不是官方 capture；Latin-1/control-key mapping 不覆盖
-extended P8SCII、Unicode、IME 或 clipboard；Chrome 150 自动化 pointer lock 使用 headful mode；完整
+extended P8SCII、Unicode、IME 或 clipboard；Chrome 150 自动化 pointer lock 使用 CDP focus emulation；完整
 system/audio/memory/network `stat()` 仍 Deferred。Phase 3D 开放 P0/P1 为 `0`。
 
 ### 15.16 Phase 3E Cartdata Core 矩阵
@@ -874,6 +875,25 @@ IndexedDB、durable write 或 browser gate。Phase 3E 开放 P0/P1 为 `0`。
 Known Differences：legacy schema 0 是项目自有迁移格式，不是官方浏览器格式；当前只有固定
 `default` runtime namespace，没有 profile UI；write retry 只在后续 flush boundary 重试且不声明已经保存；
 不支持 Firefox/WebKit。Phase 3F 开放 P0/P1 为 `0`。
+
+### 15.18 Phase 3G Current-cart `reload/cstore` 矩阵
+
+本表覆盖同步 current-cart-only profile；guest `load()`、filename/ref、resolver、BBS/network 与 multicart
+明确不在实现范围。production gate 只支持 Chrome/Chromium。
+
+| 行为 | Phase 3G 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| ABI/real-WASM | append-only operations `37..38`；optional Q16/presence ABI、default `0,0,0x4300`、void return、fractional integer conversion passed | `compatible`（current-cart-only profile） | guest `load` 与 ref overload Deferred |
+| data/code boundary | effective data ROM 仅 `0x0000..0x42ff`；zero-length edge accepted；negative/overflow/code access 在 mutation 前 `E_HOST_API` | gate passed | `0x4300..0x7fff` 永久不由 reload/cstore 暴露 |
+| synchronous copy | live logical Base RAM、stable cstore snapshot、same-stack cstore→reload、default/explicit ranges 与 remapped/high RAM address passed | gate passed | 不引入 HostRequest/waiting state |
+| repository/lifecycle | original/read/write 均 copy-owned；lazy COW 按 SHA-256 identity 隔离；reset/同 identity load 保留；different identity 隔离；dispose clear；每 Worker 最多 64 identities | gate passed | 达到上限 fail closed；overlay 不进入 IndexedDB |
+| unsupported refs | 非空与空 ref 均在 mutation 前 `E_FEATURE_UNSUPPORTED`，repository 保持原值 | `unsupported`（明确错误） | external cart/resolver/BBS/network/multicart Deferred |
+| Chrome production gate | Chrome `150.0.7871.189`；真实 Worker/WASM/Canvas/IndexedDB；overlay trace `21→22→23`、different identity `41`、cartdata `1→2→3→4`、Worker errors `0` | gate passed | Chrome/Chromium only |
+| regressions | 3F IndexedDB、3E cartdata、Phase 2 memory/graphics、audio/input 与 architecture 由 full verify 覆盖 | gate passed | 3H 增加跨子系统 exit corpus/soak |
+
+Known Differences：只实现 current-cart 同步子集；`cstore` 更新 Worker-local overlay，不覆写本地 cart 文件；
+overlay 不 durable，Worker dispose 后丢失；单 Worker 最多登记 64 个 cart identity；不支持 Firefox/WebKit。
+Phase 3G 开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

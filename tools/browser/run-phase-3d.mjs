@@ -19,7 +19,7 @@ async function waitFor(cdp, expression, message, timeoutMs = 30_000) {
 }
 
 const server = await startBenchmarkServer({ availability: [] });
-const chrome = await launchChrome({ headless: false, profilePrefix: "p8w-phase3d-" });
+const chrome = await launchChrome({ profilePrefix: "p8w-phase3d-" });
 
 try {
   await chrome.cdp.command("Browser.grantPermissions", {
@@ -30,6 +30,12 @@ try {
     url: `${server.origin}/tests/browser/phase-3d.html`,
   });
   await chrome.cdp.command("Page.bringToFront");
+  await chrome.cdp.command("Emulation.setFocusEmulationEnabled", { enabled: true });
+  await waitFor(
+    chrome.cdp,
+    "document.hasFocus()",
+    "Phase 3D Chrome document did not receive foreground focus",
+  );
   await waitFor(
     chrome.cdp,
     "document.body?.dataset?.progress === 'await-trusted-pointer-lock'",
@@ -71,9 +77,6 @@ try {
   await chrome.cdp.command("Input.dispatchMouseEvent", {
     type: "mousePressed", x, y, button: "left", buttons: 1, clickCount: 1,
   });
-  await chrome.cdp.command("Input.dispatchMouseEvent", {
-    type: "mouseReleased", x, y, button: "left", buttons: 0, clickCount: 1,
-  });
   try {
     await waitFor(
       chrome.cdp,
@@ -85,11 +88,15 @@ try {
       active: document.activeElement?.tagName,
       flags: document.body.dataset.progress,
       pointerLockErrors: window.__phase3dPointerLockErrors,
+      pointerLockRejections: window.__phase3dPointerLockRejections,
       pointerLockElement: document.pointerLockElement?.tagName ?? null,
       gesture: window.__phase3dGesture,
     })`);
     throw new Error(`${error.message}: ${JSON.stringify(diagnostics)}`);
   }
+  await chrome.cdp.command("Input.dispatchMouseEvent", {
+    type: "mouseReleased", x, y, button: "left", buttons: 0, clickCount: 1,
+  });
   await chrome.cdp.command("Input.dispatchMouseEvent", {
     type: "mousePressed", x, y, button: "left", buttons: 1, clickCount: 1,
   });

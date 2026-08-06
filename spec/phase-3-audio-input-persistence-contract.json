@@ -9,9 +9,9 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E", "3F"],
-  "activeWorkUnit": "3G",
-  "nextWorkUnit": "3H",
+  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E", "3F", "3G"],
+  "activeWorkUnit": "3H",
+  "nextWorkUnit": null,
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -298,7 +298,7 @@
         "traceSha256": "a80fa7fe38b5be6112c5a695daea3dd2fbb36192564b0da2685f2303303b1d51",
         "chromeGate": {
           "browser": "Google Chrome 150.0.7871.189",
-          "mode": "headful-cdp-for-pointer-lock",
+          "mode": "headless-cdp-with-focus-emulation-for-pointer-lock",
           "productionWorker": true,
           "trustedPointerGesture": true,
           "pointerLockEnterAndPauseExit": true,
@@ -308,7 +308,7 @@
         "knownDifferences": [
           "the deterministic devkit golden is a project oracle rather than an official device capture",
           "extended Unicode P8SCII input, IME and clipboard remain deferred",
-          "the automated pointer-lock gate is headful because Chrome 150 headless rejects pointer lock",
+          "the automated pointer-lock gate uses CDP focus emulation so the isolated Chrome document is fully active",
           "complete stat outside the listed input selectors remains deferred"
         ],
         "verification": [
@@ -494,7 +494,7 @@
     },
     "3G": {
       "name": "Current-cart reload and cstore",
-      "status": "active",
+      "status": "complete",
       "apis": ["reload", "cstore"],
       "profile": "synchronous-current-cart-only",
       "dataRom": {
@@ -502,7 +502,8 @@
         "bytes": 17152,
         "codeProtectionStart": "0x4300",
         "initialSource": "normalized-current-cart-rom",
-        "writeModel": "worker-lifetime-copy-on-write-overlay-keyed-by-cart-identity"
+        "writeModel": "worker-lifetime-copy-on-write-overlay-keyed-by-cart-identity",
+        "maximumWorkerCartIdentities": 64
       },
       "defaults": {
         "destination": 0,
@@ -534,9 +535,100 @@
         "reset-and-same-identity-generation-overlay-isolation",
         "node-real-wasm-and-chrome-production-gates",
         "independent-commit-and-clean-worktree"
-      ]
+      ],
+      "result": {
+        "hostBindingIds": { "reload": 37, "cstore": 38 },
+        "runtimePort": "browser-neutral CurrentCartDataRepositoryPort",
+        "productionAdapter": "Worker-owned CartRepositoryAdapter",
+        "dataRomBytes": 17152,
+        "overlay": {
+          "model": "lazy-copy-on-write",
+          "identity": "CartIdentity.contentSha256",
+          "maximumWorkerCartIdentities": 64,
+          "resetAndSameIdentityLoad": "preserve",
+          "differentIdentity": "isolate",
+          "workerDispose": "clear",
+          "indexedDb": false
+        },
+        "failurePolicy": {
+          "invalidRangeOrCodeAccess": "E_HOST_API-before-mutation",
+          "externalReference": "E_FEATURE_UNSUPPORTED-before-mutation",
+          "hostRequest": false
+        },
+        "chromeGate": {
+          "browser": "Google Chrome 150.0.7871.189",
+          "productionWorker": true,
+          "firstResetRepeatedIdentityValues": [21, 22, 23],
+          "differentIdentityValue": 41,
+          "cartdataValues": [1, 2, 3, 4],
+          "workerErrors": 0
+        },
+        "knownDifferences": [
+          "only current-cart synchronous reload/cstore is implemented; guest load and all ref/filename overloads are unsupported",
+          "cstore changes a Worker-local overlay and never overwrites a caller file or IndexedDB record",
+          "the repository fails closed after 64 distinct cart identities in one Worker lifetime",
+          "Chrome and Chromium are the only browser gates"
+        ],
+        "verification": [
+          "pnpm run test:phase-3g",
+          "pnpm run test:phase-3g:chrome",
+          "pnpm run test:phase-3f:chrome",
+          "pnpm run verify"
+        ]
+      }
     },
-    "3H": { "name": "Conformance and Phase Exit", "status": "planned" }
+    "3H": {
+      "name": "Conformance and Phase Exit",
+      "status": "active",
+      "corpus": {
+        "ownership": "project-owned",
+        "location": "tests/conformance/carts/phase-3",
+        "minimumFlows": 2,
+        "coverage": [
+          "sfx-music-and-audio-lifecycle",
+          "controller-and-devkit-input",
+          "cartdata-indexeddb-and-current-cart-overlay"
+        ],
+        "forbidden": [
+          "bbs-download",
+          "third-party-cart-corpus",
+          "ref-runtime-dependency"
+        ]
+      },
+      "oracles": [
+        "canonical-pcm",
+        "input-and-live-ram-trace",
+        "cartdata-and-overlay-trace",
+        "packed-screen-and-display-palette",
+        "worker-generation-and-recovery-trace"
+      ],
+      "executionPaths": [
+        "node-real-wasm-fresh-session-reset-and-fault-recovery",
+        "chrome-production-worker-audioworklet-input-indexeddb-and-canvas"
+      ],
+      "performanceGate": {
+        "environment": "chrome-or-chromium-desktop",
+        "profile": "representative-phase-3-audio-input-persistence-frame",
+        "p95MillisecondsMaximum": 8,
+        "measuredTicksMinimum": 120,
+        "boundedSoakSeconds": 60,
+        "optimizationPolicy": "adr-006-profile-first"
+      },
+      "recoveryGate": [
+        "host-api-fault-is-structured-and-audio-queue-resets",
+        "generation-reset-rejects-stale-input-and-work",
+        "fresh-valid-cart-recovers-after-fault",
+        "persistence-failure-remains-visible-and-nonfatal"
+      ],
+      "exit": [
+        "project-conformance-corpus-and-hash-manifest",
+        "node-and-chrome-cross-subsystem-oracles-match",
+        "performance-soak-and-recovery-gates-pass",
+        "zero-open-p0-or-p1",
+        "immutable-phase-evidence-roadmap-and-active-doc-closure",
+        "independent-commit-and-clean-worktree"
+      ]
+    }
   },
   "scope": [
     "deterministic-sfx-and-music",

@@ -54,7 +54,7 @@ const generatedBindings = JSON.parse(
   await readFile(join(projectRoot, manifest.generatedBindingsManifest), "utf8"),
 );
 
-assert.equal(manifest.phase, "3E");
+assert.equal(manifest.phase, "3G");
 assert.equal(manifest.abiVersion, abi.abiVersion);
 assert.equal(generatedBindings.source, manifest.hostApiContract);
 assert.deepEqual(manifest.compiledBridgeSources, RUNTIME_BRIDGE_SOURCES);

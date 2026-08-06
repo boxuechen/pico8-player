@@ -30,6 +30,7 @@ import type {
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
 } from "../transport/public.js";
+import { CartRepositoryAdapter } from "./adapters/cart-repository-adapter.js";
 import type { WorkerPcmTransport } from "./audio-transport.js";
 import type {
   PlayerHostToRuntime,
@@ -245,6 +246,7 @@ export function createPlayerWorkerController(
 ): PlayerWorkerController {
   const audioTransport = options.audioTransport;
   const persistence = options.persistence;
+  const cartRepository = new CartRepositoryAdapter();
   const localPersistenceDiagnostics: SerializedRuntimeError[] = [];
   let cartDataSeeds: readonly PicoCartDataSeed[] = [];
   let audioSequence = 0;
@@ -252,13 +254,17 @@ export function createPlayerWorkerController(
   let instructionBudget: number | undefined;
   const scheduler = new FrameScheduler({ maximumCatchUpTicks: 5 });
   const session = new CartSession({
-    createRuntime() {
+    createRuntime(context) {
       const router = createPicoApiHostRouter(module);
       const vm = new Z8LuaFrameVm(module, router);
       try {
         return new FrameSliceRuntime(vm, {
           ...(instructionBudget === undefined ? {} : { instructionBudget }),
           cartDataSeeds,
+          currentCart: {
+            identity: context.cart.identity,
+            repository: cartRepository,
+          },
         });
       } catch (error) {
         vm.destroy();
@@ -630,7 +636,9 @@ export function createPlayerWorkerController(
       clearInputState();
       devkitFlags = 0;
       try {
-        return [acceptBoot(command, session.load(decodeCart(new Uint8Array(command.cartBytes))))];
+        const cart = decodeCart(new Uint8Array(command.cartBytes));
+        cartRepository.registerCart(cart);
+        return [acceptBoot(command, session.load(cart))];
       } catch (error) {
         if (session.cart !== undefined) session.stop();
         if (error instanceof CartCodecError) {
@@ -654,6 +662,7 @@ export function createPlayerWorkerController(
       scheduler.reset();
       clearInputState();
       const result = session.dispose();
+      cartRepository.dispose();
       lifecycle = "disposed";
       mode = "none";
       targetFps = 0;
@@ -716,6 +725,7 @@ export function createPlayerWorkerController(
     clearInputState();
     devkitFlags = 0;
     session.dispose();
+    cartRepository.dispose();
     lifecycle = "disposed";
     if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
   }

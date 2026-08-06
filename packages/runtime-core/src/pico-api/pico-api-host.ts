@@ -4,6 +4,7 @@ import {
   type PicoCartDataSeed,
   type PicoInputSnapshot,
   type PicoMemoryLease,
+  type CartIdentity,
 } from "@pico8-web/contracts";
 import {
   PicoSfxSynth,
@@ -16,9 +17,20 @@ import { L1Input } from "../input/l1-input.js";
 import type { PicoLogicalMemoryPort } from "../frame-runtime.js";
 import { PicoRam } from "../memory/pico-ram.js";
 import { CartDataCore } from "../persistence/cart-data-core.js";
+import {
+  CurrentCartDataCore,
+  PicoFeatureUnsupportedError,
+} from "../persistence/current-cart-data-core.js";
+import type { CurrentCartDataRepositoryPort } from "../ports/current-cart-data-repository-port.js";
+
+export interface CurrentCartDataContext {
+  readonly identity: CartIdentity;
+  readonly repository: CurrentCartDataRepositoryPort;
+}
 
 export interface PicoApiHostOptions {
   readonly cartDataSeeds?: readonly PicoCartDataSeed[];
+  readonly currentCart?: CurrentCartDataContext;
 }
 
 /**
@@ -132,6 +144,18 @@ export interface PicoApiHost {
   cartdata(idBytes: Uint8Array): number;
   dget(indexRaw: number): number;
   dset(indexRaw: number, valueRaw: number): void;
+  reload(
+    destinationRaw?: number,
+    sourceRaw?: number,
+    lengthRaw?: number,
+    reference?: Uint8Array,
+  ): void;
+  cstore(
+    destinationRaw?: number,
+    sourceRaw?: number,
+    lengthRaw?: number,
+    reference?: Uint8Array,
+  ): void;
   sfx(
     sfxRaw: number,
     channelRaw?: number,
@@ -147,6 +171,7 @@ class RuntimePicoApiHost implements PicoApiHost {
   readonly #input: L1Input;
   readonly #audio: PicoSfxSynth;
   readonly #cartData: CartDataCore;
+  readonly #currentCart: CurrentCartDataCore | undefined;
 
   constructor(
     memory: PicoMemoryLease,
@@ -170,6 +195,13 @@ class RuntimePicoApiHost implements PicoApiHost {
     });
     this.#input = new L1Input(ram);
     this.#cartData = new CartDataCore(picoRam, options.cartDataSeeds ?? []);
+    this.#currentCart = options.currentCart === undefined
+      ? undefined
+      : new CurrentCartDataCore(
+        picoRam,
+        options.currentCart.identity,
+        options.currentCart.repository,
+      );
   }
 
   reset(): void {
@@ -449,6 +481,30 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   dset(indexRaw: number, valueRaw: number): void {
     this.#cartData.dset(indexRaw, valueRaw);
+  }
+
+  reload(
+    destinationRaw?: number,
+    sourceRaw?: number,
+    lengthRaw?: number,
+    reference?: Uint8Array,
+  ): void {
+    if (this.#currentCart === undefined) {
+      throw new PicoFeatureUnsupportedError("reload requires a current-cart repository");
+    }
+    this.#currentCart.reload(destinationRaw, sourceRaw, lengthRaw, reference);
+  }
+
+  cstore(
+    destinationRaw?: number,
+    sourceRaw?: number,
+    lengthRaw?: number,
+    reference?: Uint8Array,
+  ): void {
+    if (this.#currentCart === undefined) {
+      throw new PicoFeatureUnsupportedError("cstore requires a current-cart repository");
+    }
+    this.#currentCart.cstore(destinationRaw, sourceRaw, lengthRaw, reference);
   }
 }
 

@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 3F；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 3G；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -18,8 +18,9 @@
 | **Implemented through Phase 3D** | input-only `stat()`、`0x5f2d` devkit flags、bounded key FIFO、Worker event accumulator、mouse button overlay 与 app-owned trusted pointer-lock lifecycle |
 | **Implemented through Phase 3E** | synchronous `cartdata/dget/dset`、live `0x5e00..0x5eff` authority、prehydrated browser-neutral seeds 与 committed copy-owned dirty snapshots |
 | **Implemented through Phase 3F** | Worker-owned IndexedDB hydrate/commit、versioned bounded records、lifecycle flush、migration、recoverable persistence diagnostics 与 pagehide command |
+| **Implemented through Phase 3G** | synchronous current-cart `reload/cstore`、browser-neutral repository port、Worker-local identity-scoped bounded COW overlay 与 code/ref fail-closed policy |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、完整 cart swap 与 multicart；current-cart-only `reload/cstore` 由 active 3G 授权 |
+| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -638,8 +639,8 @@ type RuntimeEvent =
 
 ## 13. `load`、`reload`、`cstore` 与 cart swap
 
-> 状态：Mixed。host 驱动的 load/reset 已实现；active 3G 只授权 guest current-cart
-> `reload/cstore` 同步 cache。guest `load`、external ref、HostRequest cart suspension、BBS/network 和
+> 状态：Mixed。host 驱动的 load/reset 与 guest current-cart `reload/cstore` 同步 cache 已实现。
+> guest `load`、external ref、HostRequest cart suspension、BBS/network 和
 > multicart 仍是 Target/Deferred，不得由本节自动扩大范围。
 
 ### 13.1 状态机
