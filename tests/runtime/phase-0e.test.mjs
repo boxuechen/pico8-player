@@ -112,10 +112,12 @@ end`;
     instructionBudget: 100_000,
   });
   const boot = runtime.boot(cart);
-  assert.deepEqual(boot, {
-    ok: true,
-    value: { kind: "ready", mode: "callback", targetFps: 60 },
-  });
+  assert.equal(boot.ok, true, JSON.stringify(boot));
+  assert.equal(boot.value.kind, "ready");
+  assert.equal(boot.value.mode, "callback");
+  assert.equal(boot.value.targetFps, 60);
+  assert.equal(boot.value.audio.frameCount, 735);
+  assert.equal(boot.value.audio.pcm16le.every((value) => value === 0), true);
   assert.equal(runtime.completedSlices, 2n);
 
   let lastFrame;
@@ -177,7 +179,10 @@ while true do
   flip()
  n+=1
 end`);
-  assert.deepEqual(boot, { kind: "ready", mode: "custom", targetFps: 30 });
+  assert.equal(boot.kind, "ready");
+  assert.equal(boot.mode, "custom");
+  assert.equal(boot.targetFps, 30);
+  assert.equal(boot.audio.frameCount, 735);
   assert.equal(runtime.completedSlices, 1n);
   assert.equal(runtime.copyRam(0x130, 1)[0], 0);
   assert.equal(

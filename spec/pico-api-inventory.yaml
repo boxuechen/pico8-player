@@ -209,15 +209,15 @@ apis:
     phase: 2E
     note: RAM-backed cursor, print-home and optional pen update through generated host binding
   - name: sfx
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 3A
-    note: active work unit; deterministic four-channel SFX core and typed host binding required
+    note: deterministic four-channel live-RAM SFX core, typed binding 31, exact 22050Hz PCM slice clock and project golden; official bit-exact waveform parity remains unclaimed
   - name: music
     status: unimplemented
     owner: packages/runtime-core
     phase: 3B
-    note: planned music sequencer and browser audio integration
+    note: active work unit; music sequencer, P8SCII audio controls and production dedicated-port output required
   - name: stat
     status: unimplemented
     owner: packages/runtime-core

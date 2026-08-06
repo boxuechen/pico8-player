@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 2 exit；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 3A；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -13,8 +13,9 @@
 | 状态 | 对应范围 |
 | --- | --- |
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
+| **Implemented through Phase 3A** | browser-neutral four-channel SFX synth、live `0x3200..0x42ff` decode、deterministic 22050Hz PCM slices 与 binding `31` |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、advanced Graphics、AudioSynth、gamepad/touch/multiplayer/devkit Input、deterministic conformance scheduler、Persistence、完整 cart swap 与 multicart |
+| **Deferred** | include resolver、label presentation、advanced Graphics、music/device audio、gamepad/touch/multiplayer/devkit Input、deterministic conformance scheduler、Persistence、完整 cart swap 与 multicart |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -451,9 +452,8 @@ palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当�
 
 ## 8. AudioSynth 与 AudioWorklet
 
-> 状态：AudioSynth 尚未实现；Phase 0F transport/queue/device adapter 已 Implemented
->（ADR-010）。Phase 3 激活时必须在机器合同中确定 synth public contract，不能把本节描述
-> 直接当作已授权接口。
+> 状态：Phase 3A SFX AudioSynth 已 Implemented；Phase 0F transport/queue/device adapter
+> 已 Implemented（ADR-010）；music、P8SCII audio 和 production PCM 接线由 active 3B 授权。
 
 ### 8.1 责任边界
 
@@ -462,7 +462,13 @@ decimal sample index、frame count、stats 与 control fields 由
 [`audio-protocol.ts`](../apps/web-player/src/transport/audio-protocol.ts) 和
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json) 拥有。
 
-AudioSynth 在 Worker 内从 `0x3100..0x42ff` 和音频硬件寄存器生成规范采样；按 ADR-014 **MUST** 输出固定 `22050Hz`、mono、signed PCM16LE canonical bytes。官方 capture 是时序/频谱校准源，fake-08 只能作为带 provenance 的辅助对照。AudioWorklet 负责：
+Phase 3A 的 `PicoSfxSynth` 在 RuntimeCore 内从 `0x3200..0x42ff` 和音频硬件寄存器
+live-read SFX；`FrameSliceRuntime` 为 startup transaction 与每个 committed frame 发布
+`CanonicalAudioSlice`。`firstSample` 使用 decimal uint string，PCM 固定为 `22050Hz`、mono、
+signed PCM16LE；30Hz 为 735 samples，60Hz 用整数 remainder 生成 367/368。它不 import
+Worker、MessagePort、AudioContext 或 Worklet。`0x3100..0x31ff` music sequencing 和
+production transport 接线属于 3B。官方 capture 是时序/频谱校准源，fake-08 只能作为带
+provenance 的辅助对照。AudioWorklet 负责：
 
 - 将 22050Hz PCM 重采样到实际 `AudioContext.sampleRate`；
 - 维护小型 ring buffer；

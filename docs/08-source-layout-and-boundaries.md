@@ -11,6 +11,7 @@
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
 | **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
 | **Implemented through Phase 2 exit** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font、display-palette frame transport 与 project-owned production conformance gate |
+| **Implemented through Phase 3A** | browser-neutral `PicoSfxSynth`、四声道 live-RAM SFX、deterministic 22050Hz PCM slices 与 append-only generated `sfx` binding |
 | **Scaffold** | persistence/resolver adapters 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -18,7 +19,7 @@
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
 [`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1/2
-已完成，当前 active work unit 是 Phase 3A，入口位于
+已完成，Phase 3A 已独立关闭，当前 active work unit 是 Phase 3B，入口位于
 [`phases/3-audio-input-persistence.md`](./phases/3-audio-input-persistence.md)。Phase 2 边界由
 [exit evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 锁定。
 
@@ -180,18 +181,19 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 2 exit 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。Phase 3A 当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
 `graphics/map-memory.ts`、`graphics/p8scii-text.ts`、`graphics/p8scii-font.ts`、
-`memory/pico-ram.ts`、`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、
+`memory/pico-ram.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、
 `pico-api/pico-api-host.ts` 和只负责
 re-export 的 `public.ts`。
 `FrameSliceRuntime` + `FrameVmPort` + browser-neutral `PicoApiHost` 拥有单 generation 的
 frame/time/HostRequest transaction、canonical logical RAM access 与 standard-4bpp draw-state/sprite/map/tline graphics/input；`CartSession` 通过 RuntimeCore-owned
 runtime factory port 拥有 cart snapshot、generation、cold reset、stale response 和
 fault/stop/dispose lifecycle；`FrameScheduler` 拥有 wall-clock accumulator/catch-up policy，但
-不拥有 clock source 或 simulation。visual P8SCII/custom font 已落在 browser-neutral RuntimeCore；
-P8SCII audio/timed side effects、gamepad/touch/multiplayer/devkit input、AudioSynth、
+不拥有 clock source 或 simulation。`PicoSfxSynth` 从同一 physical Pico RAM live-read SFX，
+由 committed logical slices 生成 browser-neutral canonical PCM；visual P8SCII/custom font 已落在 RuntimeCore。
+music/P8SCII audio 与 production device flow、gamepad/touch/multiplayer/devkit input、
 deterministic scheduler 和 persistence 仍未落地。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。

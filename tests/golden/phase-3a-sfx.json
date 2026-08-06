@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "profile": "phase-3a-project-oracle-v1",
+  "sampleRate": 22050,
+  "format": "mono-signed-pcm16le",
+  "slices": [
+    { "firstSample": "0", "frameCount": 1470 },
+    { "firstSample": "1470", "frameCount": 2205 },
+    { "firstSample": "3675", "frameCount": 1470 }
+  ],
+  "pcmSha256": "aea8a76d7afe74ed325cbb08e61e0698604d9f0b796204c1a4206ead35ed06ba",
+  "channelTraceSha256": "4beea604dbcf69bf3b70fa63668e33fba2c6351609ec8113256103c559a48004"
+}

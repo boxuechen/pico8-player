@@ -36,3 +36,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## SFX synthesis and filter formulae
+
+`src/audio/sfx-synth.ts` is a TypeScript rewrite informed by the SFX state,
+waveform, effect, reverb, distortion and biquad filter implementations in:
+
+- fake-08: <https://github.com/jtothebell/fake-08>
+- fixed revision: `814991a2571ad3970e386cef48f3b148aa1c27b9`
+- upstream paths: `source/Audio.cpp`, `source/synth.cpp`, `source/filter.cpp`
+- original implementation: [zepto8](https://github.com/samhocevar/zepto8)
+
+The production implementation uses project-owned deterministic noise and a
+browser-neutral TypeScript state model. The waveform constants and filter
+formulae remain derived from the cited zepto8 work, whose files carry the Do
+What The Fuck You Want To Public License, Version 2:
+
+```text
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.
+```

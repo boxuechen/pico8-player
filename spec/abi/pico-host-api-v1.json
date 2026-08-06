@@ -366,6 +366,18 @@
         { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "void"
+    },
+    {
+      "id": 31,
+      "guestName": "sfx",
+      "hostMethod": "sfx",
+      "parameters": [
+        { "name": "sfxRaw", "type": "q16.16-raw-i32" },
+        { "name": "channelRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "offsetRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "lengthRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

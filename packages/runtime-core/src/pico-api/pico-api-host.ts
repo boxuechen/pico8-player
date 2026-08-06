@@ -3,6 +3,11 @@ import {
   type PicoInputSnapshot,
   type PicoMemoryLease,
 } from "@pico8-web/contracts";
+import {
+  PicoSfxSynth,
+  type AudioChannelSnapshot,
+  type CanonicalAudioSlice,
+} from "../audio/sfx-synth.js";
 import { L1Graphics } from "../graphics/l1-graphics.js";
 import { L1Input } from "../input/l1-input.js";
 import type { PicoLogicalMemoryPort } from "../frame-runtime.js";
@@ -15,7 +20,10 @@ import { PicoRam } from "../memory/pico-ram.js";
 export interface PicoApiHost {
   readonly memoryLeaseId: string;
   reset(): void;
+  resetAudio(): void;
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void;
+  renderAudioSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice;
+  snapshotAudioChannels(): readonly AudioChannelSnapshot[];
   cls(colorRaw?: number): void;
   color(colorRaw?: number): number;
   camera(xRaw?: number, yRaw?: number): void;
@@ -109,12 +117,19 @@ export interface PicoApiHost {
   btn(buttonRaw?: number, playerRaw?: number): number;
   /** Returns the current tick's edge/repeat state as a boolean encoded as 0/1. */
   btnp(buttonRaw: number, playerRaw?: number): number;
+  sfx(
+    sfxRaw: number,
+    channelRaw?: number,
+    offsetRaw?: number,
+    lengthRaw?: number,
+  ): void;
 }
 
 class RuntimePicoApiHost implements PicoApiHost {
   readonly memoryLeaseId: string;
   readonly #graphics: L1Graphics;
   readonly #input: L1Input;
+  readonly #audio: PicoSfxSynth;
 
   constructor(memory: PicoMemoryLease, logicalMemory: PicoLogicalMemoryPort) {
     if (
@@ -130,15 +145,29 @@ class RuntimePicoApiHost implements PicoApiHost {
     const ram = picoRam.physicalBytes;
     this.#graphics = new L1Graphics(picoRam);
     this.#input = new L1Input(ram);
+    this.#audio = new PicoSfxSynth(ram);
   }
 
   reset(): void {
     this.#graphics.reset();
     this.#input.reset();
+    this.#audio.reset();
+  }
+
+  resetAudio(): void {
+    this.#audio.reset();
   }
 
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void {
     this.#input.beginTick(input, targetFps);
+  }
+
+  renderAudioSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice {
+    return this.#audio.renderSlices(sliceCount, targetFps);
+  }
+
+  snapshotAudioChannels(): readonly AudioChannelSnapshot[] {
+    return this.#audio.snapshotChannels();
   }
 
   cls(colorRaw?: number): void {
@@ -354,6 +383,15 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   btnp(buttonRaw: number, playerRaw?: number): number {
     return this.#input.btnp(buttonRaw, playerRaw);
+  }
+
+  sfx(
+    sfxRaw: number,
+    channelRaw?: number,
+    offsetRaw?: number,
+    lengthRaw?: number,
+  ): void {
+    this.#audio.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw);
   }
 }
 

@@ -41,7 +41,11 @@ function wrapHost(memory, logicalMemory, overrides = {}) {
   return {
     memoryLeaseId: base.memoryLeaseId,
     reset: () => base.reset(),
+    resetAudio: () => base.resetAudio(),
     beginTick: (input, targetFps) => base.beginTick(input, targetFps),
+    renderAudioSlices: (sliceCount, targetFps) =>
+      base.renderAudioSlices(sliceCount, targetFps),
+    snapshotAudioChannels: () => base.snapshotAudioChannels(),
     cls: (colorRaw) => base.cls(colorRaw),
     pset: (xRaw, yRaw, colorRaw) => base.pset(xRaw, yRaw, colorRaw),
     line: (x0Raw, y0Raw, x1OrColorRaw, y1Raw, colorRaw) =>
@@ -56,6 +60,8 @@ function wrapHost(memory, logicalMemory, overrides = {}) {
       base.circfill(xRaw, yRaw, radiusRaw, colorRaw),
     btn: (buttonRaw, playerRaw) => base.btn(buttonRaw, playerRaw),
     btnp: (buttonRaw, playerRaw) => base.btnp(buttonRaw, playerRaw),
+    sfx: (sfxRaw, channelRaw, offsetRaw, lengthRaw) =>
+      base.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw),
     ...overrides,
   };
 }
@@ -199,10 +205,12 @@ while true do
  flip()
  n+=1
 end`));
-  assert.deepEqual(boot, {
-    ok: true,
-    value: { kind: "ready", mode: "custom", targetFps: 30 },
-  });
+  assert.equal(boot.ok, true, JSON.stringify(boot));
+  assert.equal(boot.value.kind, "ready");
+  assert.equal(boot.value.mode, "custom");
+  assert.equal(boot.value.targetFps, 30);
+  assert.equal(boot.value.audio.frameCount, 735);
+  assert.equal(boot.value.audio.pcm16le.every((value) => value === 0), true);
   assert.equal(runtime.copyRam(0xe000, 1)[0], 0x29);
   assert.equal(runtime.copyRam(0x6000, 1)[0], 0);
   assert.equal(runtime.copyRam(0x160, 1)[0], 0);

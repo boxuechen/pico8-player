@@ -7,6 +7,7 @@ import {
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
 import { normalizeButtons } from "./input/l1-input.js";
+import type { CanonicalAudioSlice } from "./audio/sfx-synth.js";
 import {
   createPicoApiHost,
   type PicoApiHost,
@@ -109,6 +110,8 @@ export interface RuntimeFrame {
   readonly screen: Uint8Array;
   /** 16-entry display-palette map snapshotted from Base RAM 0x5f10..0x5f1f. */
   readonly displayPalette: Uint8Array;
+  /** Canonical PCM committed by this exact logical frame slice. */
+  readonly audio: CanonicalAudioSlice;
 }
 
 export interface RuntimeHostRequest {
@@ -126,6 +129,8 @@ export type RuntimeBootResult =
       readonly kind: "ready";
       readonly mode: Exclude<FrameVmMode, "none">;
       readonly targetFps: 30 | 60;
+      /** Canonical PCM for the 1/30-second startup transaction. */
+      readonly audio: CanonicalAudioSlice;
     }
   | { readonly kind: "host-request"; readonly request: RuntimeHostRequest };
 
@@ -321,12 +326,14 @@ export class FrameSliceRuntime {
 
   dispose(): void {
     if (this.#state === "disposed") return;
+    this.#picoApiHost.resetAudio();
     this.#vm.destroy();
     this.#pending = undefined;
     this.#state = "disposed";
   }
 
   #acceptFault<T>(fault: VmFaultRecord): RuntimeResult<T> {
+    this.#picoApiHost.resetAudio();
     this.#pending = undefined;
     this.#state = "faulted";
     return { ok: false, error: serializeFault(fault) };
@@ -375,13 +382,16 @@ export class FrameSliceRuntime {
     // Official startup runs top-level/_init at 1/30 s. Express that epoch in
     // target-rate slices so completedSlices remains the source of logical time.
     this.#completedSlices = BigInt(this.#targetFps / 30);
+    const targetFps = this.#targetFps as 30 | 60;
+    const audio = this.#picoApiHost.renderAudioSlices(targetFps / 30, targetFps);
     this.#state = "ready";
     return {
       ok: true,
       value: {
         kind: "ready",
         mode: this.#mode as Exclude<FrameVmMode, "none">,
-        targetFps: this.#targetFps as 30 | 60,
+        targetFps,
+        audio,
       },
     };
   }
@@ -426,13 +436,15 @@ export class FrameSliceRuntime {
     }
     this.#pending = undefined;
     this.#completedSlices += 1n;
+    const targetFps = this.#targetFps as 30 | 60;
     const frame: RuntimeFrame = {
       frameId: this.#frameId++,
       completedSlices: this.#completedSlices.toString(),
       timeRawBeforeStep: timeRaw,
-      targetFps: this.#targetFps as 30 | 60,
+      targetFps,
       screen: this.#ram.copy(SCREEN_OFFSET, SCREEN_BYTES),
       displayPalette: this.#ram.copy(DISPLAY_PALETTE_OFFSET, DISPLAY_PALETTE_BYTES),
+      audio: this.#picoApiHost.renderAudioSlices(1, targetFps),
     };
     this.#state = "ready";
     return { ok: true, value: { kind: "frame", frame } };

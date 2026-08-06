@@ -727,7 +727,7 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
 - Phase 2 exit 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
   `tline` 与 visual P8SCII/custom font；P8SCII audio/timed controls、`tline(bits)` precision
   overload 与 advanced screen/bitplane mode 仍 `partial`。
-- AudioSynth、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
+- Phase 3A 已实现 project-profile SFX AudioSynth；music/device audio、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
@@ -757,6 +757,23 @@ Phase 2 exit 时开放 P0/P1 为 `0`。Known Differences：P8SCII audio/timed co
 Phase 3 设备语义，`tline(bits)` precision overload 与 advanced screen/bitplane modes deferred；
 未记录的 invalid/overflow edge 和未运行的官方/第三方 cart 保持 `unknown`。这些是显式范围边界，
 不升级为 official bit-exact 或第三方兼容声明。
+
+### 15.12 Phase 3A Deterministic SFX Core 矩阵
+
+本表覆盖 browser-neutral SFX core，不声明 music、P8SCII audio、device output 或官方
+bit-exact waveform。项目 golden 位于 `tests/golden/phase-3a-sfx.json`。
+
+| 行为 | Phase 3A 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| production `sfx()` ABI | append-only binding `31`；real-WASM raw optional Q16.16 passed | `implemented` | `music()` 由 3B 追加，禁止改号 |
+| SFX RAM / channels | `0x3200..0x42ff` 全 64 slots、四声道 auto/explicit/steal/stop/release/offset/length/loop passed | `compatible`（project profile） | music reservation/arbitration 属 3B |
+| synthesis | built-in/custom waveform、8 effects、filter/hardware vectors、deterministic noise 与 recursion bound passed | `compatible`（project oracle） | official capture 前不声明 waveform bit-exact；note crossfade 未建模 |
+| canonical clock | 22050Hz mono PCM16LE；30Hz 735；60Hz startup 735 后 367/368；decimal sample index exact | `implemented` | 3B 将同一 slices 接入 dedicated transport |
+| lifecycle | live RAM mutation、fresh reset/replay、fault/dispose channel clear passed | `implemented` | generation queue isolation 与 device lifecycle 属 3B |
+| golden | PCM `aea8a76d…06ba`；channel trace `4beea604…8004` | gate passed | oracle 变化必须人工审阅 fixture/算法 diff |
+
+Known Differences：`sfx()` 在已激活 ABI 下返回 nil；note transition crossfade 未建模；
+deterministic noise/golden 是项目实现 oracle，不是官方 PICO-8 capture。Phase 3A 开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

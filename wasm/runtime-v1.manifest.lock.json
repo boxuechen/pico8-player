@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "2E",
+  "phase": "3A",
   "abiContract": "spec/abi/p8w-v1.json",
   "hostApiContract": "spec/abi/pico-host-api-v1.json",
   "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
@@ -39,13 +39,13 @@
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 184986,
-        "sha256": "900c3783cfec67edcca8f8cfe48f0b8cffdb0f9b8c7414edc78c932cf4698b35"
+        "bytes": 185009,
+        "sha256": "1989f6858322b2433d4c06e3d501aa8716196b6e8c2c2d2851eb1a89f27a19c9"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs",
     "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html + tests/browser/phase-2d.html + tests/browser/phase-2e.html",
     "fixtures": "project-owned synthetic source and p8.png only"
   }

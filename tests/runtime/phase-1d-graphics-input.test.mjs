@@ -72,7 +72,11 @@ function delegateHost(memory, logicalMemory, calls) {
   return {
     memoryLeaseId: base.memoryLeaseId,
     reset: () => base.reset(),
+    resetAudio: () => base.resetAudio(),
     beginTick: (input, targetFps) => base.beginTick(input, targetFps),
+    renderAudioSlices: (sliceCount, targetFps) =>
+      base.renderAudioSlices(sliceCount, targetFps),
+    snapshotAudioChannels: () => base.snapshotAudioChannels(),
     cls: (colorRaw) => base.cls(colorRaw),
     pset: (xRaw, yRaw, colorRaw) => base.pset(xRaw, yRaw, colorRaw),
     line(...args) {
@@ -100,6 +104,8 @@ function delegateHost(memory, logicalMemory, calls) {
       calls.push(["btnp", buttonRaw, playerRaw]);
       return base.btnp(buttonRaw, playerRaw);
     },
+    sfx: (sfxRaw, channelRaw, offsetRaw, lengthRaw) =>
+      base.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw),
   };
 }
 

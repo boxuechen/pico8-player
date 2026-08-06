@@ -28,7 +28,7 @@
 | 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | 2 Graphics、Memory、Text | **Complete；2A–2F** | [Evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
-| 3 Audio、完整 Input、Persistence | **Active；3A** | [Active phase](./phases/3-audio-input-persistence.md) |
+| 3 Audio、完整 Input、Persistence | **Active；3B；3A complete** | [Active phase](./phases/3-audio-input-persistence.md) |
 | 4 L2 / MVP 兼容加固 | Not started | Phase 3 exit 后激活 |
 | 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
 
@@ -105,7 +105,7 @@ oracle；graphics/text p95 均约 `0.4ms`，资源故障、stale generation 拒�
 
 ### Phase 3 — Audio、完整 Input 与 Persistence
 
-> 状态：Active；当前 work unit 3A。以下仍只保存 roadmap headline；production 授权与
+> 状态：Active；当前 work unit 3B；3A complete。以下仍只保存 roadmap headline；production 授权与
 > work-unit exit 由 [active phase](./phases/3-audio-input-persistence.md) 定义。
 
 目标：完成可听、可控制、可保存的 player runtime。

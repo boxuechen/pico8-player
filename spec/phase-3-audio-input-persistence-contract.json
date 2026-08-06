@@ -9,13 +9,13 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": [],
-  "activeWorkUnit": "3A",
-  "nextWorkUnit": "3B",
+  "completedWorkUnits": ["3A"],
+  "activeWorkUnit": "3B",
+  "nextWorkUnit": "3C",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
-      "status": "active",
+      "status": "complete",
       "apis": ["sfx"],
       "hostBinding": {
         "allocation": "append-only-after-operation-30",
@@ -56,9 +56,77 @@
         "canonical-pcm-event-and-channel-golden",
         "real-wasm-and-regression-tests-pass",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingId": 31,
+        "runtimeSynth": "PicoSfxSynth",
+        "canonicalSlice": {
+          "sampleRate": 22050,
+          "format": "mono-signed-pcm16le",
+          "firstSampleEncoding": "decimal-uint-string",
+          "maximumSlicesPerRender": 120
+        },
+        "golden": "tests/golden/phase-3a-sfx.json",
+        "pcmSha256": "aea8a76d7afe74ed325cbb08e61e0698604d9f0b796204c1a4206ead35ed06ba",
+        "channelTraceSha256": "4beea604dbcf69bf3b70fa63668e33fba2c6351609ec8113256103c559a48004",
+        "knownDifferences": [
+          "project-owned deterministic waveform oracle is not an official bit-exact capture",
+          "note-transition crossfade is not modeled",
+          "sfx return value remains nil under the activated void-result ABI"
+        ],
+        "verification": [
+          "pnpm run test:phase-3a",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "3B": {
+      "name": "Music and Browser Audio",
+      "status": "active",
+      "apis": ["music"],
+      "hostBinding": {
+        "allocation": "operation-32-after-sfx",
+        "argumentEncoding": "signed-q16.16-raw-int32",
+        "optionalEncoding": "uint32-presence-mask",
+        "resultEncoding": "none",
+        "failureEncoding": "nonzero-status"
+      },
+      "musicMemory": {
+        "range": "0x3100..0x31ff",
+        "patterns": 64,
+        "channelsPerPattern": 4,
+        "access": "live-pico-ram"
+      },
+      "runtimeOwns": [
+        "music-pattern-sequencing",
+        "channel-mask-and-sfx-arbitration",
+        "fade-clock",
+        "p8scii-audio-side-effects",
+        "canonical-pcm-sequence"
+      ],
+      "browserOwns": [
+        "dedicated-messageport-transfer",
+        "bounded-worklet-queue",
+        "device-resampling",
+        "audio-context-lifecycle"
+      ],
+      "behavior": [
+        "music-start-stop-fade-and-channel-mask",
+        "pattern-start-loop-stop-flags",
+        "sfx-interrupt-and-music-resume",
+        "p8scii-audio-control-dispatch",
+        "boot-and-frame-pcm-over-dedicated-port",
+        "generation-reset-fault-stop-and-dispose-queue-isolation",
+        "chrome-44100-and-48000-device-output"
+      ],
+      "exit": [
+        "typed-music-host-binding",
+        "deterministic-music-and-p8scii-audio-golden",
+        "production-worker-to-audioworklet-pcm-flow",
+        "node-real-wasm-and-chrome-gates-pass",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "3B": { "name": "Music and Browser Audio", "status": "planned" },
     "3C": { "name": "Controller Input", "status": "planned" },
     "3D": { "name": "Devkit Input", "status": "planned" },
     "3E": { "name": "Cartdata Core", "status": "planned" },
