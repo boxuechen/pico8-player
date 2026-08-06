@@ -489,6 +489,40 @@ export class FrameSliceRuntime {
     return this.#vm.copyRam(offset, length);
   }
 
+  /** Copy live logical Base RAM only while a root HostRequest is suspended. */
+  copySuspendedLogicalRam(offset: number, length: number): Uint8Array {
+    if (this.#state !== "waiting-host" || this.#pending === undefined) {
+      throw new Error("logical RAM snapshot requires a suspended host request");
+    }
+    if (
+      !Number.isInteger(offset) || !Number.isInteger(length) ||
+      offset < 0 || length < 0 || offset > 0x10000 || length > 0x10000 - offset
+    ) {
+      throw new RangeError("logical RAM snapshot range is out of bounds");
+    }
+    return this.#ram.copy(offset, length);
+  }
+
+  /** Atomically apply bytes to live logical Base RAM before guest continuation. */
+  writeSuspendedLogicalRam(offset: number, bytes: Uint8Array): void {
+    if (this.#state !== "waiting-host" || this.#pending === undefined) {
+      throw new Error("logical RAM write requires a suspended host request");
+    }
+    if (!(bytes instanceof Uint8Array)) {
+      throw new TypeError("logical RAM write bytes must be a Uint8Array");
+    }
+    if (
+      !Number.isInteger(offset) || offset < 0 || offset > 0x10000 ||
+      bytes.byteLength > 0x10000 - offset
+    ) {
+      throw new RangeError("logical RAM write range is out of bounds");
+    }
+    const snapshot = bytes.slice();
+    for (let index = 0; index < snapshot.byteLength; index += 1) {
+      this.#ram.writeU8(offset + index, snapshot[index]!);
+    }
+  }
+
   dispose(): void {
     if (this.#state === "disposed") return;
     this.#picoApiHost.resetAudio();

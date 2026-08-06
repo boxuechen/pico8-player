@@ -46,6 +46,8 @@ export interface CartSessionRuntimePort {
     isError?: boolean,
   ): RuntimeResult<RuntimeBootResult | RuntimeStepResult>;
   copyRam(offset: number, length: number): Uint8Array;
+  copySuspendedLogicalRam?(offset: number, length: number): Uint8Array;
+  writeSuspendedLogicalRam?(offset: number, bytes: Uint8Array): void;
   dispose(): void;
 }
 
@@ -131,6 +133,11 @@ interface PendingHostRequest {
   readonly generation: number;
   readonly id: number;
   readonly operation: "boot" | "step";
+}
+
+interface SuspendedLogicalRamPort extends CartSessionRuntimePort {
+  copySuspendedLogicalRam(offset: number, length: number): Uint8Array;
+  writeSuspendedLogicalRam(offset: number, bytes: Uint8Array): void;
 }
 
 const MAX_GENERATION = 0xffff_ffff;
@@ -422,6 +429,51 @@ export class CartSession {
     }
   }
 
+  copySuspendedLogicalRam(
+    generation: number,
+    offset: number,
+    length: number,
+  ): RuntimeResult<Uint8Array> {
+    const checked = this.#validateSuspendedRamAccess(generation, offset, length);
+    if (!checked.ok) return checked;
+    try {
+      return {
+        ok: true,
+        value: checked.value.copySuspendedLogicalRam(offset, length).slice(),
+      };
+    } catch (error) {
+      return this.#faultCurrent(lifecycleError(
+        "E_INVARIANT",
+        `suspended logical RAM snapshot threw: ${errorMessage(error)}`,
+      ));
+    }
+  }
+
+  writeSuspendedLogicalRam(
+    generation: number,
+    offset: number,
+    bytes: Uint8Array,
+  ): RuntimeResult<void> {
+    if (!(bytes instanceof Uint8Array)) {
+      return invalid("suspended logical RAM write requires a Uint8Array");
+    }
+    const checked = this.#validateSuspendedRamAccess(
+      generation,
+      offset,
+      bytes.byteLength,
+    );
+    if (!checked.ok) return checked;
+    try {
+      checked.value.writeSuspendedLogicalRam(offset, bytes.slice());
+      return { ok: true, value: undefined };
+    } catch (error) {
+      return this.#faultCurrent(lifecycleError(
+        "E_INVARIANT",
+        `suspended logical RAM write threw: ${errorMessage(error)}`,
+      ));
+    }
+  }
+
   stop(): RuntimeResult<CartSessionStopResult> {
     if (this.#state === "disposed") return invalid("cart session is disposed");
     if (this.#state === "loading") return invalid("cart session is loading");
@@ -449,6 +501,36 @@ export class CartSession {
       return { ok: false, error: teardownError };
     }
     return { ok: true, value: { kind: "disposed", generation: this.#generation } };
+  }
+
+  #validateSuspendedRamAccess(
+    generation: number,
+    offset: number,
+    length: number,
+  ): RuntimeResult<SuspendedLogicalRamPort> {
+    if (generation !== this.#generation) {
+      return invalid("logical RAM access belongs to a stale generation", {
+        activeGeneration: this.#generation,
+        accessGeneration: generation,
+      });
+    }
+    const runtime = this.#runtime;
+    if (this.#state !== "waiting-host" || runtime === undefined || this.#pendingRequest === undefined) {
+      return invalid("logical RAM access requires a suspended host request");
+    }
+    if (
+      typeof runtime.copySuspendedLogicalRam !== "function" ||
+      typeof runtime.writeSuspendedLogicalRam !== "function"
+    ) {
+      return invalid("active runtime does not expose suspended logical RAM access");
+    }
+    if (
+      !Number.isInteger(offset) || !Number.isInteger(length) ||
+      offset < 0 || length < 0 || offset > PICO_RAM_SIZE || length > PICO_RAM_SIZE - offset
+    ) {
+      return invalid("logical RAM access range is outside the 64 KiB address space");
+    }
+    return { ok: true, value: runtime as SuspendedLogicalRamPort };
   }
 
   #start(

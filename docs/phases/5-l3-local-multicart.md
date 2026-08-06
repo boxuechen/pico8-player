@@ -1,6 +1,6 @@
 # Phase 5 — L3 Local / Multicart
 
-> 状态：Active；5A–5D complete，5E active
+> 状态：Active；5A–5E complete，5F active
 > 机器合同：[`spec/phase-5-l3-multicart-contract.json`](../../spec/phase-5-l3-multicart-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 4 L2/MVP exit](../evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)
@@ -35,8 +35,8 @@ Phase 5 完成 caller-authorized local bundle、root recoverable HostRequest、g
 | 5B CartLoader / Resolver / Repository | Complete | browser-neutral ports、local bundle resolver、identity repository |
 | 5C Root HostRequest Pipeline | Complete | bounded async root suspension、generation/request race gate |
 | 5D Guest `load()` / Atomic Cart Swap | Complete | versioned guest request、staged session、replacement handshake |
-| 5E External `reload/cstore` | **Active** | 下节 |
-| 5F Coroutine / L3 Compatibility | Pending | 5E exit 后展开 |
+| 5E External `reload/cstore` | Complete | versioned request、调用点 snapshot、resume-before-RAM |
+| 5F Coroutine / L3 Compatibility | **Active** | 下节 |
 | 5G Optional BBS Adapter | Pending | 条件 work unit；允许 Rejected/Deferred 结论 |
 | 5H L3 Exit / Resource Gate | Pending | aggregate exit |
 
@@ -71,44 +71,55 @@ root-only copied request。Worker 只通过 caller-authorized bundle 和 `CartLo
 old-continuation non-return 已由 real-WASM Node 和 Chrome 门禁覆盖。验证入口是
 `pnpm run test:phase-5d` 与 `pnpm run test:phase-5d:chrome`。
 
-## Active work unit：5E External `reload/cstore`
+## 5E closure
+
+5E 已把显式 external ref 编码为 `P8WD` version 1 copied request；无 ref 的 current-cart
+`reload/cstore` 继续同步执行。Worker 通过 `CartLoader` 的 `reloadData/cstoreData` capability
+解析 target，`reload` 在 continuation 前写 suspended logical RAM，`cstore` 在 API 调用点 snapshot
+RAM 后只提交 identity-scoped Worker COW overlay。generation 不变、无 replacement handshake；range、
+denied、nested、cancel/late completion 与 current-cart 回归由 Node real-WASM 和 Chrome production
+Worker 覆盖。历史 Phase 3/4 current-cart tests 只移除“external 永久 unsupported”的 live 假设，原同步
+行为与 evidence 不改写。验证入口是 `pnpm run test:phase-5e` 与
+`pnpm run test:phase-5e:chrome`。
+
+## Active work unit：5F Coroutine / L3 Compatibility
 
 ### Observable behavior
 
-1. 无 external ref 的 `reload/cstore` 继续走现有同步 current-cart path；显式非当前 ref 产生独立
-   versioned copied request，并保持同一 Worker/session/runtime generation，不触发 cart swap handshake。
-2. z8lua 在 root active coroutine 的 API 调用点 suspension；request 只携带 operation、presence/range 与
-   canonical ref，最大 4096 bytes。nested call 仍按 5F 前 policy fail closed。
-3. Worker 通过现有 `CartLoader` 解析 bundle target：`reload` 必须检查 `access.reloadData`，`cstore`
-   必须检查 `access.cstoreData`；不得回退到 URL、文件系统、BBS 或按扩展名推断权限。
-4. `reload` 的 target data/overlay bytes 必须在 guest continuation 前写入 suspended VM RAM；不能用
-   下一帧延迟 copy 模拟同步 API。范围是 Base RAM 64 KiB 与 cart data ROM `0..0x42ff` 的交集规则。
-5. `cstore` 在调用边界 snapshot Base RAM source，resolution 完成后只写 target identity 的 Worker-local
-   copy-on-write overlay；不覆写调用方原始 cart bytes，不进入 5F/5G/持久化扩展。
-6. resolve/decode/capability/range/cancel/generation 失败不得 partial write；late completion 不恢复 stale
-   coroutine。每 execution 最多写 64 个 external target identities。
-7. project corpus 的 external reload 与 cstore→reload lanes 在 Node real-WASM 和 Chrome production
-   Worker 一致；logical time、frame/audio/input ownership 在 waiting-host 期间不前进。
+1. 对 guest-created coroutine 中所有可 suspension surface 建立同一矩阵：`flip/run/stop/load`、external
+   `reload/cstore` 与 diagnostic HostRequest；覆盖 callback、custom loop、single nested 与 multi-level nested。
+2. 先用 pinned z8lua real-WASM spike 验证 direct-resumer ownership、continuation stack、instruction hook
+   与 request side-effect count。不得用 Promise、Asyncify、同步 busy-wait 或 catchable Lua error 冒充 root bubbling。
+3. 5F 必须作出一个显式结论：`supported-bubbling` 或 `accepted-root-only`。只有 Node/Chrome exact-once
+   request、取消、budget 与 multi-level 恢复全部通过，并新增替代 ADR 时，才允许扩大 ADR-017；否则
+   保持 `nested-host-suspend`，把它冻结为 L3 project profile 的 Known Difference。
+4. 无论结论为何，nested call 都不得访问 resolver/repository、提交 overlay、替换 session、推进 logical
+   time/frame/audio/input 或发布 stale output；guest `pcall/coresume` 不得吞掉结构化 host fault。
+5. root callback/custom 的 `load/reload/cstore/flip` 已完成语义必须保持回归兼容；coroutine hook 继续
+   继承统一 instruction budget，OOM/budget/fault 后不得原地恢复损坏的 VM。
+6. project corpus 的 nested-suspension-policy lane 在 Node real-WASM 与 Chrome production Worker 得到相同
+   classification，并在 inventory/Known Differences/机器合同中只保留一个公开结论。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.5E.allowedPaths` 控制。production owner 限于 external cart-data
-request、suspended RAM access、identity overlay 与 Worker continuation orchestration；不得修改
-graphics/audio/input algorithms、Main transport generation、IndexedDB schema 或 BBS scope。
+精确允许路径由机器合同 `workUnits.5F.allowedPaths` 控制。production 变更仅限 coroutine suspension、
+fault containment 与对应 Worker orchestration；不得修改 graphics/audio/input 算法、Main transport、
+persistence schema、cart resolver capability 或 BBS scope。若 spike 不满足扩大条件，不得留下半实现 bubbling。
 
-### Proposed tests（5E 实现时加入 package scripts）
+### Proposed tests（5F 实现时加入 package scripts）
 
-- `pnpm run test:phase-5e`
-- `pnpm run test:phase-5e:chrome`
+- `pnpm run test:phase-5f`
+- `pnpm run test:phase-5f:chrome`
 - `pnpm run test:architecture`
 - production/public contract 发生变化时最终运行 `pnpm run verify`
 
 ### Exit gate
 
-- current-cart synchronous regression 与 external root suspension 同时通过。
-- external reload 先 apply RAM、external cstore 使用调用点 snapshot，并遵守 target capability/range/64-target limit。
-- failure/cancel/late result 无 partial overlay、stale resume、generation change 或 hidden I/O。
-- Node/Chrome corpus oracle 一致；5E 结果折叠入机器合同，5F 成为唯一 active work unit并独立提交。
+- suspension matrix 与 direct-resumer spike 有 machine-checkable Node/Chrome 结果。
+- `supported-bubbling` 必须 exact-once、multi-level、budget/cancel 全通过并由替代 ADR 接受；否则结论必须是
+  `accepted-root-only`，且所有 nested surface 统一、无外部 side effect。
+- root behavior 与 Phase 5D/5E corpus 无回归，Chrome/Node classification 一致。
+- 5F 结果折叠入机器合同，5G 成为唯一 active work unit并独立提交。
 
 ## Phase exit gate
 

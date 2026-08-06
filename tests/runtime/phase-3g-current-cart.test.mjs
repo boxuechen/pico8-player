@@ -143,7 +143,7 @@ function _draw() end`, "9");
   runtime.dispose();
 });
 
-test("invalid and external-reference calls fail before repository mutation", () => {
+test("invalid current-cart calls fail before repository mutation", () => {
   const rom = new Uint8Array(0x8000);
   rom[0] = 0x19;
   rom[0x42ff] = 0x2a;
@@ -162,14 +162,23 @@ test("invalid and external-reference calls fail before repository mutation", () 
     assert.equal(repository.readData(parsed.identity, 0x42ff, 1)[0], 0x2a);
   }
 
-  for (const source of [
-    `poke(0,0x81) cstore(0,0,1,"other.p8")`,
-    `poke(0,0x82) reload(0,0,1,"")`,
-  ]) {
-    const parsed = cart(`${source}\nfunction _update() end function _draw() end`, "c", rom);
-    const repository = assertFault(parsed, "E_FEATURE_UNSUPPORTED");
-    assert.equal(repository.readData(parsed.identity, 0, 1)[0], 0x19);
-  }
+});
+
+test("external-reference calls leave the current repository untouched while transferring", () => {
+  const rom = new Uint8Array(0x8000);
+  rom[0] = 0x19;
+  const parsed = cart(
+    `poke(0,0x81) cstore(0,0,1,"other.p8")\n` +
+      `function _update() end function _draw() end`,
+    "c",
+    rom,
+  );
+  const { runtime, repository, boot } = runtimeFor(parsed);
+  const result = boot();
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.value.kind, "host-request");
+  assert.equal(repository.readData(parsed.identity, 0, 1)[0], 0x19);
+  runtime.dispose();
 });
 
 test("Worker repository owns copies, isolates identities and enforces lifetime bounds", () => {

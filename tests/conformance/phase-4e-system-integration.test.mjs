@@ -144,7 +144,7 @@ function _draw() end`);
   }
 });
 
-test("nested flip and external cart references close as bounded Phase 4E decisions", () => {
+test("nested flip stays bounded while external references transfer to the Phase 5 root pipeline", () => {
   const nested = createRuntime(`
 co=cocreate(function() flip() end)
 function _update() coresume(co) end
@@ -170,9 +170,11 @@ function _update() reload(0,0,1,"other") end
 function _draw() end`),
     };
     assert.equal(assertOk(session.load(externalCart)).kind, "ready");
-    const fault = session.step();
-    assert.equal(fault.ok, false);
-    assert.equal(fault.error.code, "E_FEATURE_UNSUPPORTED");
+    const transfer = assertOk(session.step());
+    assert.equal(transfer.kind, "host-request");
+    assert.equal(transfer.request.operation, "step");
+    assert.equal(transfer.request.generation, session.generation);
+    assert.equal(repository.readData(cart.identity, 0, 1)[0], cart.rom[0]);
   } finally {
     session.dispose();
     repository.dispose();

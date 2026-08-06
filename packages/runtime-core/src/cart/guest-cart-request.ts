@@ -3,6 +3,8 @@ import {
   PICO_HOST_REQUEST_MAX_BYTES,
 } from "@pico8-web/contracts";
 
+import { decodeCartRequestRef, invalidCartRequest } from "./cart-request-codec.js";
+
 export const GUEST_CART_REQUEST_MAGIC = Object.freeze([0x50, 0x38, 0x57, 0x4c] as const);
 export const GUEST_CART_REQUEST_VERSION = 1 as const;
 export const GUEST_CART_REQUEST_HEADER_BYTES = 16 as const;
@@ -20,44 +22,7 @@ export interface GuestCartLoadRequest {
 }
 
 function invalid(message: string): never {
-  throw new RangeError(`invalid guest cart request: ${message}`);
-}
-
-function decodeUtf8(bytes: Uint8Array): string {
-  const output: string[] = [];
-  const continuation = (index: number): number => {
-    const byte = bytes[index];
-    if (byte === undefined || (byte & 0xc0) !== 0x80) invalid("ref is not valid UTF-8");
-    return byte & 0x3f;
-  };
-  for (let index = 0; index < bytes.length;) {
-    const first = bytes[index++]!;
-    let codePoint: number;
-    if (first <= 0x7f) {
-      codePoint = first;
-    } else if (first >= 0xc2 && first <= 0xdf) {
-      codePoint = ((first & 0x1f) << 6) | continuation(index++);
-    } else if (first >= 0xe0 && first <= 0xef) {
-      const second = continuation(index++);
-      const third = continuation(index++);
-      if ((first === 0xe0 && second < 0x20) || (first === 0xed && second >= 0x20)) {
-        invalid("ref is not valid UTF-8");
-      }
-      codePoint = ((first & 0x0f) << 12) | (second << 6) | third;
-    } else if (first >= 0xf0 && first <= 0xf4) {
-      const second = continuation(index++);
-      const third = continuation(index++);
-      const fourth = continuation(index++);
-      if ((first === 0xf0 && second < 0x10) || (first === 0xf4 && second >= 0x10)) {
-        invalid("ref is not valid UTF-8");
-      }
-      codePoint = ((first & 0x07) << 18) | (second << 12) | (third << 6) | fourth;
-    } else {
-      invalid("ref is not valid UTF-8");
-    }
-    output.push(String.fromCodePoint(codePoint));
-  }
-  return output.join("");
+  return invalidCartRequest("guest cart", message);
 }
 
 /** Cheap discriminator; matching payloads must still pass the strict decoder. */
@@ -93,8 +58,10 @@ export function decodeGuestCartLoadRequest(bytes: Uint8Array): GuestCartLoadRequ
   if (expectedLength !== bytes.byteLength) invalid("payload length is not canonical");
 
   const refStart = GUEST_CART_REQUEST_HEADER_BYTES;
-  const ref = decodeUtf8(bytes.subarray(refStart, refStart + refLength));
-  if (ref.length === 0 || ref.includes("\0")) invalid("ref is empty or contains NUL");
+  const ref = decodeCartRequestRef(
+    "guest cart",
+    bytes.subarray(refStart, refStart + refLength),
+  );
   const breadcrumbStart = refStart + refLength;
   const parameterStart = breadcrumbStart + breadcrumbLength;
   return Object.freeze({

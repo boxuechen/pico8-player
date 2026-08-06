@@ -1,9 +1,6 @@
-import {
-  PICO_CART_DATA_ROM_SIZE,
-  PICO_RAM_SIZE,
-  type CartIdentity,
-} from "@pico8-web/contracts";
+import { type CartIdentity } from "@pico8-web/contracts";
 
+import { normalizeCstoreRange, normalizeReloadRange } from "../cart/cart-data-range.js";
 import { PicoRam } from "../memory/pico-ram.js";
 import type { CurrentCartDataRepositoryPort } from "../ports/current-cart-data-repository-port.js";
 
@@ -12,36 +9,6 @@ const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 /** Recognized by the VM adapter without introducing a RuntimeCore value import. */
 export class PicoFeatureUnsupportedError extends Error {
   override readonly name = "PicoFeatureUnsupportedError";
-}
-
-function rawInteger(raw: number | undefined, fallback: number): number {
-  return raw === undefined ? fallback : raw >> 16;
-}
-
-function ramAddress(raw: number | undefined): number {
-  return rawInteger(raw, 0) & 0xffff;
-}
-
-function cartOffset(raw: number | undefined): number {
-  return rawInteger(raw, 0);
-}
-
-function byteLength(raw: number | undefined): number {
-  return rawInteger(raw, PICO_CART_DATA_ROM_SIZE);
-}
-
-function assertRange(
-  label: string,
-  offset: number,
-  length: number,
-  limit: number,
-): void {
-  if (
-    !Number.isInteger(offset) || !Number.isInteger(length) ||
-    offset < 0 || length < 0 || offset > limit || length > limit - offset
-  ) {
-    throw new RangeError(`${label} range is out of bounds`);
-  }
 }
 
 function assertNoReference(reference: Uint8Array | undefined): void {
@@ -78,11 +45,11 @@ export class CurrentCartDataCore {
     reference?: Uint8Array,
   ): void {
     assertNoReference(reference);
-    const destination = ramAddress(destinationRaw);
-    const source = cartOffset(sourceRaw);
-    const length = byteLength(lengthRaw);
-    assertRange("reload Base RAM destination", destination, length, PICO_RAM_SIZE);
-    assertRange("reload cart ROM source", source, length, PICO_CART_DATA_ROM_SIZE);
+    const { destination, source, length } = normalizeReloadRange(
+      destinationRaw,
+      sourceRaw,
+      lengthRaw,
+    );
     const bytes = this.#repository.readData(this.#identity, source, length);
     if (!(bytes instanceof Uint8Array) || bytes.byteLength !== length) {
       throw new Error("current-cart repository returned an invalid reload snapshot");
@@ -99,11 +66,11 @@ export class CurrentCartDataCore {
     reference?: Uint8Array,
   ): void {
     assertNoReference(reference);
-    const destination = cartOffset(destinationRaw);
-    const source = ramAddress(sourceRaw);
-    const length = byteLength(lengthRaw);
-    assertRange("cstore cart ROM destination", destination, length, PICO_CART_DATA_ROM_SIZE);
-    assertRange("cstore Base RAM source", source, length, PICO_RAM_SIZE);
+    const { destination, source, length } = normalizeCstoreRange(
+      destinationRaw,
+      sourceRaw,
+      lengthRaw,
+    );
     const bytes = this.#ram.copy(source, length);
     this.#repository.writeDataOverlay(this.#identity, destination, bytes);
   }

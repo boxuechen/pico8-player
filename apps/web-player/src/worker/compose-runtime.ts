@@ -14,8 +14,12 @@ import {
   CartLoader,
   CartResolutionError,
   CartSession,
+  decodeExternalCartDataRequest,
   decodeGuestCartLoadRequest,
+  isExternalCartDataRequestPayload,
   isGuestCartRequestPayload,
+  normalizeCstoreRange,
+  normalizeReloadRange,
   type CartDataPersistencePort,
   type CanonicalAudioSlice,
   FrameScheduler,
@@ -250,6 +254,15 @@ interface PendingGuestLoad {
   readonly continueRunning: boolean;
 }
 
+interface PendingExternalCartData {
+  readonly workerGeneration: number;
+  readonly sessionGeneration: number;
+  readonly runtimeGeneration: number;
+  readonly requestId: number;
+  readonly cancellation: CartCancellationSource;
+  readonly resume: PendingRootHostRequest["resume"];
+}
+
 const ZERO_DEVKIT_INPUT: PicoDevkitInputBatch = Object.freeze({
   mouseXRaw: 0,
   mouseYRaw: 0,
@@ -360,6 +373,8 @@ export function createPlayerWorkerController(
   let eventSink: PlayerWorkerEventSink | undefined;
   let pendingHostRequest: PendingRootHostRequest | undefined;
   let pendingGuestLoad: PendingGuestLoad | undefined;
+  let pendingExternalCartData: PendingExternalCartData | undefined;
+  const externalCstoreTargetIdentities = new Set<string>();
   const breadcrumbStack: Uint8Array[] = [];
 
   function clearPendingDevkitEvents(): void {
@@ -524,6 +539,7 @@ export function createPlayerWorkerController(
   ): PlayerRuntimeToHost {
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
+    cancelPendingExternalCartData();
     lifecycle = "faulted";
     scheduler.pause();
     clearInputState();
@@ -590,6 +606,13 @@ export function createPlayerWorkerController(
     const pending = pendingGuestLoad;
     if (pending === undefined) return;
     pendingGuestLoad = undefined;
+    pending.cancellation.cancel();
+  }
+
+  function cancelPendingExternalCartData(): void {
+    const pending = pendingExternalCartData;
+    if (pending === undefined) return;
+    pendingExternalCartData = undefined;
     pending.cancellation.cancel();
   }
 
@@ -685,6 +708,7 @@ export function createPlayerWorkerController(
       pendingGuestLoad = undefined;
       session = staged;
       sessionGeneration = nextSessionGeneration;
+      externalCstoreTargetIdentities.clear();
       if (request.breadcrumb !== undefined) breadcrumbStack.push(request.breadcrumb.slice());
       inputSequence = -1;
       clearInputState();
@@ -725,7 +749,10 @@ export function createPlayerWorkerController(
     request: CartSessionHostRequest,
     continueRunning: boolean,
   ): readonly PlayerRuntimeToHost[] {
-    if (pendingHostRequest !== undefined || pendingGuestLoad !== undefined) {
+    if (
+      pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
+      pendingExternalCartData !== undefined
+    ) {
       return [fault(command, {
         code: "E_HOST_REQUEST",
         message: "root HostRequest violates the bounded single-pending contract",
@@ -759,6 +786,154 @@ export function createPlayerWorkerController(
     return [state(command, "waiting-host")];
   }
 
+  function externalCartDataIsCurrent(pending: PendingExternalCartData): boolean {
+    return pendingExternalCartData === pending &&
+      !pending.cancellation.token.cancelled &&
+      pending.workerGeneration === workerGeneration &&
+      pending.sessionGeneration === sessionGeneration &&
+      pending.runtimeGeneration === session.generation;
+  }
+
+  function failExternalCartData(
+    pending: PendingExternalCartData,
+  ): void {
+    if (!externalCartDataIsCurrent(pending)) return;
+    pendingExternalCartData = undefined;
+    emitBackground(pending.resume(new Uint8Array(), true));
+  }
+
+  async function completeExternalCartData(
+    pending: PendingExternalCartData,
+    request: ReturnType<typeof decodeExternalCartDataRequest>,
+    range: ReturnType<typeof normalizeReloadRange> | ReturnType<typeof normalizeCstoreRange>,
+    cstoreSnapshot: Uint8Array | undefined,
+  ): Promise<void> {
+    try {
+      const current = session.cart?.identity;
+      const loaded = await cartLoader.load(
+        request.ref,
+        {
+          ...(current === undefined ? {} : { current }),
+          purpose: request.operation,
+        },
+        pending.cancellation.token,
+      );
+      if (!externalCartDataIsCurrent(pending)) return;
+
+      if (request.operation === "reload") {
+        const bytes = cartRepository.readData(
+          loaded.cart.identity,
+          range.source,
+          range.length,
+        );
+        if (!externalCartDataIsCurrent(pending)) return;
+        const written = session.writeSuspendedLogicalRam(
+          pending.runtimeGeneration,
+          range.destination,
+          bytes,
+        );
+        if (!written.ok) throw written.error;
+      } else {
+        if (cstoreSnapshot === undefined || cstoreSnapshot.byteLength !== range.length) {
+          throw new Error("external cstore snapshot invariant failed");
+        }
+        if (range.length !== 0) {
+          const target = loaded.cart.identity.contentSha256;
+          if (
+            !externalCstoreTargetIdentities.has(target) &&
+            externalCstoreTargetIdentities.size >= 64
+          ) {
+            throw new RangeError("external cstore reached its 64-target execution limit");
+          }
+          cartRepository.writeDataOverlay(
+            loaded.cart.identity,
+            range.destination,
+            cstoreSnapshot,
+          );
+          externalCstoreTargetIdentities.add(target);
+        }
+      }
+
+      if (!externalCartDataIsCurrent(pending)) return;
+      pendingExternalCartData = undefined;
+      emitBackground(pending.resume(new Uint8Array(), false));
+    } catch {
+      failExternalCartData(pending);
+    }
+  }
+
+  function suspendExternalCartData(
+    command: PlayerRuntimeControlCommand,
+    hostRequest: CartSessionHostRequest,
+    resume: PendingRootHostRequest["resume"],
+  ): readonly PlayerRuntimeToHost[] {
+    if (
+      pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
+      pendingExternalCartData !== undefined
+    ) {
+      session.stop();
+      return [fault(command, {
+        code: "E_HOST_REQUEST",
+        message: "root HostRequest violates the bounded single-pending contract",
+        phase: "host-call",
+        recoverable: false,
+      })];
+    }
+
+    try {
+      const request = decodeExternalCartDataRequest(hostRequest.bytes);
+      const range = request.operation === "reload"
+        ? normalizeReloadRange(
+            request.destinationRaw,
+            request.sourceRaw,
+            request.lengthRaw,
+          )
+        : normalizeCstoreRange(
+            request.destinationRaw,
+            request.sourceRaw,
+            request.lengthRaw,
+          );
+      const cstoreSnapshot = request.operation === "cstore"
+        ? session.copySuspendedLogicalRam(
+            hostRequest.generation,
+            range.source,
+            range.length,
+          )
+        : undefined;
+      if (cstoreSnapshot !== undefined && !cstoreSnapshot.ok) {
+        throw cstoreSnapshot.error;
+      }
+
+      scheduler.pause();
+      lifecycle = "waiting-host";
+      const pending: PendingExternalCartData = {
+        workerGeneration,
+        sessionGeneration,
+        runtimeGeneration: hostRequest.generation,
+        requestId: hostRequest.id,
+        cancellation: new CartCancellationSource(),
+        resume,
+      };
+      pendingExternalCartData = pending;
+      void completeExternalCartData(
+        pending,
+        request,
+        range,
+        cstoreSnapshot?.value,
+      );
+      return [state(command, "waiting-host")];
+    } catch (error) {
+      session.stop();
+      return [fault(command, {
+        code: "E_HOST_REQUEST",
+        message: error instanceof Error ? error.message : String(error),
+        phase: "host-call",
+        recoverable: false,
+        details: { externalCartDataMalformedOrOutOfRange: true },
+      })];
+    }
+  }
+
   function completePendingHostRequest(
     pending: PendingRootHostRequest,
     completion: RootHostRequestCompletion | undefined,
@@ -789,12 +964,16 @@ export function createPlayerWorkerController(
     if (isGuestCartRequestPayload(request.bytes)) {
       return suspendGuestLoad(command, request, lifecycle === "running");
     }
+    if (isExternalCartDataRequestPayload(request.bytes)) {
+      return suspendExternalCartData(command, request, resume);
+    }
     if (hostRequestHandler === undefined) {
       return [unsupportedHostRequest(command)];
     }
     if (
       request.bytes.byteLength > PICO_HOST_REQUEST_MAX_BYTES ||
-      pendingHostRequest !== undefined || pendingGuestLoad !== undefined
+      pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
+      pendingExternalCartData !== undefined
     ) {
       return [fault(command, {
         code: "E_HOST_REQUEST",
@@ -893,6 +1072,7 @@ export function createPlayerWorkerController(
           }));
           return events;
         }
+        externalCstoreTargetIdentities.clear();
         current = session.restart(current.value.parameter);
         continue;
       }
@@ -1033,6 +1213,7 @@ export function createPlayerWorkerController(
       }
       clearInputState();
       events.push(runtimeControlEvent(command, "run", result.value.parameter));
+      externalCstoreTargetIdentities.clear();
       events.push(...acceptBoot(command, session.restart(result.value.parameter), true));
     } else {
       scheduler.resume();
@@ -1109,6 +1290,7 @@ export function createPlayerWorkerController(
         }
         clearInputState();
         events.push(runtimeControlEvent(command, "run", result.value.parameter));
+        externalCstoreTargetIdentities.clear();
         events.push(...acceptBoot(
           command,
           session.restart(result.value.parameter),
@@ -1148,6 +1330,7 @@ export function createPlayerWorkerController(
       }
       cancelPendingHostRequest();
       cancelPendingGuestLoad();
+      cancelPendingExternalCartData();
       sessionGeneration = command.sessionGeneration;
       instructionBudget = command.instructionBudget;
       scheduler.reset();
@@ -1167,6 +1350,7 @@ export function createPlayerWorkerController(
         localCartResolver = nextResolver;
         cartLoader = new CartLoader(localCartResolver, cartRepository);
         breadcrumbStack.length = 0;
+        externalCstoreTargetIdentities.clear();
         cartRepository.registerCart(cart);
         return acceptBoot(command, session.load(cart));
       } catch (error) {
@@ -1191,11 +1375,13 @@ export function createPlayerWorkerController(
     if (command.type === "dispose") {
       cancelPendingHostRequest();
       cancelPendingGuestLoad();
+      cancelPendingExternalCartData();
       scheduler.reset();
       clearInputState();
       const result = session.dispose();
       localCartResolver.dispose();
       cartRepository.dispose();
+      externalCstoreTargetIdentities.clear();
       lifecycle = "disposed";
       mode = "none";
       targetFps = 0;
@@ -1209,11 +1395,13 @@ export function createPlayerWorkerController(
       }
       cancelPendingHostRequest();
       cancelPendingGuestLoad();
+      cancelPendingExternalCartData();
       sessionGeneration = command.sessionGeneration;
       scheduler.reset();
       inputSequence = -1;
       clearInputState();
       devkitFlags = 0;
+      externalCstoreTargetIdentities.clear();
       return acceptBoot(command, session.reset());
     }
     if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
@@ -1247,6 +1435,7 @@ export function createPlayerWorkerController(
     }
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
+    cancelPendingExternalCartData();
     const stopped = session.stop();
     scheduler.reset();
     clearInputState();
@@ -1260,12 +1449,14 @@ export function createPlayerWorkerController(
   function disposeSync(): void {
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
+    cancelPendingExternalCartData();
     scheduler.reset();
     clearInputState();
     devkitFlags = 0;
     session.dispose();
     localCartResolver.dispose();
     cartRepository.dispose();
+    externalCstoreTargetIdentities.clear();
     lifecycle = "disposed";
     if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
   }

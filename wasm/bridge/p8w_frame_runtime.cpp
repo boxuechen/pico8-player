@@ -598,6 +598,19 @@ int load_continuation(lua_State *state) {
   return luaL_error(state, "replaced load execution resumed");
 }
 
+int cart_data_continuation(lua_State *state) {
+  Context *context = context_from_lua(state);
+  if (!context->response_ready) {
+    return luaL_error(state, "cart-data response invariant failed");
+  }
+  context->response_ready = false;
+  if (context->response_is_error) {
+    context->host_response_failed = true;
+    return luaL_error(state, "external cart-data request failed");
+  }
+  return 0;
+}
+
 int p8_load(lua_State *state) {
   constexpr uint8_t kMagic[4] = {'P', '8', 'W', 'L'};
   constexpr size_t kHeaderBytes = 16;
@@ -664,6 +677,82 @@ int p8_load(lua_State *state) {
                     load_continuation);
 }
 
+int p8_external_cart_data(lua_State *state) {
+  // The existing no-ref call remains a synchronous PicoApiHost operation.
+  if (lua_isnoneornil(state, 4)) return p8_host_call(state);
+
+  constexpr uint8_t kMagic[4] = {'P', '8', 'W', 'D'};
+  constexpr size_t kHeaderBytes = 24;
+  constexpr size_t kMaxRefBytes = 256;
+  auto *descriptor = static_cast<const P8wHostBindingDescriptor *>(
+      lua_touserdata(state, lua_upvalueindex(1)));
+  Context *context = context_from_lua(state);
+  if (descriptor == nullptr || context == nullptr) {
+    return luaL_error(state, "external cart-data binding invariant failed");
+  }
+  const bool is_reload = std::strcmp(descriptor->guest_name, "reload") == 0;
+  const bool is_cstore = std::strcmp(descriptor->guest_name, "cstore") == 0;
+  if (!is_reload && !is_cstore) {
+    return luaL_error(state, "external cart-data operation invariant failed");
+  }
+
+  uint8_t flags = 1u << 3u;
+  int32_t scalars[3] = {};
+  for (int index = 0; index < 3; ++index) {
+    const int argument = index + 1;
+    if (!lua_isnoneornil(state, argument)) {
+      flags |= static_cast<uint8_t>(1u << index);
+      scalars[index] = luaL_checknumber(state, argument).bits();
+    }
+  }
+  size_t ref_length = 0;
+  const char *ref = luaL_checklstring(state, 4, &ref_length);
+  if (ref_length == 0 || ref_length > kMaxRefBytes ||
+      kHeaderBytes + ref_length > kMaxHostBytes ||
+      std::memchr(ref, '\0', ref_length) != nullptr) {
+    return luaL_error(state, "external cart-data ref exceeds local multicart limits");
+  }
+  if (state != context->active) {
+    context->nested_suspend_attempt = true;
+    return lua_yieldk(state, 0, 0, cart_data_continuation);
+  }
+  if (context->pending_request) {
+    return luaL_error(state, "host request already pending");
+  }
+
+  context->next_request_id += 1u;
+  if (context->next_request_id == 0) context->next_request_id = 1;
+  context->request_id = context->next_request_id;
+  uint8_t *output = context->request_bytes;
+  std::memcpy(output, kMagic, sizeof(kMagic));
+  output[4] = 1;
+  output[5] = is_reload ? 1 : 2;
+  output[6] = flags;
+  output[7] = 0;
+  const auto write_u16 = [output](size_t offset, size_t value) {
+    output[offset] = static_cast<uint8_t>(value & 0xffu);
+    output[offset + 1] = static_cast<uint8_t>((value >> 8u) & 0xffu);
+  };
+  const auto write_i32 = [output](size_t offset, int32_t value) {
+    const uint32_t bits = static_cast<uint32_t>(value);
+    output[offset] = static_cast<uint8_t>(bits & 0xffu);
+    output[offset + 1] = static_cast<uint8_t>((bits >> 8u) & 0xffu);
+    output[offset + 2] = static_cast<uint8_t>((bits >> 16u) & 0xffu);
+    output[offset + 3] = static_cast<uint8_t>((bits >> 24u) & 0xffu);
+  };
+  write_i32(8, scalars[0]);
+  write_i32(12, scalars[1]);
+  write_i32(16, scalars[2]);
+  write_u16(20, ref_length);
+  write_u16(22, 0);
+  std::memcpy(output + kHeaderBytes, ref, ref_length);
+  context->request_length = static_cast<uint32_t>(kHeaderBytes + ref_length);
+  context->pending_request = true;
+  context->yield_reason = P8W_YIELD_HOST_REQUEST;
+  return lua_yieldk(state, 0, static_cast<int>(context->request_id),
+                    cart_data_continuation);
+}
+
 int p8_probe_host_request(lua_State *state) {
   Context *context = context_from_lua(state);
   size_t length = 0;
@@ -707,13 +796,14 @@ void register_host_functions(lua_State *state) {
   for (const auto &binding : kP8wHostBindings) {
     lua_pushlightuserdata(
         state, const_cast<P8wHostBindingDescriptor *>(&binding));
-    lua_pushcclosure(
-        state,
-        std::strcmp(binding.guest_name, "pal") == 0
-            ? p8_pal
-            : std::strcmp(binding.guest_name, "stat") == 0 ? p8_stat
-                                                             : p8_host_call,
-        1);
+    lua_CFunction function = p8_host_call;
+    if (std::strcmp(binding.guest_name, "pal") == 0) function = p8_pal;
+    if (std::strcmp(binding.guest_name, "stat") == 0) function = p8_stat;
+    if (std::strcmp(binding.guest_name, "reload") == 0 ||
+        std::strcmp(binding.guest_name, "cstore") == 0) {
+      function = p8_external_cart_data;
+    }
+    lua_pushcclosure(state, function, 1);
     lua_setglobal(state, binding.guest_name);
   }
 }

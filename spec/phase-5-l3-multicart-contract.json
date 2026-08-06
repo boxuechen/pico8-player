@@ -25,7 +25,7 @@
     "resourceSources": ["caller-provided-bytes", "caller-authorized-local-bundle"],
     "bbsAccess": "deferred-no-automated-access",
     "bbsIsCoreExitGate": false,
-    "nestedHostSuspension": "root-only; nested-host-suspend until Phase 5F decision",
+    "nestedHostSuspension": "root-only; Phase 5F compatibility decision active",
     "thirdPartyCorpusPublishedDenominatorContribution": 0
   },
   "capabilityProfile": {
@@ -52,9 +52,9 @@
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A", "5B", "5C", "5D"],
-  "activeWorkUnit": "5E",
-  "nextWorkUnit": "5F",
+  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E"],
+  "activeWorkUnit": "5F",
+  "nextWorkUnit": "5G",
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -138,7 +138,7 @@
     },
     "5E": {
       "name": "External reload / cstore",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "packages/runtime-core/src/cart/",
         "packages/runtime-core/src/frame-runtime.ts",
@@ -155,6 +155,8 @@
         "apps/web-player/src/worker/compose-runtime.ts",
         "apps/web-player/src/worker/adapters/cart-repository-adapter.ts",
         "tests/runtime/phase-5e-external-cart-data.test.mjs",
+        "tests/runtime/phase-3g-current-cart.test.mjs",
+        "tests/conformance/phase-4e-system-integration.test.mjs",
         "tests/browser/phase-5e.html",
         "tests/browser/phase-5e.mjs",
         "tests/browser/phase-5e-worker.mjs",
@@ -174,9 +176,74 @@
         "current-cart reload and cstore remain synchronous and regression-compatible",
         "range, capability, resolver, cancellation and late completion paths fail closed with no partial write",
         "Node real-WASM and Chrome pass the project external-reload and external-cstore corpus lanes"
+      ],
+      "result": {
+        "guestRequest": "P8WD version 1 copied root payload with operation, presence/range and canonical ref",
+        "currentCartPath": "synchronous and regression-compatible when the external ref is absent",
+        "reloadCommit": "target identity data/overlay written to suspended logical RAM before continuation",
+        "cstoreCommit": "call-point logical RAM snapshot written only to target identity Worker-local COW overlay",
+        "generationChange": false,
+        "replacementHandshake": false,
+        "maximumExternalCstoreTargetsPerExecution": 64,
+        "historicalRegressionFiles": [
+          "tests/runtime/phase-3g-current-cart.test.mjs",
+          "tests/conformance/phase-4e-system-integration.test.mjs"
+        ],
+        "runtimeArtifact": {
+          "wasmBytes": 191488,
+          "wasmSha256": "85f180146cd16577b8a0a0c57143f74a8befddbfa5b1676146b78a9cf2070283"
+        },
+        "verification": [
+          "pnpm run test:phase-5e",
+          "pnpm run test:phase-5e:chrome",
+          "pnpm run test:architecture",
+          "pnpm run test:phase-3g",
+          "pnpm run test:phase-5a",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "5F": {
+      "name": "Coroutine / L3 Compatibility",
+      "status": "active",
+      "decisionOutcomes": ["supported-bubbling", "accepted-root-only"],
+      "allowedPaths": [
+        "packages/runtime-core/src/frame-runtime.ts",
+        "packages/runtime-core/src/session/cart-session.ts",
+        "packages/z8lua-bridge/src/public.ts",
+        "wasm/bridge/p8w_frame_runtime.cpp",
+        "wasm/bridge/p8w_frame_runtime.h",
+        "wasm/runtime-v1.manifest.lock.json",
+        "spec/abi/p8w-v1.json",
+        "spec/pico-api-inventory.yaml",
+        "apps/web-player/src/worker/compose-runtime.ts",
+        "tests/runtime/phase-5f-coroutine-policy.test.mjs",
+        "tests/browser/phase-5f.html",
+        "tests/browser/phase-5f.mjs",
+        "tests/browser/phase-5f-worker.mjs",
+        "tools/browser/build-phase-5f-worker.mjs",
+        "tools/browser/run-phase-5f.mjs",
+        "tests/conformance/carts/phase-5/",
+        "tests/conformance/manifests/phase-5-l3-corpus.json",
+        "tests/architecture/",
+        "docs/adr/019-phase-5-coroutine-compatibility.md",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/5-l3-local-multicart.md",
+        "spec/phase-5-l3-multicart-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "real-WASM spike covers direct-resumer ownership and every nested suspension surface",
+        "the result is exactly one of supported-bubbling or accepted-root-only",
+        "supported-bubbling requires an accepted replacement ADR plus exact-once multi-level Node and Chrome evidence",
+        "accepted-root-only keeps nested-host-suspend uniform and proves zero resolver, repository, overlay, session-swap or stale-output side effects",
+        "instruction-budget and fault containment remain uncatchable by guest coroutine helpers",
+        "root callback and custom load, reload, cstore and flip behavior remain regression-compatible",
+        "Node real-WASM and Chrome classify the project nested-suspension-policy lane identically"
       ]
     },
-    "5F": { "name": "Coroutine / L3 Compatibility", "status": "pending" },
     "5G": { "name": "Optional BBS Adapter", "status": "pending" },
     "5H": { "name": "L3 Exit / Resource Gate", "status": "pending" }
   },

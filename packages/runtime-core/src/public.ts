@@ -1,5 +1,7 @@
 export * from "./audio/sfx-synth.js";
+export * from "./cart/cart-data-range.js";
 export * from "./cart/cart-loader.js";
+export * from "./cart/external-cart-data-request.js";
 export * from "./cart/guest-cart-request.js";
 export * from "./cart/cart-resolution.js";
 export * from "./frame-runtime.js";
