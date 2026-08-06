@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "phase": "6H",
+  "target": "local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop",
+  "releaseClaim": {
+    "localQualificationPerformed": true,
+    "projectRegressionClaimed": true,
+    "thirdPartyOrBbsCompatibilityClaimed": false,
+    "publicCompatibilityRateClaimed": false,
+    "officialBitExactClaimed": false,
+    "networkAccess": false
+  },
+  "inputs": {
+    "docs/adr/021-menuitem-registration-boundary.md": "b8404e73062b2a40715c896a1f3453e1a417abf2b96cfd20a75bb934e145c658",
+    "docs/adr/022-cpu-slicing-decision.md": "a2e8c0b71cbba2d0984337df792142ef3f8963dff13d064c18b26f991222738e",
+    "packages/runtime-core/src/audio/sfx-synth.ts": "f12167b2277cea509360f4f418c526274cc23b5ed84406a7693ce7ed21a1b9ba",
+    "spec/compat/local-observations-v1.schema.json": "db8a02333f8329e34bb26bb36b23983f4bbbe510eaf6d81de3cd0e4c78fa795a",
+    "tools/compat/local-qualification-v1.mjs": "31b726b77f2bb7993db522ee33aeade5b51cbc20c5c97cbeabcfdb557161e7ad",
+    "wasm/bridge/p8w_frame_runtime.cpp": "7af8d9841840e2749567b8d20be865f93031e2396bfc044e9bbba24af91d8ff1",
+    "wasm/bridge/p8w_pico8_compat.cpp": "ba1d1e7f953ea782a3a61eb5c6607e4ee7c9b7b00436cec07e89ab8b58268723",
+    "wasm/runtime-v1.manifest.lock.json": "be1d279baeecc3792aae3804d613ee12f21edab7dcfcc7079292ac4730dd43da",
+    "tests/runtime/phase-6d-stat20.test.mjs": "0fb3a74cdc0d5260aff07337f93cc690acae1d4ea110c3c1c4afa5c992e5f067",
+    "tests/runtime/phase-6e-menuitem.test.mjs": "fc36d6d5cc712425bbae2ec63d94878bd100d877d7819c103034a576ea8a9ce5",
+    "tests/runtime/phase-6f-cpu-slicing.test.mjs": "347895d85d24650a1b774d204c2af8245d36c59b2112835a0ed380159b80b352",
+    "tests/runtime/phase-6g-language-compat.test.mjs": "1b6081b03483186cf6558a8730345cc62d62f194974492418ee2f4c726bab688"
+  },
+  "qualification": {
+    "corpusMode": "developer-supplied-local-only",
+    "cases": 12,
+    "classifications": { "C0": 1, "C1": 0, "C2": 3, "C3": 0, "CU": 8 },
+    "smoke": {
+      "inProfileCases": 11,
+      "inProfileBoots": 11,
+      "outOfProfileCases": 1,
+      "futureVersionDispositions": 1,
+      "fixedTicksPerCase": 120
+    },
+    "manualPlayability": {
+      "C2Cases": 3,
+      "criticalFlowCases": 2,
+      "durationGateCases": 1,
+      "durationGateSeconds": 900,
+      "maximumLogicalFrames": 27000,
+      "persistenceCases": 1,
+      "localEvidenceSha256": "55f5f8cbf6a53516f3f4c5e810b0cda2c1102812a3fa49565c10a5499a31da1c"
+    },
+    "openP0": 0,
+    "openP1": 0,
+    "allCasesClassified": true,
+    "perCartResultsPublished": false,
+    "publishedDenominatorContribution": 0
+  },
+  "compatibility": {
+    "closedClusters": [
+      "legacy-stat-20-note-query",
+      "menuitem-registration",
+      "implicit-cpu-slicing",
+      "lua-unpack-global",
+      "p8scii-source-token"
+    ],
+    "projectNodeCases": { "stat20": 1, "menuitem": 4, "cpuSlicing": 6, "language": 4 },
+    "projectChromeCasesPerCluster": 12,
+    "projectChromeFramesPerCase": 120,
+    "runtimeWasmSha256": "747bb6ae2d4fbe9bfff14ec90e5193826f181ff0068c2d00c34859f89bd341b9",
+    "chromeVersion": "Google Chrome 150.0.7871.189"
+  },
+  "knownDifferences": [
+    "P4-KD-02",
+    "P4-KD-03",
+    "P4-KD-05",
+    "P4-KD-06",
+    "P5-KD-01",
+    "P6-KD-01",
+    "P6-KD-02"
+  ],
+  "privacy": {
+    "repositoryThirdPartyCartBytes": 0,
+    "repositoryThirdPartyScreenshots": 0,
+    "thirdPartyCartIdentitiesPublished": false,
+    "thirdPartyCartHashesPublished": false,
+    "thirdPartyPathsPublished": false,
+    "thirdPartyPerCartResultsPublished": false
+  }
+}

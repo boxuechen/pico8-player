@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "phase": "6",
   "name": "Real-cart Qualification",
-  "status": "active",
+  "status": "complete",
   "target": "local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
@@ -76,9 +76,10 @@
       "durationOrTrace"
     ]
   },
-  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E", "6F", "6G"],
-  "activeWorkUnit": "6H",
+  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E", "6F", "6G", "6H"],
+  "activeWorkUnit": null,
   "nextWorkUnit": null,
+  "nextPhase": "deferred",
   "workUnits": {
     "6A": {
       "name": "Activation / Corpus Policy",
@@ -441,7 +442,7 @@
           "durationGateSeconds": 900,
           "maximumLogicalFrames": 27000,
           "persistenceCases": 1,
-          "localEvidenceSha256": "55f5f8cbf6a53516f3f4c5e810b0cda2c1102812a3fa49565c10a5499a31da1"
+          "localEvidenceSha256": "55f5f8cbf6a53516f3f4c5e810b0cda2c1102812a3fa49565c10a5499a31da1c"
         },
         "finalLocalClassifications": {
           "C0": 1,
@@ -471,11 +472,13 @@
     },
     "6H": {
       "name": "Qualification Exit / Report",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tests/conformance/manifests/phase-6h-exit.json",
         "tests/conformance/phase-6h-exit.test.mjs",
+        "tests/contract/phase-5a-activation.test.mjs",
         "tests/contract/phase-6a-activation.test.mjs",
+        "tests/runtime/phase-5g-bbs-policy.test.mjs",
         "tests/architecture/",
         "docs/evidence/phase-6/",
         "docs/05-delivery-plan.md",
@@ -492,7 +495,31 @@
         "the final report distinguishes fixed-trace boot coverage from manual playability and publishes no third-party compatibility percentage",
         "the Phase 6 machine contract and roadmap are closed, immutable evidence is archived, and the completed phase document is removed from the active documentation route",
         "pnpm run verify passes, the Phase 6 exit is committed independently, and the repository is clean"
-      ]
+      ],
+      "result": {
+        "exitManifest": "tests/conformance/manifests/phase-6h-exit.json",
+        "exitManifestSha256": "4a7d38eee00f9f57859c997dbe70fb6fdba462e62770b8188885316c3d53feba",
+        "evidence": "docs/evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md",
+        "evidenceSha256": "900bce72b82bbce2cf5dc2bd8dc453f644c953d5a4b86f3a26c1bfd3ee431692",
+        "releaseClaim": "local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop",
+        "localCorpusCases": 12,
+        "classifiedCases": 12,
+        "inProfileSmokeBoots": 11,
+        "outOfProfileFutureVersionCases": 1,
+        "manualC2Cases": 3,
+        "openP0": 0,
+        "openP1": 0,
+        "thirdPartyBytesTracked": false,
+        "thirdPartyScreenshotsTracked": false,
+        "thirdPartyPerCartResultsPublished": false,
+        "publicCompatibilityRateClaimed": false,
+        "verification": [
+          "pnpm run test:phase-6h",
+          "pnpm run test:phase-6a",
+          "pnpm run test:architecture",
+          "pnpm run verify"
+        ]
+      }
     }
   },
   "phaseExitGate": {

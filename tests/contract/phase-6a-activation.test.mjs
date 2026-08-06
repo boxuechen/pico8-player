@@ -17,18 +17,24 @@ async function sha256(relativePath) {
 
 const contract = await readJson("spec/phase-6-real-cart-qualification-contract.json");
 
-test("Phase 6A activates one bounded work unit from the closed Phase 5 baseline", async () => {
+test("Phase 6A remains anchored to the closed Phase 5 baseline after Phase 6 exit", async () => {
   assert.equal(contract.phase, "6");
-  assert.equal(contract.status, "active");
+  assert.ok(["active", "complete"].includes(contract.status));
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
   assert.ok(contract.completedWorkUnits.includes("6A"));
-  assert.match(contract.activeWorkUnit, /^6[B-H]$/u);
   assert.equal(contract.workUnits["6A"].status, "complete");
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
-  assert.equal(
-    Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
-    1,
-  );
+  if (contract.status === "active") {
+    assert.match(contract.activeWorkUnit, /^6[B-H]$/u);
+    assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
+    assert.equal(
+      Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
+      1,
+    );
+  } else {
+    assert.equal(contract.activeWorkUnit, null);
+    assert.equal(contract.nextWorkUnit, null);
+    assert.ok(Object.values(contract.workUnits).every((unit) => unit.status === "complete"));
+  }
 
   for (const [pathKey, hashKey] of [
     ["phase5Contract", "phase5ContractSha256"],
@@ -79,17 +85,27 @@ test("Phase 6A publishes explicit qualification and exit gates", () => {
 test("Phase 6A routes Codex and keeps local corpus paths ignored", async () => {
   const docsReadme = await readFile(new URL("docs/README.md", projectRoot), "utf8");
   const phaseIndex = await readFile(new URL("docs/phases/README.md", projectRoot), "utf8");
-  const phase = await readFile(
-    new URL("docs/phases/6-real-cart-qualification.md", projectRoot),
-    "utf8",
-  );
   const gitignore = await readFile(new URL(".gitignore", projectRoot), "utf8");
   const packageJson = await readJson("package.json");
 
-  assert.match(docsReadme, /Active work unit \| 6[B-H]/u);
-  assert.ok(phaseIndex.includes("6-real-cart-qualification.md"));
-  assert.match(phase, /Active work unit：6[B-H]/u);
-  assert.ok(phase.includes("不自动访问 BBS"));
+  if (contract.status === "active") {
+    const phase = await readFile(
+      new URL("docs/phases/6-real-cart-qualification.md", projectRoot),
+      "utf8",
+    );
+    assert.match(docsReadme, /Active work unit \| 6[B-H]/u);
+    assert.ok(phaseIndex.includes("6-real-cart-qualification.md"));
+    assert.match(phase, /Active work unit：6[B-H]/u);
+    assert.ok(phase.includes("不自动访问 BBS"));
+  } else {
+    assert.ok(docsReadme.includes("71-phase-6-real-cart-qualification-exit-evidence.md"));
+    assert.ok(!docsReadme.includes("Active work unit |"));
+    assert.ok(!phaseIndex.includes("6-real-cart-qualification.md"));
+    await assert.rejects(
+      readFile(new URL("docs/phases/6-real-cart-qualification.md", projectRoot)),
+      { code: "ENOENT" },
+    );
+  }
   assert.ok(gitignore.includes("/tests/conformance/local-corpus.json"));
   assert.ok(gitignore.includes("/tests/conformance/local-corpus/"));
   assert.equal(

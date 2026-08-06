@@ -21,15 +21,15 @@
 | 3 Audio / Input / Persistence（3A–3H） | Complete | [Phase 3 exit](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
 | 4 L2 / MVP Compatibility（4A–4H） | Complete | [Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [contract](../spec/phase-4-l2-mvp-contract.json) |
 | 5 L3 local/multicart | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
-| 6 Real-cart Qualification（6A–6H） | Active | [active phase](./phases/6-real-cart-qualification.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
+| 6 Real-cart Qualification（6A–6H） | Complete | [Phase 6 exit](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
 
 Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
 corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
 [`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) 为准，不在 roadmap 重复。
 
-## 3. 当前阶段边界
+## 3. 下一阶段激活边界
 
-Phase 6 已激活，具体 work unit 只由 active phase 文档授权。它保持以下边界：
+Phase 6 已关闭，当前没有 active phase。任何下一阶段必须先创建 phase 文档与机器合同，并重新冻结：
 
 1. 相对关闭 L3 profile 的明确 capability delta、合法 corpus 和可计算发布分母。
 2. 新资源来源、缓存、分享或网络 surface 的 caller authority 与 fail-closed 边界。
@@ -37,8 +37,9 @@ Phase 6 已激活，具体 work unit 只由 active phase 文档授权。它保�
 4. 是否改变 ADR-019 root-only coroutine policy；如改变，先提交 replacement ADR 和独立 spike。
 5. 网络、持久化、版权、Terms、隐私和资源上限；默认不得自动访问 BBS 或跟踪第三方 cart bytes。
 
-当前入口已包含版本化 `spec/` 机器合同、唯一 active work unit、精确 Chrome gate 和前置 Phase 5
-evidence hash。后续阶段方向继续 Deferred，不得从本 roadmap 越过 active work unit 开工。
+Phase 6 的 aggregate qualification、输入 hash 与 privacy boundary 只由关闭合同和
+[exit evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) 保存。后续阶段
+方向继续 Deferred，不得从本 roadmap 直接开工。
 
 ## 4. 当前声明之外
 

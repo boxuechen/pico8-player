@@ -630,6 +630,11 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 它绑定项目原创 local corpus、受审 build 和 Chrome production path，不是 official
 bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 
+Phase 6 另已关闭 **local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop**：
+12 个 caller-supplied local case 全部有 aggregate C* disposition，11/11
+in-profile case 完成 fixed smoke，3 个代表 case 完成 C2。该补充只证明本地 qualification 执行，
+不改变上述 project-profile 发布分母，也不发布第三方 cart 身份、hash、逐-cart 结果或兼容率。
+
 | 指标 | 当前结论 | 权威来源 |
 | --- | --- | --- |
 | Project L3 corpus | `C3=6/6`，playable `100%`，开放 P0/P1=`0/0`，Node/Chrome cross-oracle 一致 | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
@@ -637,6 +642,7 @@ bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 | Replacement gate | `100/100` swaps，generation `1→101`，stale commit `0` | Phase 5 evidence |
 | Resource gate | fixed 16 MiB WASM、1 MiB default Lua heap、`1800.0644s` Chrome mixed soak | Phase 5 evidence |
 | Aggregate claim | profile、inputs、scope 与 artifact hash machine-checked | [`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) |
+| Local real-cart qualification | `12/12` classified aggregate、`11/11` in-profile smoke、3 个 C2、公开分母贡献 `0` | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [`phase-6h-exit.json`](../tests/conformance/manifests/phase-6h-exit.json) |
 
 ### 15.5 Published Known Differences
 
@@ -682,6 +688,7 @@ surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profil
 | Phase 3 audio/input/persistence | [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
 | Phase 4 L2/MVP hardening | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
 | Phase 5 L3 local/multicart | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
+| Phase 6 real-cart qualification | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) |
 
 新回归只更新当前 compatibility entry、机器 inventory/issue registry 和新 phase evidence；不得把
 旧 work-unit 表重新复制回本文件。

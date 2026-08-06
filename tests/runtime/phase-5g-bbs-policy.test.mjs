@@ -99,7 +99,9 @@ test("5G deferred policy remains closed after the independent 5H exit", async ()
     "docs/evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md",
   );
   const packageJson = await readJson("package.json");
-  assert.match(docsReadme, /最近完成 \| Phase 5/u);
+  const recentPhase = docsReadme.match(/最近完成 \| Phase (\d+)/u);
+  assert.ok(recentPhase, "docs must retain a completed-phase route");
+  assert.ok(Number(recentPhase[1]) >= 5, "completed-phase route cannot move backwards");
   assert.match(evidence, /ADR-020/u);
   assert.match(evidence, /Deferred/u);
   assert.equal(await exists("docs/phases/5-l3-local-multicart.md"), false);
