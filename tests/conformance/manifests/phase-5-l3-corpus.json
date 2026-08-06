@@ -102,7 +102,13 @@
       "license": "project-owned-test-fixture",
       "capabilityLanes": ["nested-suspension-policy"],
       "observables": ["structured-error", "side-effect-count", "coroutine-state"],
-      "activationClassification": "CU"
+      "activationClassification": "CU",
+      "phase5fClassification": "C3",
+      "phase5fExpectedFault": {
+        "code": "E_FEATURE_UNSUPPORTED",
+        "reason": "nested-host-suspend",
+        "externalSideEffects": 0
+      }
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Phase 5 — L3 Local / Multicart
 
-> 状态：Active；5A–5E complete，5F active
+> 状态：Active；5A–5F complete，5G active
 > 机器合同：[`spec/phase-5-l3-multicart-contract.json`](../../spec/phase-5-l3-multicart-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 4 L2/MVP exit](../evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)
@@ -36,8 +36,8 @@ Phase 5 完成 caller-authorized local bundle、root recoverable HostRequest、g
 | 5C Root HostRequest Pipeline | Complete | bounded async root suspension、generation/request race gate |
 | 5D Guest `load()` / Atomic Cart Swap | Complete | versioned guest request、staged session、replacement handshake |
 | 5E External `reload/cstore` | Complete | versioned request、调用点 snapshot、resume-before-RAM |
-| 5F Coroutine / L3 Compatibility | **Active** | 下节 |
-| 5G Optional BBS Adapter | Pending | 条件 work unit；允许 Rejected/Deferred 结论 |
+| 5F Coroutine / L3 Compatibility | Complete | ADR-019、28-case matrix、accepted root-only |
+| 5G Optional BBS Adapter | **Active** | 下节；条件 work unit，允许 Rejected/Deferred 结论 |
 | 5H L3 Exit / Resource Gate | Pending | aggregate exit |
 
 ## 5A closure
@@ -82,44 +82,56 @@ Worker 覆盖。历史 Phase 3/4 current-cart tests 只移除“external 永久 
 行为与 evidence 不改写。验证入口是 `pnpm run test:phase-5e` 与
 `pnpm run test:phase-5e:chrome`。
 
-## Active work unit：5F Coroutine / L3 Compatibility
+## 5F closure
+
+5F 的 real-WASM spike 证明 plain guest yield/continuation 只返回直接 `coresume()`，没有自然 root
+bubbling。Node 与 Chrome production Worker 的 28-case matrix 覆盖 7 个 suspension surface、
+callback/custom 与 single/multi-level nesting，全部统一得到不可被 `pcall/coresume` 吞掉的
+`E_FEATURE_UNSUPPORTED` / `nested-host-suspend`。host handler、waiting-host、external overlay、
+session replacement、frame、runtime control、audio 和 persistence side effect 均为 0；instruction
+budget 继续跨 guest coroutine 继承，fault 后 fresh session 可恢复。ADR-019 因此接受
+`accepted-root-only`，不修改 production WASM；project corpus lane 在 Node/Chrome 均为 C3。验证入口是
+`pnpm run test:phase-5f` 与 `pnpm run test:phase-5f:chrome`。
+
+## Active work unit：5G Optional BBS Adapter Decision
 
 ### Observable behavior
 
-1. 对 guest-created coroutine 中所有可 suspension surface 建立同一矩阵：`flip/run/stop/load`、external
-   `reload/cstore` 与 diagnostic HostRequest；覆盖 callback、custom loop、single nested 与 multi-level nested。
-2. 先用 pinned z8lua real-WASM spike 验证 direct-resumer ownership、continuation stack、instruction hook
-   与 request side-effect count。不得用 Promise、Asyncify、同步 busy-wait 或 catchable Lua error 冒充 root bubbling。
-3. 5F 必须作出一个显式结论：`supported-bubbling` 或 `accepted-root-only`。只有 Node/Chrome exact-once
-   request、取消、budget 与 multi-level 恢复全部通过，并新增替代 ADR 时，才允许扩大 ADR-017；否则
-   保持 `nested-host-suspend`，把它冻结为 L3 project profile 的 Known Difference。
-4. 无论结论为何，nested call 都不得访问 resolver/repository、提交 overlay、替换 session、推进 logical
-   time/frame/audio/input 或发布 stale output；guest `pcall/coresume` 不得吞掉结构化 host fault。
-5. root callback/custom 的 `load/reload/cstore/flip` 已完成语义必须保持回归兼容；coroutine hook 继续
-   继承统一 instruction budget，OOM/budget/fault 后不得原地恢复损坏的 VM。
-6. project corpus 的 nested-suspension-policy lane 在 Node real-WASM 与 Chrome production Worker 得到相同
-   classification，并在 inventory/Known Differences/机器合同中只保留一个公开结论。
+1. 先复核当前 Lexaloffle Terms、官方 cart/BBS 资源接口与现有 caller-authorized boundary；在决定前
+   禁止编写 production network adapter、下载或提交第三方 cart bytes。
+2. 5G 必须在 ADR-020 中只选择一个结论：`implemented-opt-in`、`rejected` 或 `deferred`。BBS adapter
+   不是 Phase 5 exit gate；证据不足、授权边界不清或 Terms 不允许时必须保持 Deferred/Rejected。
+3. 只有 Terms 与技术接口都允许时才可选择 `implemented-opt-in`，且必须由 caller 显式启用、固定
+   allowlisted Lexaloffle origin、限定 ref grammar/redirect/content-type/1 MiB bytes、支持 cancellation，
+   并复用 `CartLoader` 的 decode/capability 二次检查。guest string 不能成为任意 URL 权限。
+4. 无论结论为何，RuntimeCore、z8lua/WASM、cart codec、local bundle 默认路径与 ADR-018 都不得获得
+   browser/network dependency；具体 adapter 只能位于 Worker app boundary 并由 composition root 注入。
+5. 禁止 crawler、搜索/列表发现、登录态、cookie/session 复用、公共镜像、持久缓存和跨 origin fallback；
+   BBS/第三方结果及 bytes 对 tracked corpus 和公开 playable-rate 分母贡献保持 0。
+6. 若结论为 Deferred/Rejected，必须以 architecture/policy tests 证明 production source 没有新增网络
+   capability，local 5B–5F gates 仍通过；不得为了“预留”留下不可达的半实现 adapter。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.5F.allowedPaths` 控制。production 变更仅限 coroutine suspension、
-fault containment 与对应 Worker orchestration；不得修改 graphics/audio/input 算法、Main transport、
-persistence schema、cart resolver capability 或 BBS scope。若 spike 不满足扩大条件，不得留下半实现 bubbling。
+精确允许路径由机器合同 `workUnits.5G.allowedPaths` 控制。只有选择 `implemented-opt-in` 才允许增加
+Worker-owned adapter/transport；Deferred/Rejected 路径只修改 policy tests、ADR、compatibility 与机器
+合同。不得修改 RuntimeCore、WASM、graphics/audio/input、persistence schema 或 tracked corpus。
 
-### Proposed tests（5F 实现时加入 package scripts）
+### Proposed tests（5G 实现时加入 package scripts）
 
-- `pnpm run test:phase-5f`
-- `pnpm run test:phase-5f:chrome`
+- `pnpm run test:phase-5g`
+- 若实现 adapter：`pnpm run test:phase-5g:chrome`
 - `pnpm run test:architecture`
 - production/public contract 发生变化时最终运行 `pnpm run verify`
 
 ### Exit gate
 
-- suspension matrix 与 direct-resumer spike 有 machine-checkable Node/Chrome 结果。
-- `supported-bubbling` 必须 exact-once、multi-level、budget/cancel 全通过并由替代 ADR 接受；否则结论必须是
-  `accepted-root-only`，且所有 nested surface 统一、无外部 side effect。
-- root behavior 与 Phase 5D/5E corpus 无回归，Chrome/Node classification 一致。
-- 5F 结果折叠入机器合同，5G 成为唯一 active work unit并独立提交。
+- 当前 Terms 与接口依据、访问日期和结论进入 ADR-020；机器合同只保留一个 outcome。
+- implemented 路径通过 allowlist、redirect/content-type/size、cancel/late result、generation 与 Chrome
+  production tests；Deferred/Rejected 路径证明 production network surface 未增加。
+- local bundle、root request、guest load、external data 与 nested-policy 回归无变化。
+- tracked BBS/第三方 bytes 为 0，published denominator contribution 为 0。
+- 5G 结果折叠入机器合同，5H 成为唯一 active work unit并独立提交。
 
 ## Phase exit gate
 

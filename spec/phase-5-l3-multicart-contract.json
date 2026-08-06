@@ -25,7 +25,7 @@
     "resourceSources": ["caller-provided-bytes", "caller-authorized-local-bundle"],
     "bbsAccess": "deferred-no-automated-access",
     "bbsIsCoreExitGate": false,
-    "nestedHostSuspension": "root-only; Phase 5F compatibility decision active",
+    "nestedHostSuspension": "root-only; Phase 5F outcome accepted-root-only with nested-host-suspend structured fault",
     "thirdPartyCorpusPublishedDenominatorContribution": 0
   },
   "capabilityProfile": {
@@ -45,16 +45,16 @@
   },
   "corpus": {
     "manifest": "tests/conformance/manifests/phase-5-l3-corpus.json",
-    "manifestSha256": "34689e150a4afa5913d207c93ef59db9201315cb3d6804efe9c8e2d2f9fd32e1",
+    "manifestSha256": "76e4e21a3a1caa73021dfe7e186c71b7afcf01baa126bb0deab5e4024fb6a170",
     "cases": 6,
     "repositoryEntries": 2,
     "ownership": "project-authored",
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E"],
-  "activeWorkUnit": "5F",
-  "nextWorkUnit": "5G",
+  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E", "5F"],
+  "activeWorkUnit": "5G",
+  "nextWorkUnit": "5H",
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -205,7 +205,7 @@
     },
     "5F": {
       "name": "Coroutine / L3 Compatibility",
-      "status": "active",
+      "status": "complete",
       "decisionOutcomes": ["supported-bubbling", "accepted-root-only"],
       "allowedPaths": [
         "packages/runtime-core/src/frame-runtime.ts",
@@ -242,9 +242,83 @@
         "instruction-budget and fault containment remain uncatchable by guest coroutine helpers",
         "root callback and custom load, reload, cstore and flip behavior remain regression-compatible",
         "Node real-WASM and Chrome classify the project nested-suspension-policy lane identically"
+      ],
+      "result": {
+        "decision": "accepted-root-only",
+        "decisionRecord": "docs/adr/019-phase-5-coroutine-compatibility.md",
+        "directResumer": "plain nested yield and continuation return only to the immediate coresume caller",
+        "matrix": {
+          "surfaces": ["flip", "run", "stop", "load", "external-reload", "external-cstore", "diagnostic-host-request"],
+          "executionModes": ["callback", "custom"],
+          "nestingDepths": ["single", "multi"],
+          "cases": 28
+        },
+        "nestedFault": {
+          "code": "E_FEATURE_UNSUPPORTED",
+          "reason": "nested-host-suspend",
+          "guestCatchable": false
+        },
+        "externalSideEffects": {
+          "hostHandlerCalls": 0,
+          "waitingHostEvents": 0,
+          "replacementHandshakes": 0,
+          "publishedFrames": 0,
+          "runtimeControls": 0,
+          "overlayCommits": 0,
+          "persistenceCommits": 0
+        },
+        "requestCancellation": "no nested request is allocated, so no resolver or cancellable operation begins",
+        "budgetPolicy": "guest-created coroutines inherit the root instruction hook and cannot swallow budget poison",
+        "corpusLane": {
+          "id": "l3/nested-suspension-policy",
+          "nodeClassification": "C3",
+          "chromeClassification": "C3"
+        },
+        "productionChange": false,
+        "runtimeArtifactChanged": false,
+        "verification": [
+          "pnpm run test:phase-5f",
+          "pnpm run test:phase-5f:chrome",
+          "pnpm run test:phase-5d",
+          "pnpm run test:phase-5d:chrome",
+          "pnpm run test:phase-5e",
+          "pnpm run test:phase-5e:chrome",
+          "pnpm run test:architecture",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "5G": {
+      "name": "Optional BBS Adapter",
+      "status": "active",
+      "decisionOutcomes": ["implemented-opt-in", "rejected", "deferred"],
+      "allowedPaths": [
+        "apps/web-player/src/worker/adapters/bbs-cart-resolver-adapter.ts",
+        "apps/web-player/src/worker/compose-runtime.ts",
+        "apps/web-player/src/transport/",
+        "tests/runtime/phase-5g-bbs-policy.test.mjs",
+        "tests/browser/phase-5g.html",
+        "tests/browser/phase-5g.mjs",
+        "tests/browser/phase-5g-worker.mjs",
+        "tools/browser/build-phase-5g-worker.mjs",
+        "tools/browser/run-phase-5g.mjs",
+        "tests/architecture/",
+        "docs/adr/020-phase-5-bbs-adapter.md",
+        "docs/06-testing-compatibility.md",
+        "docs/10-reference-sources.md",
+        "docs/README.md",
+        "docs/phases/5-l3-local-multicart.md",
+        "spec/phase-5-l3-multicart-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "review the current Lexaloffle Terms and official resource interface before any network implementation",
+        "choose exactly one of implemented-opt-in, rejected or deferred and record it in ADR-020",
+        "implemented-opt-in requires explicit caller authorization, a bounded allowlisted origin, cancellation, byte limits and no cart-controlled URL authority",
+        "rejected or deferred leaves production network capability unchanged and proves local L3 exit remains independent",
+        "no BBS or third-party cart bytes enter the tracked corpus or published compatibility denominator"
       ]
     },
-    "5G": { "name": "Optional BBS Adapter", "status": "pending" },
     "5H": { "name": "L3 Exit / Resource Gate", "status": "pending" }
   },
   "phaseExitGate": {

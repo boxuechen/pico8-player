@@ -637,6 +637,17 @@ bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 
 ### 15.6 Coverage limitation 与范围排除
 
+Phase 5 active profile 在 Phase 4 历史表之上增加一个已接受差异：
+
+| ID | API / 模式 | 用户可见影响 | Workaround / scope |
+| --- | --- | --- | --- |
+| `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
+
+`P4-KD-01` 是已发布 L2 profile 的历史条目；`P5-KD-01` 将相同 ownership 边界扩展并验证到
+全部 L3 suspension surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profile；Phase 5E
+已在 caller-authorized local bundle 中实现 root external `reload/cstore`，但不包含 URL、filesystem
+或 BBS fallback。
+
 `P4-CL-01` 覆盖 28 个已实现但仍缺 official edge vectors 的 required VM builtin；它们继续标为
 `unknown`，不能计作 official-compatible。精确 API 名单只由
 [`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 维护，不在 living 文档复制。

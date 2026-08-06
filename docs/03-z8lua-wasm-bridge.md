@@ -173,8 +173,13 @@ end
 因此：
 
 - host request **MUST** 带 out-of-band `pendingRequest` 状态；不能仅靠 Lua yield return values 猜测。
-- 当前仅 root HostRequest 可恢复；nested `flip/load/reload/cstore` suspension 返回 `E_FEATURE_UNSUPPORTED`，并在结构化 details 中标记 `reason: "nested-host-suspend"`。
-- missing-cart resolver、nested suspension 或 root bubbling 只能由 active phase 在精确 coroutine conformance 下扩展，不能从本目标说明推导为已支持。
+- Phase 5F 已由 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) 接受 root-only：仅 root HostRequest
+  可恢复；guest-created single/multi-level coroutine 中的 `flip/run/stop/load`、external
+  `reload/cstore` 与 diagnostic HostRequest 统一返回 `E_FEATURE_UNSUPPORTED`，并在结构化 details
+  中标记 `reason: "nested-host-suspend"`。
+- Node/Chrome 的 28-case matrix 已证明 guest `pcall/coresume` 不可吞掉该 fault，且不产生 resolver、
+  repository、overlay、session replacement 或 stale output side effect。未来 general bubbling 仍必须由
+  replacement ADR 取得完整 resumer-chain ownership，不能从目标说明或单个 wrapper 推导为已支持。
 - 不得使用 Asyncify 来掩盖 Lua coroutine 所有权问题。
 
 ## 5. Shared Pico RAM
