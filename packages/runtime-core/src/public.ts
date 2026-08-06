@@ -8,5 +8,6 @@ export type * from "./ports/cart-data-persistence-port.js";
 export type * from "./ports/cart-repository-port.js";
 export type * from "./ports/cart-resolver-port.js";
 export type * from "./ports/current-cart-data-repository-port.js";
+export type * from "./ports/root-host-request-handler-port.js";
 export * from "./scheduler/frame-scheduler.js";
 export * from "./session/cart-session.js";

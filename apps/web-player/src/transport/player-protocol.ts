@@ -64,6 +64,7 @@ interface PlayerEventEnvelope {
 export type PlayerRuntimeState =
   | "ready"
   | "running"
+  | "waiting-host"
   | "paused"
   | "stopped"
   | "disposed";

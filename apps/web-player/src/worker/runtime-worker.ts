@@ -124,15 +124,46 @@ export function installPlayerRuntimeWorker(
   audioTransport?: WorkerPcmTransport,
 ): void {
   let queue = Promise.resolve();
+  let activeController: PlayerWorkerController | undefined;
+  let handlingCommand = false;
+  const bufferedBackgroundEvents: PlayerRuntimeToHost[][] = [];
+  const controllerPromise = Promise.resolve(controller);
+
+  function postBackgroundEvents(responses: readonly PlayerRuntimeToHost[]): void {
+    if (handlingCommand) {
+      bufferedBackgroundEvents.push([...responses]);
+      return;
+    }
+    for (const response of responses) postPlayerResponse(scope, response);
+  }
+
+  function flushBackgroundEvents(): void {
+    for (const responses of bufferedBackgroundEvents.splice(0)) {
+      for (const response of responses) postPlayerResponse(scope, response);
+    }
+  }
+
+  async function getController(): Promise<PlayerWorkerController> {
+    const active = activeController ?? await controllerPromise;
+    if (activeController === undefined) {
+      activeController = active;
+      active.setEventSink(postBackgroundEvents);
+    }
+    return active;
+  }
+
   scope.addEventListener("message", (event) => {
     if (audioTransport !== undefined && attachAudioPort(event.data, audioTransport)) return;
     if (!isPlayerHostToRuntime(event.data)) return;
     const command = event.data;
     queue = queue.then(async () => {
       try {
-        const active = await controller;
+        const active = await getController();
+        handlingCommand = true;
         const responses = await active.handle(command);
         for (const response of responses) postPlayerResponse(scope, response);
+        handlingCommand = false;
+        flushBackgroundEvents();
         if (
           command.type === "dispose" &&
           responses.some((response) => response.type === "state" && response.state === "disposed")
@@ -140,6 +171,8 @@ export function installPlayerRuntimeWorker(
           audioTransport?.dispose();
         }
       } catch (error) {
+        handlingCommand = false;
+        bufferedBackgroundEvents.length = 0;
         postPlayerResponse(scope, {
           v: 1,
           type: "fault",

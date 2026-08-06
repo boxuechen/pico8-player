@@ -82,6 +82,9 @@ export const PICO_CART_REF_MAX_BYTES = 256;
 /** Maximum number of caller-authorized entries in one Worker-local bundle. */
 export const PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES = 64;
 
+/** Maximum copied payload or response for one root VM HostRequest. */
+export const PICO_HOST_REQUEST_MAX_BYTES = 4096;
+
 /**
  * Caller-created authority attached to resolved cart bytes. These bits are
  * data, not hints: ref text, extensions and cart contents cannot elevate them.

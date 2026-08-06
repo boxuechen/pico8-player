@@ -170,7 +170,10 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
     if (value.state === "stopped" && value.mode === "none") {
       return value.targetFps === 0;
     }
-    return ["ready", "running", "paused", "stopped"].includes(
+    if (value.state === "waiting-host" && value.mode === "none") {
+      return value.targetFps === 0;
+    }
+    return ["ready", "running", "waiting-host", "paused", "stopped"].includes(
       String(value.state),
     ) &&
       (value.mode === "callback" || value.mode === "custom") &&

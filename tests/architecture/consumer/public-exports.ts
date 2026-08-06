@@ -20,6 +20,7 @@ import {
   PICO_CART_INPUT_MAX_BYTES,
   PICO_CART_REF_MAX_BYTES,
   PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES,
+  PICO_HOST_REQUEST_MAX_BYTES,
   PICO_RAM_SIZE,
   type CartAccess,
   type CartIdentity,
@@ -39,6 +40,7 @@ import {
   type CartDataPersistencePort,
   type CartRepositoryPort,
   type CartResolverPort,
+  type RootHostRequestHandlerPort,
   type CurrentCartDataRepositoryPort,
   type CartSessionRuntimeContext,
   type CartSessionRuntimePort,
@@ -69,6 +71,7 @@ const exactCartDataRomBytes: 17152 = PICO_CART_DATA_ROM_SIZE;
 const exactCartInputBytes: 1048576 = PICO_CART_INPUT_MAX_BYTES;
 const exactCartRefBytes: 256 = PICO_CART_REF_MAX_BYTES;
 const exactLocalBundleEntries: 64 = PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES;
+const exactHostRequestBytes: 4096 = PICO_HOST_REQUEST_MAX_BYTES;
 declare const pngBytes: Uint8Array;
 declare const textBytes: Uint8Array;
 const decodeOptions: P8PngDecodeOptions = { limits: { maximumCartVersion: 42 } };
@@ -114,6 +117,7 @@ declare const cartDataPersistence: CartDataPersistencePort;
 declare const currentCartRepository: CurrentCartDataRepositoryPort;
 declare const cartRepository: CartRepositoryPort;
 declare const cartResolver: CartResolverPort;
+declare const rootHostRequestHandler: RootHostRequestHandlerPort;
 const cancellation = new CartCancellationSource();
 const cartLoader = new CartLoader(cartResolver, cartRepository);
 const cartAccess: CartAccess = {
@@ -136,6 +140,7 @@ void exactCartDataRomBytes;
 void exactCartInputBytes;
 void exactCartRefBytes;
 void exactLocalBundleEntries;
+void exactHostRequestBytes;
 void decodedCart;
 void decodedTextCart;
 void parsedCart;
@@ -151,6 +156,7 @@ void cartDataPersistence;
 void currentCartRepository;
 void cartRepository;
 void cartResolver;
+void rootHostRequestHandler;
 void cancellation;
 void cartLoader;
 void cartAccess;

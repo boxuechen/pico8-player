@@ -52,9 +52,9 @@
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A", "5B"],
-  "activeWorkUnit": "5C",
-  "nextWorkUnit": "5D",
+  "completedWorkUnits": ["5A", "5B", "5C"],
+  "activeWorkUnit": "5D",
+  "nextWorkUnit": "5E",
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -88,21 +88,59 @@
     },
     "5C": {
       "name": "Root HostRequest Pipeline",
+      "status": "complete",
+      "result": {
+        "publicPort": "RootHostRequestHandlerPort",
+        "maximumPayloadBytes": 4096,
+        "workerState": "waiting-host",
+        "historicalGatePolicy": "Phase 4 evidence bytes stay immutable while evolving Phase 5 production sources are no longer compared to historical live hashes",
+        "historicalGateFiles": [
+          "tests/conformance/phase-4g-resource-long-run.test.mjs",
+          "tests/conformance/phase-4h-exit.test.mjs"
+        ],
+        "completionGate": ["workerGeneration", "sessionGeneration", "runtimeGeneration", "requestId"],
+        "nestedPolicy": "nested-host-suspend",
+        "verification": [
+          "pnpm run test:phase-5c",
+          "pnpm run test:phase-5c:chrome",
+          "pnpm run test:architecture",
+          "pnpm run test:phase-1e",
+          "pnpm run test:phase-4e",
+          "pnpm run test:phase-4h",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "5D": {
+      "name": "Guest load / Atomic Cart Swap",
       "status": "active",
       "allowedPaths": [
-        "packages/runtime-core/src/ports/",
+        "packages/contracts/src/public.ts",
+        "packages/runtime-core/src/cart/",
         "packages/runtime-core/src/public.ts",
         "packages/runtime-core/src/frame-runtime.ts",
         "packages/runtime-core/src/session/cart-session.ts",
+        "packages/z8lua-bridge/src/public.ts",
+        "wasm/bridge/p8w_frame_runtime.cpp",
+        "wasm/bridge/p8w_frame_runtime.h",
+        "wasm/runtime-v1.manifest.lock.json",
+        "spec/abi/p8w-v1.json",
+        "spec/pico-api-inventory.yaml",
         "apps/web-player/src/worker/compose-runtime.ts",
         "apps/web-player/src/worker/runtime-worker.ts",
+        "apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts",
         "apps/web-player/src/transport/player-protocol.ts",
         "apps/web-player/src/transport/public.ts",
         "apps/web-player/src/transport/validators.ts",
         "apps/web-player/src/main/player-runtime-client.ts",
-        "tests/runtime/phase-5c-root-host-request.test.mjs",
-        "tests/browser/phase-5c.html",
-        "tools/browser/run-phase-5c.mjs",
+        "apps/web-player/src/main/compose-player.ts",
+        "tests/runtime/phase-5d-guest-load.test.mjs",
+        "tests/browser/phase-5d.html",
+        "tests/browser/phase-5d.mjs",
+        "tests/browser/phase-5d-worker.mjs",
+        "tools/browser/build-phase-5d-worker.mjs",
+        "tools/browser/run-phase-5d.mjs",
+        "tests/wasm/",
         "tests/architecture/",
         "tests/contract/phase-5a-activation.test.mjs",
         "docs/README.md",
@@ -111,15 +149,14 @@
         "package.json"
       ],
       "exit": [
-        "production Worker recovers root boot and step HostRequests without blocking later control messages",
-        "payload, response, request count and lifecycle are bounded and copy-owned",
-        "generation plus request id rejects stale, duplicate and mismatched completions",
-        "logical time, audio, input and persistence do not commit while waiting",
-        "nested-host-suspend remains fail closed",
-        "Node real-WASM and Chrome production-path gates pass"
+        "guest load request has a versioned bounded root-only payload and never returns to old code",
+        "CartLoader capability resolution feeds an isolated staged session",
+        "successful swap advances Player session generation and resets stale frame/audio/input ownership",
+        "parameter and breadcrumb commit only with the target cart",
+        "callback and custom-loop target carts auto-run in Node real-WASM and Chrome",
+        "failure and cancellation paths publish no mixed-generation state"
       ]
     },
-    "5D": { "name": "Guest load / Atomic Cart Swap", "status": "pending" },
     "5E": { "name": "External reload / cstore", "status": "pending" },
     "5F": { "name": "Coroutine / L3 Compatibility", "status": "pending" },
     "5G": { "name": "Optional BBS Adapter", "status": "pending" },

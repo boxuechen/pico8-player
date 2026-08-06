@@ -352,6 +352,7 @@ export class PlayerRuntimeClient {
       pending.reject(new RuntimeClientError(value.error));
       return;
     }
+    if (value.type === "state" && value.state === "waiting-host") return;
     if (value.type !== pending.terminalType) return;
     globalThis.clearTimeout(pending.timer);
     this.#pending.delete(value.requestId);

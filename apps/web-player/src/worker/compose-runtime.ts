@@ -2,6 +2,7 @@ import { CartCodecError, decodeCart, decodeP8Png } from "@pico8-web/cart-codec";
 import {
   PICO_CONTROLLER_COUNT,
   PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  PICO_HOST_REQUEST_MAX_BYTES,
   type PicoCartDataCommit,
   type PicoCartDataSeed,
   type PicoDevkitInputBatch,
@@ -9,13 +10,17 @@ import {
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
 import {
+  CartCancellationSource,
   CartSession,
   type CartDataPersistencePort,
   type CanonicalAudioSlice,
   FrameScheduler,
   FrameSliceRuntime,
   type CartSessionBootResult,
+  type CartSessionHostRequest,
   type CartSessionStepResult,
+  type RootHostRequestCompletion,
+  type RootHostRequestHandlerPort,
   type RuntimeBootResult,
   type RuntimeResult,
   type RuntimeStepResult,
@@ -194,12 +199,18 @@ export interface PlayerWorkerController {
   handle(
     command: PlayerHostToRuntime,
   ): readonly PlayerRuntimeToHost[] | Promise<readonly PlayerRuntimeToHost[]>;
+  setEventSink(sink: PlayerWorkerEventSink): void;
   dispose(): void | Promise<void>;
 }
+
+export type PlayerWorkerEventSink = (
+  events: readonly PlayerRuntimeToHost[],
+) => void;
 
 export interface PlayerWorkerControllerOptions {
   readonly audioTransport?: WorkerPcmTransport;
   readonly persistence?: CartDataPersistencePort;
+  readonly hostRequestHandler?: RootHostRequestHandlerPort;
   /** Fixed per-VM diagnostic override; zero/undefined selects the 1 MiB production default. */
   readonly luaHeapLimit?: number;
 }
@@ -208,10 +219,23 @@ type PlayerWorkerLifecycle =
   | "empty"
   | "ready"
   | "running"
+  | "waiting-host"
   | "paused"
   | "stopped"
   | "faulted"
   | "disposed";
+
+interface PendingRootHostRequest {
+  readonly workerGeneration: number;
+  readonly sessionGeneration: number;
+  readonly runtimeGeneration: number;
+  readonly requestId: number;
+  readonly cancellation: CartCancellationSource;
+  readonly resume: (
+    response: Uint8Array,
+    isError: boolean,
+  ) => readonly PlayerRuntimeToHost[];
+}
 
 const ZERO_DEVKIT_INPUT: PicoDevkitInputBatch = Object.freeze({
   mouseXRaw: 0,
@@ -256,6 +280,7 @@ export function createPlayerWorkerController(
 ): PlayerWorkerController {
   const audioTransport = options.audioTransport;
   const persistence = options.persistence;
+  const hostRequestHandler = options.hostRequestHandler;
   const luaHeapLimit = options.luaHeapLimit;
   const cartRepository = new CartRepositoryAdapter();
   const localPersistenceDiagnostics: SerializedRuntimeError[] = [];
@@ -301,6 +326,8 @@ export function createPlayerWorkerController(
   let mode: "none" | "callback" | "custom" = "none";
   let targetFps: 0 | 30 | 60 = 0;
   let devkitFlags = 0;
+  let eventSink: PlayerWorkerEventSink | undefined;
+  let pendingHostRequest: PendingRootHostRequest | undefined;
 
   function clearPendingDevkitEvents(): void {
     pendingWheelRaw = 0;
@@ -462,6 +489,7 @@ export function createPlayerWorkerController(
     command: PlayerHostToRuntime,
     error: SerializedRuntimeError,
   ): PlayerRuntimeToHost {
+    cancelPendingHostRequest();
     lifecycle = "faulted";
     scheduler.pause();
     clearInputState();
@@ -482,6 +510,100 @@ export function createPlayerWorkerController(
       targetFps,
       devkitFlags,
     };
+  }
+
+  function setEventSink(sink: PlayerWorkerEventSink): void {
+    if (typeof sink !== "function") {
+      throw new TypeError("Player Worker event sink must be a function");
+    }
+    if (eventSink !== undefined && eventSink !== sink) {
+      throw new Error("Player Worker event sink is already installed");
+    }
+    eventSink = sink;
+  }
+
+  function emitBackground(events: readonly PlayerRuntimeToHost[]): void {
+    if (events.length === 0) return;
+    if (eventSink === undefined) {
+      throw new Error("Player Worker background event sink is not installed");
+    }
+    eventSink(events);
+  }
+
+  function cancelPendingHostRequest(): void {
+    const pending = pendingHostRequest;
+    if (pending === undefined) return;
+    pendingHostRequest = undefined;
+    pending.cancellation.cancel();
+  }
+
+  function completePendingHostRequest(
+    pending: PendingRootHostRequest,
+    completion: RootHostRequestCompletion | undefined,
+  ): void {
+    if (
+      pendingHostRequest !== pending || pending.cancellation.token.cancelled ||
+      pending.workerGeneration !== workerGeneration ||
+      pending.sessionGeneration !== sessionGeneration
+    ) return;
+    pendingHostRequest = undefined;
+
+    const valid = completion !== undefined &&
+      completion.generation === pending.runtimeGeneration &&
+      completion.requestId === pending.requestId &&
+      completion.bytes instanceof Uint8Array &&
+      completion.bytes.byteLength <= PICO_HOST_REQUEST_MAX_BYTES &&
+      typeof completion.isError === "boolean";
+    const response = valid ? completion.bytes.slice() : new Uint8Array();
+    const events = pending.resume(response, valid ? completion.isError : true);
+    emitBackground(events);
+  }
+
+  function suspendHostRequest(
+    command: PlayerRuntimeControlCommand,
+    request: CartSessionHostRequest,
+    resume: PendingRootHostRequest["resume"],
+  ): readonly PlayerRuntimeToHost[] {
+    if (hostRequestHandler === undefined) {
+      return [unsupportedHostRequest(command)];
+    }
+    if (
+      request.bytes.byteLength > PICO_HOST_REQUEST_MAX_BYTES ||
+      pendingHostRequest !== undefined
+    ) {
+      return [fault(command, {
+        code: "E_HOST_REQUEST",
+        message: "root HostRequest violates the bounded single-pending contract",
+        phase: "host-call",
+        recoverable: false,
+      })];
+    }
+
+    scheduler.pause();
+    lifecycle = "waiting-host";
+    const cancellation = new CartCancellationSource();
+    const pending: PendingRootHostRequest = {
+      workerGeneration,
+      sessionGeneration,
+      runtimeGeneration: request.generation,
+      requestId: request.id,
+      cancellation,
+      resume,
+    };
+    pendingHostRequest = pending;
+    const handlerRequest = Object.freeze({
+      generation: request.generation,
+      requestId: request.id,
+      operation: request.operation,
+      bytes: request.bytes.slice(),
+    });
+    void Promise.resolve()
+      .then(() => hostRequestHandler.handle(handlerRequest, cancellation.token))
+      .then(
+        (completion) => completePendingHostRequest(pending, completion),
+        () => completePendingHostRequest(pending, undefined),
+      );
+    return [state(command, "waiting-host")];
   }
 
   function unsupportedHostRequest(
@@ -506,7 +628,18 @@ export function createPlayerWorkerController(
     for (let restartCount = 0; restartCount <= 8; restartCount += 1) {
       if (!current.ok) return [...events, fault(command, current.error)];
       if (current.value.kind === "host-request") {
-        return [...events, unsupportedHostRequest(command)];
+        const request = current.value.request;
+        return [...events, ...suspendHostRequest(command, request, (response, isError) =>
+          acceptBoot(
+            command,
+            session.completeHostRequest(
+              request.generation,
+              request.id,
+              response,
+              isError,
+            ) as RuntimeResult<CartSessionBootResult>,
+            continueRunning,
+          ))];
       }
       if (current.value.cartDataCommit !== undefined) {
         enqueueCartDataCommit(current.value.cartDataCommit);
@@ -619,17 +752,77 @@ export function createPlayerWorkerController(
     };
   }
 
+  function heartbeatEvent(
+    command: Extract<PlayerRuntimeControlCommand, { readonly type: "vsync" }>,
+    tickCount: number,
+    droppedTicks: number,
+  ): PlayerRuntimeToHost {
+    return {
+      ...playerBase(command),
+      type: "heartbeat",
+      vsyncSequence: command.sequence,
+      tickCount,
+      droppedTicks,
+    };
+  }
+
+  function acceptVsyncHostCompletion(
+    command: Extract<PlayerRuntimeControlCommand, { readonly type: "vsync" }>,
+    result: RuntimeResult<CartSessionStepResult>,
+    executedBefore: number,
+    droppedTicks: number,
+  ): readonly PlayerRuntimeToHost[] {
+    if (!result.ok) return [fault(command, result.error)];
+    if (result.value.kind === "host-request") {
+      const request = result.value.request;
+      return suspendHostRequest(command, request, (response, isError) =>
+        acceptVsyncHostCompletion(
+          command,
+          session.completeHostRequest(
+            request.generation,
+            request.id,
+            response,
+            isError,
+          ) as RuntimeResult<CartSessionStepResult>,
+          executedBefore,
+          droppedTicks,
+        ));
+    }
+
+    const executedTicks = executedBefore + 1;
+    const events: PlayerRuntimeToHost[] = [];
+    if (result.value.kind === "stopped") {
+      if (result.value.cartDataCommit !== undefined) {
+        enqueueCartDataCommit(result.value.cartDataCommit);
+      }
+      scheduler.pause();
+      lifecycle = "stopped";
+      clearInputState();
+      devkitFlags = 0;
+      resetAudioQueue(command.sessionGeneration);
+      events.push(runtimeControlEvent(command, "stop", result.value.message));
+      events.push(state(command, "stopped"));
+    } else if (result.value.kind === "restart") {
+      if (result.value.cartDataCommit !== undefined) {
+        enqueueCartDataCommit(result.value.cartDataCommit);
+      }
+      clearInputState();
+      events.push(runtimeControlEvent(command, "run", result.value.parameter));
+      events.push(...acceptBoot(command, session.restart(result.value.parameter), true));
+    } else {
+      scheduler.resume();
+      lifecycle = "running";
+      events.push(frameEvent(command, result.value));
+    }
+    events.push(heartbeatEvent(command, executedTicks, droppedTicks));
+    return events;
+  }
+
   function handleVsync(
     command: Extract<PlayerRuntimeControlCommand, { readonly type: "vsync" }>,
   ): readonly PlayerRuntimeToHost[] {
     if (lifecycle !== "running") {
-      return [{
-        ...playerBase(command),
-        type: "heartbeat",
-        vsyncSequence: command.sequence,
-        tickCount: 0,
-        droppedTicks: 0,
-      }];
+      return [heartbeatEvent(command, 0, 0)];
     }
     const decision = scheduler.pulse(command.timestampMs);
     const events: PlayerRuntimeToHost[] = [];
@@ -657,8 +850,19 @@ export function createPlayerWorkerController(
         return events;
       }
       if (result.value.kind === "host-request") {
-        events.push(unsupportedHostRequest(command));
-        return events;
+        const request = result.value.request;
+        return [...events, ...suspendHostRequest(command, request, (response, isError) =>
+          acceptVsyncHostCompletion(
+            command,
+            session.completeHostRequest(
+              request.generation,
+              request.id,
+              response,
+              isError,
+            ) as RuntimeResult<CartSessionStepResult>,
+            executedTicks,
+            decision.droppedTicks,
+          ))];
       }
       executedTicks += 1;
       if (result.value.kind === "stopped") {
@@ -689,13 +893,7 @@ export function createPlayerWorkerController(
       }
       events.push(frameEvent(command, result.value));
     }
-    events.push({
-      ...playerBase(command),
-      type: "heartbeat",
-      vsyncSequence: command.sequence,
-      tickCount: executedTicks,
-      droppedTicks: decision.droppedTicks,
-    });
+    events.push(heartbeatEvent(command, executedTicks, decision.droppedTicks));
     return events;
   }
 
@@ -723,6 +921,7 @@ export function createPlayerWorkerController(
       if (command.sessionGeneration <= sessionGeneration) {
         return generationFault(command, "loadCart requires a new session generation");
       }
+      cancelPendingHostRequest();
       sessionGeneration = command.sessionGeneration;
       instructionBudget = command.instructionBudget;
       scheduler.reset();
@@ -753,6 +952,7 @@ export function createPlayerWorkerController(
       }
     }
     if (command.type === "dispose") {
+      cancelPendingHostRequest();
       scheduler.reset();
       clearInputState();
       const result = session.dispose();
@@ -768,6 +968,7 @@ export function createPlayerWorkerController(
       if (lifecycle === "disposed" || command.sessionGeneration <= sessionGeneration) {
         return generationFault(command, "reset requires a new session generation");
       }
+      cancelPendingHostRequest();
       sessionGeneration = command.sessionGeneration;
       scheduler.reset();
       inputSequence = -1;
@@ -804,6 +1005,7 @@ export function createPlayerWorkerController(
       lifecycle = "running";
       return [state(command, "running")];
     }
+    cancelPendingHostRequest();
     const stopped = session.stop();
     scheduler.reset();
     clearInputState();
@@ -815,6 +1017,7 @@ export function createPlayerWorkerController(
   }
 
   function disposeSync(): void {
+    cancelPendingHostRequest();
     scheduler.reset();
     clearInputState();
     devkitFlags = 0;
@@ -865,10 +1068,11 @@ export function createPlayerWorkerController(
   }
 
   if (persistence === undefined) {
-    return { handle: handleSync, dispose: disposeSync };
+    return { handle: handleSync, setEventSink, dispose: disposeSync };
   }
   return {
     handle: handlePersistent,
+    setEventSink,
     async dispose() {
       disposeSync();
       try {
