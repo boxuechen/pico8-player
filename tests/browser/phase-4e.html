@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phase 4E system integration</title>
+    <style>
+      body { margin: 24px; color: #fff1e8; background: #1d2b53; font: 14px monospace; }
+      button { min-width: 240px; min-height: 52px; font: inherit; }
+      canvas { width: 128px; height: 128px; image-rendering: pixelated; }
+      #result { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body data-status="preparing" data-progress="loading Phase 4E cart">
+    <button id="start" type="button" disabled>Start trusted Phase 4E gate</button>
+    <main id="player"></main>
+    <pre id="result"></pre>
+    <script type="module" src="./phase-4e.mjs"></script>
+  </body>
+</html>

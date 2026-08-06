@@ -93,6 +93,12 @@ export type PlayerRuntimeToHost =
       readonly droppedTicks: number;
     })
   | (PlayerEventEnvelope & {
+      readonly type: "runtime-control";
+      readonly control: "run" | "stop";
+      /** Copy-owned P8 byte string: run parameter or stop message. */
+      readonly payload: ArrayBuffer;
+    })
+  | (PlayerEventEnvelope & {
       readonly type: "diagnostic";
       readonly error: SerializedRuntimeError;
     })

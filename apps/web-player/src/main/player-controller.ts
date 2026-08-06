@@ -291,6 +291,15 @@ export class PlayerController {
     if (event.type === "state" || event.type === "frame") {
       this.#input.setDevkitFlags(event.devkitFlags);
     }
+    if (event.type === "state" && event.state === "stopped" && this.#state === "running") {
+      this.#cancelFrame();
+      this.#input.setEnabled(false);
+      this.#input.setDevkitFlags(0);
+      this.#composition.runtime.clearInput();
+      this.#setState("stopped", "Cartridge stopped");
+      void this.#composition.suspendAudio().catch((error) => this.#fail(error));
+      return;
+    }
     if (event.type === "diagnostic") {
       this.#elements.diagnostic.textContent = `${event.error.code}: ${event.error.message}`;
     } else if (event.type === "fault") {

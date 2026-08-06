@@ -838,6 +838,24 @@ partial Known Difference，因为当前 VM/scheduler contract 没有 guest timed
 advanced screen/bitplane modes 为 MVP 外 unsupported，若未来引入必须先修改 RuntimeFrame/presenter
 schema 与 ADR。4D 无开放 P0/P1。
 
+### 15.16 Phase 4E System/Player Integration 矩阵
+
+4E 以项目原创 `system-integration` flow 把 VM control、RuntimeCore、production Worker、Canvas、
+AudioWorklet 与 IndexedDB 放进同一确定性路径；ABI append guest `reset` 为 `41`，既有 `1..40`
+不变。
+
+| 行为 | Phase 4E 结果 | 兼容口径 | 后续边界 |
+| --- | --- | --- | --- |
+| guest controls | `run("again")` fresh runtime、`stat(6)`、`stop("done")` 与 public `runtime-control` event 通过 | `compatible`（root/current-cart、payload ≤4096 bytes） | guest `load`、external resolver、nested host suspend 不进入 MVP |
+| system routing | `assert` structured fault；`reset` 只恢复 `0x5f00..0x5f7f`/graphics private defaults；`time` same-frame route | bounded compatible；`time` CPU calibration 仍 partial | host `CartSession.reset` 与 guest `reset` 保持不同 contract |
+| cross-domain flow | canonical audio、`btn/btnp` edge、cartdata、current-cart overlay 在 run/stop 边界保持一致并 flush | Node/Chrome exact | AudioContext/IndexedDB/input ownership不变 |
+| lifecycle/recovery | same-generation audio reset、guest stop、assert fault、stale generation、有效 cart recovery、Worker/AudioContext dispose 通过 | safety gate passed；Chrome 150 desktop | 30-minute/multi-cart resource gate 属于 4G |
+
+inventory 更新为 implementation `95/6/1/10`、conformance `67/6/29/10`（按各自状态顺序）。
+external `reload/cstore` 保持 current-cart-only；nested `flip` 为 accepted unsupported；未列出的
+`stat` selector 返回 false；conditional `printh/extcmd` 因无项目 corpus 需要且会扩大 host capability，
+明确排除在 MVP。4E 无开放 P0/P1。
+
 ## 16. Definition of Done
 
 ### 16.1 单个功能或 bugfix

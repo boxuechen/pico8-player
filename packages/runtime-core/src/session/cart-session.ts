@@ -52,6 +52,8 @@ export interface CartSessionRuntimePort {
 export interface CartSessionRuntimeContext {
   readonly generation: number;
   readonly cart: CartSessionCartMetadata;
+  /** Copy-owned parameter exposed to the fresh execution through stat(6). */
+  readonly runParameter: Uint8Array;
 }
 
 export interface CartSessionOptions {
@@ -73,7 +75,19 @@ export type CartSessionBootResult =
       readonly devkitFlags: number;
       readonly cartDataCommit?: PicoCartDataCommit;
     }
-  | { readonly kind: "host-request"; readonly request: CartSessionHostRequest };
+  | { readonly kind: "host-request"; readonly request: CartSessionHostRequest }
+  | {
+      readonly kind: "stopped";
+      readonly generation: number;
+      readonly message: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    }
+  | {
+      readonly kind: "restart";
+      readonly generation: number;
+      readonly parameter: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    };
 
 export type CartSessionStepResult =
   | {
@@ -82,7 +96,18 @@ export type CartSessionStepResult =
       readonly frame: Extract<RuntimeStepResult, { kind: "frame" }>["frame"];
     }
   | { readonly kind: "host-request"; readonly request: CartSessionHostRequest }
-  | { readonly kind: "stopped"; readonly generation: number };
+  | {
+      readonly kind: "stopped";
+      readonly generation: number;
+      readonly message: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    }
+  | {
+      readonly kind: "restart";
+      readonly generation: number;
+      readonly parameter: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    };
 
 export interface CartSessionStopResult {
   readonly kind: "stopped";
@@ -175,6 +200,13 @@ function copyCartDataCommit(commit: PicoCartDataCommit): PicoCartDataCommit {
   });
 }
 
+function copyRunParameter(parameter: Uint8Array): Uint8Array {
+  if (!(parameter instanceof Uint8Array) || parameter.byteLength > 4096) {
+    throw new RangeError("run parameter must be a Uint8Array of at most 4096 bytes");
+  }
+  return parameter.slice();
+}
+
 function isRuntimePort(value: unknown): value is CartSessionRuntimePort {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as Partial<CartSessionRuntimePort>;
@@ -235,7 +267,7 @@ export class CartSession {
     } catch (error) {
       return invalid(errorMessage(error));
     }
-    return this.#start(snapshot);
+    return this.#start(snapshot, new Uint8Array());
   }
 
   reset(): RuntimeResult<CartSessionBootResult> {
@@ -248,7 +280,27 @@ export class CartSession {
     if (this.#cart === undefined) {
       return invalid("cart session has no cart to reset");
     }
-    return this.#start(this.#cart);
+    return this.#start(this.#cart, new Uint8Array());
+  }
+
+  /** Start a fresh execution of the retained cart with a guest run() parameter. */
+  restart(parameter: Uint8Array = new Uint8Array()): RuntimeResult<CartSessionBootResult> {
+    if (this.#state === "disposed") {
+      return invalid("cart session is disposed");
+    }
+    if (this.#state === "loading") {
+      return invalid("cart session is already loading");
+    }
+    if (this.#cart === undefined) {
+      return invalid("cart session has no cart to restart");
+    }
+    let snapshot: Uint8Array;
+    try {
+      snapshot = copyRunParameter(parameter);
+    } catch (error) {
+      return invalid(errorMessage(error));
+    }
+    return this.#start(this.#cart, snapshot);
   }
 
   step(input: PicoInputSnapshot = ZERO_PICO_INPUT): RuntimeResult<CartSessionStepResult> {
@@ -317,7 +369,7 @@ export class CartSession {
       return this.#faultCurrent(result.error);
     }
     if (pending.operation === "boot") {
-      if (result.value.kind === "frame" || result.value.kind === "stopped") {
+      if (result.value.kind === "frame") {
         return this.#faultCurrent(lifecycleError(
           "E_INVARIANT",
           "boot host completion returned a step outcome",
@@ -387,7 +439,10 @@ export class CartSession {
     return { ok: true, value: { kind: "disposed", generation: this.#generation } };
   }
 
-  #start(cart: CartRunSnapshot): RuntimeResult<CartSessionBootResult> {
+  #start(
+    cart: CartRunSnapshot,
+    runParameter: Uint8Array,
+  ): RuntimeResult<CartSessionBootResult> {
     if (this.#generation >= MAX_GENERATION) {
       return this.#faultCurrent(lifecycleError(
         "E_INVARIANT",
@@ -405,7 +460,11 @@ export class CartSession {
     const metadata = metadataOf(cart);
     let runtime: CartSessionRuntimePort;
     try {
-      const context = Object.freeze({ generation: this.#generation, cart: metadata });
+      const context = Object.freeze({
+        generation: this.#generation,
+        cart: metadata,
+        runParameter: runParameter.slice(),
+      });
       const candidate: unknown = this.#createRuntime(context);
       if (!isRuntimePort(candidate)) {
         throw new TypeError("runtime factory returned an invalid runtime port");
@@ -450,6 +509,32 @@ export class CartSession {
       this.#state = "waiting-host";
       return { ok: true, value: this.#decorateHostRequest(result.request) };
     }
+    if (result.kind === "stopped" || result.kind === "restart") {
+      const teardownError = this.#releaseRuntime();
+      if (teardownError !== undefined) return this.#enterFault(teardownError);
+      this.#pendingRequest = undefined;
+      this.#state = "stopped";
+      return {
+        ok: true,
+        value: result.kind === "stopped"
+          ? {
+              kind: "stopped",
+              generation: this.#generation,
+              message: result.message.slice(),
+              ...(result.cartDataCommit === undefined
+                ? {}
+                : { cartDataCommit: copyCartDataCommit(result.cartDataCommit) }),
+            }
+          : {
+              kind: "restart",
+              generation: this.#generation,
+              parameter: result.parameter.slice(),
+              ...(result.cartDataCommit === undefined
+                ? {}
+                : { cartDataCommit: copyCartDataCommit(result.cartDataCommit) }),
+            },
+      };
+    }
     this.#pendingRequest = undefined;
     this.#state = "ready";
     return {
@@ -486,7 +571,31 @@ export class CartSession {
       this.#state = "stopped";
       return {
         ok: true,
-        value: { kind: "stopped", generation: this.#generation },
+        value: {
+          kind: "stopped",
+          generation: this.#generation,
+          message: result.message.slice(),
+          ...(result.cartDataCommit === undefined
+            ? {}
+            : { cartDataCommit: copyCartDataCommit(result.cartDataCommit) }),
+        },
+      };
+    }
+    if (result.kind === "restart") {
+      const teardownError = this.#releaseRuntime();
+      if (teardownError !== undefined) return this.#enterFault(teardownError);
+      this.#pendingRequest = undefined;
+      this.#state = "stopped";
+      return {
+        ok: true,
+        value: {
+          kind: "restart",
+          generation: this.#generation,
+          parameter: result.parameter.slice(),
+          ...(result.cartDataCommit === undefined
+            ? {}
+            : { cartDataCommit: copyCartDataCommit(result.cartDataCommit) }),
+        },
       };
     }
     this.#pendingRequest = undefined;

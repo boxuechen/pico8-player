@@ -31,7 +31,9 @@ function postPlayerResponse(
 ): void {
   const transfer = response.type === "frame"
     ? [response.packedScreen, response.displayPalette]
-    : [];
+    : response.type === "runtime-control"
+      ? [response.payload]
+      : [];
   scope.postMessage(response, transfer);
 }
 

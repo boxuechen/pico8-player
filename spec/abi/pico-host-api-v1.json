@@ -478,6 +478,13 @@
         { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "void"
+    },
+    {
+      "id": 41,
+      "guestName": "reset",
+      "hostMethod": "resetSystem",
+      "parameters": [],
+      "result": "void"
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Phase 4 — L2 / MVP Compatibility Hardening
 
-> 状态：Active；4A–4D complete，4E active
+> 状态：Active；4A–4E complete，4F active
 > 机器合同：[`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 3 exit](../evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
@@ -29,8 +29,8 @@ serial、Firefox/WebKit 和移动 release。外部合法 cart 可以本地研究
 | 4B Compatibility Runner & Baseline Triage | Complete | Node/Chrome 可重复 baseline；7/7 C3，无开放 issue |
 | 4C P8 Lua & Core Library Compatibility | Complete | 13 项 VM/core API、确定性 PRNG 与 nested budget containment 关闭 |
 | 4D Graphics / Memory / Text Hardening | Complete | 9 项 API、386-byte Node/Chrome oracle 与两项 MVP scope decision 关闭 |
-| 4E System / Audio / Input / Persistence / Player | **Active** | 剩余 system/player 集成与跨域恢复门禁关闭 |
-| 4F CPU / Slow-frame / Scheduler Calibration | Planned | 4M VM inst/s 成本模型与慢帧策略可复现 |
+| 4E System / Audio / Input / Persistence / Player | Complete | root runtime control、跨域组合流与恢复门禁关闭 |
+| 4F CPU / Slow-frame / Scheduler Calibration | **Active** | 4M VM inst/s 成本模型、慢帧策略与 safety cap 可复现 |
 | 4G Resource Sizing & Chrome Long-run | Planned | fixed memory、30 分钟 soak、多 cart lifecycle 通过 |
 | 4H Phase 4 / L2 Exit | Planned | L2 兼容报告、Known Differences、release gate 与证据归档 |
 
@@ -66,43 +66,58 @@ partial Known Difference，advanced screen/bitplane modes 明确排除在 MVP �
 [`phase-4d-graphics-memory-text.json`](../../tests/conformance/manifests/phase-4d-graphics-memory-text.json)
 锁定。
 
-## Active work unit：4E System / Audio / Input / Persistence / Player Integration
+## 已完成：4E
+
+root guest `run/stop` 现在通过 VM control outcome 进入 RuntimeCore/Worker；guest `reset` 以
+append-only host binding `41` 只恢复 system/graphics defaults，`assert` 保持 structured VM fault，
+`stat(6)` 返回 copy-owned run parameter。项目原创组合 flow 在 Node real-WASM 与 Chrome production
+Worker/Canvas/AudioWorklet/IndexedDB 路径锁定 audio、input、cartdata/current-cart、run/stop、fault/
+recovery、stale generation 与 dispose 行为；同一外部 generation 的 guest `run` 创建 fresh runtime
+graph 并重置 audio timeline。精确 hash、Chrome 版本、inventory counts 与 MVP scope decisions 由
+`workUnits.4E.result` 和
+[`phase-4e-system-integration.json`](../../tests/conformance/manifests/phase-4e-system-integration.json)
+锁定。
+
+## Active work unit：4F CPU / Slow-frame / Scheduler Calibration
 
 ### Observable behavior
 
-- 为 required `run/stop/assert/reset/flip/time/stat` 建立最小、可观察的 guest contract；区分 guest
-  runtime-control、host `CartSession.reset()` 与 browser player controls，不能用同名函数偷换边界。
-- 建立一个项目原创组合 flow，在固定 input trace 下同时观察 framebuffer/RAM、canonical audio、
-  input edge、cartdata/current-cart overlay 和 runtime-control event；Node real-WASM 与 Chrome production
-  Worker/Canvas/AudioWorklet/IndexedDB 必须交叉一致。
-- `run/stop/reset` 必须经现有 VM/RuntimeCore control result 与 Worker state machine 表达；不得让
-  guest 直接操作 Window、Worker、storage 或 audio device。`assert` 保持 VM-local structured fault。
-- 复验 `sfx/music/btn/btnp/cartdata/dget/dset/reload/cstore` 的跨域组合、reset/fault 后恢复、stale
-  generation 拒绝与资源释放；Phase 3 单项通过不能替代本单元的组合生命周期证据。
-- 对 external `reload/cstore`、nested `flip` suspension、未支持 `stat()` selectors，以及 conditional
-  `printh/extcmd` 分别做 MVP decision；未实现项必须进入明确 Known Difference 或 excluded scope。
-- `time/stat` 的逻辑时钟与已实现 selectors 本单元只锁定正确路由；4M instructions/s 数值、慢帧
-  策略和 host CPU calibration 保留给 4F，不在 4E 隐式改 scheduler policy。
+- 校准 z8lua 已消费 instruction count 与 PICO-8 `4,000,000 VM instructions/s` 参考预算的换算，
+  明确 30 Hz、60 Hz 和 custom-loop slice 的精确预算公式、取整方向与测试容差；不能用 host
+  wall-clock 或机器速度代替 guest cost。
+- 用项目原创 cart 覆盖低于、恰好达到和超过单 slice 预算的 30 Hz/60 Hz 路径；Node real-WASM 与
+  Chrome production Worker 必须对 instruction count、logical tick、frame/audio/input/persistence
+  transaction 得到相同分类和可重复 trace。
+- 把 compatibility soft budget 与 safety hard cap 分成两个命名清楚的策略：普通 over-budget frame
+  按已受审 slow-frame policy 继续或降频，不得被误报为 VM fault；无限循环或长期不 yield 仍必须由
+  bounded hard cap/watchdog 终止并产生 structured fault。
+- 实现并校准 `stat(1)`（自上次 flip 的 CPU 使用率）和 `stat(7)`（当前目标 FPS）；只有官方证据和
+  本单元 oracle 足以锁定时才加入 `stat(0)`，不得顺便扩大其他 selector。数值必须 deterministic、
+  bounded，并与 logical scheduler 而非浏览器刷新率绑定。
+- 保持现有 30/60 Hz cadence、custom-loop `flip()` boundary、logical `time()`、canonical audio、input
+  edge 和 cartdata commit 的 transaction 语义；4F 不改变 Window/Worker/Worklet ownership，也不引入
+  adaptive host-CPU heuristic。
 
 ### 允许修改
 
-- `packages/runtime-core/src/` 中 system control、audio/input/persistence 的既有 owner；必要时修改
-  z8lua bridge 的 VM-control lowering，但不得把 browser adapter 引入 package。
-- `apps/web-player/src/worker` 的 composition/state routing，以及仅为验证 lifecycle 所需的 main/
-  worklet adapter；任何 public transport schema 变化必须同步其 owner contract 和 validators。
-- `tests/conformance/` 的 Phase 4E 原创 carts/oracles、`tests/browser/phase-4e*`、对应 Chrome runner，
-  以及 inventory/runtime manifest、本 phase 文档、机器合同、兼容矩阵与脚本。
+- z8lua bridge 的 instruction accounting/status getter，以及 `packages/runtime-core/src/` 中既有
+  frame-cost、scheduler 和 `stat` owner；若需跨 Worker 观察，只能扩展既有 versioned diagnostic/
+  state routing，不能把 policy 移到 main thread。
+- `tests/conformance/` 的 Phase 4F 原创 carts、budget trace/oracles、`tests/browser/phase-4f*`、对应
+  Chrome runner，以及 inventory/runtime manifest、本 phase 文档、机器合同、兼容矩阵和脚本。
+- 允许新增只读 calibration/benchmark 工具；结果必须可复现，且 production policy 不得依赖运行
+  benchmark 的当前机器、Chrome wall-clock 或开发环境阈值。
 
-4E 不授权 guest `load`、external resolver、BBS/network、multicart 或 writable cart filesystem；
-不改变 Canvas presenter ownership、AudioWorklet device-queue ownership、IndexedDB adapter ownership
-或 4F 的 scheduler/CPU cost policy。
+4F 不授权 4G 的 fixed-resource/30-minute/multi-cart gate，不授权 guest `load`、external resolver、
+BBS/network、writable cart filesystem 或 browser 扩展；不改变 presenter、AudioWorklet、IndexedDB、
+input adapter 的 ownership。
 
 ### 精确 contract routing
 
 - [02 §4 Session 状态机](../02-system-architecture.md#4-session-状态机)
-- [04 §8 AudioSynth 与 AudioWorklet](../04-typescript-runtime.md#8-audiosynth-与-audioworklet)
-- [04 §9 Input](../04-typescript-runtime.md#9-input)
-- [04 §11 Persistence](../04-typescript-runtime.md#11-persistence)
+- [04 §10 FrameScheduler](../04-typescript-runtime.md#10-framescheduler)
+- [04 §10.2 帧语义](../04-typescript-runtime.md#102-帧语义)
+- [04 §10.3 CPU budget 与慢帧](../04-typescript-runtime.md#103-cpu-budget-与慢帧)
 - [06 §4 确定性执行模型](../06-testing-compatibility.md#4-确定性执行模型)
 - [06 §6 Conformance carts](../06-testing-compatibility.md#6-conformance-carts)
 - [06 §12 Worker hang、crash 与恢复](../06-testing-compatibility.md#12-worker-hangcrash-与恢复)
@@ -111,17 +126,18 @@ partial Known Difference，advanced screen/bitplane modes 明确排除在 MVP �
 
 ### Verification / exit
 
-- Proposed `pnpm run test:phase-4e`：本单元创建 system control 与组合 flow 的 real-WASM/
-  RuntimeCore regression 后启用。
-- Proposed `pnpm run test:phase-4e:chrome`：本单元创建 production Worker/Canvas/AudioWorklet/
-  IndexedDB cross-oracle 与 lifecycle gate 后启用。
+- Proposed `pnpm run test:phase-4f`：本单元创建 instruction-cost、30/60/custom cadence、soft-budget/
+  hard-cap 与 `stat(1/7)` real-WASM regression 后启用。
+- Proposed `pnpm run test:phase-4f:chrome`：本单元创建 production Worker calibration cross-oracle 与
+  watchdog recovery gate 后启用。
 - `pnpm run verify`：全量回归。
-- 七个 required system API 获得 bounded conformance 或明确 accepted scope；conditional 与 partial
-  surfaces 不再保留含糊 deferred 标签。
-- Node/Chrome 组合 oracle 一致；guest stop/run/reset、fault、stale generation、storage/audio lifecycle
-  后有效 cart 可恢复，且 Worker/AudioContext/IndexedDB ownership 不变。
-- 4F 的 CPU/scheduler 输入数据可由本单元 flow 复用，但本单元不提前改其预算；repo 以独立提交
-  结束且干净。
+- 机器合同锁定每 slice budget 公式、instruction-accounting 单位、取整/容差和 30/60/custom 的 exact
+  oracles；Node/Chrome 分类一致。
+- `stat(1)` 与 `stat(7)` 在已支持路径有 deterministic bounded 结果；inventory 不再把它们留作
+  unknown。若 `stat(0)` 未获得足够证据，必须保持 false/unknown 并记录原因。
+- ordinary slow frame 与 infinite-loop safety fault 有独立、可重现的测试；fault 后可加载有效 cart，
+  scheduler/audio/input/persistence transaction 与 Worker lifecycle 无回归。
+- full verify 通过；4G 获得明确的 resource/soak 输入，repo 以独立提交结束且干净。
 
 ## Phase exit gate
 

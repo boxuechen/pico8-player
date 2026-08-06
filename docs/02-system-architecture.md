@@ -1,14 +1,14 @@
 # 系统架构
 
 > 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码和
-> [Phase 3 完成证据](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)为准。
+> [Phase 4 机器合同](../spec/phase-4-l2-mvp-contract.json)为准。
 
 ## 状态路由
 
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 3 exit** | Phase 0F browser boundary；cart decode/session/scheduler；standard graphics/text；deterministic audio；controller/devkit input；cartdata/IndexedDB；current-cart `reload/cstore`；versioned Worker/Worklet lifecycle 与 Chrome exit gates |
+| **Implemented through Phase 4E** | Phase 3 全部边界；current-cart guest `run`、root `stop`、system `reset`、`stat(6)`；versioned `runtime-control` event；同 generation runtime/audio/persistence lifecycle |
 | **Target** | slow-frame/CPU compatibility policy、guest `load`、external cart transaction、representative corpus hardening 与 release qualification |
 | **Deferred** | nested async HostRequest、完整 cart swap/multicart、BBS resolver 和完整 L3 host integration |
 
@@ -149,10 +149,10 @@ stateDiagram-v2
     idle --> loading: loadCart
     loading --> ready: parsed + VM booted
     loading --> faulted: parse/boot error
-    ready --> running: start / guest load or reset auto-start
+    ready --> running: start
     running --> paused: pause / hidden policy
     paused --> running: resume
-    running --> loading: guest load target already available / reset
+    running --> running: guest run / fresh runtime graph
     paused --> loading: reset
     running --> waiting_cart: load/reload/cstore dependency missing
     waiting_cart --> running: reload/cstore bytes supplied
@@ -164,7 +164,7 @@ stateDiagram-v2
     idle --> stopped: stop
     loading --> stopped: stop / cancel
     ready --> stopped: stop
-    running --> stopped: stop
+    running --> stopped: host or guest stop
     paused --> stopped: stop
     waiting_cart --> stopped: stop
     faulted --> stopped: stop
@@ -176,7 +176,7 @@ stateDiagram-v2
 ## 5. Worker 协议
 
 > 状态：Mixed。当前 source 已实现 load/start/input/vsync/pause/resume/reset/stop/dispose、
-> state/frame/heartbeat/diagnostic/fault 和独立 audio/persistence lifecycle；下方
+> state/frame/heartbeat/runtime-control/diagnostic/fault 和独立 audio/persistence lifecycle；下方
 > `supplyCart`/`needsCart` 仍是 Target 示例。
 
 协议必须带版本，并使用可判别 union。下面是 v1 的跨线程基线；更具体字段以 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准，不能再引入 `boot`、`host-response` 等同义消息。
@@ -199,6 +199,7 @@ export type RuntimeToHost =
   | { v: 1; type: "frame"; sessionGeneration: number; frameId: number; tick: string; width: 128; height: 128; rgba: ArrayBuffer }
   | { v: 1; type: "needsCart"; request: HostRequest }
   | { v: 1; type: "heartbeat"; sessionGeneration: number; tick: string; sequence?: number }
+  | { v: 1; type: "runtime-control"; control: "run" | "stop"; payload: ArrayBuffer }
   | { v: 1; type: "diagnostic"; diagnostic: SerializedRuntimeError }
   | { v: 1; type: "fault"; error: SerializedRuntimeError };
 ```
@@ -227,7 +228,7 @@ export type RuntimeToHost =
 6. 注册受控 PICO-8 globals 和 Lua glue。
 7. 编译 cart code；失败则回滚整个 transaction。
 8. 以官方差分锁定的 `1/30s` clock 启动 root coroutine：若 top-level 返回，进入 callback mode 并执行 `_init()`；若先到达受控 `flip()` boundary，进入 custom-loop mode，把该 boundary 作为成功 startup，禁止再额外调用 `_init()` 或启动 callback driver。commit 时把 startup epoch 换算为 target-rate slices（30 Hz 为 1、60 Hz 为 2），但不发布 host frame event。
-9. 只有全部成功后，Window `loadCart` 才把 session 提交为 `ready`；显式 `start` 后进入 `running`。guest `load()` 按官方语义在新 cart transaction 成功后自动运行。
+9. 只有全部成功后，Window `loadCart` 才把 session 提交为 `ready`；显式 `start` 后进入 `running`。guest `run(param)` 使用 retained current cart 创建 fresh runtime graph，并在同一 player session 中继续 `running`；它不是 Window reset，也不授权 guest `load()`。
 
 旧 session 在新 session commit 前应保持可销毁但不可继续写入的状态。
 

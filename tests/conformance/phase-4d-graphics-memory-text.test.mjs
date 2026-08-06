@@ -133,14 +133,15 @@ test("Phase 4D appends bindings 39 and 40 while strings stay inside the VM", asy
     readFile(new URL("spec/phase-4-l2-mvp-contract.json", projectRoot), "utf8").then(JSON.parse),
     readFile(new URL("spec/pico-api-inventory.yaml", projectRoot), "utf8").then(JSON.parse),
   ]);
-  assert.equal(abi.bindings.length, 40);
-  assert.deepEqual(abi.bindings.map(({ id }) => id), Array.from({ length: 40 }, (_, i) => i + 1));
-  assert.deepEqual(abi.bindings.slice(38).map(({ guestName }) => guestName), ["rrect", "rrectfill"]);
+  assert.ok(abi.bindings.length >= 40);
+  assert.deepEqual(abi.bindings.slice(0, 40).map(({ id }) => id),
+    Array.from({ length: 40 }, (_, i) => i + 1));
+  assert.deepEqual(abi.bindings.slice(38, 40).map(({ guestName }) => guestName),
+    ["rrect", "rrectfill"]);
   assert.equal(generated.files.length, 2);
   assert.equal(generated.prototypeSignatureCount, 12);
   assert.equal(phase.workUnits["4D"].status, "complete");
-  assert.equal(phase.activeWorkUnit, "4E");
-  assert.deepEqual(phase.completedWorkUnits, ["4A", "4B", "4C", "4D"]);
+  assert.ok(phase.completedWorkUnits.includes("4D"));
 
   const byName = new Map(inventory.apis.map((api) => [api.name, api]));
   for (const name of manifest.requiredApis) {

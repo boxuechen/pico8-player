@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr uint32_t kAbiVersion = 0x00010002u;
+constexpr uint32_t kAbiVersion = 0x00010003u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
@@ -87,6 +87,10 @@ struct Context {
   uint32_t response_length = 0;
   uint8_t request_bytes[kMaxHostBytes] = {};
   uint8_t response_bytes[kMaxHostBytes] = {};
+  uint32_t run_parameter_length = 0;
+  uint32_t control_bytes_length = 0;
+  uint8_t run_parameter[kMaxHostBytes] = {};
+  uint8_t control_bytes[kMaxHostBytes] = {};
 
   P8wStatus error_status = P8W_STATUS_OK;
   int32_t error_line = -1;
@@ -498,6 +502,52 @@ int p8_time(lua_State *state) {
 
 int control_continuation(lua_State *) { return 0; }
 
+bool copy_control_bytes(lua_State *state, int argument, Context *context) {
+  size_t length = 0;
+  const char *bytes = luaL_optlstring(state, argument, "", &length);
+  if (length > kMaxHostBytes) {
+    luaL_error(state, "runtime control payload exceeds 4096 bytes");
+    return false;
+  }
+  context->control_bytes_length = static_cast<uint32_t>(length);
+  if (length != 0) std::memcpy(context->control_bytes, bytes, length);
+  return true;
+}
+
+int p8_run(lua_State *state) {
+  Context *context = context_from_lua(state);
+  if (state != context->active) {
+    context->nested_suspend_attempt = true;
+    return lua_yieldk(state, 0, 0, control_continuation);
+  }
+  if (!copy_control_bytes(state, 1, context)) return 0;
+  context->yield_reason = P8W_YIELD_RUN;
+  return lua_yieldk(state, 0, 0, control_continuation);
+}
+
+int p8_stop(lua_State *state) {
+  Context *context = context_from_lua(state);
+  if (state != context->active) {
+    context->nested_suspend_attempt = true;
+    return lua_yieldk(state, 0, 0, control_continuation);
+  }
+  if (!copy_control_bytes(state, 1, context)) return 0;
+  context->yield_reason = P8W_YIELD_STOP;
+  return lua_yieldk(state, 0, 0, control_continuation);
+}
+
+int p8_stat(lua_State *state) {
+  const int32_t selector = luaL_checknumber(state, 1).bits() >> 16;
+  if (selector == 6) {
+    Context *context = context_from_lua(state);
+    lua_pushlstring(
+        state, reinterpret_cast<const char *>(context->run_parameter),
+        context->run_parameter_length);
+    return 1;
+  }
+  return p8_host_call(state);
+}
+
 int p8_flip(lua_State *state) {
   Context *context = context_from_lua(state);
   if (state != context->active) {
@@ -569,7 +619,10 @@ void register_host_functions(lua_State *state) {
         state, const_cast<P8wHostBindingDescriptor *>(&binding));
     lua_pushcclosure(
         state,
-        std::strcmp(binding.guest_name, "pal") == 0 ? p8_pal : p8_host_call,
+        std::strcmp(binding.guest_name, "pal") == 0
+            ? p8_pal
+            : std::strcmp(binding.guest_name, "stat") == 0 ? p8_stat
+                                                             : p8_host_call,
         1);
     lua_setglobal(state, binding.guest_name);
   }
@@ -603,6 +656,8 @@ void open_guest_environment(lua_State *state) {
   register_host_functions(state);
   register_function(state, "time", p8_time);
   register_function(state, "t", p8_time);
+  register_function(state, "run", p8_run);
+  register_function(state, "stop", p8_stop);
   register_function(state, "flip", p8_flip);
   p8w::open_pico8_compat(state, context_from_lua(state)->ram);
   // Phase 0E-only control-flow probe. It is deliberately not a PICO-8 API.
@@ -741,6 +796,13 @@ P8wStatus resume_active(Context *context) {
       context->phase = P8W_PHASE_CUSTOM_LOOP;
       context->state = P8W_STATE_CUSTOM_LOOP;
       return P8W_STATUS_YIELDED;
+    }
+    if (context->yield_reason == P8W_YIELD_STOP ||
+        context->yield_reason == P8W_YIELD_RUN) {
+      const bool restart = context->yield_reason == P8W_YIELD_RUN;
+      release_active(context);
+      context->state = P8W_STATE_STOPPED;
+      return restart ? P8W_STATUS_RESTART : P8W_STATUS_STOPPED;
     }
     fault(context, P8W_STATUS_FEATURE_UNSUPPORTED,
           "uncontrolled or nested yield");
@@ -886,6 +948,18 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_bind_host(uint32_t handle,
   return P8W_STATUS_OK;
 }
 
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_set_run_parameter(
+    uint32_t handle, const uint8_t *bytes, uint32_t length) {
+  Context *context = context_from_handle(handle);
+  if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  if (context->state != P8W_STATE_EMPTY) return P8W_STATUS_INVALID_STATE;
+  if ((bytes == nullptr && length != 0) || length > kMaxHostBytes)
+    return P8W_STATUS_BAD_ARGUMENT;
+  context->run_parameter_length = length;
+  if (length != 0) std::memcpy(context->run_parameter, bytes, length);
+  return P8W_STATUS_OK;
+}
+
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_compile(uint32_t handle,
                                          const uint8_t *source,
                                          uint32_t source_length) {
@@ -993,6 +1067,7 @@ P8W_GETTER(p8w_yield_reason, uint32_t, P8W_YIELD_NONE, yield_reason)
 P8W_GETTER(p8w_phase, uint32_t, P8W_PHASE_NONE, phase)
 P8W_GETTER(p8w_pending_request_id, uint32_t, 0, request_id)
 P8W_GETTER(p8w_pending_request_length, uint32_t, 0, request_length)
+P8W_GETTER(p8w_control_bytes_length, uint32_t, 0, control_bytes_length)
 P8W_GETTER(p8w_error_status, uint32_t, P8W_STATUS_INVALID_HANDLE, error_status)
 P8W_GETTER(p8w_error_line, int32_t, -1, error_line)
 P8W_GETTER(p8w_error_message_length, uint32_t, 0, error_message_length)
@@ -1012,6 +1087,13 @@ EMSCRIPTEN_KEEPALIVE const uint8_t *p8w_pending_request_ptr(uint32_t handle) {
   return context == nullptr || !context->pending_request
              ? nullptr
              : context->request_bytes;
+}
+
+EMSCRIPTEN_KEEPALIVE const uint8_t *p8w_control_bytes_ptr(uint32_t handle) {
+  Context *context = context_from_handle(handle);
+  return context == nullptr || context->control_bytes_length == 0
+             ? nullptr
+             : context->control_bytes;
 }
 
 EMSCRIPTEN_KEEPALIVE const char *p8w_error_message_ptr(uint32_t handle) {

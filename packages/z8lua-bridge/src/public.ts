@@ -199,6 +199,11 @@ export interface FrameRuntimeModule {
   _p8w_create(luaHeapLimit: number): number;
   _p8w_destroy(handle: number): number;
   _p8w_bind_host(handle: number, bindingId: number): number;
+  _p8w_set_run_parameter(
+    handle: number,
+    parameterPointer: number,
+    parameterLength: number,
+  ): number;
   _p8w_compile(handle: number, sourcePointer: number, sourceLength: number): number;
   _p8w_boot(handle: number, budget: number, buttons: number, timeRaw: number): number;
   _p8w_step(handle: number, budget: number, buttons: number, timeRaw: number): number;
@@ -219,6 +224,8 @@ export interface FrameRuntimeModule {
   _p8w_pending_request_id(handle: number): number;
   _p8w_pending_request_ptr(handle: number): number;
   _p8w_pending_request_length(handle: number): number;
+  _p8w_control_bytes_ptr(handle: number): number;
+  _p8w_control_bytes_length(handle: number): number;
   _p8w_error_status(handle: number): number;
   _p8w_error_line(handle: number): number;
   _p8w_error_message_ptr(handle: number): number;
@@ -237,7 +244,7 @@ export interface Z8LuaFrameVmOptions {
   readonly luaHeapLimit?: number;
 }
 
-const FRAME_ABI_VERSION = 0x0001_0002;
+const FRAME_ABI_VERSION = 0x0001_0003;
 const STATUS_OK = 0;
 const STATUS_YIELDED = 1;
 const STATUS_INVALID_HANDLE = 2;
@@ -251,6 +258,7 @@ const STATUS_UNSUPPORTED = 9;
 const STATUS_HOST_ERROR = 10;
 const STATUS_STOPPED = 11;
 const STATUS_HOST_API_ERROR = 13;
+const STATUS_RESTART = 14;
 const YIELD_FRAME_END = 1;
 const YIELD_FLIP = 2;
 const YIELD_HOST_REQUEST = 3;
@@ -626,6 +634,19 @@ export class Z8LuaFrameVm implements FrameVmPort {
     }
   }
 
+  setRunParameter(parameter: Uint8Array): void {
+    this.#assertLive();
+    if (!(parameter instanceof Uint8Array) || parameter.byteLength > 4096) {
+      throw new RangeError("run parameter must be a Uint8Array of at most 4096 bytes");
+    }
+    const status = this.#withBytes(parameter, (pointer, length) =>
+      this.#module._p8w_set_run_parameter(this.#handle, pointer, length)
+    );
+    if (status !== STATUS_OK) {
+      throw new Error(`unable to set run parameter: p8w status ${status}`);
+    }
+  }
+
   resetRam(): void {
     this.#assertLive();
     if (this.#module._p8w_ram_reset(this.#handle) !== STATUS_OK) {
@@ -797,7 +818,28 @@ export class Z8LuaFrameVm implements FrameVmPort {
     const base = { mode, state, targetFps, consumedInstructions };
     const reason = this.#module._p8w_yield_reason(this.#handle) >>> 0;
 
-    if (status === STATUS_STOPPED) return { ...base, kind: "stopped" };
+    if (status === STATUS_STOPPED) {
+      return {
+        ...base,
+        kind: "stopped",
+        state: "stopped",
+        message: this.#copyBytes(
+          this.#module._p8w_control_bytes_ptr(this.#handle),
+          this.#module._p8w_control_bytes_length(this.#handle),
+        ),
+      };
+    }
+    if (status === STATUS_RESTART) {
+      return {
+        ...base,
+        kind: "restart",
+        state: "stopped",
+        parameter: this.#copyBytes(
+          this.#module._p8w_control_bytes_ptr(this.#handle),
+          this.#module._p8w_control_bytes_length(this.#handle),
+        ),
+      };
+    }
     if (status !== STATUS_OK && status !== STATUS_YIELDED) {
       return {
         ...base,

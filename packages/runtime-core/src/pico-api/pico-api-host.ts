@@ -42,6 +42,8 @@ export interface PicoApiHost {
   readonly devkitFlags: number;
   takeCartDataCommit(): PicoCartDataCommit | undefined;
   reset(): void;
+  /** Guest reset(): restore 0x5f00..0x5f7f defaults without resetting cartdata or execution. */
+  resetSystem(): void;
   resetAudio(): void;
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void;
   renderAudioSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice;
@@ -188,6 +190,7 @@ class RuntimePicoApiHost implements PicoApiHost {
   readonly #audio: PicoSfxSynth;
   readonly #cartData: CartDataCore;
   readonly #currentCart: CurrentCartDataCore | undefined;
+  readonly #ram: PicoRam;
 
   constructor(
     memory: PicoMemoryLease,
@@ -204,6 +207,7 @@ class RuntimePicoApiHost implements PicoApiHost {
     }
     this.memoryLeaseId = memory.leaseId;
     const picoRam = new PicoRam(memory, logicalMemory);
+    this.#ram = picoRam;
     const ram = picoRam.physicalBytes;
     this.#audio = new PicoSfxSynth(ram);
     this.#graphics = new L1Graphics(picoRam, {
@@ -225,6 +229,11 @@ class RuntimePicoApiHost implements PicoApiHost {
     this.#input.reset();
     this.#audio.reset();
     this.#cartData.reset();
+  }
+
+  resetSystem(): void {
+    this.#ram.fill(0x5f00, 0x80, 0);
+    this.#graphics.reset();
   }
 
   resetAudio(): void {

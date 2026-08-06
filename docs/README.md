@@ -5,11 +5,11 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-Phase 3A–3H 已完成并归档。Phase 4 已激活：4A–4D 已完成，当前唯一 active work unit 是
-**4E System / Audio / Input / Persistence / Player Integration**。
+Phase 3A–3H 已完成并归档。Phase 4 已激活：4A–4E 已完成，当前唯一 active work unit 是
+**4F CPU / Slow-frame / Scheduler Calibration**。
 
 默认开工路径：本页 →
-[`docs/phases/4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md) → 4E 明确链接的
+[`docs/phases/4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md) → 4F 明确链接的
 contract 小节。机器状态以
 [`spec/phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) 为准。
 

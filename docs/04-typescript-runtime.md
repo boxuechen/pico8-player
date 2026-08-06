@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 3 exit；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 4E；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -14,6 +14,7 @@
 | --- | --- |
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
 | **Implemented through Phase 3 exit** | browser-neutral four-channel SFX/music/P8SCII synth；fixed eight-player + devkit input；synchronous cartdata + Worker-owned IndexedDB；current-cart `reload/cstore` COW repository；dedicated PCM、production Chrome cross-oracle、performance/soak/recovery/dispose gate |
+| **Implemented through Phase 4E** | root guest `run/stop` VM control outcome；copy-owned `stat(6)` parameter；system-register-only guest `reset`；Worker same-session fresh runtime、audio reset、persistence flush 与 public `runtime-control` event |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
 
@@ -559,6 +560,19 @@ type StepResult = Readonly<{
 - 页面从后台恢复时先重置 accumulator anchor，不“补跑”后台经过的全部时间。
 - 第一版不根据宿主机器性能自动从 60 降 30 或从 30 降 15；这会让相同输入产生机器相关结果。官方的慢帧策略作为单独 conformance 功能实现。
 
+### 10.3 CPU budget 与慢帧
+
+> 状态：Phase 4F active target；完成状态与精确数值以 Phase 4 机器合同和源码为准。
+
+- compatibility cost 只使用 z8lua 的 deterministic guest instruction count；参考速率为每秒
+  `4,000,000` 条 VM instruction，30/60 Hz slice 的公式、取整与容差必须由项目原创 oracle 锁定。
+- ordinary over-budget frame 使用独立的 slow-frame policy，不得直接等同于 VM fault。safety hard
+  cap/watchdog 只负责 bounded non-yield containment，两者必须有不同的配置、诊断和测试。
+- `stat(1)` 报告自上次 frame boundary 的 bounded CPU fraction，`stat(7)` 报告当前 logical target
+  FPS；都由 Worker 内 scheduler/cost owner 提供，不读取浏览器刷新率或 host wall-clock。
+- CPU policy 不得改变 logical `time()`、canonical audio、input edge、draw/persistence transaction，
+  也不得根据当前机器性能自适应改变 guest 结果。
+
 ## 11. Persistence
 
 > 状态：Implemented。browser-neutral 同步 guest mirror、Worker-owned IndexedDB
@@ -603,6 +617,7 @@ type RuntimeEvent =
   | { v: 1; type: "frame"; sessionGeneration: number; frameId: number; tick: string; width: 128; height: 128; rgba: ArrayBuffer }
   | { v: 1; type: "needsCart"; request: HostRequest }
   | { v: 1; type: "heartbeat"; sessionGeneration: number; tick: string; sequence?: number }
+  | { v: 1; type: "runtime-control"; control: "run" | "stop"; payload: ArrayBuffer }
   | { v: 1; type: "diagnostic"; diagnostic: SerializedRuntimeError }
   | { v: 1; type: "fault"; error: SerializedRuntimeError };
 ```
@@ -611,13 +626,17 @@ type RuntimeEvent =
 > [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 和阶段机器合同为准；
 > 已实现 control command 为 load/start/vsync/pause/resume/reset/stop/dispose，另有 versioned
 > input、persistence flush 与 audio attachment envelope；事件为 state/frame/heartbeat/
-> diagnostic/fault。
+> runtime-control/diagnostic/fault。
 
 - 这是 [02-system-architecture.md](./02-system-architecture.md) 中方向性协议的 Runtime 实施命名：`loadCart` 只完成 load transaction 并进入 `ready`，Window 随后用 `start` 进入 `running`；guest `load()` 因官方语义在事务成功后自动 start。禁止再引入 `boot`/`host-response` 等同义命令。
 - `reset` 无 payload：Worker 必须调用当前 `CartSession`，使用其 private normalized
   ROM/code snapshot 创建全新 generation；`reset` 不得依赖主线程临时回传，也不得在原
   VM/RAM 上就地清零后继续。Worker 若被 watchdog 整体终止，则由 loader/repository 或主线程
   保留的原始 bytes 重建，不依赖已销毁 session。
+- guest `run(param)` 与 host `reset` 是不同入口：VM control result 携带最多 4096-byte copy-owned
+  parameter，Worker 在同一外部 `sessionGeneration` 内创建 fresh RuntimeCore/VM graph、重置同
+  generation audio timeline，并从 `stat(6)` 暴露参数；guest `stop(message)` 同样只产生 control
+  result。两者都不得直接访问 Window、Worker、IndexedDB 或 AudioContext。
 - 未知 `v` 必须 fail closed。`requestId` 在未完成请求中唯一；每次 Worker spawn 有单调
   `workerGeneration`，每次 load/reset transaction 有跨 Worker restart 单调的
   `sessionGeneration`；`frameId`、vsync/input/audio sequence 各自在所属通道单调。主线程/

@@ -45,11 +45,27 @@ export interface VmHostRequest {
 
 export type VmOperationOutcome =
   | {
-      readonly kind: "ready" | "frame" | "stopped";
+      readonly kind: "ready" | "frame";
       readonly mode: FrameVmMode;
       readonly state: FrameVmState;
       readonly targetFps: 0 | 30 | 60;
       readonly consumedInstructions: number;
+    }
+  | {
+      readonly kind: "stopped";
+      readonly mode: FrameVmMode;
+      readonly state: "stopped";
+      readonly targetFps: 0 | 30 | 60;
+      readonly consumedInstructions: number;
+      readonly message: Uint8Array;
+    }
+  | {
+      readonly kind: "restart";
+      readonly mode: FrameVmMode;
+      readonly state: "stopped";
+      readonly targetFps: 0 | 30 | 60;
+      readonly consumedInstructions: number;
+      readonly parameter: Uint8Array;
     }
   | {
       readonly kind: "host-request";
@@ -79,6 +95,7 @@ export interface FrameVmPort {
   readonly logicalMemory: PicoLogicalMemoryPort;
   readonly hostBindingState: "unbound" | "bound" | "released";
   bindHost(host: PicoApiHost): void;
+  setRunParameter(parameter: Uint8Array): void;
   resetRam(): void;
   writeCartRom(rom: Uint8Array): void;
   copyRam(offset: number, length: number): Uint8Array;
@@ -140,18 +157,38 @@ export type RuntimeBootResult =
       readonly devkitFlags: number;
       readonly cartDataCommit?: PicoCartDataCommit;
     }
-  | { readonly kind: "host-request"; readonly request: RuntimeHostRequest };
+  | { readonly kind: "host-request"; readonly request: RuntimeHostRequest }
+  | {
+      readonly kind: "stopped";
+      readonly message: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    }
+  | {
+      readonly kind: "restart";
+      readonly parameter: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    };
 
 export type RuntimeStepResult =
   | { readonly kind: "frame"; readonly frame: RuntimeFrame }
   | { readonly kind: "host-request"; readonly request: RuntimeHostRequest }
-  | { readonly kind: "stopped" };
+  | {
+      readonly kind: "stopped";
+      readonly message: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    }
+  | {
+      readonly kind: "restart";
+      readonly parameter: Uint8Array;
+      readonly cartDataCommit?: PicoCartDataCommit;
+    };
 
 export interface FrameRuntimeOptions {
   readonly instructionBudget?: number;
   readonly picoApiHost?: PicoApiHost;
   readonly cartDataSeeds?: readonly PicoCartDataSeed[];
   readonly currentCart?: CurrentCartDataContext;
+  readonly runParameter?: Uint8Array;
 }
 
 interface PendingTransaction {
@@ -203,6 +240,7 @@ export class FrameSliceRuntime {
   readonly #ram: PicoRam;
   readonly #instructionBudget: number;
   readonly #currentCart: CurrentCartDataContext | undefined;
+  readonly #runParameter: Uint8Array;
   #state: RuntimeSessionState = "empty";
   #mode: FrameVmMode = "none";
   #targetFps: 0 | 30 | 60 = 0;
@@ -227,6 +265,13 @@ export class FrameSliceRuntime {
       );
     }
     this.#currentCart = options.currentCart;
+    if (
+      options.runParameter !== undefined &&
+      (!(options.runParameter instanceof Uint8Array) || options.runParameter.byteLength > 4096)
+    ) {
+      throw new RangeError("runParameter must be a Uint8Array of at most 4096 bytes");
+    }
+    this.#runParameter = options.runParameter?.slice() ?? new Uint8Array();
     const host = options.picoApiHost ?? createPicoApiHost(
       vm.memory,
       vm.logicalMemory,
@@ -307,6 +352,7 @@ export class FrameSliceRuntime {
     this.#vm.resetRam();
     this.#picoApiHost.reset();
     this.#vm.writeCartRom(bootRom);
+    this.#vm.setRunParameter(this.#runParameter);
     const compiled = this.#vm.compile(cart.code);
     if (compiled.kind === "fault") return this.#acceptFault(compiled.error);
     const controllers = normalizedInput.controllers;
@@ -433,7 +479,31 @@ export class FrameSliceRuntime {
         },
       };
     }
-    if (outcome.kind === "stopped" || !this.#captureMode(outcome)) {
+    if (outcome.kind === "stopped" || outcome.kind === "restart") {
+      this.#picoApiHost.resetAudio();
+      const cartDataCommit = this.#takeCartDataCommit();
+      if (!cartDataCommit.ok) return cartDataCommit;
+      this.#state = "stopped";
+      return {
+        ok: true,
+        value: outcome.kind === "stopped"
+          ? {
+              kind: "stopped",
+              message: outcome.message.slice(),
+              ...(cartDataCommit.value === undefined
+                ? {}
+                : { cartDataCommit: cartDataCommit.value }),
+            }
+          : {
+              kind: "restart",
+              parameter: outcome.parameter.slice(),
+              ...(cartDataCommit.value === undefined
+                ? {}
+                : { cartDataCommit: cartDataCommit.value }),
+            },
+      };
+    }
+    if (!this.#captureMode(outcome)) {
       this.#state = "stopped";
       return {
         ok: false,
@@ -491,9 +561,38 @@ export class FrameSliceRuntime {
       };
     }
     if (outcome.kind === "stopped") {
+      this.#picoApiHost.resetAudio();
+      const cartDataCommit = this.#takeCartDataCommit();
+      if (!cartDataCommit.ok) return cartDataCommit;
       this.#pending = undefined;
       this.#state = "stopped";
-      return { ok: true, value: { kind: "stopped" } };
+      return {
+        ok: true,
+        value: {
+          kind: "stopped",
+          message: outcome.message.slice(),
+          ...(cartDataCommit.value === undefined
+            ? {}
+            : { cartDataCommit: cartDataCommit.value }),
+        },
+      };
+    }
+    if (outcome.kind === "restart") {
+      this.#picoApiHost.resetAudio();
+      const cartDataCommit = this.#takeCartDataCommit();
+      if (!cartDataCommit.ok) return cartDataCommit;
+      this.#pending = undefined;
+      this.#state = "stopped";
+      return {
+        ok: true,
+        value: {
+          kind: "restart",
+          parameter: outcome.parameter.slice(),
+          ...(cartDataCommit.value === undefined
+            ? {}
+            : { cartDataCommit: cartDataCommit.value }),
+        },
+      };
     }
     if (outcome.kind !== "frame" || !this.#captureMode(outcome)) {
       return this.#acceptFault({

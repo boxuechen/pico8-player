@@ -9,9 +9,9 @@
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A", "4B", "4C", "4D"],
-  "activeWorkUnit": "4E",
-  "nextWorkUnit": "4F",
+  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E"],
+  "activeWorkUnit": "4F",
+  "nextWorkUnit": "4G",
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -80,6 +80,7 @@
         "structuredFault": "E_VM_INSTRUCTION_BUDGET",
         "chrome": "Google Chrome 150.0.7871.189",
         "hostAbiBindings": 38,
+        "runtimeAbiVersion": "0x00010002",
         "runtimeWasmSha256": "9fe3cae43c6e3a0dd5123ceaca37edf7699a88ba26e9ea7c77bcbaf88ccb9820",
         "inventoryCounts": {
           "implementationCounts": {
@@ -145,7 +146,7 @@
     },
     "4E": {
       "name": "System, Audio, Input, Persistence and Player Integration",
-      "status": "active",
+      "status": "complete",
       "requiredApis": ["run", "stop", "assert", "reset", "flip", "time", "stat"],
       "integrationProfiles": [
         "audio-input-persistence-cross-flow",
@@ -157,9 +158,79 @@
         "nested-flip-suspension",
         "unsupported-stat-selectors",
         "conditional-printh-and-extcmd"
+      ],
+      "result": {
+        "conformanceManifest": "tests/conformance/manifests/phase-4e-system-integration.json",
+        "projectCarts": 2,
+        "hostAbiBindings": 41,
+        "preservedHostBindingPrefix": "1..40",
+        "runtimeAbiVersion": "0x00010003",
+        "runtimeWasmSha256": "59873be5c3f517d37403c145cac5eae963d9bebf32e4dabbf24063b5556474b0",
+        "runtimeControls": ["run", "stop"],
+        "publicPlayerEvent": "runtime-control",
+        "firstScreenSha256": "99d598ca6fa57a75dc4de3b4ef57ece7168b48acd3e2d3d31e0b9117575a5af9",
+        "restartScreenSha256": "0f6cba94d7a5b5020d588ba0de35305889133df861c881d6c585d8065289e393",
+        "cartdataSha256": "2692e9c03cab0b0b29228a6f42380edd3010159b1005c0f04f23cb5bb2a1990a",
+        "structuredFault": "E_VM_RUNTIME",
+        "chrome": "Google Chrome 150.0.7871.189",
+        "scopeDecisions": {
+          "externalReloadCstore": "accepted-current-cart-only",
+          "nestedFlipSuspension": "accepted-unsupported-nested-host-suspend",
+          "unsupportedStatSelectors": "return-false-and-list-known-selectors",
+          "printh": "unsupported-outside-mvp",
+          "extcmd": "unsupported-outside-mvp"
+        },
+        "inventoryCounts": {
+          "implementationCounts": {
+            "implemented": 95,
+            "partial": 6,
+            "unimplemented": 1,
+            "unsupported": 10
+          },
+          "conformanceCounts": {
+            "compatible": 67,
+            "partial": 6,
+            "unknown": 29,
+            "unsupported": 10
+          }
+        },
+        "verification": [
+          "pnpm run test:phase-4e",
+          "pnpm run test:phase-4e:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "4F": {
+      "name": "CPU Cost, Slow-frame and Scheduler Calibration",
+      "status": "active",
+      "referenceInstructionsPerSecond": 4000000,
+      "requiredCadencesHz": [30, 60],
+      "requiredProfiles": [
+        "below-soft-budget",
+        "at-soft-budget",
+        "above-soft-budget",
+        "custom-loop-flip-boundary",
+        "hard-cap-non-yield-containment",
+        "fault-recovery"
+      ],
+      "requiredStatSelectors": [1, 7],
+      "conditionalStatSelectors": [0],
+      "policyBoundaries": {
+        "compatibilityBudget": "deterministic guest instruction cost per logical slice",
+        "safetyCap": "bounded non-yield containment with structured fault",
+        "hostWallClock": "measurement-only; forbidden as production compatibility input"
+      },
+      "nonGoals": [
+        "resource-sizing",
+        "30-minute-soak",
+        "multi-cart-lifecycle",
+        "guest-load",
+        "external-cart-resolver",
+        "adaptive-host-cpu-policy",
+        "non-Chromium-browsers"
       ]
     },
-    "4F": { "name": "CPU Cost, Slow-frame and Scheduler Calibration", "status": "planned" },
     "4G": { "name": "Resource Sizing and Chrome Long-run", "status": "planned" },
     "4H": { "name": "Phase 4 / L2 Exit", "status": "planned" }
   },

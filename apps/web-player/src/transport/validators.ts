@@ -167,6 +167,9 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
     if (value.state === "disposed") {
       return value.mode === "none" && value.targetFps === 0;
     }
+    if (value.state === "stopped" && value.mode === "none") {
+      return value.targetFps === 0;
+    }
     return ["ready", "running", "paused", "stopped"].includes(
       String(value.state),
     ) &&
@@ -193,6 +196,10 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
       isUint(value.vsyncSequence) && isUint(value.tickCount) &&
       Number(value.tickCount) <= 5 && isUint(value.droppedTicks)
     );
+  }
+  if (value.type === "runtime-control") {
+    return (value.control === "run" || value.control === "stop") &&
+      value.payload instanceof ArrayBuffer && value.payload.byteLength <= 4096;
   }
   if (value.type === "diagnostic" || value.type === "fault") {
     return isPlayerError(value.error);

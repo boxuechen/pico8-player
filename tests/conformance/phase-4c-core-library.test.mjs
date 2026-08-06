@@ -113,7 +113,8 @@ test("Phase 4C closes its inventory and stays a pure VM change with host ABI unc
     Array.from({ length: 38 }, (_, index) => index + 1),
   );
   assert.equal(generated.files.length, 2);
-  assert.equal(runtimeManifest.abiVersion, 0x0001_0002);
+  assert.equal(phase.workUnits["4C"].result.runtimeAbiVersion, "0x00010002");
+  assert.ok(runtimeManifest.abiVersion >= 0x0001_0002);
   assert.equal(runtimeManifest.compiledBridgeSources.includes(
     "wasm/bridge/p8w_pico8_compat.cpp",
   ), true);

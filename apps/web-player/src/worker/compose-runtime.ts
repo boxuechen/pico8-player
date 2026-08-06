@@ -101,6 +101,14 @@ export function createPhase0EWorkerController(
     if (value.kind === "stopped") {
       return { ...eventBase(command), type: "stopped" };
     }
+    if (value.kind === "restart") {
+      return fault(command, {
+        code: "E_FEATURE_UNSUPPORTED",
+        message: "guest run is only supported by the production player controller",
+        phase: "none",
+        recoverable: false,
+      });
+    }
     const packedScreen = value.frame.screen.buffer.slice(
       value.frame.screen.byteOffset,
       value.frame.screen.byteOffset + value.frame.screen.byteLength,
@@ -265,6 +273,7 @@ export function createPlayerWorkerController(
             identity: context.cart.identity,
             repository: cartRepository,
           },
+          runParameter: context.runParameter,
         });
       } catch (error) {
         vm.destroy();
@@ -377,6 +386,12 @@ export function createPlayerWorkerController(
   }
 
   function enqueueCartDataCommit(commit: PicoCartDataCommit): void {
+    cartDataSeeds = [
+      ...cartDataSeeds
+        .filter((seed) => seed.id !== commit.id)
+        .map((seed) => ({ id: seed.id, bytes: seed.bytes.slice() })),
+      { id: commit.id, bytes: commit.bytes.slice() },
+    ];
     if (persistence === undefined) return;
     try {
       persistence.enqueue(commit);
@@ -479,22 +494,75 @@ export function createPlayerWorkerController(
   function acceptBoot(
     command: PlayerRuntimeControlCommand,
     result: RuntimeResult<CartSessionBootResult>,
+    continueRunning = false,
+  ): readonly PlayerRuntimeToHost[] {
+    let current = result;
+    const events: PlayerRuntimeToHost[] = [];
+    for (let restartCount = 0; restartCount <= 8; restartCount += 1) {
+      if (!current.ok) return [...events, fault(command, current.error)];
+      if (current.value.kind === "host-request") {
+        return [...events, unsupportedHostRequest(command)];
+      }
+      if (current.value.cartDataCommit !== undefined) {
+        enqueueCartDataCommit(current.value.cartDataCommit);
+      }
+      if (current.value.kind === "stopped") {
+        scheduler.pause();
+        clearInputState();
+        lifecycle = "stopped";
+        mode = "none";
+        targetFps = 0;
+        devkitFlags = 0;
+        resetAudioQueue(command.sessionGeneration);
+        events.push(runtimeControlEvent(command, "stop", current.value.message));
+        events.push(state(command, "stopped"));
+        return events;
+      }
+      if (current.value.kind === "restart") {
+        events.push(runtimeControlEvent(command, "run", current.value.parameter));
+        if (restartCount === 8) {
+          events.push(fault(command, {
+            code: "E_VM_INSTRUCTION_BUDGET",
+            message: "guest run restart limit exceeded in one host command",
+            phase: "none",
+            recoverable: false,
+            details: { restartCount: restartCount + 1 },
+          }));
+          return events;
+        }
+        current = session.restart(current.value.parameter);
+        continue;
+      }
+      beginAudioGeneration(command.sessionGeneration);
+      sendAudio(current.value.audio);
+      mode = current.value.mode;
+      targetFps = current.value.targetFps;
+      devkitFlags = current.value.devkitFlags;
+      scheduler.configure(targetFps);
+      if (continueRunning) {
+        scheduler.start();
+        lifecycle = "running";
+        events.push(state(command, "running"));
+        return events;
+      }
+      lifecycle = "ready";
+      events.push(state(command, "ready"));
+      return events;
+    }
+    return [...events, fault(command, invariant("unreachable guest restart loop"))];
+  }
+
+  function runtimeControlEvent(
+    command: PlayerRuntimeControlCommand,
+    control: "run" | "stop",
+    payload: Uint8Array,
   ): PlayerRuntimeToHost {
-    if (!result.ok) return fault(command, result.error);
-    if (result.value.kind === "host-request") {
-      return unsupportedHostRequest(command);
-    }
-    beginAudioGeneration(command.sessionGeneration);
-    sendAudio(result.value.audio);
-    mode = result.value.mode;
-    targetFps = result.value.targetFps;
-    devkitFlags = result.value.devkitFlags;
-    if (result.value.cartDataCommit !== undefined) {
-      enqueueCartDataCommit(result.value.cartDataCommit);
-    }
-    scheduler.configure(targetFps);
-    lifecycle = "ready";
-    return state(command, "ready");
+    return {
+      ...playerBase(command),
+      type: "runtime-control",
+      control,
+      payload: payload.slice().buffer,
+    };
   }
 
   function acceptInput(command: PlayerRuntimeInputCommand): void {
@@ -586,11 +654,29 @@ export function createPlayerWorkerController(
       }
       executedTicks += 1;
       if (result.value.kind === "stopped") {
+        if (result.value.cartDataCommit !== undefined) {
+          enqueueCartDataCommit(result.value.cartDataCommit);
+        }
         scheduler.pause();
         lifecycle = "stopped";
         clearInputState();
         devkitFlags = 0;
+        resetAudioQueue(command.sessionGeneration);
+        events.push(runtimeControlEvent(command, "stop", result.value.message));
         events.push(state(command, "stopped"));
+        break;
+      }
+      if (result.value.kind === "restart") {
+        if (result.value.cartDataCommit !== undefined) {
+          enqueueCartDataCommit(result.value.cartDataCommit);
+        }
+        clearInputState();
+        events.push(runtimeControlEvent(command, "run", result.value.parameter));
+        events.push(...acceptBoot(
+          command,
+          session.restart(result.value.parameter),
+          true,
+        ));
         break;
       }
       events.push(frameEvent(command, result.value));
@@ -638,7 +724,7 @@ export function createPlayerWorkerController(
       try {
         const cart = decodeCart(new Uint8Array(command.cartBytes));
         cartRepository.registerCart(cart);
-        return [acceptBoot(command, session.load(cart))];
+        return acceptBoot(command, session.load(cart));
       } catch (error) {
         if (session.cart !== undefined) session.stop();
         if (error instanceof CartCodecError) {
@@ -679,7 +765,7 @@ export function createPlayerWorkerController(
       inputSequence = -1;
       clearInputState();
       devkitFlags = 0;
-      return [acceptBoot(command, session.reset())];
+      return acceptBoot(command, session.reset());
     }
     if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
       return generationFault(command, "command belongs to a stale or missing session");
@@ -751,6 +837,7 @@ export function createPlayerWorkerController(
     }
     const events = handleSync(command);
     const hasFault = events.some((event) => event.type === "fault");
+    const hasGuestControl = events.some((event) => event.type === "runtime-control");
     if (command.type === "dispose") {
       try {
         await persistence!.dispose();
@@ -762,7 +849,7 @@ export function createPlayerWorkerController(
         );
       }
     } else if (
-      command.type === "pause" || command.type === "stop" || hasFault
+      command.type === "pause" || command.type === "stop" || hasFault || hasGuestControl
     ) {
       await flushPersistence();
     }
