@@ -23,6 +23,9 @@ import {
 } from "../persistence/current-cart-data-core.js";
 import type { CurrentCartDataRepositoryPort } from "../ports/current-cart-data-repository-port.js";
 
+const LEGACY_CHANNEL_ZERO_NOTE_SELECTOR = 20;
+const Q16_ONE = 65_536;
+
 export interface CurrentCartDataContext {
   readonly identity: CartIdentity;
   readonly repository: CurrentCartDataRepositoryPort;
@@ -515,6 +518,9 @@ class RuntimePicoApiHost implements PicoApiHost {
   }
 
   stat(selectorRaw: number): number {
+    if ((selectorRaw >> 16) === LEGACY_CHANNEL_ZERO_NOTE_SELECTOR) {
+      return this.#audio.snapshotChannels()[0]!.note * Q16_ONE;
+    }
     return this.#input.stat(selectorRaw);
   }
 

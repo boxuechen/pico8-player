@@ -634,7 +634,7 @@ bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 
 | ID | API / 模式 | 用户可见影响 | Workaround / scope |
 | --- | --- | --- | --- |
-| `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | 使用 `1,6,7,30,31,32,33,34,36,38,39` |
+| `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | 使用 `1,6,7,20,30,31,32,33,34,36,38,39`；`20` 是 legacy channel-0 current note |
 | `P4-KD-03` | timed P8SCII | delay control 不暂停 guest | 用 logical frame 驱动文字时间 |
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |

@@ -138,7 +138,7 @@ test("local external corpus bytes and results remain outside tracked claims", ()
   assert.match(ignore, /^\/tests\/conformance\/local-corpus\.json$/m);
   assert.match(ignore, /^\/tests\/conformance\/local-corpus\/$/m);
   assert.equal(example.schemaVersion, 1);
-  assert.match(example.policy, /never committed/);
+  assert.equal(example.policy, "developer-supplied-local-only");
   assert.equal(phase.corpusPolicy.publishedDenominator, "project-authored tracked corpus only");
   assert.equal(phase.nonGoals.includes("bbs-network-access"), true);
 });

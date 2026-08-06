@@ -40,14 +40,14 @@
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 191488,
-        "sha256": "85f180146cd16577b8a0a0c57143f74a8befddbfa5b1676146b78a9cf2070283"
+        "bytes": 191495,
+        "sha256": "b5944f31d6fabdcb0eb79f8f3c764751e1962d39a5488a49d09f4b800b8bbc7f"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs + tests/runtime/phase-3b-music-audio.test.mjs + tests/runtime/phase-3c-controller-input.test.mjs + tests/runtime/phase-3d-devkit-input.test.mjs + tests/runtime/phase-3e-cartdata.test.mjs + tests/runtime/phase-3g-current-cart.test.mjs + tests/conformance/phase-4c-core-library.test.mjs + tests/conformance/phase-4d-graphics-memory-text.test.mjs + tests/conformance/phase-4e-system-integration.test.mjs + tests/conformance/phase-4f-cpu-scheduler.test.mjs + tests/conformance/phase-4g-resource-long-run.test.mjs",
-    "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html + tests/browser/phase-2d.html + tests/browser/phase-2e.html + tests/browser/phase-3b.html + tests/browser/phase-3c.html + tests/browser/phase-3d.html + tests/browser/phase-3f.html + tests/browser/phase-3g.html + tests/browser/phase-4c.html + tests/browser/phase-4d.html + tests/browser/phase-4e.html + tests/browser/phase-4f.html + tests/browser/phase-4g.html",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs + tests/runtime/phase-3b-music-audio.test.mjs + tests/runtime/phase-3c-controller-input.test.mjs + tests/runtime/phase-3d-devkit-input.test.mjs + tests/runtime/phase-3e-cartdata.test.mjs + tests/runtime/phase-3g-current-cart.test.mjs + tests/runtime/phase-6d-stat20.test.mjs + tests/conformance/phase-4c-core-library.test.mjs + tests/conformance/phase-4d-graphics-memory-text.test.mjs + tests/conformance/phase-4e-system-integration.test.mjs + tests/conformance/phase-4f-cpu-scheduler.test.mjs + tests/conformance/phase-4g-resource-long-run.test.mjs",
+    "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html + tests/browser/phase-2d.html + tests/browser/phase-2e.html + tests/browser/phase-3b.html + tests/browser/phase-3c.html + tests/browser/phase-3d.html + tests/browser/phase-3f.html + tests/browser/phase-3g.html + tests/browser/phase-4c.html + tests/browser/phase-4d.html + tests/browser/phase-4e.html + tests/browser/phase-4f.html + tests/browser/phase-4g.html + tests/compat/run-phase-6d-project-smoke.mjs",
     "fixtures": "project-owned synthetic source and p8.png only"
   }
 }

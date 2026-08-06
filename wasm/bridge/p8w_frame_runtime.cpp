@@ -436,7 +436,7 @@ int p8_host_call(lua_State *state) {
       }
     } else if (selector == 34) {
       lua_pushinteger(state, static_cast<int16_t>(frame.result));
-    } else if (selector == 32 || selector == 33 || selector == 36 ||
+    } else if (selector == 20 || selector == 32 || selector == 33 || selector == 36 ||
                selector == 38 || selector == 39) {
       lua_pushnumber(state, lua_Number::frombits(frame.result));
     } else {

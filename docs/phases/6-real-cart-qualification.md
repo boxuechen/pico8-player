@@ -1,6 +1,6 @@
 # Phase 6 — Real-cart Qualification
 
-> 状态：Active；6A–6C complete，6D active
+> 状态：Active；6A–6D complete，6E active
 > 机器合同：[`spec/phase-6-real-cart-qualification-contract.json`](../../spec/phase-6-real-cart-qualification-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 5 L3 local/multicart exit](../evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)
@@ -26,6 +26,7 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 - [Instruction budget 边界](../03-z8lua-wasm-bridge.md#92-instruction-budget抛错不分帧续跑)
 - [ADR-017 coroutine frame slice](../adr/017-coroutine-frame-slice-and-fault-containment.md)
 - [Official PICO-8 v0.2.7 `stat()` reference](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#STAT)
+- [Official PICO-8 v0.2.7 `menuitem()` reference](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#MENUITEM)
 
 ## Work units
 
@@ -34,8 +35,8 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 | 6A Activation / Corpus Policy | Complete | 12-cart local-only policy、Phase 5 hash baseline、公开分母为 0 |
 | 6B External Corpus Runner | Complete | 三份 schema、fail-closed validator、path-redacted report CLI |
 | 6C Twelve-cart Baseline | Complete | 12/12 complete；6 boots/CU、6 fails/C0；local-only screenshots |
-| 6D `stat(20)` Compatibility | **Active** | 下节 |
-| 6E `menuitem()` Boundary | Pending | 6D exit 后展开 |
+| 6D `stat(20)` Compatibility | Complete | affected case 恢复；local baseline 变为 7 boots/CU、5 fails/C0 |
+| 6E `menuitem()` Boundary | **Active** | 下节 |
 | 6F CPU Slicing Spike / Decision | Pending | 6E exit 后展开；必须尊重/替换 ADR-017 |
 | 6G Chrome Playability Pass | Pending | 6F exit 后展开 |
 | 6H Qualification Exit / Report | Pending | aggregate exit |
@@ -65,42 +66,54 @@ source token surface；future-version rejection 保持 v0.2.7 scope boundary。�
 observations、report 和截图均被 Git 忽略，公开 denominator 贡献为 0。验证入口是
 `pnpm run test:phase-6c` 与 `pnpm run test:phase-6c:chrome`；external 结果不是 CI 依赖。
 
-## Active work unit：6D `stat(20)` Compatibility
+## 6D closure
+
+6D 将 legacy `stat(20)` 精确接到 RuntimeCore authoritative `PicoSfxSynth` channel 0 note state，
+inactive 返回 P8 number `-1`；C++ bridge 只新增 selector 20 的 Q16 numeric decode，其他 selector
+保持原类型。原创 real-WASM/Chrome regression 覆盖 idle、active、note `1→2→3`、stop/reset，
+项目 Chrome 12/12 通过。受影响 local case 从 boolean arithmetic fault 恢复为 `boots/CU`；完整
+ignored corpus 变为 7 boots/CU、5 fails/C0，公开 denominator 仍为 0。production WASM SHA-256 为
+`b5944f31d6fabdcb0eb79f8f3c764751e1962d39a5488a49d09f4b800b8bbc7f`。验证入口是
+`pnpm run test:phase-6d`、`pnpm run test:phase-6d:chrome` 与 `pnpm run verify`。
+
+## Active work unit：6E `menuitem()` Boundary
 
 ### Observable behavior
 
-1. 按官方 v0.2.7 manual 的 legacy audio status mapping，`stat(20)` 返回 channel 0 当前 note number；
-   无 active SFX 时返回 P8 number `-1`，不能返回 boolean `false`。
-2. value 只来自 RuntimeCore authoritative `PicoSfxSynth` state；不得读取 AudioContext、device mixer、
-   output queue 或 host wall clock。现有 deterministic frame/audio transaction 顺序不变。
-3. C++ `stat-input-selector` bridge 只为 selector 20 增加 numeric decode；30/31/34 的 boolean/string/
-   integer 特例、32/33/36/38/39 Q16 与 unknown-selector false 均保持不变。
-4. 用项目原创最小 cart 覆盖 idle `-1`、active note、note progression、stop/reset；Node real-WASM 与
-   Chrome production path 必须一致。
-5. 修复后重新运行受影响 local case 的 120-tick trace，必须从 boolean arithmetic fault 变为
-   `boots/CU`；这只是 local regression，不形成第三方成功率声明。
+1. 先用 ADR 冻结 ownership：`menuitem()` 的 Lua callback 和注册表留在同一 VM generation；不得把
+   Lua function pointer、registry ref 或可执行 closure 传给 TypeScript/DOM。
+2. 当前 unit 至少实现 official registration boundary：index `1..5`（保留 `0xff00` button filter
+   bits）、P8SCII label 最多 16 bytes、callback 必须为 function；同 index replacement 与省略
+   label/callback removal 可确定执行。
+3. 当前 web-player 的 host lifecycle pause 不是 PICO-8 pause menu。6E 必须明确决定 UI/callback
+   invocation 是本 unit 实现还是 Published Known Difference；不能用一个静默 JS no-op 冒充完整菜单。
+4. 若接受 registration-only，注册表必须 VM-local、bounded、GC-safe、fresh generation 自动清空，
+   并明确 guest 不能触发 callback；不得新增 Worker/Main transport 或 DOM authority。
+5. 原创 real-WASM cart 覆盖 add/update/remove、invalid index/label/callback、GC lifetime 和 fresh reset；
+   Chrome production path 与受影响 local case 均不再因 missing global fault。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.6D.allowedPaths` 控制。ownership 只跨 AudioSynth state、
-PicoApiHost selector routing 与 bridge return decoding；不得修改 scheduler、AudioWorklet、device
-transport、cart codec 或其他 stat selector。external bytes 和 `ref/` 仍不进入测试或构建。
+精确允许路径由机器合同 `workUnits.6E.allowedPaths` 控制。默认路径只允许 VM-local compat、ADR、
+原创 regression 与 inventory/文档；除非 ADR 明确授权 full UI，不得修改 RuntimeCore、Worker/Main
+transport、PlayerController、DOM shell 或 host pause lifecycle。external bytes 和 `ref/` 仍不进入
+测试或构建。
 
 ### Tests
 
-- Proposed：`pnpm run test:phase-6d`
-- Proposed：`pnpm run test:phase-6d:chrome`
-- `pnpm run test:phase-3b`
-- `pnpm run test:phase-3d`
+- Proposed：`pnpm run test:phase-6e`
+- Proposed：`pnpm run test:phase-6e:chrome`
+- `pnpm run test:phase-4c`
 - `pnpm run test:architecture`
-- public/runtime contract 改变，最终必须运行 `pnpm run verify`
+- VM/runtime contract 改变，最终必须运行 `pnpm run verify`
 
 ### Exit gate
 
-- Node real-WASM 精确覆盖 inactive/active/progression/stop/reset 和 stat selector regression。
-- Chrome project cart 与 local affected case 均不再出现 boolean arithmetic fault。
-- API inventory 和 `P4-KD-02` 只增加 selector 20，不暗示 16–26 或 46–56 全量支持。
-- `pnpm run verify` 通过；6D 结果折叠入机器合同，6E 成为唯一 active work unit，并独立提交。
+- ADR 固定 callback/registry/UI ownership；注册语义不是无界 host handle 或静默假兼容。
+- Node real-WASM 精确覆盖 bounded registry、replacement/removal、validation、GC 与 generation cleanup。
+- Chrome project cart 与 local affected case 均不再出现 missing-global fault。
+- API inventory/Published Known Difference 精确区分 registration 与 UI/invocation 支持。
+- `pnpm run verify` 通过；6E 结果折叠入机器合同，6F 成为唯一 active work unit，并独立提交。
 
 ## Phase exit gate
 

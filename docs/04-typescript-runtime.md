@@ -549,6 +549,9 @@ type StepResult = Readonly<{
 - `stat(1)` 报告当前 transaction 到调用点为止的 CPU fraction，并跨 root HostRequest continuation
   累计；因此它可略小于 frame 完成后的诊断值。`stat(7)` 返回 logical target FPS。两者都不读取
   浏览器刷新率或 host wall-clock；`stat(0)` 因缺少稳定 oracle 继续返回 false。
+- legacy `stat(20)` 返回 authoritative AudioSynth channel 0 的当前 note number；inactive 时为 `-1`。
+  该查询与 canonical audio 使用同一 deterministic state，不读取 AudioContext、device mixer、
+  output queue 或 host wall clock；它不代表 legacy selectors `16..26` 已整体实现。
 - CPU policy 不得改变 logical `time()`、canonical audio、input edge、draw/persistence transaction，
   也不得根据当前机器性能自适应改变 guest 结果。
 
