@@ -1,13 +1,15 @@
-import type { ParsedCart } from "@pico8-web/cart-codec";
+import type { CartWarning, ParsedCart } from "@pico8-web/cart-codec";
 import {
   PICO_CART_DATA_ROM_SIZE,
   PICO_CART_ROM_SIZE,
   type CartIdentity,
 } from "@pico8-web/contracts";
-import type { CurrentCartDataRepositoryPort } from "@pico8-web/runtime-core";
+import type { CartRepositoryPort } from "@pico8-web/runtime-core";
 
 interface CartDataRecord {
   readonly original: Uint8Array;
+  readonly rom: Uint8Array;
+  cart?: ParsedCart;
   overlay?: Uint8Array;
 }
 
@@ -39,8 +41,50 @@ function equalBytes(left: Uint8Array, right: Uint8Array): boolean {
   return true;
 }
 
+function copyWarnings(warnings: readonly CartWarning[]): readonly CartWarning[] {
+  return Object.freeze(warnings.map((warning) => Object.freeze({
+    code: warning.code,
+    message: warning.message,
+    offset: warning.offset,
+    ...(warning.section === undefined ? {} : { section: warning.section }),
+  })));
+}
+
+function copyParsedCart(cart: ParsedCart): ParsedCart {
+  if (
+    !(cart.rom instanceof Uint8Array) || cart.rom.byteLength !== PICO_CART_ROM_SIZE ||
+    !(cart.code instanceof Uint8Array) || !Array.isArray(cart.warnings) ||
+    (cart.format !== "p8" && cart.format !== "p8.png") ||
+    !Number.isSafeInteger(cart.version) || cart.version < 0 || cart.version > 255 ||
+    !Number.isSafeInteger(cart.sourceBytes) || cart.sourceBytes < 0
+  ) {
+    throw new TypeError("cart repository requires a valid ParsedCart snapshot");
+  }
+  const code = cart.code.slice();
+  return Object.freeze({
+    identity: Object.freeze({ contentSha256: keyOf(cart.identity) }),
+    format: cart.format,
+    version: cart.version,
+    rom: cart.rom.slice(),
+    code,
+    warnings: copyWarnings(cart.warnings),
+    sourceBytes: cart.sourceBytes,
+    cartVersion: cart.version,
+    luaSource: code,
+  });
+}
+
+function equalCart(left: ParsedCart, right: ParsedCart): boolean {
+  return left.format === right.format &&
+    left.version === right.version &&
+    left.sourceBytes === right.sourceBytes &&
+    equalBytes(left.rom, right.rom) &&
+    equalBytes(left.code, right.code) &&
+    JSON.stringify(left.warnings) === JSON.stringify(right.warnings);
+}
+
 /** Worker-lifetime, identity-scoped current-cart data ROM with lazy COW. */
-export class CartRepositoryAdapter implements CurrentCartDataRepositoryPort {
+export class CartRepositoryAdapter implements CartRepositoryPort {
   readonly #records = new Map<string, CartDataRecord>();
   #disposed = false;
 
@@ -53,15 +97,43 @@ export class CartRepositoryAdapter implements CurrentCartDataRepositoryPort {
     const original = cart.rom.slice(0, PICO_CART_DATA_ROM_SIZE);
     const existing = this.#records.get(key);
     if (existing !== undefined) {
-      if (!equalBytes(existing.original, original)) {
-        throw new Error("cart identity was registered with different data ROM bytes");
+      if (!equalBytes(existing.rom, cart.rom)) {
+        throw new Error("cart identity was registered with different ROM bytes");
       }
       return;
     }
     if (this.#records.size >= CURRENT_CART_REPOSITORY_MAX_CARTS) {
       throw new RangeError("current-cart repository reached its 64-cart Worker limit");
     }
-    this.#records.set(key, { original });
+    this.#records.set(key, { original, rom: cart.rom.slice() });
+  }
+
+  put(cart: ParsedCart): void {
+    this.#assertLive();
+    const owned = copyParsedCart(cart);
+    const key = keyOf(owned.identity);
+    const original = owned.rom.slice(0, PICO_CART_DATA_ROM_SIZE);
+    const existing = this.#records.get(key);
+    if (existing !== undefined) {
+      if (!equalBytes(existing.rom, owned.rom)) {
+        throw new Error("cart identity was registered with different ROM bytes");
+      }
+      if (existing.cart !== undefined && !equalCart(existing.cart, owned)) {
+        throw new Error("cart identity was registered with different parsed cart content");
+      }
+      existing.cart = owned;
+      return;
+    }
+    if (this.#records.size >= CURRENT_CART_REPOSITORY_MAX_CARTS) {
+      throw new RangeError("current-cart repository reached its 64-cart Worker limit");
+    }
+    this.#records.set(key, { original, rom: owned.rom, cart: owned });
+  }
+
+  get(identity: CartIdentity): ParsedCart | undefined {
+    this.#assertLive();
+    const cart = this.#records.get(keyOf(identity))?.cart;
+    return cart === undefined ? undefined : copyParsedCart(cart);
   }
 
   readData(identity: CartIdentity, source: number, length: number): Uint8Array {

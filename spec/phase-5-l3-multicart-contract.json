@@ -52,9 +52,9 @@
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A"],
-  "activeWorkUnit": "5B",
-  "nextWorkUnit": "5C",
+  "completedWorkUnits": ["5A", "5B"],
+  "activeWorkUnit": "5C",
+  "nextWorkUnit": "5D",
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -70,29 +70,55 @@
     },
     "5B": {
       "name": "CartLoader / Resolver / Repository",
+      "status": "complete",
+      "result": {
+        "publicPorts": ["CartResolverPort", "CartRepositoryPort"],
+        "runtimeComponents": ["CartLoader", "CartCancellationSource"],
+        "workerAdapters": ["LocalCartBundleResolver", "CartRepositoryAdapter"],
+        "maximumLocalBundleEntries": 64,
+        "networkAccess": false,
+        "verification": [
+          "pnpm run test:phase-5b",
+          "pnpm run test:architecture",
+          "pnpm run test:phase-3g",
+          "pnpm run test:phase-4e",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "5C": {
+      "name": "Root HostRequest Pipeline",
       "status": "active",
       "allowedPaths": [
-        "packages/contracts/src/public.ts",
         "packages/runtime-core/src/ports/",
-        "packages/runtime-core/src/cart/",
         "packages/runtime-core/src/public.ts",
-        "apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts",
-        "apps/web-player/src/worker/adapters/cart-repository-adapter.ts",
-        "tests/runtime/phase-5b-cart-resolver.test.mjs",
+        "packages/runtime-core/src/frame-runtime.ts",
+        "packages/runtime-core/src/session/cart-session.ts",
+        "apps/web-player/src/worker/compose-runtime.ts",
+        "apps/web-player/src/worker/runtime-worker.ts",
+        "apps/web-player/src/transport/player-protocol.ts",
+        "apps/web-player/src/transport/public.ts",
+        "apps/web-player/src/transport/validators.ts",
+        "apps/web-player/src/main/player-runtime-client.ts",
+        "tests/runtime/phase-5c-root-host-request.test.mjs",
+        "tests/browser/phase-5c.html",
+        "tools/browser/run-phase-5c.mjs",
         "tests/architecture/",
+        "tests/contract/phase-5a-activation.test.mjs",
+        "docs/README.md",
         "docs/phases/5-l3-local-multicart.md",
         "spec/phase-5-l3-multicart-contract.json",
         "package.json"
       ],
       "exit": [
-        "browser-neutral resolver/repository ports use opaque refs and immutable access capabilities",
-        "local bundle adapter resolves only caller-provided entries and never fetches",
-        "decode, cancellation, stale result, limits, copy ownership and capability denial are tested",
-        "RuntimeCore and cart-codec remain free of browser/network/storage globals",
-        "pnpm run test:phase-5b and pnpm run test:architecture pass"
+        "production Worker recovers root boot and step HostRequests without blocking later control messages",
+        "payload, response, request count and lifecycle are bounded and copy-owned",
+        "generation plus request id rejects stale, duplicate and mismatched completions",
+        "logical time, audio, input and persistence do not commit while waiting",
+        "nested-host-suspend remains fail closed",
+        "Node real-WASM and Chrome production-path gates pass"
       ]
     },
-    "5C": { "name": "Root HostRequest Pipeline", "status": "pending" },
     "5D": { "name": "Guest load / Atomic Cart Swap", "status": "pending" },
     "5E": { "name": "External reload / cstore", "status": "pending" },
     "5F": { "name": "Coroutine / L3 Compatibility", "status": "pending" },

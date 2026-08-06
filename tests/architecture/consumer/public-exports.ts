@@ -17,7 +17,11 @@ import {
   PICO_CART_DATA_ID_MAX_BYTES,
   PICO_CART_DATA_NUMBER_COUNT,
   PICO_CART_DATA_ROM_SIZE,
+  PICO_CART_INPUT_MAX_BYTES,
+  PICO_CART_REF_MAX_BYTES,
+  PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES,
   PICO_RAM_SIZE,
+  type CartAccess,
   type CartIdentity,
   type PicoCartDataCommit,
   type PicoCartDataSeed,
@@ -26,11 +30,15 @@ import {
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
 import {
+  CartCancellationSource,
+  CartLoader,
   CartSession,
   createPicoApiHost,
   FrameSliceRuntime,
   logicalTimeRaw,
   type CartDataPersistencePort,
+  type CartRepositoryPort,
+  type CartResolverPort,
   type CurrentCartDataRepositoryPort,
   type CartSessionRuntimeContext,
   type CartSessionRuntimePort,
@@ -58,6 +66,9 @@ const exactCartDataBytes: 256 = PICO_CART_DATA_BYTES;
 const exactCartDataNumbers: 64 = PICO_CART_DATA_NUMBER_COUNT;
 const exactCartDataIdBytes: 64 = PICO_CART_DATA_ID_MAX_BYTES;
 const exactCartDataRomBytes: 17152 = PICO_CART_DATA_ROM_SIZE;
+const exactCartInputBytes: 1048576 = PICO_CART_INPUT_MAX_BYTES;
+const exactCartRefBytes: 256 = PICO_CART_REF_MAX_BYTES;
+const exactLocalBundleEntries: 64 = PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES;
 declare const pngBytes: Uint8Array;
 declare const textBytes: Uint8Array;
 const decodeOptions: P8PngDecodeOptions = { limits: { maximumCartVersion: 42 } };
@@ -101,6 +112,16 @@ declare const serializedError: SerializedRuntimeError;
 declare const cartDataCommit: PicoCartDataCommit;
 declare const cartDataPersistence: CartDataPersistencePort;
 declare const currentCartRepository: CurrentCartDataRepositoryPort;
+declare const cartRepository: CartRepositoryPort;
+declare const cartResolver: CartResolverPort;
+const cancellation = new CartCancellationSource();
+const cartLoader = new CartLoader(cartResolver, cartRepository);
+const cartAccess: CartAccess = {
+  load: true,
+  reloadData: true,
+  cstoreData: true,
+  include: false,
+};
 const oneSecondRaw = logicalTimeRaw(60n, 60);
 
 void lease;
@@ -112,6 +133,9 @@ void exactCartDataBytes;
 void exactCartDataNumbers;
 void exactCartDataIdBytes;
 void exactCartDataRomBytes;
+void exactCartInputBytes;
+void exactCartRefBytes;
+void exactLocalBundleEntries;
 void decodedCart;
 void decodedTextCart;
 void parsedCart;
@@ -125,6 +149,11 @@ void serializedError;
 void cartDataCommit;
 void cartDataPersistence;
 void currentCartRepository;
+void cartRepository;
+void cartResolver;
+void cancellation;
+void cartLoader;
+void cartAccess;
 void oneSecondRaw;
 
 export {};

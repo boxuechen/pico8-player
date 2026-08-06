@@ -73,6 +73,26 @@ export const PICO_CART_DATA_BYTES = 256;
 export const PICO_CART_DATA_NUMBER_COUNT = 64;
 export const PICO_CART_DATA_ID_MAX_BYTES = 64;
 
+/** Maximum caller-provided encoded cart input accepted by the L3 loader. */
+export const PICO_CART_INPUT_MAX_BYTES = 1_048_576;
+
+/** Maximum UTF-8 byte length of an opaque cart reference. */
+export const PICO_CART_REF_MAX_BYTES = 256;
+
+/** Maximum number of caller-authorized entries in one Worker-local bundle. */
+export const PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES = 64;
+
+/**
+ * Caller-created authority attached to resolved cart bytes. These bits are
+ * data, not hints: ref text, extensions and cart contents cannot elevate them.
+ */
+export interface CartAccess {
+  readonly load: boolean;
+  readonly reloadData: boolean;
+  readonly cstoreData: boolean;
+  readonly include: boolean;
+}
+
 export interface PicoControllerSnapshot {
   /** Player 0..7 left/right/up/down/O/X masks. */
   readonly controllers: readonly number[];
