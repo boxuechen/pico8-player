@@ -1,6 +1,8 @@
 import type { ParsedCart } from "@pico8-web/cart-codec";
 import {
   type PicoInputSnapshot,
+  type PicoCartDataCommit,
+  type PicoCartDataSeed,
   type PicoMemoryLease,
   type RuntimeErrorCode,
   type RuntimePhase,
@@ -111,6 +113,7 @@ export interface RuntimeFrame {
   /** 16-entry display-palette map snapshotted from Base RAM 0x5f10..0x5f1f. */
   readonly displayPalette: Uint8Array;
   readonly devkitFlags: number;
+  readonly cartDataCommit?: PicoCartDataCommit;
   /** Canonical PCM committed by this exact logical frame slice. */
   readonly audio: CanonicalAudioSlice;
 }
@@ -133,6 +136,7 @@ export type RuntimeBootResult =
       /** Canonical PCM for the 1/30-second startup transaction. */
       readonly audio: CanonicalAudioSlice;
       readonly devkitFlags: number;
+      readonly cartDataCommit?: PicoCartDataCommit;
     }
   | { readonly kind: "host-request"; readonly request: RuntimeHostRequest };
 
@@ -144,6 +148,7 @@ export type RuntimeStepResult =
 export interface FrameRuntimeOptions {
   readonly instructionBudget?: number;
   readonly picoApiHost?: PicoApiHost;
+  readonly cartDataSeeds?: readonly PicoCartDataSeed[];
 }
 
 interface PendingTransaction {
@@ -209,7 +214,14 @@ export class FrameSliceRuntime {
     this.#vm = vm;
     this.#instructionBudget = budget;
     this.#ram = new PicoRam(vm.memory, vm.logicalMemory);
-    const host = options.picoApiHost ?? createPicoApiHost(vm.memory, vm.logicalMemory);
+    if (options.picoApiHost !== undefined && options.cartDataSeeds !== undefined) {
+      throw new TypeError("cartDataSeeds cannot be combined with a custom PicoApiHost");
+    }
+    const host = options.picoApiHost ?? createPicoApiHost(
+      vm.memory,
+      vm.logicalMemory,
+      options.cartDataSeeds === undefined ? {} : { cartDataSeeds: options.cartDataSeeds },
+    );
     if (host.memoryLeaseId !== vm.memory.leaseId) {
       throw new Error("PicoApiHost is bound to a different memory lease");
     }
@@ -390,6 +402,8 @@ export class FrameSliceRuntime {
     this.#completedSlices = BigInt(this.#targetFps / 30);
     const targetFps = this.#targetFps as 30 | 60;
     const audio = this.#picoApiHost.renderAudioSlices(targetFps / 30, targetFps);
+    const cartDataCommit = this.#takeCartDataCommit();
+    if (!cartDataCommit.ok) return cartDataCommit;
     this.#state = "ready";
     return {
       ok: true,
@@ -399,6 +413,9 @@ export class FrameSliceRuntime {
         targetFps,
         audio,
         devkitFlags: this.#picoApiHost.devkitFlags,
+        ...(cartDataCommit.value === undefined
+          ? {}
+          : { cartDataCommit: cartDataCommit.value }),
       },
     };
   }
@@ -444,6 +461,9 @@ export class FrameSliceRuntime {
     this.#pending = undefined;
     this.#completedSlices += 1n;
     const targetFps = this.#targetFps as 30 | 60;
+    const audio = this.#picoApiHost.renderAudioSlices(1, targetFps);
+    const cartDataCommit = this.#takeCartDataCommit();
+    if (!cartDataCommit.ok) return cartDataCommit;
     const frame: RuntimeFrame = {
       frameId: this.#frameId++,
       completedSlices: this.#completedSlices.toString(),
@@ -452,10 +472,27 @@ export class FrameSliceRuntime {
       screen: this.#ram.copy(SCREEN_OFFSET, SCREEN_BYTES),
       displayPalette: this.#ram.copy(DISPLAY_PALETTE_OFFSET, DISPLAY_PALETTE_BYTES),
       devkitFlags: this.#picoApiHost.devkitFlags,
-      audio: this.#picoApiHost.renderAudioSlices(1, targetFps),
+      audio,
+      ...(cartDataCommit.value === undefined
+        ? {}
+        : { cartDataCommit: cartDataCommit.value }),
     };
     this.#state = "ready";
     return { ok: true, value: { kind: "frame", frame } };
+  }
+
+  #takeCartDataCommit(): RuntimeResult<PicoCartDataCommit | undefined> {
+    try {
+      return { ok: true, value: this.#picoApiHost.takeCartDataCommit() };
+    } catch (error) {
+      return this.#acceptFault({
+        code: "E_INVARIANT",
+        message: `cartdata commit snapshot failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        phase: "none",
+      });
+    }
   }
 }
 

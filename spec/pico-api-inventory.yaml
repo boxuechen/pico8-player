@@ -224,17 +224,20 @@ apis:
     phase: 3D
     note: documented devkit input selectors 30,31,32,33,34,36,38,39 are implemented through typed binding 33; complete stat remains deferred
   - name: cartdata
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 3E
+    note: synchronous one-shot validated slot selection through binding 34; prehydrated 256-byte seed is copied into live 0x5e00 RAM and the boolean reports seed presence
   - name: dget
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 3E
+    note: binding 35 returns signed Q16.16 raw little-endian values from the selected live 0x5e00 cartdata region
   - name: dset
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 3E
+    note: binding 36 writes signed Q16.16 raw little-endian values; committed transaction snapshots also detect direct RAM writes
   - name: reload
     status: unimplemented
     owner: packages/runtime-core

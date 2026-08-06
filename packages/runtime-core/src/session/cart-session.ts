@@ -3,6 +3,7 @@ import {
   PICO_CART_ROM_SIZE,
   PICO_RAM_SIZE,
   type CartIdentity,
+  type PicoCartDataCommit,
   type PicoInputSnapshot,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
@@ -70,6 +71,7 @@ export type CartSessionBootResult =
       readonly targetFps: 30 | 60;
       readonly audio: Extract<RuntimeBootResult, { kind: "ready" }>["audio"];
       readonly devkitFlags: number;
+      readonly cartDataCommit?: PicoCartDataCommit;
     }
   | { readonly kind: "host-request"; readonly request: CartSessionHostRequest };
 
@@ -162,6 +164,14 @@ function metadataOf(cart: CartRunSnapshot): CartSessionCartMetadata {
     identity: cart.identity,
     format: cart.format,
     version: cart.version,
+  });
+}
+
+function copyCartDataCommit(commit: PicoCartDataCommit): PicoCartDataCommit {
+  return Object.freeze({
+    id: commit.id,
+    bytes: commit.bytes.slice(),
+    revision: commit.revision,
   });
 }
 
@@ -451,6 +461,9 @@ export class CartSession {
         targetFps: result.targetFps,
         audio: result.audio,
         devkitFlags: result.devkitFlags,
+        ...(result.cartDataCommit === undefined
+          ? {}
+          : { cartDataCommit: copyCartDataCommit(result.cartDataCommit) }),
       },
     };
   }
@@ -483,7 +496,13 @@ export class CartSession {
       value: {
         kind: "frame",
         generation: this.#generation,
-        frame: { ...result.frame, screen: result.frame.screen.slice() },
+        frame: {
+          ...result.frame,
+          screen: result.frame.screen.slice(),
+          ...(result.frame.cartDataCommit === undefined
+            ? {}
+            : { cartDataCommit: copyCartDataCommit(result.frame.cartDataCommit) }),
+        },
       },
     };
   }

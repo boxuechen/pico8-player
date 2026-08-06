@@ -1,5 +1,7 @@
 import {
   PICO_RAM_SIZE,
+  type PicoCartDataCommit,
+  type PicoCartDataSeed,
   type PicoInputSnapshot,
   type PicoMemoryLease,
 } from "@pico8-web/contracts";
@@ -13,6 +15,11 @@ import { L1Graphics } from "../graphics/l1-graphics.js";
 import { L1Input } from "../input/l1-input.js";
 import type { PicoLogicalMemoryPort } from "../frame-runtime.js";
 import { PicoRam } from "../memory/pico-ram.js";
+import { CartDataCore } from "../persistence/cart-data-core.js";
+
+export interface PicoApiHostOptions {
+  readonly cartDataSeeds?: readonly PicoCartDataSeed[];
+}
 
 /**
  * Browser-neutral synchronous PICO API surface called from z8lua imports.
@@ -21,6 +28,7 @@ import { PicoRam } from "../memory/pico-ram.js";
 export interface PicoApiHost {
   readonly memoryLeaseId: string;
   readonly devkitFlags: number;
+  takeCartDataCommit(): PicoCartDataCommit | undefined;
   reset(): void;
   resetAudio(): void;
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void;
@@ -121,6 +129,9 @@ export interface PicoApiHost {
   /** Returns the current tick's edge/repeat state as a boolean encoded as 0/1. */
   btnp(buttonRaw: number, playerRaw?: number): number;
   stat(selectorRaw: number): number;
+  cartdata(idBytes: Uint8Array): number;
+  dget(indexRaw: number): number;
+  dset(indexRaw: number, valueRaw: number): void;
   sfx(
     sfxRaw: number,
     channelRaw?: number,
@@ -135,8 +146,13 @@ class RuntimePicoApiHost implements PicoApiHost {
   readonly #graphics: L1Graphics;
   readonly #input: L1Input;
   readonly #audio: PicoSfxSynth;
+  readonly #cartData: CartDataCore;
 
-  constructor(memory: PicoMemoryLease, logicalMemory: PicoLogicalMemoryPort) {
+  constructor(
+    memory: PicoMemoryLease,
+    logicalMemory: PicoLogicalMemoryPort,
+    options: PicoApiHostOptions,
+  ) {
     if (
       !(memory.buffer instanceof ArrayBuffer) ||
       memory.byteLength !== PICO_RAM_SIZE ||
@@ -153,12 +169,14 @@ class RuntimePicoApiHost implements PicoApiHost {
       play: (bytes) => this.#audio.playP8sciiAudio(bytes),
     });
     this.#input = new L1Input(ram);
+    this.#cartData = new CartDataCore(picoRam, options.cartDataSeeds ?? []);
   }
 
   reset(): void {
     this.#graphics.reset();
     this.#input.reset();
     this.#audio.reset();
+    this.#cartData.reset();
   }
 
   resetAudio(): void {
@@ -171,6 +189,10 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   get devkitFlags(): number {
     return this.#input.devkitFlags;
+  }
+
+  takeCartDataCommit(): PicoCartDataCommit | undefined {
+    return this.#cartData.takeCommit();
   }
 
   renderAudioSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice {
@@ -416,12 +438,25 @@ class RuntimePicoApiHost implements PicoApiHost {
   stat(selectorRaw: number): number {
     return this.#input.stat(selectorRaw);
   }
+
+  cartdata(idBytes: Uint8Array): number {
+    return this.#cartData.cartdata(idBytes);
+  }
+
+  dget(indexRaw: number): number {
+    return this.#cartData.dget(indexRaw);
+  }
+
+  dset(indexRaw: number, valueRaw: number): void {
+    this.#cartData.dset(indexRaw, valueRaw);
+  }
 }
 
 /** Create the browser-neutral host over the VM's stable memory lease. */
 export function createPicoApiHost(
   memory: PicoMemoryLease,
   logicalMemory: PicoLogicalMemoryPort,
+  options: PicoApiHostOptions = {},
 ): PicoApiHost {
-  return new RuntimePicoApiHost(memory, logicalMemory);
+  return new RuntimePicoApiHost(memory, logicalMemory, options);
 }

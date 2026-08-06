@@ -64,6 +64,9 @@ export const PICO_CONTROLLER_COUNT = 8;
 export const PICO_CONTROLLER_BUTTON_COUNT = 6;
 export const PICO_CONTROLLER_BUTTON_MASK = 0x3f;
 export const PICO_DEVKIT_KEYPRESS_BATCH_LIMIT = 64;
+export const PICO_CART_DATA_BYTES = 256;
+export const PICO_CART_DATA_NUMBER_COUNT = 64;
+export const PICO_CART_DATA_ID_MAX_BYTES = 64;
 
 export interface PicoControllerSnapshot {
   /** Player 0..7 left/right/up/down/O/X masks. */
@@ -82,4 +85,17 @@ export interface PicoDevkitInputBatch {
 
 export interface PicoInputSnapshot extends PicoControllerSnapshot {
   readonly devkit: PicoDevkitInputBatch;
+}
+
+/** Browser-neutral prehydrated record copied before guest execution begins. */
+export interface PicoCartDataSeed {
+  readonly id: string;
+  readonly bytes: Uint8Array;
+}
+
+/** Copy-owned snapshot emitted only after a successful runtime transaction. */
+export interface PicoCartDataCommit {
+  readonly id: string;
+  readonly bytes: Uint8Array;
+  readonly revision: number;
 }

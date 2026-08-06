@@ -72,6 +72,8 @@ function delegateHost(memory, logicalMemory, calls) {
   const base = createPicoApiHost(memory, logicalMemory);
   return {
     memoryLeaseId: base.memoryLeaseId,
+    get devkitFlags() { return base.devkitFlags; },
+    takeCartDataCommit: () => base.takeCartDataCommit(),
     reset: () => base.reset(),
     resetAudio: () => base.resetAudio(),
     beginTick: (input, targetFps) => base.beginTick(input, targetFps),

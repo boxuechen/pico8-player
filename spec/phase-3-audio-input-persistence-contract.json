@@ -9,9 +9,9 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A", "3B", "3C", "3D"],
-  "activeWorkUnit": "3E",
-  "nextWorkUnit": "3F",
+  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E"],
+  "activeWorkUnit": "3F",
+  "nextWorkUnit": "3G",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -320,7 +320,7 @@
     },
     "3E": {
       "name": "Cartdata Core",
-      "status": "active",
+      "status": "complete",
       "apis": ["cartdata", "dget", "dset"],
       "memory": {
         "range": "0x5e00..0x5eff",
@@ -343,7 +343,7 @@
         "committed-256-byte-snapshot-publication"
       ],
       "persistenceSeam": {
-        "input": "browser-neutral-prehydrated-id-to-256-byte-seed-map",
+        "input": "browser-neutral-readonly-array-of-id-and-256-byte-seed-records",
         "output": "immutable-committed-id-bytes-revision-snapshot",
         "asyncIndexedDb": "owned-by-3F-not-3E"
       },
@@ -359,9 +359,90 @@
         "browser-neutral-seed-and-commit-port",
         "deterministic-reset-fault-and-golden-tests",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingIds": {
+          "cartdata": 34,
+          "dget": 35,
+          "dset": 36
+        },
+        "runtimeCore": "package-private CartDataCore over canonical PicoRam",
+        "commitPolicy": {
+          "boundary": "successful-boot-or-frame-only",
+          "baseline": "selected-seed-or-absent-zero-slot",
+          "dirtyObservation": "full-256-byte-live-ram-compare",
+          "noChange": "suppressed",
+          "revision": "generation-local-positive-monotonic-integer",
+          "ownership": "frozen-record-with-copy-owned-byte-snapshot"
+        },
+        "golden": "tests/golden/phase-3e-cartdata.json",
+        "goldenSha256": "8277cd8f7054e6fef828a16c68e40d857dbcab286fa59d4a965f00590cd7746f",
+        "browserGate": "none-3E-is-browser-neutral",
+        "knownDifferences": [
+          "the deterministic cartdata golden is a project oracle rather than an official persistence capture",
+          "invalid ids repeated selection preactivation and out-of-range indices fault with project-owned E_HOST_API policy",
+          "revision restarts at one for each fresh runtime generation",
+          "durable IndexedDB hydration commit migration and failure reporting remain owned by active work unit 3F"
+        ],
+        "verification": [
+          "pnpm run test:phase-3e",
+          "pnpm run test:phase-3d:chrome",
+          "pnpm run test:phase-3b",
+          "pnpm run test:phase-2f",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "3F": {
+      "name": "IndexedDB Persistence",
+      "status": "active",
+      "storage": {
+        "database": "pico8-web-player",
+        "databaseVersion": 1,
+        "objectStore": "cartdata",
+        "key": "profile-namespace-plus-cartdata-id",
+        "cartHashInKey": false,
+        "recordSchemaVersion": 1,
+        "bytes": 256,
+        "maximumHydratedRecords": 4096,
+        "maximumHydratedBytes": 1048576
+      },
+      "migration": {
+        "legacyRecordSchemaVersion": 0,
+        "policy": "lazy-read-normalize-and-rewrite-as-current-schema",
+        "futureSchema": "visible-read-diagnostic-and-record-skip"
+      },
+      "workerOwns": [
+        "indexeddb-open-upgrade-and-record-validation",
+        "preboot-namespace-hydration-before-load-and-reset",
+        "latest-commit-coalescing-per-cartdata-id",
+        "durable-flush-before-generation-replacement-and-dispose",
+        "read-write-diagnostics-without-simulation-fault"
+      ],
+      "runtimeCoreOwns": [
+        "synchronous-cartdata-selection-from-prehydrated-seeds",
+        "live-ram-authority-and-committed-snapshot-production"
+      ],
+      "failurePolicy": {
+        "read": "E_PERSISTENCE_READ-diagnostic-then-empty-seed-fallback",
+        "write": "E_PERSISTENCE_WRITE-diagnostic-game-continues-and-latest-dirty-snapshot-remains-retryable",
+        "ui": "existing-player-diagnostic-aria-live-surface"
+      },
+      "lifecycle": {
+        "commandOrdering": "serialized-worker-command-queue-awaits-async-load-reset-and-flush",
+        "steadyCommit": "nonblocking-latest-per-id-coalescing",
+        "flushBoundaries": ["load", "reset", "pause", "stop", "dispose", "pagehide"],
+        "staleGeneration": "old-generation-commit-cannot-enter-new-generation-after-preboot-hydrate"
+      },
+      "exit": [
+        "real-indexeddb-worker-adapter-with-bounded-versioned-records",
+        "preboot-hydration-and-durable-reload-through-production-worker",
+        "coalesced-commit-flush-migration-and-copy-isolation",
+        "failure-visible-read-write-fallback-without-game-fault",
+        "node-fake-port-and-chrome-production-gates",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "3F": { "name": "IndexedDB Persistence", "status": "planned" },
     "3G": { "name": "Current-cart reload and cstore", "status": "planned" },
     "3H": { "name": "Conformance and Phase Exit", "status": "planned" }
   },

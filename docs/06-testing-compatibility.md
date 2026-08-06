@@ -729,7 +729,8 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
   `tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
 - Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；Phase 3C/3D 已实现固定八玩家
   controller、keyboard/Gamepad/multitouch、input-only devkit `stat()` 与 trusted pointer-lock production
-  flow；persistence 和 resolver 仍 `unsupported`/Deferred，其中同步 cartdata core 已由 active 3E 授权。
+  flow；同步 cartdata core 已由 Phase 3E 实现，IndexedDB persistence 由 active 3F 授权；resolver 仍
+  `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
@@ -835,6 +836,25 @@ Known Differences：deterministic input trace 是项目 oracle，不是官方 de
 Known Differences：golden 是项目 device oracle，不是官方 capture；Latin-1/control-key mapping 不覆盖
 extended P8SCII、Unicode、IME 或 clipboard；Chrome 150 自动化 pointer lock 使用 headful mode；完整
 system/audio/memory/network `stat()` 仍 Deferred。Phase 3D 开放 P0/P1 为 `0`。
+
+### 15.16 Phase 3E Cartdata Core 矩阵
+
+本表覆盖同步 `cartdata/dget/dset` 与 browser-neutral persistence seam。项目 golden 位于
+`tests/golden/phase-3e-cartdata.json`；IndexedDB durable behavior 从本表明确排除，由 active 3F 验证。
+
+| 行为 | Phase 3E 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| ABI/real-WASM | append-only operations `34..36`；cartdata boolean、signed/fractional Q16 raw、64 indices 与 little-endian bytes passed | `compatible`（project profile） | 3F 不改变 guest ABI |
+| id/index policy | id `1..64` lower-case ASCII/digit/underscore、one call/execution；repeat/invalid/preactivation/out-of-range 均为 `E_HOST_API` | `compatible`（strict project policy） | 官方未明确 fault shape，保持 Known Difference |
+| RAM authority | seed hit exact-copy、miss all-zero；`dget/dset`、`poke4` 和 direct byte poke 共用 live `0x5e00..0x5eff` | gate passed | IndexedDB 只能提供 seed/消费 commit，不得成为并行权威状态 |
+| transaction/commit | successful boot/frame full-256-byte dirty compare；no-change suppression、generation-local revision、fault/stopped no publish passed | gate passed | 3F durable write 只消费 committed snapshot |
+| ownership/lifecycle | seed input copy、frozen copy-owned commit、caller mutation isolation、reset rehydrate、multi-session isolation passed | gate passed | 3F 增加 namespace/storage copy boundary |
+| regressions | architecture、Phase 2F、3B AudioWorklet 与 3D Chrome pointer-lock flow passed | gate passed | Chrome/IndexedDB 首次进入 3F gate |
+| golden | file SHA-256 `8277cd8f…7746f`，boot/direct-write/no-change trace exact | gate passed | oracle 变化必须人工审阅 RAM/transaction diff |
+
+Known Differences：golden 是项目 oracle，不是官方 persistence capture；非法调用采用严格
+`E_HOST_API` policy；commit revision 在每个 fresh runtime generation 从 `1` 重新开始；3E 没有
+IndexedDB、durable write 或 browser gate。Phase 3E 开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

@@ -6,7 +6,7 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 ## 当前开发入口
 
 当前 active phase 是 [Phase 3 — Audio、Input 与 Persistence](./phases/3-audio-input-persistence.md)，
-active work unit 为 **3E Cartdata Core**。Phase 3A–3D 已完成；Phase 2A–2F 已归档。
+active work unit 为 **3F IndexedDB Persistence**。Phase 3A–3E 已完成；Phase 2A–2F 已归档。
 
 日常实现只读取以下入口，不通读已完成阶段的执行过程：
 

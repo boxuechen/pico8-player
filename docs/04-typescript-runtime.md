@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 3D；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 3E；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -16,8 +16,9 @@
 | **Implemented through Phase 3B** | browser-neutral four-channel SFX/music/P8SCII synth、live song/SFX decode、bindings `31/32`、dedicated Worker PCM 与 Chrome 44.1/48kHz AudioWorklet output |
 | **Implemented through Phase 3C** | fixed eight-player snapshot、independent `btn/btnp` latch、keyboard P0/P1、standard Gamepad、multitouch 和 production Chrome input lifecycle |
 | **Implemented through Phase 3D** | input-only `stat()`、`0x5f2d` devkit flags、bounded key FIFO、Worker event accumulator、mouse button overlay 与 app-owned trusted pointer-lock lifecycle |
+| **Implemented through Phase 3E** | synchronous `cartdata/dget/dset`、live `0x5e00..0x5eff` authority、prehydrated browser-neutral seeds 与 committed copy-owned dirty snapshots |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、IndexedDB persistence、完整 cart swap 与 multicart；同步 cartdata core 由 active 3E 授权 |
+| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、完整 cart swap 与 multicart；IndexedDB persistence 由 active 3F 授权 |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -563,8 +564,8 @@ type StepResult = Readonly<{
 
 ## 11. Persistence
 
-> 状态：active 3E 授权 browser-neutral 同步 guest mirror、prehydrated seed 与 immutable commit
-> port；IndexedDB hydrate/commit transaction 仍由 3F 实现。
+> 状态：Phase 3E 已实现 browser-neutral 同步 guest mirror、prehydrated seed 与 immutable commit
+> seam；active 3F 实现 Worker-owned IndexedDB hydrate/commit transaction。
 
 ### 11.1 同步 guest、异步浏览器
 

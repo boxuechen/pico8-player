@@ -398,6 +398,34 @@
         { "name": "selectorRaw", "type": "q16.16-raw-i32" }
       ],
       "result": "stat-input-selector"
+    },
+    {
+      "id": 34,
+      "guestName": "cartdata",
+      "hostMethod": "cartdata",
+      "parameters": [
+        { "name": "idBytes", "type": "byte-string" }
+      ],
+      "result": "boolean"
+    },
+    {
+      "id": 35,
+      "guestName": "dget",
+      "hostMethod": "dget",
+      "parameters": [
+        { "name": "indexRaw", "type": "q16.16-raw-i32" }
+      ],
+      "result": "q16.16-raw-i32"
+    },
+    {
+      "id": 36,
+      "guestName": "dset",
+      "hostMethod": "dset",
+      "parameters": [
+        { "name": "indexRaw", "type": "q16.16-raw-i32" },
+        { "name": "valueRaw", "type": "q16.16-raw-i32" }
+      ],
+      "result": "void"
     }
   ]
 }

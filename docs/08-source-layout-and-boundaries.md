@@ -11,7 +11,7 @@
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
 | **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
 | **Implemented through Phase 2 exit** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font、display-palette frame transport 与 project-owned production conformance gate |
-| **Implemented through Phase 3D** | browser-neutral `PicoSfxSynth`、live-RAM SFX/music/P8SCII audio、deterministic 22050Hz PCM、八玩家 input latch，以及 app-owned keyboard/Gamepad/multitouch/devkit input 与 production device flow |
+| **Implemented through Phase 3E** | browser-neutral audio、八玩家/devkit input，以及 live-RAM cartdata core 与 copy-owned seed/commit seam；device/storage adapters 仍由 app 拥有 |
 | **Scaffold** | persistence/resolver adapters 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -19,7 +19,7 @@
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
 [`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1/2
-已完成，Phase 3A–3D 已独立关闭，当前 active work unit 是 Phase 3E，入口位于
+已完成，Phase 3A–3E 已独立关闭，当前 active work unit 是 Phase 3F，入口位于
 [`phases/3-audio-input-persistence.md`](./phases/3-audio-input-persistence.md)。Phase 2 边界由
 [exit evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 锁定。
 
@@ -184,10 +184,10 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 3B 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。Phase 3E 当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
 `graphics/map-memory.ts`、`graphics/p8scii-text.ts`、`graphics/p8scii-font.ts`、
-`memory/pico-ram.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、`scheduler/frame-scheduler.ts`、
+`memory/pico-ram.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、`persistence/cart-data-core.ts`、`scheduler/frame-scheduler.ts`、
 `pico-api/pico-api-host.ts` 和只负责
 re-export 的 `public.ts`。
 `FrameSliceRuntime` + `FrameVmPort` + browser-neutral `PicoApiHost` 拥有单 generation 的
@@ -197,8 +197,10 @@ fault/stop/dispose lifecycle；`FrameScheduler` 拥有 wall-clock accumulator/ca
 不拥有 clock source 或 simulation。`PicoSfxSynth` 从同一 physical Pico RAM live-read SFX/song，
 由 committed logical slices 生成 browser-neutral canonical PCM；visual/custom-font 与同步 audio
 P8SCII 都落在 RuntimeCore。Worker 只把 startup/frame PCM 交给 app-owned dedicated transport，
-AudioWorklet 独占 device queue/resampling。固定八玩家 latch 已在 core，keyboard/Gamepad/touch
-device mapping 已在 app；devkit input、deterministic scheduler 和 persistence 仍未落地。
+AudioWorklet 独占 device queue/resampling。固定八玩家/devkit latch 已在 core，keyboard/Gamepad/touch
+device mapping 已在 app。package-private `CartDataCore` 从 prehydrated seed 复制到 live
+`0x5e00..0x5eff`，并只在 committed boot/frame 输出 copy-owned dirty snapshot；active 3F 激活
+browser-neutral persistence port contract 与 Worker-owned IndexedDB adapter，RuntimeCore 不依赖 storage API。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。

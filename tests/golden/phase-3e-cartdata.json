@@ -1,0 +1,15 @@
+{
+  "boot": {
+    "id": "golden_slot",
+    "revision": 1,
+    "firstEightHex": "0080feff00000000"
+  },
+  "frames": [
+    {
+      "id": "golden_slot",
+      "revision": 2,
+      "firstEightHex": "0080feff34120000"
+    },
+    null
+  ]
+}

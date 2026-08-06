@@ -13,8 +13,13 @@ import {
   PICO_CONTROLLER_BUTTON_COUNT,
   PICO_CONTROLLER_BUTTON_MASK,
   PICO_CONTROLLER_COUNT,
+  PICO_CART_DATA_BYTES,
+  PICO_CART_DATA_ID_MAX_BYTES,
+  PICO_CART_DATA_NUMBER_COUNT,
   PICO_RAM_SIZE,
   type CartIdentity,
+  type PicoCartDataCommit,
+  type PicoCartDataSeed,
   type PicoInputSnapshot,
   type PicoMemoryLease,
   type SerializedRuntimeError,
@@ -46,6 +51,9 @@ const exactSize: 65536 = PICO_RAM_SIZE;
 const exactControllerCount: 8 = PICO_CONTROLLER_COUNT;
 const exactButtonCount: 6 = PICO_CONTROLLER_BUTTON_COUNT;
 const exactButtonMask: 63 = PICO_CONTROLLER_BUTTON_MASK;
+const exactCartDataBytes: 256 = PICO_CART_DATA_BYTES;
+const exactCartDataNumbers: 64 = PICO_CART_DATA_NUMBER_COUNT;
+const exactCartDataIdBytes: 64 = PICO_CART_DATA_ID_MAX_BYTES;
 declare const pngBytes: Uint8Array;
 declare const textBytes: Uint8Array;
 const decodeOptions: P8PngDecodeOptions = { limits: { maximumCartVersion: 42 } };
@@ -60,7 +68,11 @@ const frameVm: FrameVmPort = new Z8LuaFrameVm(
   frameModule,
   createPicoApiHostRouter(frameModule),
 );
-const frameRuntime = new FrameSliceRuntime(frameVm);
+const cartDataSeed: PicoCartDataSeed = {
+  id: "public_export",
+  bytes: new Uint8Array(PICO_CART_DATA_BYTES),
+};
+const frameRuntime = new FrameSliceRuntime(frameVm, { cartDataSeeds: [cartDataSeed] });
 const picoApiHost: PicoApiHost = createPicoApiHost(
   frameVm.memory,
   frameVm.logicalMemory,
@@ -82,6 +94,7 @@ const input: PicoInputSnapshot = {
   },
 };
 declare const serializedError: SerializedRuntimeError;
+declare const cartDataCommit: PicoCartDataCommit;
 const oneSecondRaw = logicalTimeRaw(60n, 60);
 
 void lease;
@@ -89,6 +102,9 @@ void exactSize;
 void exactControllerCount;
 void exactButtonCount;
 void exactButtonMask;
+void exactCartDataBytes;
+void exactCartDataNumbers;
+void exactCartDataIdBytes;
 void decodedCart;
 void decodedTextCart;
 void parsedCart;
@@ -99,6 +115,7 @@ void picoApiHost;
 void cartSession;
 void input;
 void serializedError;
+void cartDataCommit;
 void oneSecondRaw;
 
 export {};
