@@ -250,6 +250,11 @@ export class PlayerComposition {
     return this.runtime.stop();
   }
 
+  flushPersistence(): void {
+    if (this.#disposed) return;
+    this.runtime.flushPersistence();
+  }
+
   resumeAudio(): Promise<void> {
     this.#assertActive();
     return this.audio?.resume() ?? Promise.resolve();

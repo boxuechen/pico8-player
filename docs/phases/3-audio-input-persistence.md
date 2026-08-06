@@ -1,6 +1,6 @@
 # Phase 3 — Audio、Input 与 Persistence
 
-> 状态：Active；当前 work unit：3D
+> 状态：Active；当前 work unit：3G
 > 机器合同：[`spec/phase-3-audio-input-persistence-contract.json`](../../spec/phase-3-audio-input-persistence-contract.json)
 > 前置证据：[`Phase 2 Graphics/Memory/Text exit`](../evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -37,8 +37,8 @@ Non-goals：
 | 3C | Controller Input | Complete | player 0..7、keyboard/gamepad/touch 的 deterministic controller snapshots |
 | 3D | Devkit Input | Complete | input-only `stat()`、mouse/keyboard queue 和 pointer-lock lifecycle |
 | 3E | Cartdata Core | Complete | 同步 `cartdata/dget/dset` 与 256-byte browser-neutral mirror |
-| 3F | IndexedDB Persistence | **Active** | preboot hydrate、durable commit、migration 与 failure-visible fallback |
-| 3G | Current-cart `reload/cstore` | Planned | 无 resolver 的 current-cart ROM/overlay 同步路径 |
+| 3F | IndexedDB Persistence | Complete | preboot hydrate、durable commit、migration 与 failure-visible fallback |
+| 3G | Current-cart `reload/cstore` | **Active** | 无 resolver 的 current-cart ROM/overlay 同步路径 |
 | 3H | Conformance 与 Phase Exit | Planned | Node real-WASM 与 Chrome 通过 audio/input/persistence、性能和恢复门禁 |
 
 ## Completed work unit：3A
@@ -80,82 +80,88 @@ browser-neutral seed/commit DTO 与 committed-transaction dirty observation 已�
 边界、fault、reset、multi-session、direct poke 和 deterministic golden 由机器合同的
 `workUnits.3E.result` 保存；可执行回归为 `pnpm run test:phase-3e`，兼容矩阵见
 [15.16](../06-testing-compatibility.md#1516-phase-3e-cartdata-core-矩阵)。IndexedDB、异步 hydrate
-和 durable write 不在 RuntimeCore 内，继续由 active 3F 拥有。
+和 durable write 不在 RuntimeCore 内；3F 已在 Worker-owned IndexedDB adapter 完成。
 
-## Active work unit：3F
+## Completed work unit：3F
+
+browser-neutral `CartDataPersistencePort`、Worker-owned IndexedDB schema/adapter、preboot hydrate、
+latest-per-ID commit coalescing、lifecycle flush、legacy migration 和 recoverable diagnostics 已完成。
+Node fake-port 与 Chrome production 结果由机器合同的 `workUnits.3F.result` 保存；可执行回归为
+`pnpm run test:phase-3f`，兼容矩阵见
+[15.17](../06-testing-compatibility.md#1517-phase-3f-indexeddb-persistence-矩阵)。
+
+## Active work unit：3G
 
 ### Observable behavior
 
-1. production Runtime Worker 在 `loadCart/reset` 创建新 generation 前，先从 IndexedDB 按固定
-   profile/runtime namespace 读取所有可用 cartdata records，验证 id/schema/256-byte payload 并复制成
-   `PicoCartDataSeed[]`。hydrate 完成前不得启动 guest；storage key 不包含 cart hash。
-2. 数据库固定为 `pico8-web-player` version `1`、object store `cartdata`；current record schema 为
-   `{schemaVersion:1, namespace, id, bytes}`，key 由 namespace + id 组成。每 namespace 最多 hydrate
-   `4096` records / `1 MiB`，禁止 malformed storage 导致无界增长。
-3. 兼容 project-owned legacy schema `0`：读取时验证并规范化，随后 lazy rewrite 为 schema `1`；未知
-   future schema 或损坏 record 跳过并产生 `E_PERSISTENCE_READ` diagnostic，不把脏 bytes 交给 core。
-4. 每个 successful boot/frame 的 `PicoCartDataCommit` 由 Worker adapter copy 后按 id 合并，只保留最新
-   snapshot；steady simulation 不等待 IndexedDB。`load/reset/pause/stop/dispose/pagehide` 必须触发
-   best-effort durable flush，其中 generation replacement 必须先 await 旧 generation flush，再 hydrate
-   新 generation，防止 stale commit 穿透。
-5. open/read/upgrade 失败使用空 seed fallback，cart 仍可运行，并向现有 main diagnostic aria-live surface
-   发送 recoverable `E_PERSISTENCE_READ`。write/quota/transaction 失败发送
-   `E_PERSISTENCE_WRITE`，游戏继续且最新 dirty snapshot 保留供后续 flush retry；不得报告为已保存。
-6. Worker command queue 扩展为 await controller 的 sync-or-async result；无 persistence adapter 的 Node
-   路径保持同步 test-double 兼容。3F 不改变 RuntimeCore RAM authority、guest API ABI、Canvas/audio/input
-   transport，也不实现 `reload/cstore/load`。
+1. 激活 guest `reload(dest?,src?,len?)` 与 `cstore(dest?,src?,len?)`，使用 append-only operations
+   `37..38` 和既有 Q16.16 raw/presence-mask ABI；默认值固定为 `0,0,0x4300`，返回 `nil`。
+2. 当前 cart 的规范化 ROM `0x0000..0x42ff` 是唯一初始 data source。Worker repository 按
+   `CartIdentity.contentSha256` 保存 original snapshot 与 copy-on-write overlay；不得把 mutable ROM view
+   暴露给 RuntimeCore。`0x4300..0x7fff` code container 永远不可由这两个 API 读写。
+3. `reload` 必须在 guest 调用返回前，把 effective ROM（overlay 优先、否则 original）指定区间复制到
+   live Base RAM；`cstore` 必须先从 live Base RAM 复制稳定 snapshot，再同步更新当前 cart overlay。
+   同一调用栈内 `cstore` 后紧接 `reload` 必须看到新 bytes；重叠区间使用 snapshot-copy 语义。
+4. destination/source/length 使用现有 `raw >> 16` integer conversion 后完整验证：RAM 端必须位于
+   `0..0xffff`，ROM 端必须位于 `0..0x42ff`；负值、overflow/out-of-range 在任何 mutation 前产生
+   `E_HOST_API`。
+5. overlay 在一个 production Worker lifetime 内按 identity 隔离；reset 与再次 load 相同 bytes/identity
+   必须保留，切换到不同 identity 不得泄漏。Worker dispose 后丢弃；3G 不把 overlay 写入 cartdata
+   IndexedDB，也不覆写用户本地 cart 文件。
+6. filename/ref 参数、guest `load()`、external cart、resolver、BBS、network 与 multicart 不激活；只要
+   调用了带 ref 的 overload，就在 mutation 前返回 `E_FEATURE_UNSUPPORTED`。current-cart path 必须纯同步，
+   不产生 HostRequest、不进入 waiting state，也不改变 frame/audio/cartdata transaction 顺序。
 
 ### 允许修改的范围
 
-- `packages/contracts/src/**` 的 persistence error codes；3E seed/commit DTO 只能兼容扩展；
-  `packages/runtime-core/src/ports/**` 只允许加入 browser-neutral persistence port contract
-- `apps/web-player/src/worker/{adapters,compose-runtime.ts,runtime-worker.ts,player-worker-entry.mjs}` 的
-  IndexedDB adapter、async command ordering、hydrate/commit/flush 与 diagnostics
-- `apps/web-player/src/{transport,main}/**` 中最小的 flush command、`pagehide` lifecycle 和现有 diagnostic
-  展示路径；不得把 storage state 搬到 Window
-- `tests/{runtime,browser,architecture,fixtures}/**`、`tools/browser/**`、`package.json`、机器合同、兼容矩阵
-  和本 active 文档
+- `spec/abi/pico-host-api-v1.json`、generated bindings、WASM bridge 及其 manifest，只允许 append
+  `reload/cstore` 两个同步 binding；不得改写既有 operation ID
+- `packages/runtime-core/src/{ports,memory,pico-api,frame-runtime,session,public}.ts` 中 browser-neutral
+  current-cart repository contract、range/copy logic 和 generation wiring
+- `apps/web-player/src/worker/{adapters/cart-repository-adapter.ts,compose-runtime.ts}` 的 Worker-local
+  original/overlay repository 与 identity composition；不得把 ROM/overlay authority搬到 Window
+- `tests/{runtime,browser,architecture,fixtures,golden}/**`、`tools/browser/**`、`package.json`、WASM/phase
+  machine contract、兼容矩阵和本 active 文档
 
-不得修改 `docs/evidence/**`；不得使用 localStorage、Service Worker、cart hash key、任意 URL、BBS、
-guest `reload/cstore/load` 或通用 save-state。不得让 IDB transaction 位于 WASM import 或逐帧阻塞
-simulation；不得因持久化失败把 otherwise-valid cart 转为 VM fault。
+不得修改 `docs/evidence/**`；不得实现 guest `load`、HostRequest suspension、任意 ref/filename、URL/BBS、
+multicart、overlay IndexedDB schema、local file overwrite、export UI 或通用 save-state。不得把 32 KiB cart
+container 当成全部可读写 data ROM，也不得让 cartdata namespace 与 per-cart overlay 共用 key space。
 
 ### Routed contracts
 
-- [Persistence owner 与 failure policy](../04-typescript-runtime.md#11-persistence)
-- [Worker serialization 与 lifecycle](../04-typescript-runtime.md#12-workerwatchdog-与消息协议)
+- [CartLoader/repository capability 与 data ROM 范围](../04-typescript-runtime.md#54-cartloader-与资源边界)
+- [`load/reload/cstore` bounded target](../04-typescript-runtime.md#13-loadreloadcstore-与-cart-swap)
 - [RuntimeCore/app package ownership](../08-source-layout-and-boundaries.md#2-package-职责)
-- [官方 Cartridge Data](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#Cartridge_Data)
+- [官方 Memory `reload/cstore`](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#Memory)
 
 ### Verification
 
-3F 必须新增 `pnpm run test:phase-3f`，覆盖：
+3G 必须新增 `pnpm run test:phase-3g`，覆盖：
 
-- fake port 的 preboot ordering、seed copy、latest-per-id coalescing、flush/retry、load/reset/fault/stop/dispose
-  generation isolation，以及 read/write diagnostic 不改变 simulation state。
-- IndexedDB adapter 的 fresh schema、namespace/key no-cart-hash、exact 256-byte round-trip、record bounds、
-  legacy-0 migration、future/corrupt record rejection、transaction abort 和 copy ownership。
-- production Worker + real IndexedDB Chrome gate：首次 `cartdata=false` 写入，flush/restart 后
-  `cartdata=true` 且 256 bytes exact；reset/pagehide lifecycle、migration 和 zero Worker errors。
-- 3E real-WASM golden、3D input、3B audio、Phase 2 graphics 和 architecture 回归。
+- real-WASM default/explicit `reload/cstore`、same-stack visibility、Q16 integer/range/code protection、
+  source/destination overlap、zero length 和 mutation-before-fault assertions。
+- repository original/overlay copy ownership、different identity isolation、reset/same-identity load preservation、
+  dispose clear，以及 ref overload `E_FEATURE_UNSUPPORTED` 无副作用。
+- Chrome production cart 通过 screen/RAM trace 证明 cstore→reload、reset/same-identity 与不同 identity；
+  0 Worker errors，且既有 IndexedDB cartdata 仍通过。
+- 3F persistence、3E cartdata、Phase 2 memory/graphics、audio/input 与 architecture 回归。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-3f
-pnpm run test:phase-3d:chrome
+pnpm run test:phase-3g
+pnpm run test:phase-3f:chrome
 pnpm run verify
 git status --short
 ```
 
-### 3F exit gate
+### 3G exit gate
 
-- guest 同步 API 从 preboot seed 工作，IndexedDB 不进入 RuntimeCore/WASM synchronous path。
-- committed snapshots durable、copy-owned、namespace-scoped 且 generation-safe；key 不含 cart hash。
-- storage read/write/migration/corruption 失败可见但不谎报、不破坏 otherwise-valid simulation。
-- Node failure/lifecycle tests 与 Chrome production persistence/restart gate 通过，机器合同记录 schema、
-  limits、golden/known differences 和命令。
-- 3F 独立提交后 worktree 干净；随后才折叠本节并激活 3G。
+- current-cart reload/cstore 在 WASM import 内同步完成且只访问 `0x0000..0x42ff`；code/container 受保护。
+- overlay copy-owned、identity-scoped、reset-safe、Worker-lifetime bounded；不冒充 local-file/IndexedDB durability。
+- ref/external/multicart fail closed，invalid range 在 mutation 前失败；不新增 HostRequest 状态。
+- Node real-WASM 与 Chrome production gate 通过，机器合同记录 golden/known differences/命令。
+- 3G 独立提交后 worktree 干净；随后才折叠本节并激活 3H。
 
 ## Phase exit gate
 

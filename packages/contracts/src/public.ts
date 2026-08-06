@@ -36,6 +36,8 @@ export type RuntimeErrorCode =
   | "E_FEATURE_UNSUPPORTED"
   | "E_HOST_REQUEST"
   | "E_HOST_API"
+  | "E_PERSISTENCE_READ"
+  | "E_PERSISTENCE_WRITE"
   | "E_INVALID_STATE"
   | "E_INVARIANT";
 

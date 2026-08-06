@@ -2,7 +2,7 @@
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
 如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1/2 已完成；当前 active
-phase 是 [Phase 3](./phases/3-audio-input-persistence.md)，work unit 为 3F。
+phase 是 [Phase 3](./phases/3-audio-input-persistence.md)，work unit 为 3G。
 
 ## 1. ADR registry
 
@@ -33,8 +33,8 @@ phase 是 [Phase 3](./phases/3-audio-input-persistence.md)，work unit 为 3F。
 
 ### Active blockers
 
-当前 Phase 3F 没有已登记 blocker。Phase 3A–3E 已完成 deterministic audio、Chrome device audio、
-controller/devkit input 与 browser-neutral cartdata core；Phase 1A–1F 已通过 L1 bounded-profile exit；Phase 2A–2F
+当前 Phase 3G 没有已登记 blocker。Phase 3A–3F 已完成 deterministic audio、Chrome device audio、
+controller/devkit input、cartdata core 与 IndexedDB persistence；Phase 1A–1F 已通过 L1 bounded-profile exit；Phase 2A–2F
 已通过 Graphics/Memory/Text project-profile exit，见
 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)。
 

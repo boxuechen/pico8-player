@@ -2,12 +2,15 @@ import { CartCodecError, decodeCart, decodeP8Png } from "@pico8-web/cart-codec";
 import {
   PICO_CONTROLLER_COUNT,
   PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  type PicoCartDataCommit,
+  type PicoCartDataSeed,
   type PicoDevkitInputBatch,
   type PicoInputSnapshot,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
 import {
   CartSession,
+  type CartDataPersistencePort,
   type CanonicalAudioSlice,
   FrameScheduler,
   FrameSliceRuntime,
@@ -179,12 +182,15 @@ export function createPhase0EWorkerController(
 }
 
 export interface PlayerWorkerController {
-  handle(command: PlayerHostToRuntime): readonly PlayerRuntimeToHost[];
-  dispose(): void;
+  handle(
+    command: PlayerHostToRuntime,
+  ): readonly PlayerRuntimeToHost[] | Promise<readonly PlayerRuntimeToHost[]>;
+  dispose(): void | Promise<void>;
 }
 
 export interface PlayerWorkerControllerOptions {
   readonly audioTransport?: WorkerPcmTransport;
+  readonly persistence?: CartDataPersistencePort;
 }
 
 type PlayerWorkerLifecycle =
@@ -238,6 +244,9 @@ export function createPlayerWorkerController(
   options: PlayerWorkerControllerOptions = {},
 ): PlayerWorkerController {
   const audioTransport = options.audioTransport;
+  const persistence = options.persistence;
+  const localPersistenceDiagnostics: SerializedRuntimeError[] = [];
+  let cartDataSeeds: readonly PicoCartDataSeed[] = [];
   let audioSequence = 0;
   let nextAudioSample = 0n;
   let instructionBudget: number | undefined;
@@ -249,6 +258,7 @@ export function createPlayerWorkerController(
       try {
         return new FrameSliceRuntime(vm, {
           ...(instructionBudget === undefined ? {} : { instructionBudget }),
+          cartDataSeeds,
         });
       } catch (error) {
         vm.destroy();
@@ -339,6 +349,89 @@ export function createPlayerWorkerController(
     nextAudioSample = firstSample + BigInt(slice.frameCount);
   }
 
+  function recordPersistenceFailure(
+    code: "E_PERSISTENCE_READ" | "E_PERSISTENCE_WRITE",
+    message: string,
+    error?: unknown,
+  ): void {
+    if (localPersistenceDiagnostics.length >= 32) {
+      localPersistenceDiagnostics.shift();
+    }
+    localPersistenceDiagnostics.push({
+      code,
+      message,
+      phase: "none",
+      recoverable: true,
+      ...(error === undefined ? {} : {
+        details: {
+          cause: error instanceof Error ? error.message : String(error),
+        },
+      }),
+    });
+  }
+
+  function enqueueCartDataCommit(commit: PicoCartDataCommit): void {
+    if (persistence === undefined) return;
+    try {
+      persistence.enqueue(commit);
+    } catch (error) {
+      recordPersistenceFailure(
+        "E_PERSISTENCE_WRITE",
+        "Unable to queue committed cartdata for durable storage",
+        error,
+      );
+    }
+  }
+
+  function takePersistenceEvents(
+    command: PlayerHostToRuntime,
+  ): readonly PlayerRuntimeToHost[] {
+    if (persistence === undefined) return [];
+    let diagnostics: readonly SerializedRuntimeError[] = [];
+    try {
+      diagnostics = persistence.takeDiagnostics();
+    } catch (error) {
+      recordPersistenceFailure(
+        "E_PERSISTENCE_READ",
+        "Unable to read persistence diagnostics",
+        error,
+      );
+    }
+    const combined = [...localPersistenceDiagnostics.splice(0), ...diagnostics];
+    return combined.map((error) => ({
+      ...playerBase(command),
+      type: "diagnostic" as const,
+      error,
+    }));
+  }
+
+  async function flushPersistence(): Promise<void> {
+    if (persistence === undefined) return;
+    try {
+      await persistence.flush();
+    } catch (error) {
+      recordPersistenceFailure(
+        "E_PERSISTENCE_WRITE",
+        "Unable to durably flush committed cartdata",
+        error,
+      );
+    }
+  }
+
+  async function hydratePersistence(): Promise<void> {
+    if (persistence === undefined) return;
+    try {
+      cartDataSeeds = await persistence.hydrate();
+    } catch (error) {
+      cartDataSeeds = [];
+      recordPersistenceFailure(
+        "E_PERSISTENCE_READ",
+        "Unable to hydrate cartdata; using an empty durable mirror",
+        error,
+      );
+    }
+  }
+
   function fault(
     command: PlayerHostToRuntime,
     error: SerializedRuntimeError,
@@ -390,6 +483,9 @@ export function createPlayerWorkerController(
     mode = result.value.mode;
     targetFps = result.value.targetFps;
     devkitFlags = result.value.devkitFlags;
+    if (result.value.cartDataCommit !== undefined) {
+      enqueueCartDataCommit(result.value.cartDataCommit);
+    }
     scheduler.configure(targetFps);
     lifecycle = "ready";
     return state(command, "ready");
@@ -425,6 +521,9 @@ export function createPlayerWorkerController(
     const packedScreen = result.frame.screen.slice().buffer;
     const displayPalette = result.frame.displayPalette.slice().buffer;
     devkitFlags = result.frame.devkitFlags;
+    if (result.frame.cartDataCommit !== undefined) {
+      enqueueCartDataCommit(result.frame.cartDataCommit);
+    }
     return {
       ...playerBase(command),
       type: "frame",
@@ -507,114 +606,171 @@ export function createPlayerWorkerController(
     return [{ ...playerBase(command), type: "fault", error: playerLifecycleError(message) }];
   }
 
-  return {
-    handle(command) {
-      if (command.type === "input") {
-        acceptInput(command);
-        return [];
-      }
+  function handleSync(command: PlayerHostToRuntime): readonly PlayerRuntimeToHost[] {
+    if (command.type === "input") {
+      acceptInput(command);
+      return [];
+    }
+    if (command.type === "flushPersistence") {
       if (workerGeneration === 0) workerGeneration = command.workerGeneration;
-      if (command.workerGeneration !== workerGeneration) {
-        return generationFault(command, "command belongs to another Worker generation");
+      return [];
+    }
+    if (workerGeneration === 0) workerGeneration = command.workerGeneration;
+    if (command.workerGeneration !== workerGeneration) {
+      return generationFault(command, "command belongs to another Worker generation");
+    }
+    if (command.type === "loadCart") {
+      if (command.sessionGeneration <= sessionGeneration) {
+        return generationFault(command, "loadCart requires a new session generation");
       }
-      if (command.type === "loadCart") {
-        if (command.sessionGeneration <= sessionGeneration) {
-          return generationFault(command, "loadCart requires a new session generation");
-        }
-        sessionGeneration = command.sessionGeneration;
-        instructionBudget = command.instructionBudget;
-        scheduler.reset();
-        inputSequence = -1;
-        clearInputState();
-        devkitFlags = 0;
-        try {
-          return [acceptBoot(command, session.load(decodeCart(new Uint8Array(command.cartBytes))))];
-        } catch (error) {
-          if (session.cart !== undefined) session.stop();
-          if (error instanceof CartCodecError) {
-            return [fault(command, {
-              code: "E_CART_PARSE",
-              message: `${error.code}: ${error.message}`,
-              phase: "none",
-              recoverable: true,
-              details: {
-                cartCodecCode: error.code,
-                ...(error.offset === undefined ? {} : { byteOffset: error.offset }),
-              },
-            })];
-          }
-          return [fault(command, invariant(
-            error instanceof Error ? error.message : String(error),
-          ))];
-        }
-      }
-      if (command.type === "dispose") {
-        scheduler.reset();
-        clearInputState();
-        const result = session.dispose();
-        lifecycle = "disposed";
-        mode = "none";
-        targetFps = 0;
-        devkitFlags = 0;
-        resetAudioQueue(command.sessionGeneration);
-        return result.ok ? [state(command, "disposed")] : [fault(command, result.error)];
-      }
-      if (command.type === "reset") {
-        if (lifecycle === "disposed" || command.sessionGeneration <= sessionGeneration) {
-          return generationFault(command, "reset requires a new session generation");
-        }
-        sessionGeneration = command.sessionGeneration;
-        scheduler.reset();
-        inputSequence = -1;
-        clearInputState();
-        devkitFlags = 0;
-        return [acceptBoot(command, session.reset())];
-      }
-      if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
-        return generationFault(command, "command belongs to a stale or missing session");
-      }
-      if (command.type === "vsync") return handleVsync(command);
-      if (command.type === "start") {
-        if (lifecycle !== "ready") {
-          return generationFault(command, "start requires a ready session");
-        }
-        scheduler.start();
-        lifecycle = "running";
-        return [state(command, "running")];
-      }
-      if (command.type === "pause") {
-        if (lifecycle !== "running" && lifecycle !== "paused") {
-          return generationFault(command, "pause requires a running session");
-        }
-        scheduler.pause();
-        lifecycle = "paused";
-        clearInputState();
-        return [state(command, "paused")];
-      }
-      if (command.type === "resume") {
-        if (lifecycle !== "paused" && lifecycle !== "running") {
-          return generationFault(command, "resume requires a paused session");
-        }
-        scheduler.resume();
-        lifecycle = "running";
-        return [state(command, "running")];
-      }
-      const stopped = session.stop();
+      sessionGeneration = command.sessionGeneration;
+      instructionBudget = command.instructionBudget;
       scheduler.reset();
+      inputSequence = -1;
       clearInputState();
       devkitFlags = 0;
-      if (!stopped.ok) return [fault(command, stopped.error)];
-      lifecycle = "stopped";
-      resetAudioQueue(command.sessionGeneration);
-      return [state(command, "stopped")];
-    },
-    dispose() {
+      try {
+        return [acceptBoot(command, session.load(decodeCart(new Uint8Array(command.cartBytes))))];
+      } catch (error) {
+        if (session.cart !== undefined) session.stop();
+        if (error instanceof CartCodecError) {
+          return [fault(command, {
+            code: "E_CART_PARSE",
+            message: `${error.code}: ${error.message}`,
+            phase: "none",
+            recoverable: true,
+            details: {
+              cartCodecCode: error.code,
+              ...(error.offset === undefined ? {} : { byteOffset: error.offset }),
+            },
+          })];
+        }
+        return [fault(command, invariant(
+          error instanceof Error ? error.message : String(error),
+        ))];
+      }
+    }
+    if (command.type === "dispose") {
       scheduler.reset();
       clearInputState();
-      devkitFlags = 0;
-      session.dispose();
+      const result = session.dispose();
       lifecycle = "disposed";
-      if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
+      mode = "none";
+      targetFps = 0;
+      devkitFlags = 0;
+      resetAudioQueue(command.sessionGeneration);
+      return result.ok ? [state(command, "disposed")] : [fault(command, result.error)];
+    }
+    if (command.type === "reset") {
+      if (lifecycle === "disposed" || command.sessionGeneration <= sessionGeneration) {
+        return generationFault(command, "reset requires a new session generation");
+      }
+      sessionGeneration = command.sessionGeneration;
+      scheduler.reset();
+      inputSequence = -1;
+      clearInputState();
+      devkitFlags = 0;
+      return [acceptBoot(command, session.reset())];
+    }
+    if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
+      return generationFault(command, "command belongs to a stale or missing session");
+    }
+    if (command.type === "vsync") return handleVsync(command);
+    if (command.type === "start") {
+      if (lifecycle !== "ready") {
+        return generationFault(command, "start requires a ready session");
+      }
+      scheduler.start();
+      lifecycle = "running";
+      return [state(command, "running")];
+    }
+    if (command.type === "pause") {
+      if (lifecycle !== "running" && lifecycle !== "paused") {
+        return generationFault(command, "pause requires a running session");
+      }
+      scheduler.pause();
+      lifecycle = "paused";
+      clearInputState();
+      return [state(command, "paused")];
+    }
+    if (command.type === "resume") {
+      if (lifecycle !== "paused" && lifecycle !== "running") {
+        return generationFault(command, "resume requires a paused session");
+      }
+      scheduler.resume();
+      lifecycle = "running";
+      return [state(command, "running")];
+    }
+    const stopped = session.stop();
+    scheduler.reset();
+    clearInputState();
+    devkitFlags = 0;
+    if (!stopped.ok) return [fault(command, stopped.error)];
+    lifecycle = "stopped";
+    resetAudioQueue(command.sessionGeneration);
+    return [state(command, "stopped")];
+  }
+
+  function disposeSync(): void {
+    scheduler.reset();
+    clearInputState();
+    devkitFlags = 0;
+    session.dispose();
+    lifecycle = "disposed";
+    if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
+  }
+
+  function isValidGenerationReplacement(command: PlayerHostToRuntime): boolean {
+    if (command.type !== "loadCart" && command.type !== "reset") return false;
+    return (workerGeneration === 0 || command.workerGeneration === workerGeneration) &&
+      command.sessionGeneration > sessionGeneration && lifecycle !== "disposed";
+  }
+
+  async function handlePersistent(
+    command: PlayerHostToRuntime,
+  ): Promise<readonly PlayerRuntimeToHost[]> {
+    if (command.type === "flushPersistence") {
+      if (workerGeneration === 0) workerGeneration = command.workerGeneration;
+      if (command.workerGeneration !== workerGeneration) return [];
+      await flushPersistence();
+      return takePersistenceEvents(command);
+    }
+    if (isValidGenerationReplacement(command)) {
+      await flushPersistence();
+      await hydratePersistence();
+    }
+    const events = handleSync(command);
+    const hasFault = events.some((event) => event.type === "fault");
+    if (command.type === "dispose") {
+      try {
+        await persistence!.dispose();
+      } catch (error) {
+        recordPersistenceFailure(
+          "E_PERSISTENCE_WRITE",
+          "Unable to dispose cartdata persistence cleanly",
+          error,
+        );
+      }
+    } else if (
+      command.type === "pause" || command.type === "stop" || hasFault
+    ) {
+      await flushPersistence();
+    }
+    return [...takePersistenceEvents(command), ...events];
+  }
+
+  if (persistence === undefined) {
+    return { handle: handleSync, dispose: disposeSync };
+  }
+  return {
+    handle: handlePersistent,
+    async dispose() {
+      disposeSync();
+      try {
+        await persistence.dispose();
+      } catch {
+        // No host command exists to receive diagnostics during forced teardown.
+      }
     },
   };
 }

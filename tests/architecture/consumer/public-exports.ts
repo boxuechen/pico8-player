@@ -29,6 +29,7 @@ import {
   createPicoApiHost,
   FrameSliceRuntime,
   logicalTimeRaw,
+  type CartDataPersistencePort,
   type CartSessionRuntimeContext,
   type CartSessionRuntimePort,
   type FrameVmPort,
@@ -95,6 +96,7 @@ const input: PicoInputSnapshot = {
 };
 declare const serializedError: SerializedRuntimeError;
 declare const cartDataCommit: PicoCartDataCommit;
+declare const cartDataPersistence: CartDataPersistencePort;
 const oneSecondRaw = logicalTimeRaw(60n, 60);
 
 void lease;
@@ -116,6 +118,7 @@ void cartSession;
 void input;
 void serializedError;
 void cartDataCommit;
+void cartDataPersistence;
 void oneSecondRaw;
 
 export {};

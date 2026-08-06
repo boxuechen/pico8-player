@@ -117,6 +117,7 @@ export class PlayerController {
       if (this.#document.visibilityState === "hidden") this.#pauseForEnvironment();
       else this.#resumeFromEnvironment();
     });
+    this.#bind(this.#window, "pagehide", () => this.#composition.flushPersistence());
     this.#renderState("Select a .p8 or .p8.png cartridge");
   }
 

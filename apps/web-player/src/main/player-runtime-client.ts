@@ -209,6 +209,18 @@ export class PlayerRuntimeClient {
     });
   }
 
+  /** Best-effort requestless flush for page lifecycle boundaries. */
+  flushPersistence(): void {
+    if (this.#disposed) return;
+    this.#worker.postMessage({
+      v: 1,
+      type: "flushPersistence",
+      requestId: 0,
+      workerGeneration: this.#workerGeneration,
+      sessionGeneration: this.#sessionGeneration,
+    });
+  }
+
   attachAudioPort(port: MessagePort): void {
     this.#assertActive();
     this.#worker.postMessage(

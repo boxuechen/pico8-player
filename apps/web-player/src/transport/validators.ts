@@ -89,6 +89,8 @@ function isPlayerError(value: unknown): boolean {
     "E_FEATURE_UNSUPPORTED",
     "E_HOST_REQUEST",
     "E_HOST_API",
+    "E_PERSISTENCE_READ",
+    "E_PERSISTENCE_WRITE",
     "E_INVALID_STATE",
     "E_INVARIANT",
   ]);
@@ -117,6 +119,9 @@ function isPlayerError(value: unknown): boolean {
 
 export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
   if (!isPlayerEnvelope(value)) return false;
+  if (value.type === "flushPersistence") {
+    return value.requestId === 0;
+  }
   if (value.type === "input") {
     return (
       value.requestId === 0 &&
@@ -154,7 +159,9 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
 
 export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToHost {
   if (!isPlayerEnvelope(value)) return false;
-  if (!isPositiveUint(value.requestId)) return false;
+  if (!isPositiveUint(value.requestId) && !(
+    value.requestId === 0 && value.type === "diagnostic"
+  )) return false;
   if (value.type === "state") {
     if (!isUint(value.devkitFlags) || Number(value.devkitFlags) > 0x07) return false;
     if (value.state === "disposed") {

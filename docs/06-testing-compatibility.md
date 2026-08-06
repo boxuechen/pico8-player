@@ -729,7 +729,8 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
   `tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
 - Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；Phase 3C/3D 已实现固定八玩家
   controller、keyboard/Gamepad/multitouch、input-only devkit `stat()` 与 trusted pointer-lock production
-  flow；同步 cartdata core 已由 Phase 3E 实现，IndexedDB persistence 由 active 3F 授权；resolver 仍
+  flow；同步 cartdata core 与 IndexedDB persistence 已由 Phase 3E/3F 实现；current-cart
+  `reload/cstore` 由 active 3G 授权，resolver 仍
   `unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
@@ -840,7 +841,7 @@ system/audio/memory/network `stat()` 仍 Deferred。Phase 3D 开放 P0/P1 为 `0
 ### 15.16 Phase 3E Cartdata Core 矩阵
 
 本表覆盖同步 `cartdata/dget/dset` 与 browser-neutral persistence seam。项目 golden 位于
-`tests/golden/phase-3e-cartdata.json`；IndexedDB durable behavior 从本表明确排除，由 active 3F 验证。
+`tests/golden/phase-3e-cartdata.json`；IndexedDB durable behavior 从本表明确排除，已由 3F 验证。
 
 | 行为 | Phase 3E 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
@@ -855,6 +856,24 @@ system/audio/memory/network `stat()` 仍 Deferred。Phase 3D 开放 P0/P1 为 `0
 Known Differences：golden 是项目 oracle，不是官方 persistence capture；非法调用采用严格
 `E_HOST_API` policy；commit revision 在每个 fresh runtime generation 从 `1` 重新开始；3E 没有
 IndexedDB、durable write 或 browser gate。Phase 3E 开放 P0/P1 为 `0`。
+
+### 15.17 Phase 3F IndexedDB Persistence 矩阵
+
+本表覆盖 Worker-owned IndexedDB adapter 与 browser-neutral persistence port；同步 guest
+`cartdata/dget/dset` 语义仍由 15.16 拥有。production gate 只支持 Chrome/Chromium。
+
+| 行为 | Phase 3F 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| schema/key/bounds | database `pico8-web-player` v1、store `cartdata`、keyPath `[namespace,id]`；schema 1 exact 256 bytes；default namespace 最多 4096 records / 1 MiB | gate passed | profile selection UI Deferred；key 明确不含 cart hash |
+| hydrate/commit | load/reset preboot hydrate；successful boot/frame snapshot copy 后 latest-per-ID coalesce；steady simulation 不等待 IDB | gate passed | 3G overlay 不得复用 cartdata key space |
+| lifecycle/generation | load/reset 先 flush 旧 commit 再 hydrate；pause/stop/dispose/pagehide/fault best-effort flush；stale generation 不 hydrate | gate passed | failed write 保留 pending snapshot 到后续 flush |
+| migration/failure | project schema 0 lazy rewrite；future/corrupt skip + `E_PERSISTENCE_READ`；open/transaction failure `E_PERSISTENCE_WRITE`，valid game 保持运行 | `compatible`（project storage profile） | 不声明跨浏览器或通用 schema compatibility |
+| Chrome production gate | Chrome `150.0.7871.189`；fresh miss、256-byte round-trip、不同 cart hash 同 ID hit、pagehide/reset、migration、4096 bound、write failure 后 paused、Worker errors `0` | gate passed | Chrome/Chromium only |
+| regressions | Node fake-port ordering/retry/fault tests、3E real-WASM、3D Chrome、3B audio、Phase 2 与 architecture passed | gate passed | 3G 增加 current-cart ROM overlay 回归 |
+
+Known Differences：legacy schema 0 是项目自有迁移格式，不是官方浏览器格式；当前只有固定
+`default` runtime namespace，没有 profile UI；write retry 只在后续 flush boundary 重试且不声明已经保存；
+不支持 Firefox/WebKit。Phase 3F 开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

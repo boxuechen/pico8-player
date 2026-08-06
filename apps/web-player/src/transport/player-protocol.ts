@@ -43,9 +43,16 @@ export type PlayerRuntimeInputCommand = PlayerCommandEnvelope & {
   readonly input: PicoInputSnapshot;
 };
 
+/** Requestless lifecycle hint used by pagehide to best-effort flush durable data. */
+export type PlayerRuntimePersistenceFlushCommand = PlayerCommandEnvelope & {
+  readonly type: "flushPersistence";
+  readonly requestId: 0;
+};
+
 export type PlayerHostToRuntime =
   | PlayerRuntimeControlCommand
-  | PlayerRuntimeInputCommand;
+  | PlayerRuntimeInputCommand
+  | PlayerRuntimePersistenceFlushCommand;
 
 interface PlayerEventEnvelope {
   readonly v: typeof PLAYER_PROTOCOL_VERSION;

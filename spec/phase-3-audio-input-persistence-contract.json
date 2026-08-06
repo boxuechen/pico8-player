@@ -9,9 +9,9 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E"],
-  "activeWorkUnit": "3F",
-  "nextWorkUnit": "3G",
+  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E", "3F"],
+  "activeWorkUnit": "3G",
+  "nextWorkUnit": "3H",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -395,7 +395,7 @@
     },
     "3F": {
       "name": "IndexedDB Persistence",
-      "status": "active",
+      "status": "complete",
       "storage": {
         "database": "pico8-web-player",
         "databaseVersion": 1,
@@ -441,9 +441,101 @@
         "failure-visible-read-write-fallback-without-game-fault",
         "node-fake-port-and-chrome-production-gates",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "runtimePort": "browser-neutral CartDataPersistencePort",
+        "productionAdapter": "Worker-owned IndexedDbCartDataPersistenceAdapter",
+        "database": {
+          "name": "pico8-web-player",
+          "version": 1,
+          "store": "cartdata",
+          "keyPath": ["namespace", "id"],
+          "defaultNamespace": "default",
+          "cartHashInKey": false
+        },
+        "record": {
+          "schemaVersion": 1,
+          "bytes": 256,
+          "maximumHydratedRecords": 4096,
+          "maximumHydratedBytes": 1048576,
+          "legacySchemaZero": "lazy-rewrite",
+          "futureOrMalformed": "skip-with-E_PERSISTENCE_READ"
+        },
+        "commit": {
+          "steadySimulation": "copy-and-coalesce-latest-per-id-without-await",
+          "flushBoundaries": ["load", "reset", "pause", "stop", "dispose", "pagehide", "fault"],
+          "writeFailure": "E_PERSISTENCE_WRITE-and-retain-latest-pending-snapshot"
+        },
+        "chromeGate": {
+          "browser": "Google Chrome 150.0.7871.189",
+          "productionWorker": true,
+          "freshMissAndExact256ByteRoundTrip": true,
+          "differentCartHashSharedIdHit": true,
+          "pagehideAndReset": true,
+          "legacyMigration": true,
+          "futureAndCorruptDiagnostics": true,
+          "recordBound": 4096,
+          "writeFailureContinuedState": "paused",
+          "workerErrors": 0
+        },
+        "knownDifferences": [
+          "legacy schema zero is project-owned and not an official browser storage format",
+          "durability is scoped to the fixed default runtime namespace with no profile selection UI",
+          "write retries occur at later flush boundaries and do not claim a successful save",
+          "IndexedDB behavior is gated only on Chrome and Chromium"
+        ],
+        "verification": [
+          "pnpm run test:phase-3f",
+          "pnpm run test:phase-3f:chrome",
+          "pnpm run test:phase-3d:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "3G": {
+      "name": "Current-cart reload and cstore",
+      "status": "active",
+      "apis": ["reload", "cstore"],
+      "profile": "synchronous-current-cart-only",
+      "dataRom": {
+        "range": "0x0000..0x42ff",
+        "bytes": 17152,
+        "codeProtectionStart": "0x4300",
+        "initialSource": "normalized-current-cart-rom",
+        "writeModel": "worker-lifetime-copy-on-write-overlay-keyed-by-cart-identity"
+      },
+      "defaults": {
+        "destination": 0,
+        "source": 0,
+        "length": 17152
+      },
+      "behavior": [
+        "reload-copies-current-overlay-or-original-rom-into-live-base-ram-synchronously",
+        "cstore-copies-a-stable-live-ram-snapshot-into-current-cart-overlay-synchronously",
+        "same-call-stack-cstore-then-reload-observes-new-bytes",
+        "overlay-survives-reset-and-same-identity-load-within-one-worker",
+        "overlap-uses-snapshot-copy-semantics",
+        "range-and-code-section-protection-before-mutation",
+        "filename-or-ref-argument-is-E_FEATURE_UNSUPPORTED-before-mutation"
+      ],
+      "nonGoals": [
+        "guest-load",
+        "external-cart-ref-or-resolver",
+        "bbs-or-network",
+        "multicart",
+        "overlay-indexeddb-durability",
+        "overwriting-caller-local-files",
+        "export-ui"
+      ],
+      "exit": [
+        "append-only-reload-and-cstore-real-wasm-bindings",
+        "browser-neutral-current-cart-rom-repository-and-overlay",
+        "default-explicit-overlap-range-and-code-protection-tests",
+        "reset-and-same-identity-generation-overlay-isolation",
+        "node-real-wasm-and-chrome-production-gates",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "3G": { "name": "Current-cart reload and cstore", "status": "planned" },
     "3H": { "name": "Conformance and Phase Exit", "status": "planned" }
   },
   "scope": [

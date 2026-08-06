@@ -129,7 +129,7 @@ export function installPlayerRuntimeWorker(
     queue = queue.then(async () => {
       try {
         const active = await controller;
-        const responses = active.handle(command);
+        const responses = await active.handle(command);
         for (const response of responses) postPlayerResponse(scope, response);
         if (
           command.type === "dispose" &&
