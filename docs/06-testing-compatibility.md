@@ -16,7 +16,7 @@
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| **Active Phase 4 baseline** | 112 项 API 四维清单、38 binding 对账、7-case 项目原创 corpus 与 local-only 外部 schema；当前 runner/triage 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
+| **Active Phase 4 baseline** | 112 项 API 四维清单、38 binding 对账、7-case 项目原创 corpus；Node/Chrome baseline 为 `C3=7`、playable `100%`；当前 P8 Lua/core library 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -781,6 +781,23 @@ official bit-exact、第三方 playable rate、完整 `stat()`、guest `load` �
 Phase 3 exit 开放 P0/P1 为 `0`。Known Differences：canonical PCM/hash 是项目 oracle，不是官方
 bit-exact 声明；startup underrun 与正式 soak 窗口分开计数；current-cart overlay 仅 Worker-local；
 未列出的 API/invalid edge 和未运行的合法代表 cart 保持 `unknown`，不得从项目 profile 外推 L2。
+
+### 15.13 Phase 4B L2 Baseline 矩阵
+
+`phase4-l2-runner@1` 统一编排 Phase 1–3 的真实出口入口，并把结果绑定到 production source/
+WASM build id、cart/source hash、固定 input trace、frame/time 范围和执行环境。普通执行只写
+gitignored smoke；受审 Node/Chrome 结果及 SHA-256 由
+[`phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) 锁定。
+
+| 行为 | Phase 4B 结果 | 兼容口径 | 后续边界 |
+| --- | --- | --- | --- |
+| project corpus | 7 个原创 cart，覆盖 30/60Hz、custom loop、p8png、graphics/RAM/text、audio/input、persistence | `C3=7`，`C0/C1/C2/CU=0`；playable `7/7=100%` | 是项目 oracle，不外推第三方/BBS playable rate |
+| Node/Chrome cross-oracle | real-WASM 与 production Worker/Canvas/AudioWorklet/IndexedDB 的 case oracle digest 全部一致 | gate passed；Chrome 150 desktop | 其他 Chrome 版本由后续 release/long-run gate 复验 |
+| fault/triage | boot 全部 ready；first fault/divergent frame 均为空；开放 P0/P1 与 issue registry 均为 0 | 当前冻结 corpus 无已知失败 | 新 gap 必须先登记 severity/owner/原创 repro |
+| provenance | external/local corpus bytes、结果、名称均未跟踪，公开分母贡献为 0 | gate passed | guest load、BBS/network、multicart 仍 non-goal |
+
+Phase 4B 没有改变 production behavior。它证明冻结 corpus 的既有覆盖稳定，不代表 inventory 中
+未实现的 required VM/library API 已完成；这些 gap 从 4C 起按 surface 收敛。
 
 ## 16. Definition of Done
 

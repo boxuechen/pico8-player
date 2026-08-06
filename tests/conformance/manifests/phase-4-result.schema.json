@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.local/spec/phase-4-result.schema.json",
+  "title": "Phase 4 L2 compatibility runner result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "phase",
+    "runner",
+    "target",
+    "corpus",
+    "build",
+    "environment",
+    "machine",
+    "cases",
+    "summary",
+    "externalCorpus"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "phase": { "const": "4B" },
+    "runner": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "const": "phase4-l2-runner" },
+        "version": { "const": 1 }
+      }
+    },
+    "target": { "enum": ["node-real-wasm", "chrome-production"] },
+    "corpus": { "type": "object" },
+    "build": { "type": "object" },
+    "environment": { "type": "object" },
+    "machine": { "type": "object" },
+    "cases": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "sourceSha256",
+          "cartSha256",
+          "classification",
+          "boot",
+          "execution",
+          "oracle",
+          "crossOracleSha256",
+          "targetObservation"
+        ]
+      }
+    },
+    "summary": { "type": "object" },
+    "externalCorpus": { "type": "object" }
+  }
+}

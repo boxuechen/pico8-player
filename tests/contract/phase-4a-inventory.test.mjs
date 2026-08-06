@@ -107,7 +107,10 @@ test("frozen project corpus has provenance, flows, observables and exact source 
     assert.ok(entry.criticalFlow.length > 0, entry.id);
     assert.ok(entry.observables.length > 0, entry.id);
     assert.ok(entry.capabilityLanes.length > 0, entry.id);
-    assert.equal(entry.phase4Classification, "CU", entry.id);
+    assert.ok(corpus.claimPolicy.classifications.includes(entry.phase4Classification), entry.id);
+    if (phase.completedWorkUnits.includes("4B")) {
+      assert.equal(entry.phase4Classification, "C3", entry.id);
+    }
     assert.equal(existsSync(path.join(REPO_ROOT, entry.priorEvidence)), true, entry.priorEvidence);
   }
 });

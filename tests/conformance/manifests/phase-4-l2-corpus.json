@@ -41,7 +41,7 @@
       "criticalFlow": "deterministic held and edge input trace through the complete bounded flow",
       "observables": ["frame-trace", "screen", "semantic-pixels", "reset"],
       "priorEvidence": "tests/conformance/manifests/phase-1f-l1-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     },
     {
       "id": "l2/callback-60-p8png",
@@ -55,7 +55,7 @@
       "criticalFlow": "generated p8png decode and complete deterministic 60 Hz callback flow",
       "observables": ["codec-identity", "frame-trace", "screen", "reset"],
       "priorEvidence": "tests/conformance/manifests/phase-1f-l1-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     },
     {
       "id": "l2/custom-flip-30",
@@ -68,7 +68,7 @@
       "criticalFlow": "root custom loop advances through all expected flip boundaries",
       "observables": ["frame-trace", "logical-time", "screen", "reset"],
       "priorEvidence": "tests/conformance/manifests/phase-1f-l1-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     },
     {
       "id": "l2/graphics-memory",
@@ -81,7 +81,7 @@
       "criticalFlow": "complete graphics, mapped memory, sprite, map and palette interaction flow",
       "observables": ["ram-trace", "screen", "display-palette", "rgba", "reset"],
       "priorEvidence": "tests/conformance/manifests/phase-2f-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     },
     {
       "id": "l2/text-remap",
@@ -94,7 +94,7 @@
       "criticalFlow": "complete built-in and custom P8SCII text plus screen remap flow",
       "observables": ["ram-trace", "screen", "display-palette", "rgba", "reset"],
       "priorEvidence": "tests/conformance/manifests/phase-2f-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     },
     {
       "id": "l2/audio-input",
@@ -107,7 +107,7 @@
       "criticalFlow": "complete SFX, music, controller and devkit input trace",
       "observables": ["canonical-pcm", "input-ram-trace", "screen", "palette", "reset"],
       "priorEvidence": "tests/conformance/manifests/phase-3h-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     },
     {
       "id": "l2/persistence-overlay",
@@ -120,7 +120,7 @@
       "criticalFlow": "hydrate, mutate, flush, reset and same-identity current-cart overlay flow",
       "observables": ["cartdata", "overlay", "screen", "audio", "generation"],
       "priorEvidence": "tests/conformance/manifests/phase-3h-exit.json",
-      "phase4Classification": "CU"
+      "phase4Classification": "C3"
     }
   ]
 }

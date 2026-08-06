@@ -17,7 +17,8 @@
 [`evidence/`](./evidence/) 与机器合同中保存；当前 Phase 4 的唯一授权入口是
 [`4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md)。最新 production 边界仍由
 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) 锁定；
-4A 只新增 contract、corpus 和测试事实，没有扩大 production surface。
+4A–4B 只新增 contract、corpus、runner 与受审 baseline，没有扩大 production surface；4C
+仅授权 VM/library surface，不授权新的浏览器依赖或 host binding。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 

@@ -9,9 +9,9 @@
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A"],
-  "activeWorkUnit": "4B",
-  "nextWorkUnit": "4C",
+  "completedWorkUnits": ["4A", "4B"],
+  "activeWorkUnit": "4C",
+  "nextWorkUnit": "4D",
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -41,9 +41,30 @@
     },
     "4B": {
       "name": "Compatibility Runner and Baseline Triage",
-      "status": "active"
+      "status": "complete",
+      "result": {
+        "runner": "phase4-l2-runner@1",
+        "resultSchema": "tests/conformance/manifests/phase-4-result.schema.json",
+        "issueRegistry": "tests/conformance/manifests/phase-4-issues.json",
+        "projectCorpusCases": 7,
+        "classifications": { "C0": 0, "C1": 0, "C2": 0, "C3": 7, "CU": 0 },
+        "playableRate": 1,
+        "openP0": 0,
+        "openP1": 0,
+        "nodeEvidence": "benchmarks/phase-4/results/node-macos-arm64-l2-baseline.json",
+        "nodeEvidenceSha256": "3473d6f1cbd3ae034d7be92bc61c7f886dd074d066d55a6b421e110aceaf701d",
+        "chromeEvidence": "benchmarks/phase-4/results/chromium-macos-arm64-l2-baseline.json",
+        "chromeEvidenceSha256": "801460755de55c51e2bc4ee4e499ff217e7c2fd14e5d3b48a1a2be3477eb8c90",
+        "chrome": "Google Chrome 150.0.7871.189",
+        "playerBuildId": "9962c35d1f5a85e5b05c2de88373d6332340e8d6247aa225710f6b06cf6fd126",
+        "verification": [
+          "pnpm run test:phase-4b",
+          "pnpm run test:phase-4b:chrome",
+          "pnpm run verify"
+        ]
+      }
     },
-    "4C": { "name": "P8 Lua and Core Library Compatibility", "status": "planned" },
+    "4C": { "name": "P8 Lua and Core Library Compatibility", "status": "active" },
     "4D": { "name": "Graphics, Memory and Text Hardening", "status": "planned" },
     "4E": { "name": "System, Audio, Input, Persistence and Player Integration", "status": "planned" },
     "4F": { "name": "CPU Cost, Slow-frame and Scheduler Calibration", "status": "planned" },
