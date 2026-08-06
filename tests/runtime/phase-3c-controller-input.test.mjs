@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
+import { inputSnapshot } from "../helpers/input.mjs";
 
 import {
   PICO_CONTROLLER_BUTTON_COUNT,
@@ -53,7 +54,7 @@ function q16(value) {
 }
 
 function snapshot(...controllers) {
-  return { controllers: [...controllers, ...ZERO].slice(0, 8) };
+  return inputSnapshot([...controllers, ...ZERO].slice(0, 8));
 }
 
 function sourceCart(source) {
@@ -137,7 +138,7 @@ function buildGolden() {
       { length: 8 },
       (_, player) => ((tick * 5 + player * 11) ^ (1 << ((tick + player) % 6))) & 0x3f,
     );
-    input.beginTick({ controllers }, tick < 24 ? 30 : 60);
+    input.beginTick(inputSnapshot(controllers), tick < 24 ? 30 : 60);
     const pressed = Array.from({ length: 8 }, (_, player) => {
       let mask = 0;
       for (let button = 0; button < 6; button += 1) {
@@ -171,7 +172,7 @@ end
 function _draw() end`));
   assert.equal(boot.ok, true, JSON.stringify(boot));
   const controllers = [1, 2, 4, 8, 16, 32, 3, 63];
-  const stepped = runtime.step({ controllers });
+  const stepped = runtime.step(inputSnapshot(controllers));
   assert.equal(stepped.ok, true, JSON.stringify(stepped));
   const ram = runtime.copyRam(0, 0x10000);
   assert.deepEqual([...ram.subarray(0x5f4c, 0x5f54)], controllers);
@@ -221,9 +222,9 @@ test("fixed input DTO rejects malformed masks without advancing runtime state", 
   const runtime = createRuntime();
   assert.equal(runtime.boot(sourceCart("function _draw() end")).ok, true);
   for (const input of [
-    { controllers: [0] },
-    { controllers: [0, 0, 0, 0, 0, 0, 0, 64] },
-    { controllers: new Uint8Array(8) },
+    { ...inputSnapshot(), controllers: [0] },
+    { ...inputSnapshot(), controllers: [0, 0, 0, 0, 0, 0, 0, 64] },
+    { ...inputSnapshot(), controllers: new Uint8Array(8) },
   ]) {
     const result = runtime.step(input);
     assert.equal(result.ok, false);
@@ -237,7 +238,7 @@ test("fixed input DTO rejects malformed masks without advancing runtime state", 
   assert.equal(isPlayerHostToRuntime(validEnvelope), true);
   assert.equal(isPlayerHostToRuntime({
     ...validEnvelope,
-    input: { controllers: [0, 0, 0, 0, 0, 0, 0, 64] },
+    input: inputSnapshot([0, 0, 0, 0, 0, 0, 0, 64]),
   }), false);
   runtime.dispose();
 });
@@ -256,7 +257,7 @@ function _draw() cls(1) pset(x,0,7) end`);
   controller.handle(command("input", {
     requestId: 0,
     sequence: 2,
-    input: { controllers },
+    input: inputSnapshot(controllers),
   }));
   controllers[7] = 0;
   controller.handle(command("input", {

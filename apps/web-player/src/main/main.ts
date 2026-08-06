@@ -119,6 +119,7 @@ export async function mountPico8Player(
 export { PlayerComposition } from "./compose-player.js";
 export { KeyboardInputFrontend } from "./input-frontend.js";
 export { GamepadInputFrontend } from "./gamepad-input.js";
+export { DevkitInputFrontend } from "./devkit-input.js";
 export { PlayerInputFrontend } from "./player-input.js";
 export { TouchInputFrontend } from "./touch-input.js";
 export { PlayerController } from "./player-controller.js";

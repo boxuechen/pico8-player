@@ -415,6 +415,27 @@ int p8_host_call(lua_State *state) {
   }
   context->phase = previous_phase;
   if (descriptor->result_kind == P8W_HOST_RESULT_VOID) return 0;
+  if (descriptor->result_kind == P8W_HOST_RESULT_STAT_INPUT) {
+    const int32_t selector = frame.scalar_slots[0] >> 16;
+    if (selector == 30) {
+      lua_pushboolean(state, frame.result != 0);
+    } else if (selector == 31) {
+      if (frame.result < 0) {
+        lua_pushliteral(state, "");
+      } else {
+        const char byte = static_cast<char>(frame.result & 0xff);
+        lua_pushlstring(state, &byte, 1u);
+      }
+    } else if (selector == 34) {
+      lua_pushinteger(state, static_cast<int16_t>(frame.result));
+    } else if (selector == 32 || selector == 33 || selector == 36 ||
+               selector == 38 || selector == 39) {
+      lua_pushnumber(state, lua_Number::frombits(frame.result));
+    } else {
+      lua_pushboolean(state, 0);
+    }
+    return 1;
+  }
   if (descriptor->result_kind == P8W_HOST_RESULT_BOOLEAN ||
       (descriptor->result_kind == P8W_HOST_RESULT_INTEGER_OR_BOOLEAN &&
        (frame.presence_bits & 1u) != 0) ||

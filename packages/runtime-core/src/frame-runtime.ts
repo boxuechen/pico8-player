@@ -6,7 +6,7 @@ import {
   type RuntimePhase,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
-import { normalizeControllers, ZERO_PICO_INPUT } from "./input/l1-input.js";
+import { normalizeInputSnapshot, ZERO_PICO_INPUT } from "./input/l1-input.js";
 import type { CanonicalAudioSlice } from "./audio/sfx-synth.js";
 import {
   createPicoApiHost,
@@ -110,6 +110,7 @@ export interface RuntimeFrame {
   readonly screen: Uint8Array;
   /** 16-entry display-palette map snapshotted from Base RAM 0x5f10..0x5f1f. */
   readonly displayPalette: Uint8Array;
+  readonly devkitFlags: number;
   /** Canonical PCM committed by this exact logical frame slice. */
   readonly audio: CanonicalAudioSlice;
 }
@@ -131,6 +132,7 @@ export type RuntimeBootResult =
       readonly targetFps: 30 | 60;
       /** Canonical PCM for the 1/30-second startup transaction. */
       readonly audio: CanonicalAudioSlice;
+      readonly devkitFlags: number;
     }
   | { readonly kind: "host-request"; readonly request: RuntimeHostRequest };
 
@@ -234,9 +236,9 @@ export class FrameSliceRuntime {
     if (this.#state !== "empty") {
       return { ok: false, error: invalidState("runtime session is not empty") };
     }
-    let controllers: readonly number[];
+    let normalizedInput: PicoInputSnapshot;
     try {
-      controllers = normalizeControllers(input);
+      normalizedInput = normalizeInputSnapshot(input);
     } catch (error) {
       return {
         ok: false,
@@ -251,7 +253,8 @@ export class FrameSliceRuntime {
     this.#vm.writeCartRom(cart.rom);
     const compiled = this.#vm.compile(cart.code);
     if (compiled.kind === "fault") return this.#acceptFault(compiled.error);
-    this.#picoApiHost.beginTick({ controllers }, 30);
+    const controllers = normalizedInput.controllers;
+    this.#picoApiHost.beginTick(normalizedInput, 30);
     const buttons = controllers[0]!;
     const outcome = this.#vm.boot(
       this.#instructionBudget,
@@ -270,9 +273,9 @@ export class FrameSliceRuntime {
     if (this.#state !== "ready" || this.#targetFps === 0) {
       return { ok: false, error: invalidState("runtime session is not ready to step") };
     }
-    let controllers: readonly number[];
+    let normalizedInput: PicoInputSnapshot;
     try {
-      controllers = normalizeControllers(input);
+      normalizedInput = normalizeInputSnapshot(input);
     } catch (error) {
       return {
         ok: false,
@@ -280,7 +283,8 @@ export class FrameSliceRuntime {
       };
     }
     const timeRaw = logicalTimeRaw(this.#completedSlices + 1n, this.#targetFps);
-    this.#picoApiHost.beginTick({ controllers }, this.#targetFps);
+    const controllers = normalizedInput.controllers;
+    this.#picoApiHost.beginTick(normalizedInput, this.#targetFps);
     const buttons = controllers[0]!;
     const outcome = this.#vm.step(this.#instructionBudget, buttons, timeRaw);
     return this.#acceptStepOutcome(
@@ -394,6 +398,7 @@ export class FrameSliceRuntime {
         mode: this.#mode as Exclude<FrameVmMode, "none">,
         targetFps,
         audio,
+        devkitFlags: this.#picoApiHost.devkitFlags,
       },
     };
   }
@@ -446,6 +451,7 @@ export class FrameSliceRuntime {
       targetFps,
       screen: this.#ram.copy(SCREEN_OFFSET, SCREEN_BYTES),
       displayPalette: this.#ram.copy(DISPLAY_PALETTE_OFFSET, DISPLAY_PALETTE_BYTES),
+      devkitFlags: this.#picoApiHost.devkitFlags,
       audio: this.#picoApiHost.renderAudioSlices(1, targetFps),
     };
     this.#state = "ready";

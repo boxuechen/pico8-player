@@ -69,6 +69,7 @@ export type CartSessionBootResult =
       readonly mode: Extract<RuntimeBootResult, { kind: "ready" }>["mode"];
       readonly targetFps: 30 | 60;
       readonly audio: Extract<RuntimeBootResult, { kind: "ready" }>["audio"];
+      readonly devkitFlags: number;
     }
   | { readonly kind: "host-request"; readonly request: CartSessionHostRequest };
 
@@ -449,6 +450,7 @@ export class CartSession {
         mode: result.mode,
         targetFps: result.targetFps,
         audio: result.audio,
+        devkitFlags: result.devkitFlags,
       },
     };
   }

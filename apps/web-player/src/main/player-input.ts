@@ -2,6 +2,7 @@ import type { PicoInputSnapshot } from "@pico8-web/contracts";
 import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 
 import { GamepadInputFrontend, type GamepadSource } from "./gamepad-input.js";
+import { DevkitInputFrontend } from "./devkit-input.js";
 import { KeyboardInputFrontend } from "./input-frontend.js";
 import { TouchInputFrontend } from "./touch-input.js";
 
@@ -16,14 +17,16 @@ export interface PlayerInputFrontendOptions {
 export class PlayerInputFrontend {
   readonly keyboard: KeyboardInputFrontend;
   readonly gamepad: GamepadInputFrontend;
+  readonly devkit: DevkitInputFrontend;
   readonly touch: TouchInputFrontend | undefined;
   #disposed = false;
 
-  constructor(focusTarget: HTMLElement, options: PlayerInputFrontendOptions = {}) {
+  constructor(focusTarget: HTMLCanvasElement, options: PlayerInputFrontendOptions = {}) {
     this.keyboard = new KeyboardInputFrontend(focusTarget, options);
     this.gamepad = new GamepadInputFrontend({
       ...(options.gamepadSource === undefined ? {} : { source: options.gamepadSource }),
     });
+    this.devkit = new DevkitInputFrontend(focusTarget, options);
     this.touch = options.touchRoot === undefined
       ? undefined
       : new TouchInputFrontend(options.touchRoot, options);
@@ -34,6 +37,19 @@ export class PlayerInputFrontend {
   }
 
   snapshot(): PicoInputSnapshot {
+    return this.#snapshot(false);
+  }
+
+  takeSnapshot(): PicoInputSnapshot {
+    return this.#snapshot(true);
+  }
+
+  setDevkitFlags(flags: number): void {
+    this.#assertActive();
+    this.devkit.setFlags(flags);
+  }
+
+  #snapshot(consumeDevkitEvents: boolean): PicoInputSnapshot {
     this.#assertActive();
     const sources = [
       this.keyboard.snapshot().controllers,
@@ -47,7 +63,10 @@ export class PlayerInputFrontend {
         controllers[player] = controllers[player]! | source[player]!;
       }
     }
-    return { controllers };
+    return {
+      controllers,
+      devkit: consumeDevkitEvents ? this.devkit.takeBatch() : this.devkit.peekBatch(),
+    };
   }
 
   setEnabled(enabled: boolean): void {
@@ -55,6 +74,7 @@ export class PlayerInputFrontend {
     this.keyboard.setEnabled(enabled);
     this.gamepad.setEnabled(enabled);
     this.touch?.setEnabled(enabled);
+    this.devkit.setEnabled(enabled);
   }
 
   clear(): void {
@@ -62,6 +82,7 @@ export class PlayerInputFrontend {
     this.keyboard.clear();
     this.gamepad.clear();
     this.touch?.clear();
+    this.devkit.clear();
   }
 
   dispose(): void {
@@ -71,6 +92,7 @@ export class PlayerInputFrontend {
     this.keyboard.dispose();
     this.gamepad.dispose();
     this.touch?.dispose();
+    this.devkit.dispose();
   }
 
   #assertActive(): void {

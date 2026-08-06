@@ -1,6 +1,9 @@
 import { CartCodecError, decodeCart, decodeP8Png } from "@pico8-web/cart-codec";
 import {
   PICO_CONTROLLER_COUNT,
+  PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  type PicoDevkitInputBatch,
+  type PicoInputSnapshot,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
 import {
@@ -193,6 +196,21 @@ type PlayerWorkerLifecycle =
   | "faulted"
   | "disposed";
 
+const ZERO_DEVKIT_INPUT: PicoDevkitInputBatch = Object.freeze({
+  mouseXRaw: 0,
+  mouseYRaw: 0,
+  mouseButtons: 0,
+  wheelRaw: 0,
+  movementXRaw: 0,
+  movementYRaw: 0,
+  keypresses: Object.freeze([]),
+});
+
+function saturatingAddInt32(left: number, right: number): number {
+  const result = left + right;
+  return Math.max(-0x8000_0000, Math.min(0x7fff_ffff, result)) | 0;
+}
+
 function playerBase(command: PlayerHostToRuntime) {
   return {
     v: 1 as const,
@@ -243,8 +261,51 @@ export function createPlayerWorkerController(
   let sessionGeneration = 0;
   let inputSequence = -1;
   let inputControllers: readonly number[] = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+  let inputMouseXRaw = 0;
+  let inputMouseYRaw = 0;
+  let inputMouseButtons = 0;
+  let pendingWheelRaw = 0;
+  let pendingMovementXRaw = 0;
+  let pendingMovementYRaw = 0;
+  const pendingKeypresses: number[] = [];
   let mode: "none" | "callback" | "custom" = "none";
   let targetFps: 0 | 30 | 60 = 0;
+  let devkitFlags = 0;
+
+  function clearPendingDevkitEvents(): void {
+    pendingWheelRaw = 0;
+    pendingMovementXRaw = 0;
+    pendingMovementYRaw = 0;
+    pendingKeypresses.length = 0;
+  }
+
+  function clearInputState(): void {
+    inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+    inputMouseXRaw = 0;
+    inputMouseYRaw = 0;
+    inputMouseButtons = 0;
+    clearPendingDevkitEvents();
+  }
+
+  function simulationInput(includePendingEvents: boolean): PicoInputSnapshot {
+    return {
+      controllers: inputControllers,
+      devkit: includePendingEvents ? {
+        mouseXRaw: inputMouseXRaw,
+        mouseYRaw: inputMouseYRaw,
+        mouseButtons: inputMouseButtons,
+        wheelRaw: pendingWheelRaw,
+        movementXRaw: pendingMovementXRaw,
+        movementYRaw: pendingMovementYRaw,
+        keypresses: pendingKeypresses.slice(),
+      } : {
+        ...ZERO_DEVKIT_INPUT,
+        mouseXRaw: inputMouseXRaw,
+        mouseYRaw: inputMouseYRaw,
+        mouseButtons: inputMouseButtons,
+      },
+    };
+  }
 
   function beginAudioGeneration(generation: number): void {
     audioSequence = 0;
@@ -284,7 +345,8 @@ export function createPlayerWorkerController(
   ): PlayerRuntimeToHost {
     lifecycle = "faulted";
     scheduler.pause();
-    inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+    clearInputState();
+    devkitFlags = 0;
     resetAudioQueue(command.sessionGeneration);
     return { ...playerBase(command), type: "fault", error };
   }
@@ -299,6 +361,7 @@ export function createPlayerWorkerController(
       state: next,
       mode,
       targetFps,
+      devkitFlags,
     };
   }
 
@@ -326,6 +389,7 @@ export function createPlayerWorkerController(
     sendAudio(result.value.audio);
     mode = result.value.mode;
     targetFps = result.value.targetFps;
+    devkitFlags = result.value.devkitFlags;
     scheduler.configure(targetFps);
     lifecycle = "ready";
     return state(command, "ready");
@@ -340,6 +404,17 @@ export function createPlayerWorkerController(
     ) return;
     inputSequence = command.sequence;
     inputControllers = command.input.controllers.slice();
+    const devkit = command.input.devkit;
+    inputMouseXRaw = devkit.mouseXRaw;
+    inputMouseYRaw = devkit.mouseYRaw;
+    inputMouseButtons = devkit.mouseButtons;
+    pendingWheelRaw = saturatingAddInt32(pendingWheelRaw, devkit.wheelRaw);
+    pendingMovementXRaw = saturatingAddInt32(pendingMovementXRaw, devkit.movementXRaw);
+    pendingMovementYRaw = saturatingAddInt32(pendingMovementYRaw, devkit.movementYRaw);
+    for (const byte of devkit.keypresses) {
+      if (pendingKeypresses.length >= PICO_DEVKIT_KEYPRESS_BATCH_LIMIT) break;
+      pendingKeypresses.push(byte);
+    }
   }
 
   function frameEvent(
@@ -349,6 +424,7 @@ export function createPlayerWorkerController(
     sendAudio(result.frame.audio);
     const packedScreen = result.frame.screen.slice().buffer;
     const displayPalette = result.frame.displayPalette.slice().buffer;
+    devkitFlags = result.frame.devkitFlags;
     return {
       ...playerBase(command),
       type: "frame",
@@ -356,6 +432,7 @@ export function createPlayerWorkerController(
       completedSlices: result.frame.completedSlices,
       timeRawBeforeStep: result.frame.timeRawBeforeStep,
       targetFps: result.frame.targetFps,
+      devkitFlags,
       packedScreen,
       displayPalette,
     };
@@ -392,7 +469,8 @@ export function createPlayerWorkerController(
     }
     let executedTicks = 0;
     for (let index = 0; index < decision.tickCount; index += 1) {
-      const result = session.step({ controllers: inputControllers });
+      const result = session.step(simulationInput(index === 0));
+      if (index === 0) clearPendingDevkitEvents();
       if (!result.ok) {
         events.push(fault(command, result.error));
         return events;
@@ -405,7 +483,8 @@ export function createPlayerWorkerController(
       if (result.value.kind === "stopped") {
         scheduler.pause();
         lifecycle = "stopped";
-        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+        clearInputState();
+        devkitFlags = 0;
         events.push(state(command, "stopped"));
         break;
       }
@@ -446,7 +525,8 @@ export function createPlayerWorkerController(
         instructionBudget = command.instructionBudget;
         scheduler.reset();
         inputSequence = -1;
-        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+        clearInputState();
+        devkitFlags = 0;
         try {
           return [acceptBoot(command, session.load(decodeCart(new Uint8Array(command.cartBytes))))];
         } catch (error) {
@@ -470,11 +550,12 @@ export function createPlayerWorkerController(
       }
       if (command.type === "dispose") {
         scheduler.reset();
-        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+        clearInputState();
         const result = session.dispose();
         lifecycle = "disposed";
         mode = "none";
         targetFps = 0;
+        devkitFlags = 0;
         resetAudioQueue(command.sessionGeneration);
         return result.ok ? [state(command, "disposed")] : [fault(command, result.error)];
       }
@@ -485,7 +566,8 @@ export function createPlayerWorkerController(
         sessionGeneration = command.sessionGeneration;
         scheduler.reset();
         inputSequence = -1;
-        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+        clearInputState();
+        devkitFlags = 0;
         return [acceptBoot(command, session.reset())];
       }
       if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
@@ -506,7 +588,7 @@ export function createPlayerWorkerController(
         }
         scheduler.pause();
         lifecycle = "paused";
-        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+        clearInputState();
         return [state(command, "paused")];
       }
       if (command.type === "resume") {
@@ -519,7 +601,8 @@ export function createPlayerWorkerController(
       }
       const stopped = session.stop();
       scheduler.reset();
-      inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+      clearInputState();
+      devkitFlags = 0;
       if (!stopped.ok) return [fault(command, stopped.error)];
       lifecycle = "stopped";
       resetAudioQueue(command.sessionGeneration);
@@ -527,7 +610,8 @@ export function createPlayerWorkerController(
     },
     dispose() {
       scheduler.reset();
-      inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
+      clearInputState();
+      devkitFlags = 0;
       session.dispose();
       lifecycle = "disposed";
       if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);

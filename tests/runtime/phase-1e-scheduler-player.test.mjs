@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { inputSnapshot } from "../helpers/input.mjs";
 
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 import { FrameScheduler } from "../../packages/runtime-core/dist/public.js";
@@ -78,7 +79,7 @@ test("Phase 1E protocol validators fail closed", () => {
   assert.equal(isPlayerHostToRuntime(command("input", {
     requestId: 0,
     sequence: 1,
-    input: { controllers: [0x40, 0, 0, 0, 0, 0, 0, 0] },
+    input: inputSnapshot([0x40, 0, 0, 0, 0, 0, 0, 0]),
   })), false);
 
   const frame = {
@@ -91,6 +92,7 @@ test("Phase 1E protocol validators fail closed", () => {
     completedSlices: "2",
     timeRawBeforeStep: 3276,
     targetFps: 60,
+    devkitFlags: 0,
     packedScreen: new ArrayBuffer(0x2000),
     displayPalette: new ArrayBuffer(16),
   };
@@ -124,7 +126,7 @@ end`);
   assert.equal(controller.handle(command("input", {
     requestId: 0,
     sequence: 1,
-    input: { controllers: [2, 0, 0, 0, 0, 0, 0, 0] },
+    input: inputSnapshot([2, 0, 0, 0, 0, 0, 0, 0]),
   })).length, 0);
   const anchor = controller.handle(command("vsync", { sequence: 1, timestampMs: 0 }));
   assert.equal(anchor.at(-1).type, "heartbeat");
@@ -151,7 +153,7 @@ end`);
     requestId: 0,
     sessionGeneration: 1,
     sequence: 99,
-    input: { controllers: [2, 0, 0, 0, 0, 0, 0, 0] },
+    input: inputSnapshot([2, 0, 0, 0, 0, 0, 0, 0]),
   }));
   controller.handle(command("vsync", {
     requestId: 5,
@@ -245,6 +247,7 @@ class FakeWorker {
         state,
         mode: state === "disposed" ? "none" : "callback",
         targetFps: state === "disposed" ? 0 : 30,
+        devkitFlags: 0,
       };
     }
     queueMicrotask(() => this.listener?.({ data: response }));
@@ -268,7 +271,7 @@ test("main client watchdog separates Worker generation and retains cart for reco
   assert.equal(client.workerGeneration, 1);
   await client.start();
   await assert.rejects(
-    client.pulse(0, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] }),
+    client.pulse(0, inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0])),
     (error) => error instanceof RuntimeClientError && error.record.code === "E_VM_WATCHDOG",
   );
   assert.equal(workers[0].terminated, true);
@@ -288,7 +291,7 @@ test("new session cancels an in-flight vsync without tripping the Worker watchdo
   const client = new PlayerRuntimeClient(() => worker, { commandTimeoutMs: 20 });
   await client.loadCart(textCart("function _draw() cls(2) end"));
   await client.start();
-  const pendingPulse = client.pulse(0, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
+  const pendingPulse = client.pulse(0, inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0]));
   const reset = client.reset();
   await assert.rejects(
     pendingPulse,

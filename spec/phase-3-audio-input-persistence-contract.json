@@ -9,9 +9,9 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A", "3B", "3C"],
-  "activeWorkUnit": "3D",
-  "nextWorkUnit": "3E",
+  "completedWorkUnits": ["3A", "3B", "3C", "3D"],
+  "activeWorkUnit": "3E",
+  "nextWorkUnit": "3F",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -236,7 +236,7 @@
     },
     "3D": {
       "name": "Devkit Input",
-      "status": "active",
+      "status": "complete",
       "apis": ["stat"],
       "devkitRegister": "0x5f2d",
       "flags": {
@@ -279,9 +279,88 @@
         "browser-neutral-devkit-state-and-event-batch-contract",
         "chrome-mouse-wheel-keyboard-and-pointer-lock-lifecycle-gate",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingId": 33,
+        "inputSnapshot": {
+          "controllerShapePreserved": "eight-six-bit-masks",
+          "devkitBatch": "fixed-state-plus-bounded-event-fields",
+          "keypressBatchLimit": 64,
+          "workerPolicy": "latest-state-accept-once-events-first-catch-up-slice"
+        },
+        "runtimeQueue": {
+          "capacityBytes": 64,
+          "overflow": "drop-newest",
+          "stat31Empty": "empty-string",
+          "unsupportedSelectors": "false"
+        },
+        "golden": "tests/golden/phase-3d-devkit-input.json",
+        "traceSha256": "a80fa7fe38b5be6112c5a695daea3dd2fbb36192564b0da2685f2303303b1d51",
+        "chromeGate": {
+          "browser": "Google Chrome 150.0.7871.189",
+          "mode": "headful-cdp-for-pointer-lock",
+          "productionWorker": true,
+          "trustedPointerGesture": true,
+          "pointerLockEnterAndPauseExit": true,
+          "generationRecovery": "1-to-2",
+          "workerErrors": 0
+        },
+        "knownDifferences": [
+          "the deterministic devkit golden is a project oracle rather than an official device capture",
+          "extended Unicode P8SCII input, IME and clipboard remain deferred",
+          "the automated pointer-lock gate is headful because Chrome 150 headless rejects pointer lock",
+          "complete stat outside the listed input selectors remains deferred"
+        ],
+        "verification": [
+          "pnpm run test:phase-3d",
+          "pnpm run test:phase-3d:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "3E": {
+      "name": "Cartdata Core",
+      "status": "active",
+      "apis": ["cartdata", "dget", "dset"],
+      "memory": {
+        "range": "0x5e00..0x5eff",
+        "bytes": 256,
+        "numbers": 64,
+        "numberEncoding": "signed-q16.16-raw-int32-little-endian",
+        "authorityAfterSelection": "live-pico-ram"
+      },
+      "idPolicy": {
+        "encoding": "ascii-byte-string",
+        "length": "1..64",
+        "characters": "lowercase-a-through-z-digits-and-underscore",
+        "callsPerExecution": 1
+      },
+      "runtimeOwns": [
+        "synchronous-cartdata-slot-selection",
+        "seed-copy-into-live-cartdata-ram",
+        "dget-dset-q16-indexed-access",
+        "direct-ram-write-dirty-observation",
+        "committed-256-byte-snapshot-publication"
+      ],
+      "persistenceSeam": {
+        "input": "browser-neutral-prehydrated-id-to-256-byte-seed-map",
+        "output": "immutable-committed-id-bytes-revision-snapshot",
+        "asyncIndexedDb": "owned-by-3F-not-3E"
+      },
+      "abi": {
+        "allocation": "append-only-operations-34-through-36",
+        "cartdataResult": "boolean-loaded-existing-seed",
+        "dgetResult": "q16.16-raw-int32",
+        "dsetResult": "void"
+      },
+      "exit": [
+        "real-wasm-cartdata-dget-dset-bindings",
+        "live-ram-and-direct-poke-coherence",
+        "browser-neutral-seed-and-commit-port",
+        "deterministic-reset-fault-and-golden-tests",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "3E": { "name": "Cartdata Core", "status": "planned" },
     "3F": { "name": "IndexedDB Persistence", "status": "planned" },
     "3G": { "name": "Current-cart reload and cstore", "status": "planned" },
     "3H": { "name": "Conformance and Phase Exit", "status": "planned" }

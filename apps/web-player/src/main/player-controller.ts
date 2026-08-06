@@ -136,6 +136,7 @@ export class PlayerController {
     this.#assertActive();
     this.#cancelFrame();
     this.#input.setEnabled(false);
+    this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
     this.#setState("loading", `Loading ${displayName}…`);
     this.#elements.diagnostic.textContent = "";
@@ -192,6 +193,7 @@ export class PlayerController {
     this.#assertActive();
     this.#cancelFrame();
     this.#input.setEnabled(false);
+    this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
     try {
       await this.#composition.reset();
@@ -208,6 +210,7 @@ export class PlayerController {
     if (["idle", "loading", "stopped", "disposed"].includes(this.#state)) return;
     this.#cancelFrame();
     this.#input.setEnabled(false);
+    this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
     try {
       await this.#composition.stop();
@@ -236,7 +239,7 @@ export class PlayerController {
     this.#frameHandle = this.#animationFrames.request((timestamp) => {
       this.#frameHandle = undefined;
       if (this.#state !== "running") return;
-      void this.#composition.pulse(timestamp, this.#input.snapshot()).then(
+      void this.#composition.pulse(timestamp, this.#input.takeSnapshot()).then(
         () => this.#scheduleFrame(),
         (error) => {
           if (
@@ -284,6 +287,9 @@ export class PlayerController {
   }
 
   #onRuntimeEvent(event: PlayerRuntimeToHost): void {
+    if (event.type === "state" || event.type === "frame") {
+      this.#input.setDevkitFlags(event.devkitFlags);
+    }
     if (event.type === "diagnostic") {
       this.#elements.diagnostic.textContent = `${event.error.code}: ${event.error.message}`;
     } else if (event.type === "fault") {
@@ -295,6 +301,7 @@ export class PlayerController {
     if (this.#disposed || this.#state === "faulted") return;
     this.#cancelFrame();
     this.#input.setEnabled(false);
+    this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
     const message = error instanceof RuntimeClientError
       ? `${error.record.code}: ${error.record.message}`

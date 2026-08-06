@@ -16,6 +16,7 @@ const resultKinds = new Map([
   ["q16.16-raw-i32", "P8W_HOST_RESULT_Q16"],
   ["integer-if-first-omitted-otherwise-boolean", "P8W_HOST_RESULT_INTEGER_OR_BOOLEAN"],
   ["integer-unless-second-present-then-boolean", "P8W_HOST_RESULT_INTEGER_OR_BOOLEAN_SECOND"],
+  ["stat-input-selector", "P8W_HOST_RESULT_STAT_INPUT"],
 ]);
 
 function sha256(text) {
@@ -163,7 +164,8 @@ export function renderCpp(contract, sourceHash = sha256(JSON.stringify(contract)
     `enum P8wHostResultKind : uint8_t {\n` +
     `  P8W_HOST_RESULT_VOID = 0,\n  P8W_HOST_RESULT_INTEGER = 1,\n` +
     `  P8W_HOST_RESULT_BOOLEAN = 2,\n  P8W_HOST_RESULT_INTEGER_OR_BOOLEAN = 3,\n` +
-    `  P8W_HOST_RESULT_Q16 = 4,\n  P8W_HOST_RESULT_INTEGER_OR_BOOLEAN_SECOND = 5,\n};\n\n` +
+    `  P8W_HOST_RESULT_Q16 = 4,\n  P8W_HOST_RESULT_INTEGER_OR_BOOLEAN_SECOND = 5,\n` +
+    `  P8W_HOST_RESULT_STAT_INPUT = 6,\n};\n\n` +
     `struct P8wHostBindingDescriptor {\n  uint32_t operation_id;\n  const char *guest_name;\n` +
     `  uint8_t minimum_arguments;\n  uint8_t maximum_arguments;\n  uint16_t byte_string_mask;\n` +
     `  uint16_t boolean_mask;\n  P8wHostResultKind result_kind;\n};\n\n` +

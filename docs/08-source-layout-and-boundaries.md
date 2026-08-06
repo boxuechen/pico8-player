@@ -11,7 +11,7 @@
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
 | **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
 | **Implemented through Phase 2 exit** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font、display-palette frame transport 与 project-owned production conformance gate |
-| **Implemented through Phase 3C** | browser-neutral `PicoSfxSynth`、live-RAM SFX/music/P8SCII audio、deterministic 22050Hz PCM、八玩家 input latch，以及 app-owned keyboard/Gamepad/multitouch 与 production device flow |
+| **Implemented through Phase 3D** | browser-neutral `PicoSfxSynth`、live-RAM SFX/music/P8SCII audio、deterministic 22050Hz PCM、八玩家 input latch，以及 app-owned keyboard/Gamepad/multitouch/devkit input 与 production device flow |
 | **Scaffold** | persistence/resolver adapters 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -19,7 +19,7 @@
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
 [`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1/2
-已完成，Phase 3A–3C 已独立关闭，当前 active work unit 是 Phase 3D，入口位于
+已完成，Phase 3A–3D 已独立关闭，当前 active work unit 是 Phase 3E，入口位于
 [`phases/3-audio-input-persistence.md`](./phases/3-audio-input-persistence.md)。Phase 2 边界由
 [exit evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 锁定。
 

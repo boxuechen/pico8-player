@@ -69,7 +69,18 @@ declare const runtimeFactory: (
   context: CartSessionRuntimeContext,
 ) => CartSessionRuntimePort;
 const cartSession = new CartSession({ createRuntime: runtimeFactory });
-const input: PicoInputSnapshot = { controllers: [0, 0, 0, 0, 0, 0, 0, 0] };
+const input: PicoInputSnapshot = {
+  controllers: [0, 0, 0, 0, 0, 0, 0, 0],
+  devkit: {
+    mouseXRaw: 0,
+    mouseYRaw: 0,
+    mouseButtons: 0,
+    wheelRaw: 0,
+    movementXRaw: 0,
+    movementYRaw: 0,
+    keypresses: [],
+  },
+};
 declare const serializedError: SerializedRuntimeError;
 const oneSecondRaw = logicalTimeRaw(60n, 60);
 

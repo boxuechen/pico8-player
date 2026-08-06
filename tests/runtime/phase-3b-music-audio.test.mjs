@@ -169,7 +169,7 @@ test("Phase 3B appends music binding 32 and preserves raw optional Q16 arguments
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.at(-1), {
+  assert.deepEqual(contract.bindings.find(({ id }) => id === 32), {
     id: 32,
     guestName: "music",
     hostMethod: "music",

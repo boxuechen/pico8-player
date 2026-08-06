@@ -33,8 +33,8 @@ phase 是 [Phase 3](./phases/3-audio-input-persistence.md)，work unit 为 3D。
 
 ### Active blockers
 
-当前 Phase 3D 没有已登记 blocker。Phase 3A–3C 已完成 deterministic audio、Chrome device audio
-与 controller input flow；Phase 1A–1F 已通过 L1 bounded-profile exit；Phase 2A–2F
+当前 Phase 3E 没有已登记 blocker。Phase 3A–3D 已完成 deterministic audio、Chrome device audio
+与 controller/devkit input flow；Phase 1A–1F 已通过 L1 bounded-profile exit；Phase 2A–2F
 已通过 Graphics/Memory/Text project-profile exit，见
 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)。
 

@@ -5,6 +5,7 @@ import type {
 import {
   PLAYER_CONTROLLER_BUTTON_MASK,
   PLAYER_CONTROLLER_COUNT,
+  PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT,
   type PlayerHostToRuntime,
   type PlayerRuntimeToHost,
 } from "./player-protocol.js";
@@ -45,12 +46,24 @@ function isPositiveUint(value: unknown): boolean {
   return isUint(value) && Number(value) > 0;
 }
 
+function isInt32(value: unknown): boolean {
+  return Number.isInteger(value) && Number(value) >= -0x8000_0000 &&
+    Number(value) <= 0x7fff_ffff;
+}
+
 function isPicoInputSnapshot(value: unknown): boolean {
   return isRecord(value) &&
     Array.isArray(value.controllers) &&
     value.controllers.length === PLAYER_CONTROLLER_COUNT &&
     value.controllers.every((buttons) =>
-      isUint(buttons) && Number(buttons) <= PLAYER_CONTROLLER_BUTTON_MASK);
+      isUint(buttons) && Number(buttons) <= PLAYER_CONTROLLER_BUTTON_MASK) &&
+    isRecord(value.devkit) &&
+    isInt32(value.devkit.mouseXRaw) && isInt32(value.devkit.mouseYRaw) &&
+    isUint(value.devkit.mouseButtons) && Number(value.devkit.mouseButtons) <= 0x07 &&
+    isInt32(value.devkit.wheelRaw) && isInt32(value.devkit.movementXRaw) &&
+    isInt32(value.devkit.movementYRaw) && Array.isArray(value.devkit.keypresses) &&
+    value.devkit.keypresses.length <= PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT &&
+    value.devkit.keypresses.every((byte) => isUint(byte) && Number(byte) <= 0xff);
 }
 
 function isPlayerEnvelope(value: unknown): value is Record<string, unknown> {
@@ -143,6 +156,7 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
   if (!isPlayerEnvelope(value)) return false;
   if (!isPositiveUint(value.requestId)) return false;
   if (value.type === "state") {
+    if (!isUint(value.devkitFlags) || Number(value.devkitFlags) > 0x07) return false;
     if (value.state === "disposed") {
       return value.mode === "none" && value.targetFps === 0;
     }
@@ -160,6 +174,7 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
       Number(value.timeRawBeforeStep) >= -0x8000_0000 &&
       Number(value.timeRawBeforeStep) <= 0x7fff_ffff &&
       (value.targetFps === 30 || value.targetFps === 60) &&
+      isUint(value.devkitFlags) && Number(value.devkitFlags) <= 0x07 &&
       value.packedScreen instanceof ArrayBuffer &&
       value.packedScreen.byteLength === 0x2000 &&
       value.displayPalette instanceof ArrayBuffer &&

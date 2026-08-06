@@ -20,6 +20,7 @@ import { PicoRam } from "../memory/pico-ram.js";
  */
 export interface PicoApiHost {
   readonly memoryLeaseId: string;
+  readonly devkitFlags: number;
   reset(): void;
   resetAudio(): void;
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void;
@@ -119,6 +120,7 @@ export interface PicoApiHost {
   btn(buttonRaw?: number, playerRaw?: number): number;
   /** Returns the current tick's edge/repeat state as a boolean encoded as 0/1. */
   btnp(buttonRaw: number, playerRaw?: number): number;
+  stat(selectorRaw: number): number;
   sfx(
     sfxRaw: number,
     channelRaw?: number,
@@ -165,6 +167,10 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void {
     this.#input.beginTick(input, targetFps);
+  }
+
+  get devkitFlags(): number {
+    return this.#input.devkitFlags;
   }
 
   renderAudioSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice {
@@ -405,6 +411,10 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void {
     this.#audio.music(patternRaw, fadeLengthRaw, channelMaskRaw);
+  }
+
+  stat(selectorRaw: number): number {
+    return this.#input.stat(selectorRaw);
   }
 }
 

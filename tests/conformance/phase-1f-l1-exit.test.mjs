@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
+import { inputSnapshot } from "../helpers/input.mjs";
 
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 import {
@@ -150,7 +151,7 @@ function runOnce(entry, cart) {
   for (let index = 0; index < entry.inputTrace.length; index += 1) {
     controller.handle(command("input", 0, 1, {
       sequence: index + 1,
-      input: { controllers: [entry.inputTrace[index], 0, 0, 0, 0, 0, 0, 0] },
+      input: inputSnapshot([entry.inputTrace[index], 0, 0, 0, 0, 0, 0, 0]),
     }));
     const frame = onlyFrame(controller.handle(command("vsync", requestId++, 1, {
       sequence: index + 2,
@@ -184,7 +185,7 @@ function runOnce(entry, cart) {
   }));
   controller.handle(command("input", 0, 2, {
     sequence: 1,
-    input: { controllers: [0, 0, 0, 0, 0, 0, 0, 0] },
+    input: inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0]),
   }));
   const resetFrameEvent = onlyFrame(controller.handle(command("vsync", requestId++, 2, {
     sequence: 2,

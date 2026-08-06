@@ -1,4 +1,4 @@
-import type { PicoInputSnapshot } from "@pico8-web/contracts";
+import type { PicoControllerSnapshot } from "@pico8-web/contracts";
 import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 
 interface KeyboardBinding {
@@ -31,7 +31,7 @@ const KEY_TO_BUTTON = new Map<string, KeyboardBinding>([
 export interface KeyboardInputFrontendOptions {
   readonly window?: Window;
   readonly document?: Document;
-  readonly onChange?: (snapshot: PicoInputSnapshot) => void;
+  readonly onChange?: (snapshot: PicoControllerSnapshot) => void;
 }
 
 /** Maps the documented player 0/1 keys into the normalized controller snapshot. */
@@ -39,7 +39,7 @@ export class KeyboardInputFrontend {
   readonly #focusTarget: HTMLElement;
   readonly #window: Window;
   readonly #document: Document;
-  readonly #onChange: ((snapshot: PicoInputSnapshot) => void) | undefined;
+  readonly #onChange: ((snapshot: PicoControllerSnapshot) => void) | undefined;
   readonly #heldCodes = new Set<string>();
   #enabled = false;
   readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
@@ -67,7 +67,7 @@ export class KeyboardInputFrontend {
     return Array.from(this.#controllers);
   }
 
-  snapshot(): PicoInputSnapshot {
+  snapshot(): PicoControllerSnapshot {
     return { controllers: Array.from(this.#controllers) };
   }
 

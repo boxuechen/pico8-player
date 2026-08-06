@@ -1,4 +1,4 @@
-import type { PicoInputSnapshot } from "@pico8-web/contracts";
+import type { PicoControllerSnapshot } from "@pico8-web/contracts";
 import {
   PLAYER_CONTROLLER_BUTTON_COUNT,
   PLAYER_CONTROLLER_COUNT,
@@ -12,14 +12,14 @@ interface TouchBinding {
 export interface TouchInputFrontendOptions {
   readonly window?: Window;
   readonly document?: Document;
-  readonly onChange?: (snapshot: PicoInputSnapshot) => void;
+  readonly onChange?: (snapshot: PicoControllerSnapshot) => void;
 }
 
 /** Converts multi-pointer virtual controls to an isolated controller source. */
 export class TouchInputFrontend {
   readonly #window: Window;
   readonly #document: Document;
-  readonly #onChange: ((snapshot: PicoInputSnapshot) => void) | undefined;
+  readonly #onChange: ((snapshot: PicoControllerSnapshot) => void) | undefined;
   readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
   readonly #pointers = new Map<number, TouchBinding>();
   readonly #removeListeners: (() => void)[] = [];
@@ -47,7 +47,7 @@ export class TouchInputFrontend {
     });
   }
 
-  snapshot(): PicoInputSnapshot {
+  snapshot(): PicoControllerSnapshot {
     return { controllers: Array.from(this.#controllers) };
   }
 

@@ -1,4 +1,4 @@
-import type { PicoInputSnapshot } from "@pico8-web/contracts";
+import type { PicoControllerSnapshot } from "@pico8-web/contracts";
 import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 const AXIS_PRESS_THRESHOLD = 0.5;
 const AXIS_RELEASE_THRESHOLD = 0.35;
@@ -48,7 +48,7 @@ export class GamepadInputFrontend {
     this.#source = options.source ?? navigator;
   }
 
-  snapshot(): PicoInputSnapshot {
+  snapshot(): PicoControllerSnapshot {
     this.#assertActive();
     this.#controllers.fill(0);
     if (!this.#enabled) return { controllers: Array.from(this.#controllers) };

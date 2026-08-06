@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 3B；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 3D；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -15,8 +15,9 @@
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
 | **Implemented through Phase 3B** | browser-neutral four-channel SFX/music/P8SCII synth、live song/SFX decode、bindings `31/32`、dedicated Worker PCM 与 Chrome 44.1/48kHz AudioWorklet output |
 | **Implemented through Phase 3C** | fixed eight-player snapshot、independent `btn/btnp` latch、keyboard P0/P1、standard Gamepad、multitouch 和 production Chrome input lifecycle |
+| **Implemented through Phase 3D** | input-only `stat()`、`0x5f2d` devkit flags、bounded key FIFO、Worker event accumulator、mouse button overlay 与 app-owned trusted pointer-lock lifecycle |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、Persistence、完整 cart swap 与 multicart；input-only devkit selectors 由 active 3D 授权 |
+| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、IndexedDB persistence、完整 cart swap 与 multicart；同步 cartdata core 由 active 3E 授权 |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -496,15 +497,14 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 ## 9. Input
 
-> 状态：Phase 3C 的固定八玩家 controller snapshot、keyboard P0/P1、Gamepad 与 touch 已
-> Implemented；active 3D 只授权 input-only devkit `stat()`、mouse/keyboard event batch 和
-> pointer-lock lifecycle。
+> 状态：Phase 3C controller 与 Phase 3D input-only devkit `stat()`、mouse/keyboard event batch、
+> pointer-lock lifecycle 均已 Implemented。
 
 RuntimeCore 在每个 boot/step transaction 前锁存固定 `PicoInputSnapshot.controllers[8]`，写
 `0x5f4c..0x5f53` 并按 30/60Hz 与 `0x5f5c/0x5f5d` 计算独立 `btnp`。HostRequest completion
 复用当前 latch；CartSession generation reset 清除 held/edge/duration。main thread 的
 `PlayerInputFrontend` 合并 keyboard、standard Gamepad 与 multitouch source，只把 normalized
-8×6-bit snapshot 送入 Worker。active 3D 可在该 DTO 上增加固定 devkit state/event batch；
+8×6-bit snapshot 送入 Worker。3D 已在该 DTO 上增加固定 devkit state/event batch；
 keypress FIFO、逐 slice delta latch 与 `stat()` consumption 由 RuntimeCore 拥有，DOM coordinate、
 pointer lock 和 event normalization 仍由 app 拥有。
 
@@ -513,7 +513,7 @@ pointer lock 和 event normalization 仍由 app 拥有。
 - replay 记录每 tick 的 normalized input snapshot，不记录 DOM timestamp。相同 replay 必须产生相同状态 hash。
 - `blur`、visibility loss、设备断连和 cart swap 必须显式清 held 状态，防止 stuck key。
 - 主线程映射可配置，但 core 只接收 PICO button index；UI 快捷键不得泄漏为 cart 输入。
-- devkit mouse/keyboard 模式通过 `0x5f2d` 与 active 3D 列出的 input-only `stat()` 契约实现；
+- devkit mouse/keyboard 模式通过 `0x5f2d` 与 3D 列出的 input-only `stat()` 契约实现；
   未列出的完整 `stat()` 仍 Deferred。基础 controller 输入是 MUST，devkit 输入是兼容阶段的 SHOULD。
 
 ## 10. FrameScheduler
@@ -563,9 +563,8 @@ type StepResult = Readonly<{
 
 ## 11. Persistence
 
-> 状态：尚未实现。现有 storage adapter 只是 composition scaffold；Phase 3 激活文档和机器
-> 契约必须先定义 public port、同步 guest mirror 与异步 commit transaction，本文只保留所有权和
-> 语义约束。
+> 状态：active 3E 授权 browser-neutral 同步 guest mirror、prehydrated seed 与 immutable commit
+> port；IndexedDB hydrate/commit transaction 仍由 3F 实现。
 
 ### 11.1 同步 guest、异步浏览器
 

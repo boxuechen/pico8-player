@@ -8,6 +8,7 @@ export const PLAYER_PROTOCOL_VERSION = 1 as const;
 export const PLAYER_CONTROLLER_COUNT = 8 as const;
 export const PLAYER_CONTROLLER_BUTTON_COUNT = 6 as const;
 export const PLAYER_CONTROLLER_BUTTON_MASK = 0x3f as const;
+export const PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT = 64 as const;
 
 interface PlayerCommandEnvelope {
   readonly v: typeof PLAYER_PROTOCOL_VERSION;
@@ -66,6 +67,7 @@ export type PlayerRuntimeToHost =
       readonly state: PlayerRuntimeState;
       readonly mode: "none" | "callback" | "custom";
       readonly targetFps: 0 | 30 | 60;
+      readonly devkitFlags: number;
     })
   | (PlayerEventEnvelope & {
       readonly type: "frame";
@@ -73,6 +75,7 @@ export type PlayerRuntimeToHost =
       readonly completedSlices: string;
       readonly timeRawBeforeStep: number;
       readonly targetFps: 30 | 60;
+      readonly devkitFlags: number;
       readonly packedScreen: ArrayBuffer;
       readonly displayPalette: ArrayBuffer;
     })

@@ -219,10 +219,10 @@ apis:
     phase: 3B
     note: typed binding 32, live 64-pattern sequencer, channel arbitration/fade, P8SCII audio and production dedicated-port AudioWorklet output; project oracle is not official bit-exact audio
   - name: stat
-    status: unimplemented
+    status: partial
     owner: packages/runtime-core
     phase: 3D
-    note: active Phase 3D only authorizes documented devkit input selectors 30,31,32,33,34,36,38,39; complete stat remains deferred
+    note: documented devkit input selectors 30,31,32,33,34,36,38,39 are implemented through typed binding 33; complete stat remains deferred
   - name: cartdata
     status: unimplemented
     owner: packages/runtime-core

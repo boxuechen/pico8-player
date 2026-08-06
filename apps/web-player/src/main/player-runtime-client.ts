@@ -7,6 +7,7 @@ import {
   isPlayerRuntimeToHost,
   PLAYER_CONTROLLER_BUTTON_MASK,
   PLAYER_CONTROLLER_COUNT,
+  PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT,
   type AudioPortAttachmentEnvelope,
   type PlayerHostToRuntime,
   type PlayerRuntimeControlCommand,
@@ -194,7 +195,18 @@ export class PlayerRuntimeClient {
 
   clearInput(): void {
     if (this.#disposed || this.#sessionGeneration === 0) return;
-    this.#postInput({ controllers: new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0) });
+    this.#postInput({
+      controllers: new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0),
+      devkit: {
+        mouseXRaw: 0,
+        mouseYRaw: 0,
+        mouseButtons: 0,
+        wheelRaw: 0,
+        movementXRaw: 0,
+        movementYRaw: 0,
+        keypresses: [],
+      },
+    });
   }
 
   attachAudioPort(port: MessagePort): void {
@@ -255,13 +267,24 @@ export class PlayerRuntimeClient {
   }
 
   #postInput(input: PicoInputSnapshot): void {
+    const devkit = input.devkit;
+    const isInt32 = (value: unknown): boolean => Number.isInteger(value) &&
+      Number(value) >= -0x8000_0000 && Number(value) <= 0x7fff_ffff;
     if (
       !Array.isArray(input.controllers) || input.controllers.length !== PLAYER_CONTROLLER_COUNT ||
       input.controllers.some((buttons) =>
         !Number.isSafeInteger(buttons) || buttons < 0 ||
-        buttons > PLAYER_CONTROLLER_BUTTON_MASK)
+        buttons > PLAYER_CONTROLLER_BUTTON_MASK) ||
+      typeof devkit !== "object" || devkit === null ||
+      !isInt32(devkit.mouseXRaw) || !isInt32(devkit.mouseYRaw) ||
+      !Number.isInteger(devkit.mouseButtons) || devkit.mouseButtons < 0 ||
+      devkit.mouseButtons > 0x07 || !isInt32(devkit.wheelRaw) ||
+      !isInt32(devkit.movementXRaw) || !isInt32(devkit.movementYRaw) ||
+      !Array.isArray(devkit.keypresses) ||
+      devkit.keypresses.length > PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT ||
+      devkit.keypresses.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 0xff)
     ) {
-      throw new RangeError("input controllers must contain eight six-bit masks");
+      throw new RangeError("input must contain a fixed controller snapshot and devkit batch");
     }
     this.#worker.postMessage({
       v: 1,
@@ -270,7 +293,18 @@ export class PlayerRuntimeClient {
       workerGeneration: this.#workerGeneration,
       sessionGeneration: this.#sessionGeneration,
       sequence: ++this.#inputSequence,
-      input: { controllers: input.controllers.slice() },
+      input: {
+        controllers: input.controllers.slice(),
+        devkit: {
+          mouseXRaw: devkit.mouseXRaw,
+          mouseYRaw: devkit.mouseYRaw,
+          mouseButtons: devkit.mouseButtons,
+          wheelRaw: devkit.wheelRaw,
+          movementXRaw: devkit.movementXRaw,
+          movementYRaw: devkit.movementYRaw,
+          keypresses: devkit.keypresses.slice(),
+        },
+      },
     });
   }
 

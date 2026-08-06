@@ -1,6 +1,7 @@
 import {
   PlayerComposition,
 } from "../../apps/web-player/dist/main/main.js";
+import { inputSnapshot } from "../helpers/input.mjs";
 
 const encoder = new TextEncoder();
 const resultNode = document.querySelector("#result");
@@ -65,7 +66,7 @@ async function createCase(requestedSampleRate) {
 
 async function pulseAll(cases, timestampMs) {
   await Promise.all(cases.map(({ composition }) =>
-    composition.pulse(timestampMs, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] })));
+    composition.pulse(timestampMs, inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0]))));
 }
 
 async function prepare() {

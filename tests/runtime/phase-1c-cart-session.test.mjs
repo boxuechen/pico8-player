@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test, { before } from "node:test";
+import { inputSnapshot } from "../helpers/input.mjs";
 
 import {
   CartSession,
@@ -42,6 +43,7 @@ function ready(mode = "callback", targetFps = 30) {
       kind: "ready",
       mode,
       targetFps,
+      devkitFlags: 0,
       audio: silentAudio(targetFps === 60 ? 735 : 735),
     },
   };
@@ -65,6 +67,7 @@ function frame(frameId = 0) {
         completedSlices: String(frameId + 2),
         timeRawBeforeStep: 0,
         targetFps: 30,
+        devkitFlags: 0,
         screen: new Uint8Array(0x2000),
         displayPalette: Uint8Array.from({ length: 16 }, (_, index) => index),
         audio: silentAudio(735, String(frameId * 735)),
@@ -99,7 +102,7 @@ class FakeRuntime {
     return result;
   }
 
-  step(input = { controllers: [0, 0, 0, 0, 0, 0, 0, 0] }) {
+  step(input = inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0])) {
     this.stepCalls.push({ ...input });
     const result = this.script.step?.(input, this) ?? frame(this.stepCalls.length - 1);
     this.state = result.ok
@@ -159,6 +162,7 @@ test("load/reset own cart bytes, use zero input, and replace the full runtime gr
     generation: 1,
     mode: "callback",
     targetFps: 30,
+    devkitFlags: 0,
     audio: silentAudio(),
   });
   assert.equal(session.state, "ready");
@@ -166,7 +170,7 @@ test("load/reset own cart bytes, use zero input, and replace the full runtime gr
   assert.equal(Object.isFrozen(session.cart.identity), true);
   assert.equal(Object.isFrozen(contexts[0]), true);
   assert.equal(Object.isFrozen(contexts[0].cart), true);
-  assert.deepEqual(runtimes[0].bootCalls[0].input, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
+  assert.deepEqual(runtimes[0].bootCalls[0].input, inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0]));
 
   cart.rom[0] = 0xee;
   cart.code[0] = 0xee;
@@ -176,7 +180,7 @@ test("load/reset own cart bytes, use zero input, and replace the full runtime gr
   assert.equal(runtimes[0].disposeCalls, 1);
   assert.equal(runtimes[1].bootCalls[0].rom[0], 0x31);
   assert.equal(runtimes[1].bootCalls[0].code[0], 0x66);
-  assert.deepEqual(runtimes[1].bootCalls[0].input, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
+  assert.deepEqual(runtimes[1].bootCalls[0].input, inputSnapshot([0, 0, 0, 0, 0, 0, 0, 0]));
   assert.deepEqual(contexts.map(({ generation }) => generation), [1, 2]);
 
   const badCart = { ...cart, rom: new Uint8Array(4) };
@@ -416,6 +420,7 @@ function _draw() end`);
     generation: 1,
     mode: "callback",
     targetFps: 30,
+    devkitFlags: 0,
     audio: silentAudio(),
   });
   assert.equal(assertOk(session.copyRam(0x5010, 1))[0], 4);

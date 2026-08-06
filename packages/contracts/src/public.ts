@@ -63,8 +63,23 @@ export interface SerializedRuntimeError {
 export const PICO_CONTROLLER_COUNT = 8;
 export const PICO_CONTROLLER_BUTTON_COUNT = 6;
 export const PICO_CONTROLLER_BUTTON_MASK = 0x3f;
+export const PICO_DEVKIT_KEYPRESS_BATCH_LIMIT = 64;
 
-export interface PicoInputSnapshot {
-  /** Player 0..7 left/right/up/down/O/X masks; validation fixes length to 8 and each value to 6 bits. */
+export interface PicoControllerSnapshot {
+  /** Player 0..7 left/right/up/down/O/X masks. */
   readonly controllers: readonly number[];
+}
+
+export interface PicoDevkitInputBatch {
+  readonly mouseXRaw: number;
+  readonly mouseYRaw: number;
+  readonly mouseButtons: number;
+  readonly wheelRaw: number;
+  readonly movementXRaw: number;
+  readonly movementYRaw: number;
+  readonly keypresses: readonly number[];
+}
+
+export interface PicoInputSnapshot extends PicoControllerSnapshot {
+  readonly devkit: PicoDevkitInputBatch;
 }
