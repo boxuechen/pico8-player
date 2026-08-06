@@ -639,6 +639,7 @@ bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
 | `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
+| `P6-KD-01` | `menuitem()` pause-menu UI / callback invocation | VM-local add/replace/remove 已支持，但 player 没有暂停菜单，玩家不能选择条目或触发 callback | 只依赖注册的 cart 可启动；依赖菜单交互的 cart 尚未达到可玩兼容；见 [ADR-021](./adr/021-menuitem-registration-boundary.md) |
 
 ### 15.6 Coverage limitation 与范围排除
 
@@ -651,7 +652,8 @@ surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profil
 `unknown`，不能计作 official-compatible。精确 API 名单只由
 [`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 维护，不在 living 文档复制。
 
-- Conditional：`printh`、`extcmd`、`menuitem`。
+- Conditional：`printh`、`extcmd`；`menuitem` 已实现 bounded VM-local registration，但 UI/invocation
+  仍为 `P6-KD-01`。
 - Excluded platform API：`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；guest root
   `load` 已进入当前 local L3 profile。
 - External/local corpus、BBS bytes 和第三方结果对公开分母贡献为 `0`。

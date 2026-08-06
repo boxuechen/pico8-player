@@ -640,6 +640,11 @@ any live state -> stopped/disposed
 transaction failure -> fault event + internal fault containment
 ```
 
+这里的 `paused` 只表示 host lifecycle/scheduler policy，不是 PICO-8 pause menu。按照
+[ADR-021](./adr/021-menuitem-registration-boundary.md)，`menuitem()` 当前只在 z8lua VM 内注册；
+RuntimeCore、Worker/Main transport 和 DOM 不接收菜单快照或 Lua callback handle，也不会由 host
+`pause` 触发 guest callback。
+
 ### 13.2 HostRequest
 
 精确 public port 是

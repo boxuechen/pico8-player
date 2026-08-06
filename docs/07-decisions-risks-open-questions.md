@@ -31,6 +31,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-018 | [Accepted](./adr/018-caller-authorized-cart-resolution.md) | caller-authorized local bundle resolver；BBS 自动访问保持 Deferred |
 | ADR-019 | [Accepted](./adr/019-phase-5-coroutine-compatibility.md) | L3 host suspension 保持 root-only；nested surface 统一 structured fault |
 | ADR-020 | [Deferred](./adr/020-phase-5-bbs-adapter.md) | 不新增自动 BBS adapter、endpoint 或 production network capability |
+| ADR-021 | [Accepted](./adr/021-menuitem-registration-boundary.md) | `menuitem()` 五槽注册表和 callback 保持 VM-local；pause-menu UI/invocation 为 Published Known Difference |
 
 ## 2. 当前未决问题
 

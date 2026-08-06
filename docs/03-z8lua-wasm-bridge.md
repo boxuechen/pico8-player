@@ -9,7 +9,7 @@
 - **Target / Deferred**：尚未进入机器契约；只有 active phase、测试与必要 ADR 完成后才能视为稳定公共契约。
 
 当前 production `p8w_*` 已覆盖 context lifecycle、64 KiB shared Pico RAM、append-only host
-bindings `1..41`、frame stepping、root HostRequest、VM-local P8 helpers、instruction accounting、
+bindings `1..41`、frame stepping、root HostRequest、VM-local P8 helpers/`menuitem` registration、instruction accounting、
 fixed memory/Lua heap 和 structured errors。`p8w0a_*`/`p8w0b_*` 仍是隔离 probe，不是产品 ABI。
 精确操作、版本和 artifact 只以 [`p8w-v1.json`](../spec/abi/p8w-v1.json)、runtime manifest、
 public adapter 与自动测试的交集为准；完成测量见
@@ -17,9 +17,9 @@ public adapter 与自动测试的交集为准；完成测量见
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors |
+| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/`menuitem` registration/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors |
 | **Accepted invariant** | 同步且不可重入的 import、append-only binding IDs、同一 Pico RAM、root-only recoverable host suspension、host-owned capability policy |
-| **Deferred** | general nested-coroutine HostRequest recovery、include resolution、multi-return/result vectors 和未激活的 capability/API 扩展 |
+| **Deferred** | full PICO-8 pause-menu UI/callback invocation、general nested-coroutine HostRequest recovery、include resolution、multi-return/result vectors 和未激活的 capability/API 扩展 |
 
 机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter。历史实施顺序、
 benchmark 数值和关闭 checklist 只从 evidence/ADR 按需追溯，不在本 living contract 重复。
@@ -99,7 +99,8 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 1. 创建 main state，安装受限 allocator。
 2. 只打开实现 P8 Lua 所需的 base、PICO pure math/string、table 与 coroutine 子集；
    project-owned table/string/coroutine helpers 保持在 VM 内，`rnd/srand` 直接使用 shared Pico
-   RAM `0x5f44..0x5f4b` 的 PRNG state，不跨 JS↔WASM host binding。
+   RAM `0x5f44..0x5f4b` 的 PRNG state；`menuitem()` 的五槽 registry、byte label 和 callback
+   strong reference 同样只属于当前 `lua_State`。这些值均不跨 JS↔WASM host binding。
 3. 删除或从不注册 `debug`、`io`、`os`、`package`、`require`、`dofile`、`loadfile` 和 native module 能力。
 4. 按目标 PICO-8 API inventory 删除多余 base globals，并注册 PICO aliases 与 generated host wrappers。
 5. 安装不可由 guest 修改的 count hook。

@@ -1,6 +1,6 @@
 # Phase 6 — Real-cart Qualification
 
-> 状态：Active；6A–6D complete，6E active
+> 状态：Active；6A–6E complete，6F active
 > 机器合同：[`spec/phase-6-real-cart-qualification-contract.json`](../../spec/phase-6-real-cart-qualification-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 5 L3 local/multicart exit](../evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)
@@ -36,8 +36,8 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 | 6B External Corpus Runner | Complete | 三份 schema、fail-closed validator、path-redacted report CLI |
 | 6C Twelve-cart Baseline | Complete | 12/12 complete；6 boots/CU、6 fails/C0；local-only screenshots |
 | 6D `stat(20)` Compatibility | Complete | affected case 恢复；local baseline 变为 7 boots/CU、5 fails/C0 |
-| 6E `menuitem()` Boundary | **Active** | 下节 |
-| 6F CPU Slicing Spike / Decision | Pending | 6E exit 后展开；必须尊重/替换 ADR-017 |
+| 6E `menuitem()` Boundary | Complete | VM-local 五槽 registration；UI/invocation 为 `P6-KD-01` |
+| 6F CPU Slicing Spike / Decision | **Active** | 下节；必须尊重/替换 ADR-017 |
 | 6G Chrome Playability Pass | Pending | 6F exit 后展开 |
 | 6H Qualification Exit / Report | Pending | aggregate exit |
 
@@ -76,44 +76,56 @@ ignored corpus 变为 7 boots/CU、5 fails/C0，公开 denominator 仍为 0。pr
 `b5944f31d6fabdcb0eb79f8f3c764751e1962d39a5488a49d09f4b800b8bbc7f`。验证入口是
 `pnpm run test:phase-6d`、`pnpm run test:phase-6d:chrome` 与 `pnpm run verify`。
 
-## Active work unit：6E `menuitem()` Boundary
+## 6E closure
+
+6E 由 [ADR-021](../adr/021-menuitem-registration-boundary.md) 接受 VM-local registration-only：
+`menuitem()` 支持槽位 `1..5`、`0xff00` filter、16-byte label、callback strong reference、replacement
+和 removal；registry 随 `lua_State` generation 销毁，没有 Lua handle、transport 或 DOM authority 越过
+WASM 边界。Node real-WASM 覆盖 validation、weak-reference GC 与 20-generation cleanup，Chrome 项目
+卡带 12/12 通过。受影响 local case 不再 missing-global，ignored aggregate 变为 8 boots/CU、4
+fails/C0；pause-menu UI/callback invocation 作为 `P6-KD-01`，不能由启动成功推断为可玩。production
+WASM SHA-256 为 `50e5c6019622342a4e7e099af8f2194c431f9740c5438ce1f31561debd8294e6`。
+验证入口是 `pnpm run test:phase-6e`、`pnpm run test:phase-6e:chrome` 与 `pnpm run verify`。
+
+## Active work unit：6F CPU Slicing Spike / Decision
 
 ### Observable behavior
 
-1. 先用 ADR 冻结 ownership：`menuitem()` 的 Lua callback 和注册表留在同一 VM generation；不得把
-   Lua function pointer、registry ref 或可执行 closure 传给 TypeScript/DOM。
-2. 当前 unit 至少实现 official registration boundary：index `1..5`（保留 `0xff00` button filter
-   bits）、P8SCII label 最多 16 bytes、callback 必须为 function；同 index replacement 与省略
-   label/callback removal 可确定执行。
-3. 当前 web-player 的 host lifecycle pause 不是 PICO-8 pause menu。6E 必须明确决定 UI/callback
-   invocation 是本 unit 实现还是 Published Known Difference；不能用一个静默 JS no-op 冒充完整菜单。
-4. 若接受 registration-only，注册表必须 VM-local、bounded、GC-safe、fresh generation 自动清空，
-   并明确 guest 不能触发 callback；不得新增 Worker/Main transport 或 DOM authority。
-5. 原创 real-WASM cart 覆盖 add/update/remove、invalid index/label/callback、GC lifetime 和 fresh reset；
-   Chrome production path 与受影响 local case 均不再因 missing global fault。
+1. 用原创最小 cart 在 real WASM 中隔离 implicit infinite/top-level loop；callback loop 与显式
+   `flip()` custom loop 是 control，不得把普通 hard-budget fault 错认成同一 surface。
+2. spike 必须验证 z8lua count hook 的 continuation 安全性、任意 instruction-point resume、Lua stack/GC、
+   `pcall`/nested coroutine 与 host transaction；不能仅让 hook 返回 `LUA_YIELD` 就宣称可恢复。
+3. [ADR-017](../adr/017-coroutine-frame-slice-and-fault-containment.md) 当前拒绝 resumable count-hook。
+   ADR-022 必须依据 spike 选择：以可证明的 bounded design 替换它，或维持 fail-closed 并发布精确
+   Known Difference。不可用源码字符串重写、无限 quantum、busy-wait 或 cart-specific workaround。
+4. 若实现 slicing，一次 Runtime `step()` 仍至多提交一个 frame；logical time、input/audio/cartdata
+   transaction、soft CPU accounting、hard safety cap、fault poison 和 fresh-generation recovery 必须保持。
+5. 原创 Node/Chrome regression 与 affected local case 锁定最终决定；existing callback/explicit-flip、
+   Phase 4F CPU model 和 ADR-019 nested suspension 不得回归。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.6E.allowedPaths` 控制。默认路径只允许 VM-local compat、ADR、
-原创 regression 与 inventory/文档；除非 ADR 明确授权 full UI，不得修改 RuntimeCore、Worker/Main
-transport、PlayerController、DOM shell 或 host pause lifecycle。external bytes 和 `ref/` 仍不进入
-测试或构建。
+精确允许路径由机器合同 `workUnits.6F.allowedPaths` 控制。只允许现有 WASM frame runtime、bridge
+adapter、RuntimeCore frame transaction、ABI/manifest、ADR 与原创 regression；不得修改 parser/cart
+bytes、用 source rewrite 绕过问题，或增加 Worker/Main/DOM capability。external bytes 和 `ref/` 仍不
+进入测试或构建。
 
 ### Tests
 
-- Proposed：`pnpm run test:phase-6e`
-- Proposed：`pnpm run test:phase-6e:chrome`
-- `pnpm run test:phase-4c`
+- Proposed：`pnpm run test:phase-6f`
+- Proposed：`pnpm run test:phase-6f:chrome`
+- `pnpm run test:phase-0e`
+- `pnpm run test:phase-4f`
 - `pnpm run test:architecture`
-- VM/runtime contract 改变，最终必须运行 `pnpm run verify`
+- 最终必须运行 `pnpm run verify`
 
 ### Exit gate
 
-- ADR 固定 callback/registry/UI ownership；注册语义不是无界 host handle 或静默假兼容。
-- Node real-WASM 精确覆盖 bounded registry、replacement/removal、validation、GC 与 generation cleanup。
-- Chrome project cart 与 local affected case 均不再出现 missing-global fault。
-- API inventory/Published Known Difference 精确区分 registration 与 UI/invocation 支持。
-- `pnpm run verify` 通过；6E 结果折叠入机器合同，6F 成为唯一 active work unit，并独立提交。
+- ADR-022 依据可执行 spike 明确替换或维持 ADR-017，不能保留模糊的“可能 slicing”。
+- Node/Chrome 锁定 implicit loop 与 callback/explicit-flip controls、budget/recovery 和 transaction 边界。
+- affected local case 按决定重跑；不做 cart-specific rewrite，也不把 watchdog 当正常 frame scheduler。
+- ABI/bridge/RuntimeCore/compatibility 文档与实际决定一致。
+- `pnpm run verify` 通过；6F 结果折叠入机器合同，6G 成为唯一 active work unit，并独立提交。
 
 ## Phase exit gate
 

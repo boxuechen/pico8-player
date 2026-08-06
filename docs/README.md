@@ -9,13 +9,13 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | --- | --- |
 | 最近完成 | Phase 5；[L3 local/multicart project-profile evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 | 当前阶段 | [Phase 6 Real-cart Qualification](./phases/6-real-cart-qualification.md) |
-| Active work unit | 6E `menuitem()` Boundary |
+| Active work unit | 6F CPU Slicing Spike / Decision |
 | 机器合同 | [`spec/phase-6-real-cart-qualification-contract.json`](../spec/phase-6-real-cart-qualification-contract.json) |
 
 Phase 5A–5H 已关闭 caller-authorized local resolution、root suspension、atomic guest load、external
 cart-data、accepted root-only coroutine 边界、Deferred BBS 决策与 30 分钟 Chrome resource gate。
-Phase 6A–6D 已完成 local-only policy、脱敏 runner、12-cart baseline 与 `stat(20)` 修复；当前只授权
-6E `menuitem()` boundary。roadmap、Target 示例和
+Phase 6A–6E 已完成 local-only policy、脱敏 runner、12-cart baseline、`stat(20)` 修复与 VM-local
+`menuitem()` registration；当前只授权 6F CPU slicing spike/decision。roadmap、Target 示例和
 历史 evidence 不能单独授权后续 work unit。
 
 日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把

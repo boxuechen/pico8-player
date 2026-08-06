@@ -76,9 +76,9 @@
       "durationOrTrace"
     ]
   },
-  "completedWorkUnits": ["6A", "6B", "6C", "6D"],
-  "activeWorkUnit": "6E",
-  "nextWorkUnit": "6F",
+  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E"],
+  "activeWorkUnit": "6F",
+  "nextWorkUnit": "6G",
   "workUnits": {
     "6A": {
       "name": "Activation / Corpus Policy",
@@ -252,7 +252,7 @@
     },
     "6E": {
       "name": "menuitem Boundary",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/p8w_pico8_compat.cpp",
         "wasm/bridge/p8w_pico8_compat.h",
@@ -271,6 +271,7 @@
         "docs/07-decisions-risks-open-questions.md",
         "docs/08-source-layout-and-boundaries.md",
         "docs/README.md",
+        "docs/phases/README.md",
         "docs/phases/6-real-cart-qualification.md",
         "spec/phase-6-real-cart-qualification-contract.json",
         "package.json"
@@ -282,11 +283,77 @@
         "a project-authored real-WASM regression covers registration, replacement, removal, invalid arguments, GC lifetime and fresh-generation cleanup",
         "the project Chrome gate and affected local external case complete their fixed traces without a missing-global fault",
         "pnpm run verify passes and 6F becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "decision": "accepted-vm-local-registration-only",
+        "adr": "docs/adr/021-menuitem-registration-boundary.md",
+        "registryOwner": "current z8lua lua_State",
+        "slots": 5,
+        "maximumLabelBytes": 16,
+        "buttonFilterMask": "0xff00",
+        "replacementAndRemoval": true,
+        "callbackGcLifetime": "strong while registered; collectable after replacement/removal",
+        "freshGenerationCleanup": true,
+        "luaHandlesCrossTypeScriptBoundary": false,
+        "pauseMenuUi": false,
+        "callbackInvocation": false,
+        "knownDifference": "P6-KD-01",
+        "runtimeWasmSha256": "50e5c6019622342a4e7e099af8f2194c431f9740c5438ce1f31561debd8294e6",
+        "projectNodeCases": 4,
+        "projectChromeCases": 12,
+        "projectChromeBoots": 12,
+        "localAffectedCaseRecovered": true,
+        "localAggregateAfterFix": {
+          "cases": 12,
+          "bootsCU": 8,
+          "failsC0": 4,
+          "publicDenominatorContribution": 0
+        },
+        "verification": [
+          "pnpm run test:phase-6e",
+          "pnpm run test:phase-6e:chrome",
+          "local-only 12-cart Chrome rerun",
+          "pnpm run verify"
+        ]
+      }
     },
     "6F": {
       "name": "CPU Slicing Spike / Decision",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "wasm/bridge/p8w_frame_runtime.cpp",
+        "wasm/bridge/p8w_frame_runtime.h",
+        "wasm/runtime-v1.manifest.lock.json",
+        "packages/z8lua-bridge/src/public.ts",
+        "packages/runtime-core/src/frame-runtime.ts",
+        "spec/abi/p8w-v1.json",
+        "spec/pico-api-inventory.yaml",
+        "tests/runtime/phase-6f-cpu-slicing.test.mjs",
+        "tests/compat/",
+        "tests/conformance/phase-5h-exit.test.mjs",
+        "tests/spikes/",
+        "tools/compat/",
+        "tests/architecture/",
+        "docs/adr/022-cpu-slicing-decision.md",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/6-real-cart-qualification.md",
+        "spec/phase-6-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "a project-owned real-WASM spike isolates implicit-loop behavior from callback and explicit-flip control cases without reading ref in tests",
+        "ADR-022 either replaces ADR-017 with a bounded resumable design or reaffirms fail-closed non-resumable instruction exhaustion with an explicit known difference",
+        "any accepted implementation preserves one-frame-per-step, deterministic time/input/audio transactions, the hard safety cap and stale-generation containment",
+        "project Node and Chrome regressions lock the chosen behavior while existing callback, explicit-flip, budget poison and recovery cases remain unchanged",
+        "the affected local external case is rerun and classified according to the decision without a cart-specific source rewrite",
+        "pnpm run verify passes and 6G becomes the only active work unit"
+      ]
     },
     "6G": {
       "name": "Chrome Playability Pass",

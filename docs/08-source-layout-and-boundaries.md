@@ -233,7 +233,9 @@ Lua stack/presence/boolean/Q16/string lowering，不复制 graphics、audio、in
 Host bindings `1..41` 保持 append-only；`rrect/rrectfill` 为 `39..40`，system-register-only `reset`
 为 `41`。guest `run/stop` 使用 VM control outcome，不占 binding id。VM-local table/string/random
 helpers 位于 `p8w_pico8_compat.*`，table/function handle 不进入 TypeScript，PRNG state 位于 shared
-Pico RAM。精确 operation 列表只以 `spec/abi/` 和生成 manifest 为准。
+Pico RAM。`menuitem()` 的 bounded 五槽 registry、byte label 与 callback strong reference 也由当前
+`lua_State` 独占；full pause-menu UI/invocation 未实现，host lifecycle pause 不消费该 registry。
+精确 operation 列表只以 `spec/abi/` 和生成 manifest 为准。
 
 明确命名的 Phase 0 memory bindings 和 `p8w0c_bench_*` 只属于隔离 probe；不得进入
 `z8lua-runtime-v1` artifact、production adapter interface 或 RuntimeCore。

@@ -15,6 +15,10 @@ namespace {
 constexpr uint32_t kPrngAddress = 0x5f44u;
 constexpr uint32_t kDefaultSeed = 0xdeadbeefu;
 constexpr uint32_t kSeedXor = 0xbead29bau;
+constexpr char kMenuitemRegistryKey[] = "p8w.menuitems";
+constexpr int kMenuitemMinimumSlot = 1;
+constexpr int kMenuitemMaximumSlot = 5;
+constexpr size_t kMenuitemMaximumLabelBytes = 16;
 
 uint32_t read_u32(const uint8_t *ram, uint32_t address) {
   return static_cast<uint32_t>(ram[address]) |
@@ -347,6 +351,64 @@ int pico8_ord(lua_State *state) {
   return count;
 }
 
+struct MenuitemIndex {
+  int slot;
+  uint16_t filter;
+};
+
+MenuitemIndex menuitem_index(lua_State *state) {
+  const int32_t raw = luaL_checknumber(state, 1).bits();
+  if ((raw & 0xffff) != 0) {
+    luaL_argerror(state, 1, "menuitem index must be an integer");
+  }
+  // P8 numbers are signed Q16.16. Treat the integer half as the documented
+  // 16-bit menuitem bitfield so filters such as 0xff00 remain representable.
+  const uint16_t encoded = static_cast<uint16_t>(
+      static_cast<uint32_t>(raw) >> 16u);
+  const int slot = encoded & 0xff;
+  if (slot < kMenuitemMinimumSlot || slot > kMenuitemMaximumSlot) {
+    luaL_argerror(state, 1,
+                  "menuitem index must select slot 1..5 with optional "
+                  "0xff00 button filter bits");
+  }
+  return {slot, static_cast<uint16_t>(encoded & 0xff00u)};
+}
+
+int pico8_menuitem(lua_State *state) {
+  const MenuitemIndex index = menuitem_index(state);
+  const bool remove =
+      lua_isnoneornil(state, 2) || lua_isnoneornil(state, 3);
+  lua_getfield(state, LUA_REGISTRYINDEX, kMenuitemRegistryKey);
+
+  // PICO-8 removes the slot when either optional registration value is absent.
+  if (remove) {
+    lua_pushnil(state);
+    lua_rawseti(state, -2, index.slot);
+    lua_pop(state, 1);
+    return 0;
+  }
+
+  size_t label_length = 0;
+  const char *label = luaL_checklstring(state, 2, &label_length);
+  if (label_length > kMenuitemMaximumLabelBytes) {
+    return luaL_argerror(state, 2, "menuitem label exceeds 16 bytes");
+  }
+  luaL_checktype(state, 3, LUA_TFUNCTION);
+
+  // The registry table is private to this lua_State. It owns the callback's
+  // strong reference and is replaced/collected with the VM generation.
+  lua_createtable(state, 3, 0);
+  lua_pushlstring(state, label, label_length);
+  lua_rawseti(state, -2, 1);
+  lua_pushvalue(state, 3);
+  lua_rawseti(state, -2, 2);
+  lua_pushinteger(state, index.filter);
+  lua_rawseti(state, -2, 3);
+  lua_rawseti(state, -2, index.slot);
+  lua_pop(state, 1);
+  return 0;
+}
+
 void register_function(lua_State *state, const char *name,
                        lua_CFunction function) {
   lua_pushcfunction(state, function);
@@ -363,6 +425,8 @@ void register_prng_function(lua_State *state, const char *name,
 }  // namespace
 
 void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
+  lua_createtable(state, kMenuitemMaximumSlot, 0);
+  lua_setfield(state, LUA_REGISTRYINDEX, kMenuitemRegistryKey);
   register_function(state, "add", pico8_add);
   register_function(state, "del", pico8_del);
   register_function(state, "deli", pico8_deli);
@@ -372,6 +436,7 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_function(state, "sub", pico8_sub);
   register_function(state, "tonum", pico8_tonum);
   register_function(state, "ord", pico8_ord);
+  register_function(state, "menuitem", pico8_menuitem);
   register_prng_function(state, "rnd", pico8_rnd, pico_ram);
   register_prng_function(state, "srand", pico8_srand, pico_ram);
   seed_prng(pico_ram, 0);
