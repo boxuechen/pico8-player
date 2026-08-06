@@ -1,6 +1,6 @@
 # Phase 4 — L2 / MVP Compatibility Hardening
 
-> 状态：Active；4A–4E complete，4F active
+> 状态：Active；4A–4F complete，4G active
 > 机器合同：[`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 3 exit](../evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
@@ -30,8 +30,8 @@ serial、Firefox/WebKit 和移动 release。外部合法 cart 可以本地研究
 | 4C P8 Lua & Core Library Compatibility | Complete | 13 项 VM/core API、确定性 PRNG 与 nested budget containment 关闭 |
 | 4D Graphics / Memory / Text Hardening | Complete | 9 项 API、386-byte Node/Chrome oracle 与两项 MVP scope decision 关闭 |
 | 4E System / Audio / Input / Persistence / Player | Complete | root runtime control、跨域组合流与恢复门禁关闭 |
-| 4F CPU / Slow-frame / Scheduler Calibration | **Active** | 4M VM inst/s 成本模型、慢帧策略与 safety cap 可复现 |
-| 4G Resource Sizing & Chrome Long-run | Planned | fixed memory、30 分钟 soak、多 cart lifecycle 通过 |
+| 4F CPU / Slow-frame / Scheduler Calibration | Complete | 4M VM inst/s 成本模型、慢帧策略与 safety cap 可复现 |
+| 4G Resource Sizing & Chrome Long-run | **Active** | fixed memory、30 分钟 soak、多 cart lifecycle 通过 |
 | 4H Phase 4 / L2 Exit | Planned | L2 兼容报告、Known Differences、release gate 与证据归档 |
 
 ## 已完成：4A
@@ -78,66 +78,74 @@ graph 并重置 audio timeline。精确 hash、Chrome 版本、inventory counts 
 [`phase-4e-system-integration.json`](../../tests/conformance/manifests/phase-4e-system-integration.json)
 锁定。
 
-## Active work unit：4F CPU / Slow-frame / Scheduler Calibration
+## 已完成：4F
+
+deterministic z8lua instruction count 现在按
+`floor(instructions * accountingFps * 65536 / 4,000,000)` 转为 signed Q16.16 CPU fraction；普通
+frame 使用 target FPS，固定 `1/30s` startup 使用 30；raw
+`0x00010000` 仍属预算内，只有更大值标记 `slowFrame`。ordinary slow frame 完成一个原子 logical
+frame，不降频、不跳 draw；默认 `1,000,000` instruction safety cap 独立 containment 非 yield cart。
+`stat(1)` 返回 transaction 到调用点的累计 CPU fraction（包括 HostRequest continuation），`stat(7)`
+返回 logical FPS；`stat(0)` 因无稳定 oracle 保持 false。30/60/custom、input/audio/draw/cartdata、
+hard-cap/recovery 的 Node real-WASM 与 Chrome production Worker exact trace 由
+[`phase-4f-cpu-scheduler.json`](../../tests/conformance/manifests/phase-4f-cpu-scheduler.json) 和机器合同
+`workUnits.4F.result` 锁定。
+
+## Active work unit：4G Resource Sizing & Chrome Long-run
 
 ### Observable behavior
 
-- 校准 z8lua 已消费 instruction count 与 PICO-8 `4,000,000 VM instructions/s` 参考预算的换算，
-  明确 30 Hz、60 Hz 和 custom-loop slice 的精确预算公式、取整方向与测试容差；不能用 host
-  wall-clock 或机器速度代替 guest cost。
-- 用项目原创 cart 覆盖低于、恰好达到和超过单 slice 预算的 30 Hz/60 Hz 路径；Node real-WASM 与
-  Chrome production Worker 必须对 instruction count、logical tick、frame/audio/input/persistence
-  transaction 得到相同分类和可重复 trace。
-- 把 compatibility soft budget 与 safety hard cap 分成两个命名清楚的策略：普通 over-budget frame
-  按已受审 slow-frame policy 继续或降频，不得被误报为 VM fault；无限循环或长期不 yield 仍必须由
-  bounded hard cap/watchdog 终止并产生 structured fault。
-- 实现并校准 `stat(1)`（自上次 flip 的 CPU 使用率）和 `stat(7)`（当前目标 FPS）；只有官方证据和
-  本单元 oracle 足以锁定时才加入 `stat(0)`，不得顺便扩大其他 selector。数值必须 deterministic、
-  bounded，并与 logical scheduler 而非浏览器刷新率绑定。
-- 保持现有 30/60 Hz cadence、custom-loop `flip()` boundary、logical `time()`、canonical audio、input
-  edge 和 cartdata commit 的 transaction 语义；4F 不改变 Window/Worker/Worklet ownership，也不引入
-  adaptive host-CPU heuristic。
+- 审计并锁定 production runtime 的 fixed 16 MiB WASM memory、64 KiB Pico RAM、默认/最低 Lua heap
+  与 transport queue 上限；每项上限必须有 owner、机器 manifest 和可观测故障，不得通过开启
+  `ALLOW_MEMORY_GROWTH` 或 host 自适应策略绕过。
+- 用项目原创 allocation/resource carts 覆盖默认 heap 正常运行、低 heap/持续分配的 bounded
+  `E_VM_OUT_OF_MEMORY`、fault 后 fresh cart recovery。Node real-WASM 与 Chrome production Worker
+  对 fault class、session generation、RAM/frame/audio/persistence commit 边界一致。
+- 运行至少 `1800s` 的 Chrome/Chromium production-path soak；计量期必须在 AudioWorklet prebuffer 后
+  开始，持续驱动 30/60 Hz logical scheduler，并报告 logical ticks、frames、dropped ticks、steady
+  audio underrun/overrun/discontinuity/stale chunks、Worker errors、main-thread long task 与 heap trend。
+- 在同一 player 实例中顺序执行至少 20 次 host-driven cart load/start/pause-or-stop/reset/fault-recover
+  lifecycle，混合 30/60/custom 与 persistence cart；每代 stale frame/PCM/input 必须被拒绝，最终活动
+  Worker/AudioContext/listener/queue 回到明确基线。
+- 长稳结果不得依赖 Firefox/WebKit，不扩大 guest API；4G 只校准资源和 host-driven lifecycle，不修改
+  4F 的 CPU formula、logical cadence 或 slow-frame transaction policy。
 
 ### 允许修改
 
-- z8lua bridge 的 instruction accounting/status getter，以及 `packages/runtime-core/src/` 中既有
-  frame-cost、scheduler 和 `stat` owner；若需跨 Worker 观察，只能扩展既有 versioned diagnostic/
-  state routing，不能把 policy 移到 main thread。
-- `tests/conformance/` 的 Phase 4F 原创 carts、budget trace/oracles、`tests/browser/phase-4f*`、对应
-  Chrome runner，以及 inventory/runtime manifest、本 phase 文档、机器合同、兼容矩阵和脚本。
-- 允许新增只读 calibration/benchmark 工具；结果必须可复现，且 production policy 不得依赖运行
-  benchmark 的当前机器、Chrome wall-clock 或开发环境阈值。
+- `wasm/runtime-v1.manifest.lock.json` 与已有 Lua allocator/fixed-memory diagnostics；只有 evidence 证明
+  当前上限不足时才可调整常量，WASM memory 仍必须 fixed。
+- `apps/web-player` 既有只读 stats/diagnostic 路由与 resource lifecycle cleanup；允许增加 bounded
+  measurement 字段，不允许把 RuntimeCore policy 移到 Window/AudioWorklet。
+- `tests/conformance/` 的原创 resource carts/manifests、`tests/browser/phase-4g*`、Chrome runner、
+  `benchmarks/phase-4/results/` 的受审 long-run artifact、脚本、inventory/phase contract 和 owner 文档。
+- 默认 `test:phase-4g:chrome` 可使用短 smoke 参数；受审 1800s gate 必须有独立、显式 evidence 命令，
+  两者复用同一 runner/schema，不能用短跑结果冒充 phase exit。
 
-4F 不授权 4G 的 fixed-resource/30-minute/multi-cart gate，不授权 guest `load`、external resolver、
-BBS/network、writable cart filesystem 或 browser 扩展；不改变 presenter、AudioWorklet、IndexedDB、
-input adapter 的 ownership。
+4G 不授权 guest `load`、external resolver/BBS/network、multicart cart format、writable filesystem、
+mobile release 或非 Chromium browser；不改变 Canvas/AudioContext/IndexedDB/input adapter ownership。
 
 ### 精确 contract routing
 
-- [02 §4 Session 状态机](../02-system-architecture.md#4-session-状态机)
-- [04 §10 FrameScheduler](../04-typescript-runtime.md#10-framescheduler)
-- [04 §10.2 帧语义](../04-typescript-runtime.md#102-帧语义)
-- [04 §10.3 CPU budget 与慢帧](../04-typescript-runtime.md#103-cpu-budget-与慢帧)
-- [06 §4 确定性执行模型](../06-testing-compatibility.md#4-确定性执行模型)
-- [06 §6 Conformance carts](../06-testing-compatibility.md#6-conformance-carts)
+- [02 §3 Execution domains](../02-system-architecture.md#3-execution-domains)
+- [02 §9 Error 模型](../02-system-architecture.md#9-error-模型)
+- [04 §12 Worker、watchdog 与消息协议](../04-typescript-runtime.md#12-workerwatchdog-与消息协议)
+- [06 §9 Fuzz、恶意输入与资源上限](../06-testing-compatibility.md#9-fuzz恶意输入与资源上限)
+- [06 §10 JS↔WASM microbench 与性能门禁](../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
+- [06 §11 Chrome/Chromium 支持矩阵](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
 - [06 §12 Worker hang、crash 与恢复](../06-testing-compatibility.md#12-worker-hangcrash-与恢复)
-- [08 §2 Package 职责](../08-source-layout-and-boundaries.md#2-package-职责)
 - [08 §4 Composition roots 与实例生命周期](../08-source-layout-and-boundaries.md#4-composition-roots-与实例生命周期)
 
 ### Verification / exit
 
-- Proposed `pnpm run test:phase-4f`：本单元创建 instruction-cost、30/60/custom cadence、soft-budget/
-  hard-cap 与 `stat(1/7)` real-WASM regression 后启用。
-- Proposed `pnpm run test:phase-4f:chrome`：本单元创建 production Worker calibration cross-oracle 与
-  watchdog recovery gate 后启用。
-- `pnpm run verify`：全量回归。
-- 机器合同锁定每 slice budget 公式、instruction-accounting 单位、取整/容差和 30/60/custom 的 exact
-  oracles；Node/Chrome 分类一致。
-- `stat(1)` 与 `stat(7)` 在已支持路径有 deterministic bounded 结果；inventory 不再把它们留作
-  unknown。若 `stat(0)` 未获得足够证据，必须保持 false/unknown 并记录原因。
-- ordinary slow frame 与 infinite-loop safety fault 有独立、可重现的测试；fault 后可加载有效 cart，
-  scheduler/audio/input/persistence transaction 与 Worker lifecycle 无回归。
-- full verify 通过；4G 获得明确的 resource/soak 输入，repo 以独立提交结束且干净。
+- Proposed `pnpm run test:phase-4g`：本单元创建 fixed-memory/Lua-heap/OOM、multi-cart lifecycle 与
+  manifest regression 后启用。
+- Proposed `pnpm run test:phase-4g:chrome`：本单元创建短时 production-path resource smoke 后启用。
+- Proposed `pnpm run evidence:phase-4g`：同一 Chrome runner 以 `1800s` 受审配置写入固定 evidence；
+  输出必须包含 exact Chrome/OS/CPU、build/cart hashes、计量窗口和全部 gate counters。
+- `pnpm run verify`：全量回归；普通 verify 不重复 30-minute evidence，但必须校验受审 artifact/schema/hash。
+- fixed sizing 与 OOM failure/recovery 通过，20 次 sequential lifecycle 无 stale event、资源泄漏或
+  persistence/audio ownership 回归；30-minute steady counters 达到 06 的 Chrome gate。
+- 完成后机器合同和兼容矩阵记录 exact limits/results，4H 获得唯一 exit baseline，repo 以独立提交结束且干净。
 
 ## Phase exit gate
 

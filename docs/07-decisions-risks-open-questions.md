@@ -42,7 +42,6 @@ input、cartdata/IndexedDB、current-cart overlay 与 aggregate exit gate，见
 | ID | 问题 | 何时回答 |
 | --- | --- | --- |
 | Q-02 | production WASM/Lua heap sizing 是否适合代表 cart corpus？ | Phase 4 corpus；不得开启 memory growth |
-| Q-08 | 官方 virtual CPU/cost 如何校准？ | Phase 4；当前 hard instruction budget 只负责安全 |
 | Q-10 | HostRequest 能否跨任意 guest coroutine 层恢复？ | L3；当前 nested 固定 unsupported，只允许预供给/同步 cache |
 
 ### Closed questions
@@ -57,6 +56,7 @@ input、cartdata/IndexedDB、current-cart overlay 与 aggregate exit gate，见
 | Q-09 | z8lua pin/patch、upper RAM mapper 和 benchmark boundary 已锁定 | [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
 | Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
+| Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，hard cap 独立负责安全 | [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) / `pnpm run test:phase-4f:chrome` |
 
 ## 3. Risk register
 
@@ -72,7 +72,7 @@ evidence，不在本表复制测试步骤。
 | R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + Phase 3 Chrome soak；Phase 4 stress/long-run 重跑 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
-| R-08 | hard budget 与官方 CPU 不一致 | safety/compatibility 分离；Phase 4 calibration |
+| R-08 | hard budget 与官方 CPU 不一致 | Phase 4F 已拆分 4M/s soft classification 与 1M instruction safety cap；4G 保持回归 |
 | R-09 | multi-cart 同步 API 需要 async host data | 预供给/同步 repository；L3 重评 |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | 默认禁止；独立授权和 resolver boundary |

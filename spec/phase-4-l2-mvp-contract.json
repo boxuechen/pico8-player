@@ -9,9 +9,9 @@
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E"],
-  "activeWorkUnit": "4F",
-  "nextWorkUnit": "4G",
+  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E", "4F"],
+  "activeWorkUnit": "4G",
+  "nextWorkUnit": "4H",
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -203,7 +203,7 @@
     },
     "4F": {
       "name": "CPU Cost, Slow-frame and Scheduler Calibration",
-      "status": "active",
+      "status": "complete",
       "referenceInstructionsPerSecond": 4000000,
       "requiredCadencesHz": [30, 60],
       "requiredProfiles": [
@@ -229,9 +229,89 @@
         "external-cart-resolver",
         "adaptive-host-cpu-policy",
         "non-Chromium-browsers"
+      ],
+      "result": {
+        "conformanceManifest": "tests/conformance/manifests/phase-4f-cpu-scheduler.json",
+        "projectCarts": 5,
+        "instructionUnit": "z8lua-vm-instruction",
+        "referenceInstructionsPerSecond": 4000000,
+        "cpuFractionFormat": "signed-q16.16",
+        "cpuFractionFormula": "floor(cpuInstructions * accountingFps * 65536 / 4000000)",
+        "startupAccountingFps": 30,
+        "slowFrameThresholdRawExclusive": 65536,
+        "softPolicy": "commit-one-atomic-logical-frame-and-mark-slowFrame",
+        "safetyHardCapDefault": 1000000,
+        "safetyHardCapFault": "E_VM_INSTRUCTION_BUDGET",
+        "statSelectors": {
+          "1": "current transaction CPU fraction so far",
+          "7": "logical target FPS",
+          "0": "accepted-known-difference-false"
+        },
+        "cadenceOracles": {
+          "30Hz": {
+            "cpuInstructions": [133329, 133334, 133336],
+            "cpuFractionRaw": [65533, 65536, 65537],
+            "slowFrame": [false, false, true]
+          },
+          "60Hz": {
+            "cpuInstructions": [66665, 66667, 66669],
+            "cpuFractionRaw": [65534, 65536, 65538],
+            "slowFrame": [false, false, true]
+          },
+          "custom30Hz": {
+            "cpuInstructions": 3033,
+            "cpuFractionRaw": 1490,
+            "slowFrame": false
+          }
+        },
+        "transactionScreenSha256": "fbd6ef69b03b85540bdda8dcdef4f2f05dcd369d44c204798fc6effce4b88187",
+        "transactionAudioSha256": "4031623795db82a594c88db8ac94fd4b1cd9e72fc1fc8db533a8a66195b56514",
+        "transactionCartdataSha256": "372d0d312ef656c2bbe87361eab1390c1877c66fcc956672d74a29b1c4927255",
+        "chrome": "Google Chrome 150.0.7871.189",
+        "hostAbiBindings": 41,
+        "runtimeAbiVersion": "0x00010003",
+        "runtimeWasmSha256": "9cccbe0618fe74ab8828d421831ae3bad47f7625f41e1a4e8dd98e828de31be5",
+        "inventoryCounts": {
+          "implementationCounts": {
+            "implemented": 96,
+            "partial": 5,
+            "unimplemented": 1,
+            "unsupported": 10
+          },
+          "conformanceCounts": {
+            "compatible": 68,
+            "partial": 5,
+            "unknown": 29,
+            "unsupported": 10
+          }
+        },
+        "verification": [
+          "pnpm run test:phase-4f",
+          "pnpm run test:phase-4f:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "4G": {
+      "name": "Resource Sizing and Chrome Long-run",
+      "status": "active",
+      "requiredProfiles": [
+        "fixed-wasm-memory-and-lua-heap-sizing",
+        "bounded-allocation-fault-and-recovery",
+        "30-minute-chrome-soak",
+        "sequential-multi-cart-lifecycle",
+        "worker-audio-persistence-resource-release"
+      ],
+      "requiredSoakSeconds": 1800,
+      "requiredSequentialCartLoads": 20,
+      "browserGate": ["chrome", "chromium"],
+      "nonGoals": [
+        "guest-load",
+        "external-cart-resolver",
+        "adaptive-host-resource-policy",
+        "non-Chromium-browsers"
       ]
     },
-    "4G": { "name": "Resource Sizing and Chrome Long-run", "status": "planned" },
     "4H": { "name": "Phase 4 / L2 Exit", "status": "planned" }
   },
   "corpusPolicy": {

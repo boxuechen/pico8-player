@@ -184,6 +184,9 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
       Number(value.timeRawBeforeStep) >= -0x8000_0000 &&
       Number(value.timeRawBeforeStep) <= 0x7fff_ffff &&
       (value.targetFps === 30 || value.targetFps === 60) &&
+      isUint(value.cpuInstructions) &&
+      isUint(value.cpuFractionRaw) && Number(value.cpuFractionRaw) <= 0x7fff_ffff &&
+      typeof value.slowFrame === "boolean" &&
       isUint(value.devkitFlags) && Number(value.devkitFlags) <= 0x07 &&
       value.packedScreen instanceof ArrayBuffer &&
       value.packedScreen.byteLength === 0x2000 &&

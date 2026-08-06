@@ -71,6 +71,9 @@ export type CartSessionBootResult =
       readonly generation: number;
       readonly mode: Extract<RuntimeBootResult, { kind: "ready" }>["mode"];
       readonly targetFps: 30 | 60;
+      readonly cpuInstructions: number;
+      readonly cpuFractionRaw: number;
+      readonly slowFrame: boolean;
       readonly audio: Extract<RuntimeBootResult, { kind: "ready" }>["audio"];
       readonly devkitFlags: number;
       readonly cartDataCommit?: PicoCartDataCommit;
@@ -544,6 +547,9 @@ export class CartSession {
         generation: this.#generation,
         mode: result.mode,
         targetFps: result.targetFps,
+        cpuInstructions: result.cpuInstructions,
+        cpuFractionRaw: result.cpuFractionRaw,
+        slowFrame: result.slowFrame,
         audio: result.audio,
         devkitFlags: result.devkitFlags,
         ...(result.cartDataCommit === undefined

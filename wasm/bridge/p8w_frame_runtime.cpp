@@ -25,6 +25,7 @@ constexpr uint32_t kMinimumLuaHeapLimit = 32u * 1024u;
 constexpr uint32_t kMaxMessageLength = 1023;
 constexpr uint32_t kMaxTraceLength = 2047;
 constexpr uint32_t kMaxHostBytes = 4096;
+constexpr uint32_t kPicoVmInstructionsPerSecond = 4000000;
 constexpr int32_t kMaxMemoryVector = 8192;
 constexpr int32_t kMaxMemoryBlock = static_cast<int32_t>(p8w::kPicoRamSize);
 constexpr char kContextRegistryKey[] = "__p8w_runtime_context";
@@ -65,6 +66,7 @@ struct Context {
   P8wPhase phase = P8W_PHASE_NONE;
   ActiveKind active_kind = ActiveKind::None;
   uint32_t target_fps = 0;
+  uint32_t accounting_fps = 0;
   uint32_t button_mask = 0;
   int32_t time_raw = 0;
   uint32_t host_binding_id = 0;
@@ -72,6 +74,7 @@ struct Context {
 
   uint32_t budget_start = 0;
   uint32_t remaining_budget = 0;
+  uint32_t transaction_consumed = 0;
   bool budget_poisoned = false;
   bool nested_suspend_attempt = false;
   bool host_oom = false;
@@ -538,11 +541,28 @@ int p8_stop(lua_State *state) {
 
 int p8_stat(lua_State *state) {
   const int32_t selector = luaL_checknumber(state, 1).bits() >> 16;
+  Context *context = context_from_lua(state);
+  if (selector == 1) {
+    const uint64_t current_segment =
+        context->remaining_budget > context->budget_start
+            ? 0
+            : context->budget_start - context->remaining_budget;
+    const uint64_t consumed = context->transaction_consumed + current_segment;
+    const uint64_t raw = consumed * context->accounting_fps * 65536u /
+                         kPicoVmInstructionsPerSecond;
+    lua_pushnumber(state, lua_Number::frombits(static_cast<int32_t>(
+                              raw > INT32_MAX ? INT32_MAX : raw)));
+    return 1;
+  }
   if (selector == 6) {
-    Context *context = context_from_lua(state);
     lua_pushlstring(
         state, reinterpret_cast<const char *>(context->run_parameter),
         context->run_parameter_length);
+    return 1;
+  }
+  if (selector == 7) {
+    lua_pushnumber(state, lua_Number::frombits(
+                              static_cast<int32_t>(context->target_fps << 16)));
     return 1;
   }
   return p8_host_call(state);
@@ -684,8 +704,18 @@ void instruction_hook(lua_State *state, lua_Debug *) {
   --context->remaining_budget;
 }
 
-bool begin_budget(Context *context, uint32_t budget) {
+bool begin_budget(Context *context, uint32_t budget, bool continuation) {
   if (budget == 0) return false;
+  if (continuation) {
+    if (context->remaining_budget > context->budget_start) return false;
+    const uint32_t consumed = context->budget_start - context->remaining_budget;
+    context->transaction_consumed =
+        consumed > UINT32_MAX - context->transaction_consumed
+            ? UINT32_MAX
+            : context->transaction_consumed + consumed;
+  } else {
+    context->transaction_consumed = 0;
+  }
   context->budget_start = budget;
   context->remaining_budget = budget;
   context->budget_poisoned = false;
@@ -732,12 +762,12 @@ bool global_is_function(Context *context, const char *name) {
   return result;
 }
 
+void detect_callback_target_fps(Context *context) {
+  context->target_fps = global_is_function(context, "_update60") ? 60 : 30;
+}
+
 void select_callback_mode(Context *context) {
-  if (global_is_function(context, "_update60")) {
-    context->target_fps = 60;
-  } else {
-    context->target_fps = 30;
-  }
+  detect_callback_target_fps(context);
   context->mode = P8W_MODE_CALLBACK;
   context->state = P8W_STATE_CALLBACK_LOOP;
 }
@@ -1000,14 +1030,21 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_boot(uint32_t handle,
   if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
   if (context->state != P8W_STATE_COMPILED)
     return P8W_STATUS_INVALID_STATE;
-  if (!begin_budget(context, instruction_budget))
+  if (!begin_budget(context, instruction_budget, false))
     return P8W_STATUS_BAD_ARGUMENT;
   context->button_mask = button_mask & 0x3fu;
   context->time_raw = time_raw;
+  // PICO-8 starts in the 30 Hz profile; callback mode may select 60 Hz after
+  // top-level code has installed _update60.
+  context->target_fps = 30;
+  // Startup always commits a 1/30-second epoch, including 60 Hz carts whose
+  // completed-slice clock advances by two slices after boot.
+  context->accounting_fps = 30;
   context->state = P8W_STATE_BOOTING;
   context->phase = P8W_PHASE_BOOT;
   P8wStatus status = resume_active(context);
   if (status != P8W_STATUS_OK) return status;
+  detect_callback_target_fps(context);
   if (start_global(context, "_init", ActiveKind::Init, P8W_PHASE_INIT)) {
     return finish_callback_sequence(context);
   }
@@ -1024,8 +1061,9 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_step(uint32_t handle,
   if (context->state != P8W_STATE_CALLBACK_LOOP &&
       context->state != P8W_STATE_CUSTOM_LOOP)
     return P8W_STATUS_INVALID_STATE;
-  if (!begin_budget(context, instruction_budget))
+  if (!begin_budget(context, instruction_budget, false))
     return P8W_STATUS_BAD_ARGUMENT;
+  context->accounting_fps = context->target_fps;
   context->button_mask = button_mask & 0x3fu;
   context->time_raw = time_raw;
   if (context->state == P8W_STATE_CALLBACK_LOOP)
@@ -1043,7 +1081,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_complete_host_request(
       context->request_id != request_id)
     return P8W_STATUS_INVALID_STATE;
   if ((bytes == nullptr && length != 0) || length > kMaxHostBytes ||
-      !begin_budget(context, instruction_budget))
+      !begin_budget(context, instruction_budget, true))
     return P8W_STATUS_BAD_ARGUMENT;
   context->response_length = length;
   if (length != 0) std::memcpy(context->response_bytes, bytes, length);

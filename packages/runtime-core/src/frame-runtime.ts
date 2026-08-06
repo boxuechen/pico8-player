@@ -127,6 +127,12 @@ export interface RuntimeFrame {
   /** Guest clock for this transaction; equals logicalTimeRaw(completedSlices, targetFps). */
   readonly timeRawBeforeStep: number;
   readonly targetFps: 30 | 60;
+  /** Exact z8lua VM instructions consumed by this committed transaction. */
+  readonly cpuInstructions: number;
+  /** Q16.16 CPU fraction; 0x00010000 is the calibrated 4M inst/s slice budget. */
+  readonly cpuFractionRaw: number;
+  /** True only when the Q16.16 CPU fraction is greater than 1.0. */
+  readonly slowFrame: boolean;
   /** Packed 4bpp screen bytes copied from Base RAM 0x6000..0x7fff. */
   readonly screen: Uint8Array;
   /** 16-entry display-palette map snapshotted from Base RAM 0x5f10..0x5f1f. */
@@ -152,6 +158,9 @@ export type RuntimeBootResult =
       readonly kind: "ready";
       readonly mode: Exclude<FrameVmMode, "none">;
       readonly targetFps: 30 | 60;
+      readonly cpuInstructions: number;
+      readonly cpuFractionRaw: number;
+      readonly slowFrame: boolean;
       /** Canonical PCM for the 1/30-second startup transaction. */
       readonly audio: CanonicalAudioSlice;
       readonly devkitFlags: number;
@@ -184,6 +193,7 @@ export type RuntimeStepResult =
     };
 
 export interface FrameRuntimeOptions {
+  /** Safety hard cap for one transaction; independent from the 4M inst/s soft budget. */
   readonly instructionBudget?: number;
   readonly picoApiHost?: PicoApiHost;
   readonly cartDataSeeds?: readonly PicoCartDataSeed[];
@@ -195,16 +205,59 @@ interface PendingTransaction {
   readonly operation: "boot" | "step";
   readonly buttons: number;
   readonly timeRaw: number;
+  readonly consumedInstructions: number;
   remainingBudget: number;
 }
 
-const DEFAULT_INSTRUCTION_BUDGET = 1_000_000;
+export const PICO_VM_INSTRUCTIONS_PER_SECOND = 4_000_000;
+export const PICO_CPU_ONE_RAW = 0x0001_0000;
+export const DEFAULT_SAFETY_INSTRUCTION_LIMIT = 1_000_000;
 const CART_ROM_BYTES = 0x8000;
 const SCREEN_OFFSET = 0x6000;
 const SCREEN_BYTES = 0x2000;
 const DISPLAY_PALETTE_OFFSET = 0x5f10;
 const DISPLAY_PALETTE_BYTES = 16;
 const STARTUP_TIME_RAW = Math.floor(65_536 / 30);
+
+export interface PicoCpuSliceBudget {
+  readonly floor: number;
+  readonly ceiling: number;
+}
+
+export interface RuntimeCpuCost {
+  readonly cpuInstructions: number;
+  readonly cpuFractionRaw: number;
+  readonly slowFrame: boolean;
+}
+
+export function picoCpuSliceBudget(targetFps: 30 | 60): PicoCpuSliceBudget {
+  if (targetFps !== 30 && targetFps !== 60) {
+    throw new RangeError("targetFps must be 30 or 60");
+  }
+  return Object.freeze({
+    floor: Math.floor(PICO_VM_INSTRUCTIONS_PER_SECOND / targetFps),
+    ceiling: Math.ceil(PICO_VM_INSTRUCTIONS_PER_SECOND / targetFps),
+  });
+}
+
+export function runtimeCpuCost(
+  cpuInstructions: number,
+  accountingFps: 30 | 60,
+): RuntimeCpuCost {
+  if (!Number.isSafeInteger(cpuInstructions) || cpuInstructions < 0 ||
+    cpuInstructions > 0xffff_ffff) {
+    throw new RangeError("cpuInstructions must be a uint32");
+  }
+  picoCpuSliceBudget(accountingFps);
+  const raw = BigInt(cpuInstructions) * BigInt(accountingFps) * 65_536n /
+    BigInt(PICO_VM_INSTRUCTIONS_PER_SECOND);
+  const cpuFractionRaw = Number(raw > 0x7fff_ffffn ? 0x7fff_ffffn : raw);
+  return Object.freeze({
+    cpuInstructions,
+    cpuFractionRaw,
+    slowFrame: cpuFractionRaw > PICO_CPU_ONE_RAW,
+  });
+}
 
 function invalidState(message: string): SerializedRuntimeError {
   return {
@@ -249,7 +302,7 @@ export class FrameSliceRuntime {
   #pending: PendingTransaction | undefined;
 
   constructor(vm: FrameVmPort, options: FrameRuntimeOptions = {}) {
-    const budget = options.instructionBudget ?? DEFAULT_INSTRUCTION_BUDGET;
+    const budget = options.instructionBudget ?? DEFAULT_SAFETY_INSTRUCTION_LIMIT;
     if (!Number.isSafeInteger(budget) || budget <= 0 || budget > 0xffff_ffff) {
       throw new RangeError("instructionBudget must be a positive uint32");
     }
@@ -368,6 +421,7 @@ export class FrameSliceRuntime {
       buttons,
       STARTUP_TIME_RAW,
       this.#instructionBudget,
+      0,
     );
   }
 
@@ -394,6 +448,7 @@ export class FrameSliceRuntime {
       buttons,
       timeRaw,
       this.#instructionBudget,
+      0,
     );
   }
 
@@ -418,6 +473,7 @@ export class FrameSliceRuntime {
         pending.buttons,
         pending.timeRaw,
         pending.remainingBudget,
+        pending.consumedInstructions,
       );
     }
     return this.#acceptStepOutcome(
@@ -425,6 +481,7 @@ export class FrameSliceRuntime {
       pending.buttons,
       pending.timeRaw,
       pending.remainingBudget,
+      pending.consumedInstructions,
     );
   }
 
@@ -458,6 +515,7 @@ export class FrameSliceRuntime {
     buttons: number,
     timeRaw: number,
     availableBudget: number,
+    consumedBefore: number,
   ): RuntimeResult<RuntimeBootResult> {
     if (outcome.kind === "fault") return this.#acceptFault(outcome.error);
     if (outcome.kind === "host-request") {
@@ -469,7 +527,13 @@ export class FrameSliceRuntime {
           phase: "host-call",
         });
       }
-      this.#pending = { operation: "boot", buttons, timeRaw, remainingBudget };
+      this.#pending = {
+        operation: "boot",
+        buttons,
+        timeRaw,
+        remainingBudget,
+        consumedInstructions: consumedBefore + outcome.consumedInstructions,
+      };
       this.#state = "waiting-host";
       return {
         ok: true,
@@ -515,6 +579,12 @@ export class FrameSliceRuntime {
     // target-rate slices so completedSlices remains the source of logical time.
     this.#completedSlices = BigInt(this.#targetFps / 30);
     const targetFps = this.#targetFps as 30 | 60;
+    // Startup commits exactly 1/30 second even when a 60 Hz cart establishes
+    // two completed logical slices, so its CPU denominator is always 30 Hz.
+    const cpuCost = runtimeCpuCost(
+      consumedBefore + outcome.consumedInstructions,
+      30,
+    );
     const audio = this.#picoApiHost.renderAudioSlices(targetFps / 30, targetFps);
     const cartDataCommit = this.#takeCartDataCommit();
     if (!cartDataCommit.ok) return cartDataCommit;
@@ -525,6 +595,7 @@ export class FrameSliceRuntime {
         kind: "ready",
         mode: this.#mode as Exclude<FrameVmMode, "none">,
         targetFps,
+        ...cpuCost,
         audio,
         devkitFlags: this.#picoApiHost.devkitFlags,
         ...(cartDataCommit.value === undefined
@@ -539,6 +610,7 @@ export class FrameSliceRuntime {
     buttons: number,
     timeRaw: number,
     availableBudget: number,
+    consumedBefore: number,
   ): RuntimeResult<RuntimeStepResult> {
     if (outcome.kind === "fault") return this.#acceptFault(outcome.error);
     if (outcome.kind === "host-request") {
@@ -550,7 +622,13 @@ export class FrameSliceRuntime {
           phase: "host-call",
         });
       }
-      this.#pending = { operation: "step", buttons, timeRaw, remainingBudget };
+      this.#pending = {
+        operation: "step",
+        buttons,
+        timeRaw,
+        remainingBudget,
+        consumedInstructions: consumedBefore + outcome.consumedInstructions,
+      };
       this.#state = "waiting-host";
       return {
         ok: true,
@@ -604,6 +682,10 @@ export class FrameSliceRuntime {
     this.#pending = undefined;
     this.#completedSlices += 1n;
     const targetFps = this.#targetFps as 30 | 60;
+    const cpuCost = runtimeCpuCost(
+      consumedBefore + outcome.consumedInstructions,
+      targetFps,
+    );
     const audio = this.#picoApiHost.renderAudioSlices(1, targetFps);
     const cartDataCommit = this.#takeCartDataCommit();
     if (!cartDataCommit.ok) return cartDataCommit;
@@ -612,6 +694,7 @@ export class FrameSliceRuntime {
       completedSlices: this.#completedSlices.toString(),
       timeRawBeforeStep: timeRaw,
       targetFps,
+      ...cpuCost,
       screen: this.#ram.copy(SCREEN_OFFSET, SCREEN_BYTES),
       displayPalette: this.#ram.copy(DISPLAY_PALETTE_OFFSET, DISPLAY_PALETTE_BYTES),
       devkitFlags: this.#picoApiHost.devkitFlags,

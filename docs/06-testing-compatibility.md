@@ -11,12 +11,12 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4C、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4F、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| **Active Phase 4 baseline** | 112 项 API 四维清单、38 binding 对账、7-case 项目原创 corpus；Node/Chrome baseline 为 `C3=7`、playable `100%`；4C 的 13 项 P8 Lua/core API 已由 real-WASM/Chrome oracle 关闭，当前 graphics/memory/text 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
+| **Active Phase 4 baseline** | 112 项 API 清单、41 binding、7-case corpus `C3=7`；4C–4F 的 core/graphics/system/CPU vertical slices 已由 Node real-WASM/Chrome oracle 关闭；当前 4G resource/long-run 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -661,7 +661,7 @@ Player capture 锁定；custom 60 Hz/fps-selection 仍留给后续 conformance�
 | top-level custom `flip()` | official samples 1..8；startup + 后续 60 boundaries passed | `implemented-baseline`（30 Hz） | custom fps-selection 后续 |
 | root HostRequest continuation | embedded-NUL request/response、一次 frame passed | `implemented-prototype` | 用真实同步-cache API 替换非公开 probe |
 | nested HostRequest/`flip()` | host side-effect 未发出；structured unsupported | `unsupported` | `nested-host-suspend`；L3 只用预供给/同步 cache |
-| instruction budget | infinite Lua loop → poisoned fault；不可再 step | `implemented-safety` | Phase 4 校准官方 CPU cost，不改变 hard limit |
+| instruction budget | infinite Lua loop → poisoned fault；不可再 step | `implemented-safety` | Phase 4F 已将 hard cap 与 4M/s soft classification 分离 |
 | Worker watchdog | Chrome JS stall → terminate/recreate/generation passed | `implemented-safety` | boot/step deadline 与 background policy 后续校准 |
 | Lua error record | phase/line/safe trace passed | `implemented-baseline` | Wasm trap/JS import/OOM 分类 corpus 继续扩充 |
 | minimal framebuffer | packed screen golden SHA-256 locked | `implemented-probe` | Phase 0F presenter 已通过；Phase 1 graphics conformance |
@@ -847,7 +847,7 @@ AudioWorklet 与 IndexedDB 放进同一确定性路径；ABI append guest `reset
 | 行为 | Phase 4E 结果 | 兼容口径 | 后续边界 |
 | --- | --- | --- | --- |
 | guest controls | `run("again")` fresh runtime、`stat(6)`、`stop("done")` 与 public `runtime-control` event 通过 | `compatible`（root/current-cart、payload ≤4096 bytes） | guest `load`、external resolver、nested host suspend 不进入 MVP |
-| system routing | `assert` structured fault；`reset` 只恢复 `0x5f00..0x5f7f`/graphics private defaults；`time` same-frame route | bounded compatible；`time` CPU calibration 仍 partial | host `CartSession.reset` 与 guest `reset` 保持不同 contract |
+| system routing | `assert` structured fault；`reset` 只恢复 `0x5f00..0x5f7f`/graphics private defaults；`time` same-frame route | bounded compatible；slow-frame clock 由 4F 关闭 | host `CartSession.reset` 与 guest `reset` 保持不同 contract |
 | cross-domain flow | canonical audio、`btn/btnp` edge、cartdata、current-cart overlay 在 run/stop 边界保持一致并 flush | Node/Chrome exact | AudioContext/IndexedDB/input ownership不变 |
 | lifecycle/recovery | same-generation audio reset、guest stop、assert fault、stale generation、有效 cart recovery、Worker/AudioContext dispose 通过 | safety gate passed；Chrome 150 desktop | 30-minute/multi-cart resource gate 属于 4G |
 
@@ -855,6 +855,28 @@ inventory 更新为 implementation `95/6/1/10`、conformance `67/6/29/10`（按�
 external `reload/cstore` 保持 current-cart-only；nested `flip` 为 accepted unsupported；未列出的
 `stat` selector 返回 false；conditional `printh/extcmd` 因无项目 corpus 需要且会扩大 host capability，
 明确排除在 MVP。4E 无开放 P0/P1。
+
+### 15.17 Phase 4F CPU/Slow-frame/Scheduler Calibration 矩阵
+
+4F 以五个项目原创 cart 锁定 z8lua instruction accounting、30/60/custom cadence、ordinary
+slow-frame transaction 与 hard-cap containment；同一 manifest 同时作为 Node real-WASM 和 Chrome
+production Worker oracle。
+
+| 行为 | Phase 4F 结果 | 兼容口径 | 后续边界 |
+| --- | --- | --- | --- |
+| CPU 换算 | `floor(instructions * accountingFps * 65536 / 4,000,000)`，startup 固定 30、普通 frame 使用 target FPS，signed Q16.16，0 instruction 容差 | deterministic project cost model | 不使用 wall-clock，不声称 z8lua 每条指令与官方内部 opcode 一一对应 |
+| 30 Hz threshold | instructions `133329/133334/133336` → raw `65533/65536/65537` → slow `false/false/true` | exact Node/Chrome oracle | raw 恰为 `1.0` 保持非 slow |
+| 60 Hz threshold | instructions `66665/66667/66669` → raw `65534/65536/65538` → slow `false/false/true` | exact Node/Chrome oracle | 第一个量化 slow instruction 为 `66668` |
+| custom loop | boot/每个 `flip()` transaction 为 `3033` instructions、raw `1490`、30 Hz | compatible bounded custom profile | 不增加 custom FPS selector |
+| `stat(1/7)` | 当前 transaction 到调用点的累计 CPU fraction；logical FPS；HostRequest continuation 累计通过 | deterministic/compatible | `stat(0)` 与未支持 selector 继续 false Known Difference |
+| ordinary slow transaction | input/btnp、draw、canonical audio、cartdata 与 time 在 `150074` instructions/raw `73764` 帧原子提交 | `slowFrame=true`，非 VM fault | 不自动降频、跳 draw 或拆帧 |
+| hard cap/recovery | 10k cap infinite update → `E_VM_INSTRUCTION_BUDGET`；fresh valid cart 恢复 | safety gate passed；Chrome 150 desktop | Window watchdog 仍只处理 Worker 无响应 |
+
+inventory 更新为 implementation `96/5/1/10`、conformance `68/5/29/10`（按各自状态顺序）。
+`time/t` 进入 implemented/compatible；`stat` 因 selector 子集仍为 partial。ABI 保持 `0x00010003`
+和 41 bindings；4F 只扩展既有 frame diagnostic DTO，未移动 Canvas/AudioContext/IndexedDB owner。
+完整 exact oracle 见
+[`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json)。
 
 ## 16. Definition of Done
 

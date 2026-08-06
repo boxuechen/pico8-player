@@ -234,15 +234,17 @@ export type RuntimeToHost =
 
 ## 7. Frame transaction
 
-> 状态：Phase 3 project profile 已实现 input → VM → audio/frame → persistence 的 committed
-> transaction；slow-frame update/draw policy、完整 CPU accounting 与 external HostRequest 仍是 Target。
+> 状态：Phase 4F 已实现 input → VM → CPU classification → audio/frame → persistence 的 committed
+> transaction；external cart HostRequest 仍是 Target。
 
 每个 logical frame 的权威顺序为：
 
 1. scheduler 决定本次 simulation slice、callback 次数与是否 draw。
 2. Runtime latch 最新 `InputSnapshot`，计算 pressed/repeat 并更新 hardware/input memory state。
 3. 按 callback 模式或 custom `flip()` loop 模式推进 z8lua，直至受控 boundary。
-4. 处理 VM error、instruction budget、host request 和 queued cart change。
+4. 累计 deterministic z8lua instruction cost，处理 VM error、safety hard cap、host request 和
+   queued cart change；普通 CPU 超预算 transaction 继续原子完成，并在公开 frame 上标记
+   `slowFrame`，不会冒充 VM fault。
 5. 根据 logical simulation clock 生成该 slice 对应的 PCM。
 6. 若本次是 visible draw/flip，读取 screen + palette/draw mode 生成 frame output。
 7. 提交 diagnostics、heartbeat 和 persistence dirty state。
@@ -251,7 +253,8 @@ export type RuntimeToHost =
 
 ## 8. 时间模型
 
-> 状态：startup/manual slice 与 Phase 1E bounded interactive scheduler 已实现；完整 slow-frame/conformance policy 仍是 Target。
+> 状态：startup/manual slice、bounded interactive scheduler 与 Phase 4F deterministic slow-frame
+> classification 已实现；4G 只验证资源与长稳，不改变 guest cadence。
 
 - Runtime 维护自己的 accumulator 和 logical simulation clock。
 - `_update()` 模式逻辑速率为 30 Hz；`_update60()` 模式为 60 Hz。
@@ -262,6 +265,10 @@ export type RuntimeToHost =
 - [ADR-011](./adr/011-hidden-tab-pause.md) 已锁定默认 hidden/blur pause：清输入并重建
   scheduler anchor，恢复时不补跑隐藏期间的所有帧。
 - 测试模式必须允许手动逐帧推进，不依赖 wall clock。
+- guest CPU fraction 为 `floor(instructions * accountingFps * 65536 / 4,000,000)`；普通 frame
+  的 `accountingFps` 等于 logical target FPS，固定 `1/30s` startup transaction 始终为 30（60 Hz
+  cart 的 startup clock 提交两个 slice）。raw `0x00010000` 是 100%，只有大于该值才标记
+  `slowFrame`。host wall-clock 不参与此结果。
 
 ## 9. Error 模型
 

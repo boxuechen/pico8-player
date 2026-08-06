@@ -82,6 +82,9 @@ export type PlayerRuntimeToHost =
       readonly completedSlices: string;
       readonly timeRawBeforeStep: number;
       readonly targetFps: 30 | 60;
+      readonly cpuInstructions: number;
+      readonly cpuFractionRaw: number;
+      readonly slowFrame: boolean;
       readonly devkitFlags: number;
       readonly packedScreen: ArrayBuffer;
       readonly displayPalette: ArrayBuffer;

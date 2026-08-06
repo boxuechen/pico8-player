@@ -9,8 +9,8 @@
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
 实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1 Host boundary、Phase 2
-memory/graphics/text bindings、Phase 3 audio/input/persistence/current-cart bindings 与 Phase 4C
-project-owned VM compatibility library 已完成；
+memory/graphics/text bindings、Phase 3 audio/input/persistence/current-cart bindings、Phase 4C
+project-owned VM compatibility library、Phase 4E root control 和 Phase 4F instruction accounting 已完成；
 当前生产边界和 Chrome 退出结果见
 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
@@ -21,6 +21,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 | --- | --- |
 | **Implemented through Phase 3 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；80-byte call frame/Base RAM API；append-only operation `1..38` 覆盖 Phase 2 graphics/text 与 Phase 3 audio/input/cartdata/current-cart bindings；boolean/presence/Q16/string lowering、structured host faults 与 real-WASM/Chrome conformance |
 | **Implemented in Phase 4C** | VM-local table helpers、P8 `sub`、guest coroutine aliases，以及使用 shared Pico RAM PRNG state 的 deterministic `rnd/srand`；host ABI 仍为 `1..38` |
+| **Implemented through Phase 4F** | root `run/stop`、VM-local `stat(1/6/7)`、guest `reset` binding `41`；每个 boot/frame segment 暴露 exact consumed instructions，HostRequest continuation 在 transaction 内累计；runtime ABI `0x00010003` |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -474,8 +475,10 @@ count hook 的安全策略已经锁定：budget exhaustion **MUST** poison conte
 4. protected outer resume 无论 guest 是否尝试捕获 sentinel，都在返回路径优先检查 poison，并报告 `P8W_ERROR_BUDGET`。
 5. 所有新 coroutine 必须继承 hook；上游 `lua_newthread()` 当前会复制 hook fields，但仍需回归测试。[上游 thread 初始化](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lstate.c#L237-L250)
 
-`quantum`、默认 budget 与官方 CPU cost model 不是一回事。Phase 0 只保证安全和
-目标 Chrome/Chromium 版本间的确定性，Phase 4 再校准兼容 CPU accounting。
+`quantum`/safety cap 与 compatibility CPU cost 不是一回事。Phase 4F 已锁定每条 count hook
+instruction 作为 deterministic accounting unit，由 Runtime 以 4M/s 和 logical target FPS 换算
+Q16.16；默认 1M instruction cap 仍只负责安全。`p8w_consumed_instructions()` 返回当前 resume
+segment，bridge 内的 `stat(1)` 另行累计同一 transaction 的先前 HostRequest segments。
 
 Window watchdog 是第二层：若 Worker 在 wall-clock deadline 内没有回复，Window 终止整个 Worker 并重建 session。它覆盖 C parser、host import、WASM trap 或 hook 无法中断的情况；它不能替代 instruction hook。deadline 必须考虑后台暂停和移动设备抖动，并在 browser test 后确定。
 

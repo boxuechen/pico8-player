@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 4E；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 4F；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -15,6 +15,7 @@
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
 | **Implemented through Phase 3 exit** | browser-neutral four-channel SFX/music/P8SCII synth；fixed eight-player + devkit input；synchronous cartdata + Worker-owned IndexedDB；current-cart `reload/cstore` COW repository；dedicated PCM、production Chrome cross-oracle、performance/soak/recovery/dispose gate |
 | **Implemented through Phase 4E** | root guest `run/stop` VM control outcome；copy-owned `stat(6)` parameter；system-register-only guest `reset`；Worker same-session fresh runtime、audio reset、persistence flush 与 public `runtime-control` event |
+| **Implemented through Phase 4F** | deterministic 4M/s Q16.16 CPU accounting；`stat(1/7)`；boot/frame `cpuInstructions/cpuFractionRaw/slowFrame`；ordinary slow-frame atomic commit 与独立 1M instruction safety cap |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
 
@@ -519,7 +520,8 @@ pointer lock 和 event normalization 仍由 app 拥有。
 
 > 状态：Phase 1E 已实现 `FrameScheduler` 的 browser-neutral interactive decision 子集：
 > 30/60Hz accumulator、首 pulse anchor、0..5 ticks、overflow drop/diagnostic 与 pause/resume
-> re-anchor。下方 `deterministic/stepExact`、slow-frame update/draw 合并仍是 Target。
+> re-anchor。Phase 4F 已锁定 deterministic 单 transaction CPU classification；不会按宿主性能自动
+> 合并 update、跳过 draw 或降频。
 
 Phase 1F 已从 production Worker 外部用 fixed synthetic pulses 重放 30/60/custom carts；具体
 设备测量只保存在 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。该
@@ -562,14 +564,21 @@ type StepResult = Readonly<{
 
 ### 10.3 CPU budget 与慢帧
 
-> 状态：Phase 4F active target；完成状态与精确数值以 Phase 4 机器合同和源码为准。
+> 状态：Implemented by Phase 4F；机器 oracle 见
+> [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json)。
 
-- compatibility cost 只使用 z8lua 的 deterministic guest instruction count；参考速率为每秒
-  `4,000,000` 条 VM instruction，30/60 Hz slice 的公式、取整与容差必须由项目原创 oracle 锁定。
-- ordinary over-budget frame 使用独立的 slow-frame policy，不得直接等同于 VM fault。safety hard
-  cap/watchdog 只负责 bounded non-yield containment，两者必须有不同的配置、诊断和测试。
-- `stat(1)` 报告自上次 frame boundary 的 bounded CPU fraction，`stat(7)` 报告当前 logical target
-  FPS；都由 Worker 内 scheduler/cost owner 提供，不读取浏览器刷新率或 host wall-clock。
+- compatibility cost 只使用 z8lua deterministic guest instruction count，参考速率固定为每秒
+  `4,000,000` 条 VM instruction。每个 boot/frame transaction 的 signed Q16.16 fraction 为
+  `floor(cpuInstructions * accountingFps * 65536 / 4,000,000)`，上限为 `INT32_MAX`；普通 frame
+  的 `accountingFps` 是 logical target FPS，固定 `1/30s` startup 始终使用 30。Node/Chrome 容差
+  都是 0 instruction。
+- raw `0x00010000` 仍属预算内；只有量化结果大于它才标记 `slowFrame=true`。ordinary slow frame
+  不降频、不跳 draw，也不拆成部分提交，而是完成一个原子 logical frame。默认
+  `1,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
+  `E_VM_INSTRUCTION_BUDGET`，与 soft classification 分离。
+- `stat(1)` 报告当前 transaction 到调用点为止的 CPU fraction，并跨 root HostRequest continuation
+  累计；因此它可略小于 frame 完成后的诊断值。`stat(7)` 返回 logical target FPS。两者都不读取
+  浏览器刷新率或 host wall-clock；`stat(0)` 因缺少稳定 oracle 继续返回 false。
 - CPU policy 不得改变 logical `time()`、canonical audio、input edge、draw/persistence transaction，
   也不得根据当前机器性能自适应改变 guest 结果。
 
