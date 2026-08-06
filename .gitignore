@@ -22,3 +22,5 @@
 # Local-only external compatibility corpus. The tracked example contains schema only.
 /tests/conformance/local-corpus.json
 /tests/conformance/local-corpus/
+/tests/conformance/local-observations.json
+/tests/conformance/local-corpus-results/

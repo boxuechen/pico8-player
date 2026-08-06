@@ -76,9 +76,9 @@
       "durationOrTrace"
     ]
   },
-  "completedWorkUnits": ["6A"],
-  "activeWorkUnit": "6B",
-  "nextWorkUnit": "6C",
+  "completedWorkUnits": ["6A", "6B"],
+  "activeWorkUnit": "6C",
+  "nextWorkUnit": "6D",
   "workUnits": {
     "6A": {
       "name": "Activation / Corpus Policy",
@@ -93,13 +93,15 @@
     },
     "6B": {
       "name": "External Corpus Runner",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tools/compat/",
         "tests/compat/",
+        "spec/compat/",
         "tests/contract/phase-6a-activation.test.mjs",
         "tests/contract/phase-6b-corpus-runner.test.mjs",
         "tests/conformance/local-corpus.example.json",
+        "tests/conformance/local-observations.example.json",
         ".gitignore",
         "docs/README.md",
         "docs/phases/README.md",
@@ -113,11 +115,50 @@
         "missing or malformed local inputs fail closed without placing third-party content in tracked paths",
         "project-authored fixtures cover schema, redaction, deterministic ordering and result classification",
         "6B result is folded into the machine contract and 6C becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "runner": "tools/compat/local-qualification-v1.mjs",
+        "cli": "tools/compat/run-local-qualification.mjs",
+        "schemas": [
+          "spec/compat/local-corpus-v1.schema.json",
+          "spec/compat/local-observations-v1.schema.json",
+          "spec/compat/local-qualification-report-v1.schema.json"
+        ],
+        "minimumCases": 12,
+        "maximumCases": 64,
+        "maximumCartBytes": 1048576,
+        "output": "deterministic path-redacted report; incomplete cases remain CU",
+        "networkAccess": false,
+        "refRuntimeDependency": false,
+        "verification": [
+          "pnpm run test:phase-6b",
+          "pnpm run test:architecture"
+        ]
+      }
     },
     "6C": {
       "name": "Twelve-cart Baseline",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "tools/compat/",
+        "tests/compat/",
+        "spec/compat/",
+        "tests/conformance/local-corpus.example.json",
+        "tests/conformance/local-observations.example.json",
+        ".gitignore",
+        "docs/README.md",
+        "docs/phases/6-real-cart-qualification.md",
+        "spec/phase-6-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "exactly twelve caller-supplied carts are pinned by source revision and SHA-256 in the ignored local manifest",
+        "the Chrome production path executes each fixed trace and emits one complete observation without reading ref or using network access",
+        "all cases receive a complete boots-or-fails smoke outcome; failures are C0 with a bounded cluster while boots remain CU until playability evidence exists",
+        "the local path-redacted report remains ignored and only a non-public aggregate is folded into the phase contract",
+        "no production compatibility fix is made in 6C",
+        "6C result is folded into the machine contract and 6D becomes the only active work unit"
+      ]
     },
     "6D": {
       "name": "stat(20) Compatibility",

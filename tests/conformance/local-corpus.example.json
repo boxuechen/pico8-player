@@ -1,18 +1,28 @@
 {
+  "$schema": "../../spec/compat/local-corpus-v1.schema.json",
   "schemaVersion": 1,
-  "policy": "local research only; never committed, published, bundled or included in the Phase 4 playable-rate denominator",
+  "corpusId": "replace-with-local-corpus-id",
+  "policy": "developer-supplied-local-only",
   "entries": [
     {
       "id": "local/example-cart-revision",
-      "file": "tests/conformance/local-corpus/example.p8.png",
+      "label": "caller-approved display label",
+      "file": "local-corpus/example.p8.png",
       "sha256": "replace-with-64-lowercase-hex-digits",
       "pico8Version": "0.2.7",
-      "sourceUrl": "https://www.lexaloffle.com/bbs/?pid=replace-me",
-      "permissionBasis": "record the applicable permission or research basis",
-      "retrievedAt": "YYYY-MM-DD",
-      "testFlow": "describe an input trace or a manual critical flow",
-      "expectedObservables": ["boot", "first-fault", "screen", "input", "audio"],
-      "classification": "CU"
+      "source": {
+        "label": "source repository or author label",
+        "revision": "immutable source revision",
+        "permissionStatus": "caller-authorized-local-research",
+        "permissionBasis": "record the applicable permission or local research basis",
+        "url": "optional provenance URL; the runner never fetches it"
+      },
+      "trace": {
+        "mode": "fixed-ticks",
+        "ticks": 120,
+        "stepMilliseconds": 16.666666666666668,
+        "inputs": []
+      }
     }
   ]
 }

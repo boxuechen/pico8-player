@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.invalid/spec/compat/local-qualification-report-v1.schema.json",
+  "title": "Path-redacted local real-cart qualification report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runner",
+    "corpus",
+    "environment",
+    "summary",
+    "entries"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runner": { "const": "phase-6-local-qualification-v1" },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "manifestSha256", "caseCount", "policy"],
+      "properties": {
+        "id": { "type": "string" },
+        "manifestSha256": { "$ref": "#/$defs/sha256" },
+        "caseCount": { "type": "integer", "minimum": 12, "maximum": 64 },
+        "policy": { "const": "developer-supplied-local-only" }
+      }
+    },
+    "environment": { "type": "object" },
+    "summary": {
+      "type": "object",
+      "required": [
+        "qualificationComplete",
+        "completedCaseCount",
+        "incompleteCaseCount",
+        "counts",
+        "failureClusters"
+      ]
+    },
+    "entries": { "type": "array", "minItems": 12, "maxItems": 64 }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

@@ -21,9 +21,8 @@ test("Phase 6A activates one bounded work unit from the closed Phase 5 baseline"
   assert.equal(contract.phase, "6");
   assert.equal(contract.status, "active");
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
-  assert.deepEqual(contract.completedWorkUnits, ["6A"]);
-  assert.equal(contract.activeWorkUnit, "6B");
-  assert.equal(contract.nextWorkUnit, "6C");
+  assert.ok(contract.completedWorkUnits.includes("6A"));
+  assert.match(contract.activeWorkUnit, /^6[B-H]$/u);
   assert.equal(contract.workUnits["6A"].status, "complete");
   assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
   assert.equal(
@@ -84,9 +83,9 @@ test("Phase 6A routes Codex and keeps local corpus paths ignored", async () => {
   const gitignore = await readFile(new URL(".gitignore", projectRoot), "utf8");
   const packageJson = await readJson("package.json");
 
-  assert.match(docsReadme, /Active work unit \| 6B External Corpus Runner/u);
+  assert.match(docsReadme, /Active work unit \| 6[B-H]/u);
   assert.ok(phaseIndex.includes("6-real-cart-qualification.md"));
-  assert.ok(phase.includes("Active work unit：6B External Corpus Runner"));
+  assert.match(phase, /Active work unit：6[B-H]/u);
   assert.ok(phase.includes("不自动访问 BBS"));
   assert.ok(gitignore.includes("/tests/conformance/local-corpus.json"));
   assert.ok(gitignore.includes("/tests/conformance/local-corpus/"));

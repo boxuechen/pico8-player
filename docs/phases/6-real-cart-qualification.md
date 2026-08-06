@@ -1,9 +1,9 @@
 # Phase 6 — Real-cart Qualification
 
-> 状态：Active；6A complete，6B active  
-> 机器合同：[`spec/phase-6-real-cart-qualification-contract.json`](../../spec/phase-6-real-cart-qualification-contract.json)  
-> 浏览器门禁：Google Chrome / Chromium desktop only  
-> 前置证据：[Phase 5 L3 local/multicart exit](../evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)  
+> 状态：Active；6A–6B complete，6C active
+> 机器合同：[`spec/phase-6-real-cart-qualification-contract.json`](../../spec/phase-6-real-cart-qualification-contract.json)
+> 浏览器门禁：Google Chrome / Chromium desktop only
+> 前置证据：[Phase 5 L3 local/multicart exit](../evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)
 > 目标声明：在不分发第三方内容的前提下，以本地真实卡带验证并收敛当前 L3 project profile
 
 ## Goal 与 non-goals
@@ -31,8 +31,8 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 | Unit | 状态 | 结果或入口 |
 | --- | --- | --- |
 | 6A Activation / Corpus Policy | Complete | 12-cart local-only policy、Phase 5 hash baseline、公开分母为 0 |
-| 6B External Corpus Runner | **Active** | 下节 |
-| 6C Twelve-cart Baseline | Pending | 6B exit 后展开 |
+| 6B External Corpus Runner | Complete | 三份 schema、fail-closed validator、path-redacted report CLI |
+| 6C Twelve-cart Baseline | **Active** | 下节 |
 | 6D `stat(20)` Compatibility | Pending | 6C exit 后展开 |
 | 6E `menuitem()` Boundary | Pending | 6D exit 后展开 |
 | 6F CPU Slicing Spike / Decision | Pending | 6E exit 后展开；必须尊重/替换 ADR-017 |
@@ -46,39 +46,51 @@ case、只由开发者在本地显式提供、必须记录 source revision、car
 实际 cart、第三方截图和音频均保持 gitignored；CI、公开兼容分母和 production network surface
 贡献均为 0。验证入口是 `pnpm run test:phase-6a`。
 
-## Active work unit：6B External Corpus Runner
+## 6B closure
+
+6B 已提供 versioned local corpus、Chrome observation 与 redacted report schema，以及无网络的
+`phase-6-local-qualification-v1` validator/CLI。它限制 12–64 个、单个最多 1 MiB 的 local cart，
+验证 realpath、hash、source revision 和 permission status；`ref/`、tracked source path、重复 ID、
+矛盾 C* 分类及泄漏本机路径均 fail closed。缺失 observation 保持 `CU` 且整份 qualification 标为
+incomplete。验证入口是 `pnpm run test:phase-6b`。
+
+## Active work unit：6C Twelve-cart Baseline
 
 ### Observable behavior
 
-1. 提供一个 Node CLI，显式接受 local manifest/output 参数；默认不扫描目录、不读取 `ref/`、不发起
-   网络请求，也不把第三方输入复制进 tracked path。
-2. 对 manifest schema、case 数量、唯一 ID、cart path、source revision、SHA-256、permission status、
-   deterministic input/trace 与 Chrome execution settings 做 fail-closed 验证。
-3. 报告固定记录 player commit、runtime WASM hash、Chrome version、cart hash、执行时长/trace、结果
-   `C0`–`C3/CU` 与 failure cluster；路径只保留 caller-approved display label，不泄露本机绝对路径。
-4. 输入和报告排序确定；同一输入和 runtime identity 产生可比较的机器结果。中断或部分执行必须显式
-   标记 incomplete，不能把未测 case 当 pass。
-5. 自动测试只使用项目原创的占位文件/fixture 验证 schema、hash mismatch、路径隔离、redaction、
-   deterministic ordering 与分类，不读取真实 external cart。
+1. 从 caller 已合法取得的本地副本建立恰好 12-case ignored manifest；每个 case 锁定 source label、
+   immutable revision、SHA-256、permission status 和 fixed-tick trace。runner 不接受 `ref/` 路径。
+2. 增加独立 local Chrome harness，复用现有 production build、WASM 和 Worker composition；对每个 cart
+   验证 codec/load、boot、固定 120 tick、first fault、frame publication 与 screen digest。
+3. harness 只输出 ignored observations JSON，不保存截图、音频或 cart bytes；environment 必须绑定当前
+   player commit、runtime WASM SHA-256 和实际 Google Chrome/Chromium version。
+4. 所有 12 case 必须完成 `boots/fails` smoke outcome；失败项标为 `C0` 并落入 bounded failure
+   cluster，启动项保持 `CU`，不能用 120-tick smoke 直接声称 C1/C2/C3。
+5. 6C 只建立 baseline，不修 production。失败 cluster 在后续 unit 先转成项目原创最小 reproduction，
+   再决定通用修复；不得加入 cart-specific 分支。
+6. local report 保持 ignored。机器合同只记录“12 case 已完整分类”、环境 identity 和 cluster 名称，
+   不能把该 corpus 计入发布 denominator 或宣传为真实游戏兼容率。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.6B.allowedPaths` 控制。工具只属于 `tools/compat/`，项目原创
-fixture/test 属于 `tests/compat/`；production packages、apps、WASM、真实 third-party corpus 和
-`ref/` 不在 6B 范围。
+精确允许路径由机器合同 `workUnits.6C.allowedPaths` 控制。tracked 变更只限 compat tooling、原创
+fixture/test、schema、phase contract 和命令；真实 cart、manifest、observations、report 与任何截图
+保持 ignored。production packages、apps、WASM 和 `ref/` runtime dependency 不在 6C 范围。
 
 ### Tests
 
+- Proposed：`pnpm run test:phase-6c`
+- Proposed：`pnpm run test:phase-6c:chrome`
 - `pnpm run test:phase-6b`
 - `pnpm run test:architecture`
-- public contract 或生产行为发生变化时最终运行 `pnpm run verify`
 
 ### Exit gate
 
-- valid local manifest 可以在无网络、无 `ref/` 依赖下生成 deterministic、path-redacted 报告。
-- 缺字段、hash mismatch、重复 ID、越界 case、tracked/ref path 和 incomplete execution 均 fail closed。
-- project-authored tests 覆盖报告 schema、C* 分类、failure cluster 和环境 identity。
-- 6B 结果折叠入机器合同，6C 成为唯一 active work unit，并独立提交。
+- 12/12 case 在 production Chrome path 完成 fixed trace，environment/cart/source hashes 完整。
+- observation 中 12/12 均 complete；启动项为 `boots/CU`，失败项为 `fails/C0` 且有 failure cluster；
+  不存在自动网络访问。
+- local report 不包含绝对路径、source URL、截图、音频和原 cart bytes，且仍被 Git 忽略。
+- 6C aggregate/cluster 结果折叠入机器合同，6D 成为唯一 active work unit，并独立提交。
 
 ## Phase exit gate
 

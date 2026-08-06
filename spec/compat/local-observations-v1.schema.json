@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.invalid/spec/compat/local-observations-v1.schema.json",
+  "title": "Local external PICO-8 observations v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "environment", "entries"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "playerCommit", "runtimeWasmSha256", "chromeVersion"],
+      "properties": {
+        "target": { "const": "chrome-production" },
+        "playerCommit": { "type": "string", "pattern": "^[a-f0-9]{7,40}$" },
+        "runtimeWasmSha256": { "$ref": "#/$defs/sha256" },
+        "chromeVersion": {
+          "type": "string",
+          "pattern": "^(Google Chrome|Chromium) [0-9]"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/observation" }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "completed",
+        "smokeOutcome",
+        "classification",
+        "failureCluster",
+        "completedTicks"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]{0,127}$" },
+        "completed": { "type": "boolean" },
+        "smokeOutcome": { "enum": ["boots", "fails", "not-run"] },
+        "classification": { "enum": ["C0", "C1", "C2", "C3", "CU"] },
+        "failureCluster": {
+          "type": ["string", "null"],
+          "enum": [
+            "parse",
+            "language",
+            "ram",
+            "graphics",
+            "audio",
+            "input",
+            "timing",
+            "persistence",
+            "unsupported-host-feature",
+            null
+          ]
+        },
+        "completedTicks": { "type": "integer", "minimum": 0, "maximum": 36000 },
+        "faultCode": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    }
+  }
+}
