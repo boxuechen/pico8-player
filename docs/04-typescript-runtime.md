@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 3G；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 3 exit；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -19,6 +19,7 @@
 | **Implemented through Phase 3E** | synchronous `cartdata/dget/dset`、live `0x5e00..0x5eff` authority、prehydrated browser-neutral seeds 与 committed copy-owned dirty snapshots |
 | **Implemented through Phase 3F** | Worker-owned IndexedDB hydrate/commit、versioned bounded records、lifecycle flush、migration、recoverable persistence diagnostics 与 pagehide command |
 | **Implemented through Phase 3G** | synchronous current-cart `reload/cstore`、browser-neutral repository port、Worker-local identity-scoped bounded COW overlay 与 code/ref fail-closed policy |
+| **Evidence through Phase 3H** | project-owned Node/Chrome cross-oracles、120-tick p95、60 秒 AudioWorklet soak、fault/stale/persistence recovery 与 resource dispose gate；未新增 production API |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
 

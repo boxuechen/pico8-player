@@ -28,8 +28,8 @@
 | 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
 | 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | 2 Graphics、Memory、Text | **Complete；2A–2F** | [Evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
-| 3 Audio、完整 Input、Persistence | **Active；3H；3A–3G complete** | [Active phase](./phases/3-audio-input-persistence.md) |
-| 4 L2 / MVP 兼容加固 | Not started | Phase 3 exit 后激活 |
+| 3 Audio、完整 Input、Persistence | **Complete；3A–3H** | [Evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
+| 4 L2 / MVP 兼容加固 | Not started | 尚未激活；开始前创建 phase contract |
 | 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
 
 ## 3. Phase 0 — 架构验证
@@ -105,8 +105,8 @@ oracle；graphics/text p95 均约 `0.4ms`，资源故障、stale generation 拒�
 
 ### Phase 3 — Audio、完整 Input 与 Persistence
 
-> 状态：Active；当前 work unit 3H；3A–3G complete。以下仍只保存 roadmap headline；production 授权与
-> work-unit exit 由 [active phase](./phases/3-audio-input-persistence.md) 定义。
+> 状态：Complete；3A–3H。以下只保存 roadmap headline；完成细节见
+> [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
 
 目标：完成可听、可控制、可保存的 player runtime。
 
@@ -115,6 +115,11 @@ multiplayer/devkit input、cartdata、IndexedDB 和 reload/cstore 的已授权�
 
 Exit headline：canonical audio golden、device output、input traces、persistence
 transaction/error/recovery 全部通过。
+
+**Status: Passed by Phase 3H.** 两个项目原创 flow 在 Node real-WASM 与 Chrome production
+Worker 获得一致的 screen/palette oracle；canonical PCM、input/RAM、cartdata/overlay、真实
+AudioWorklet/Canvas/IndexedDB、120-tick p95、60 秒 soak、fault/stale/persistence recovery 和
+dispose 门禁通过。兼容声明严格限于 Phase 3 project profile，开放 P0/P1 为 `0`。
 
 ### Phase 4 — L2 / MVP 兼容加固
 

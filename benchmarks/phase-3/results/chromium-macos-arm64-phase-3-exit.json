@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "phase": "3H",
+  "target": "PICO-8 0.2.7 Phase 3 audio, input and persistence project profile",
+  "deterministic": [
+    {
+      "id": "phase-3/audio-input",
+      "finalScreenSha256": "10a3f93d5c9391501e2077c19b6b92a850e0dcce77a3f39f3ad1f45d3cf34377",
+      "displayPaletteSha256": "be45cb2605bf36bebde684841a28f0fd43c69850a3dce5fedba69928ee3a8991",
+      "resetScreenSha256": "10a3f93d5c9391501e2077c19b6b92a850e0dcce77a3f39f3ad1f45d3cf34377",
+      "generationBeforeReset": 1,
+      "generationAfterReset": 2
+    },
+    {
+      "id": "phase-3/persistence-overlay",
+      "initial": {
+        "generation": 1,
+        "screenSha256": "998974aec9a4a95aaf7a5c76fd21233ac26ded0f55047dfdce6ca876f223e2b9",
+        "displayPaletteSha256": "be45cb2605bf36bebde684841a28f0fd43c69850a3dce5fedba69928ee3a8991"
+      },
+      "reset": {
+        "generation": 2,
+        "screenSha256": "4ff277ca2fbe07bbc9aebca350813c0612a4fd2a2ef7b6a50fcc2ed7eee8932c",
+        "displayPaletteSha256": "be45cb2605bf36bebde684841a28f0fd43c69850a3dce5fedba69928ee3a8991"
+      },
+      "sameIdentity": {
+        "generation": 3,
+        "screenSha256": "f993146719df160bf2ec19ead00ee365eaacf449424c8a74053e8b78c31c75d0",
+        "displayPaletteSha256": "be45cb2605bf36bebde684841a28f0fd43c69850a3dce5fedba69928ee3a8991"
+      }
+    }
+  ],
+  "performance": {
+    "cases": [
+      {
+        "id": "phase-3/audio-input",
+        "warmupTicks": 20,
+        "measuredTicks": 120,
+        "p50Ms": 0.3000001907348633,
+        "p95Ms": 0.40000009536743164,
+        "p99Ms": 0.5,
+        "minMs": 0.19999980926513672,
+        "maxMs": 0.5,
+        "over16_67Ms": 0
+      },
+      {
+        "id": "phase-3/persistence-overlay",
+        "warmupTicks": 20,
+        "measuredTicks": 120,
+        "p50Ms": 0.3000001907348633,
+        "p95Ms": 0.40000009536743164,
+        "p99Ms": 0.40000009536743164,
+        "minMs": 0.19999980926513672,
+        "maxMs": 0.40000009536743164,
+        "over16_67Ms": 0
+      }
+    ],
+    "maxP95Ms": 0.40000009536743164
+  },
+  "audio": {
+    "gesture": {
+      "eventIsTrusted": true,
+      "userActivationIsActive": true
+    },
+    "requestedSampleRate": 48000,
+    "actualSampleRate": 48000,
+    "prebufferStats": {
+      "v": 1,
+      "type": "audioStats",
+      "sessionGeneration": 1,
+      "deviceSampleRate": 48000,
+      "queuedSourceFrames": 11025,
+      "queueHighWaterFrames": 11025,
+      "configuredLowWaterFrames": 5512,
+      "configuredHighWaterFrames": 44100,
+      "startupUnderruns": 170,
+      "steadyUnderruns": 0,
+      "overruns": 0,
+      "droppedSourceFrames": 0,
+      "discontinuities": 0,
+      "staleChunks": 0,
+      "receivedChunks": 29,
+      "renderedDeviceFrames": 21760,
+      "playing": false
+    },
+    "inputObservation": [
+      59,
+      16,
+      16,
+      1,
+      96,
+      32,
+      1,
+      0,
+      0
+    ],
+    "soak": {
+      "requestedSeconds": 60,
+      "actualDurationMs": 60008.800000190735,
+      "runtimeFrames": 3603,
+      "timeDiscontinuities": 0,
+      "baselineAudioStats": {
+        "v": 1,
+        "type": "audioStats",
+        "sessionGeneration": 1,
+        "deviceSampleRate": 48000,
+        "queuedSourceFrames": 9950,
+        "queueHighWaterFrames": 11082,
+        "configuredLowWaterFrames": 5512,
+        "configuredHighWaterFrames": 44100,
+        "startupUnderruns": 170,
+        "steadyUnderruns": 0,
+        "overruns": 0,
+        "droppedSourceFrames": 0,
+        "discontinuities": 0,
+        "staleChunks": 0,
+        "receivedChunks": 60,
+        "renderedDeviceFrames": 48896,
+        "playing": true
+      },
+      "audioStats": {
+        "v": 1,
+        "type": "audioStats",
+        "sessionGeneration": 1,
+        "deviceSampleRate": 48000,
+        "queuedSourceFrames": 10935,
+        "queueHighWaterFrames": 11259,
+        "configuredLowWaterFrames": 5512,
+        "configuredHighWaterFrames": 44100,
+        "startupUnderruns": 170,
+        "steadyUnderruns": 0,
+        "overruns": 0,
+        "droppedSourceFrames": 0,
+        "discontinuities": 0,
+        "staleChunks": 0,
+        "receivedChunks": 3663,
+        "renderedDeviceFrames": 2929152,
+        "playing": true
+      },
+      "startupUnderrunDelta": 0,
+      "steadyUnderrunDelta": 0
+    },
+    "recovery": {
+      "code": "E_HOST_API",
+      "caughtCode": null,
+      "faultGeneration": 2,
+      "recoveryGeneration": 3,
+      "recoveredFrames": 1,
+      "faultResetStats": {
+        "v": 1,
+        "type": "audioStats",
+        "sessionGeneration": 2,
+        "deviceSampleRate": 48000,
+        "queuedSourceFrames": 0,
+        "queueHighWaterFrames": 0,
+        "configuredLowWaterFrames": 5512,
+        "configuredHighWaterFrames": 44100,
+        "startupUnderruns": 0,
+        "steadyUnderruns": 0,
+        "overruns": 0,
+        "droppedSourceFrames": 0,
+        "discontinuities": 0,
+        "staleChunks": 0,
+        "receivedChunks": 0,
+        "renderedDeviceFrames": 0,
+        "playing": false
+      }
+    },
+    "audioStateAfterDispose": "closed"
+  },
+  "persistence": {
+    "initial": [
+      1,
+      21,
+      0,
+      0
+    ],
+    "reset": [
+      2,
+      22,
+      1,
+      0
+    ],
+    "generationBeforeReset": 1,
+    "generationAfterReset": 2,
+    "firstSchemaVersion": 1,
+    "firstBytes": 256,
+    "resetBytes": 256,
+    "writeFailureDiagnostic": true,
+    "failureState": "paused"
+  },
+  "resources": {
+    "workersCreated": 6,
+    "workersTerminated": 6
+  },
+  "workerErrors": [],
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "sourceRevision": "f7f8eac3a4b3be96292909ff916077d8be08599b-dirty",
+  "sourceSha256": {
+    "apps/web-player/src/main/compose-player.ts": "1af0f9b686fa528836ad23aae04662cda8747b579b2321a4828fe4e2735dd3a2",
+    "apps/web-player/src/main/player-controller.ts": "c07c16c35c8bbd7c7a4cd134abb2b9b8b3c44667bd7fdef36866821215b45b65",
+    "apps/web-player/src/main/audio-frontend.ts": "34c94c90b0ea55f6f750d275c43872234730c23efcc5c7e2643aecb21fe2ef4d",
+    "apps/web-player/src/worker/compose-runtime.ts": "bbcce71a570bb77d66d251c9b1a638087fb88254653172c0795177180e7c2acd",
+    "apps/web-player/src/worker/adapters/indexeddb-persistence-adapter.ts": "66a40d94bd3badbfe8310e880cdc4acea1fa9be214917944d0ce8797b62db59f",
+    "apps/web-player/src/worker/adapters/cart-repository-adapter.ts": "741e3940b04f3ffdf089754c8b08d24b9aa16831d069e95c75fb360897a88b08",
+    "apps/web-player/src/worklet/pico8-audio-processor.ts": "110ae4c013ac651877c9562dd2bae8aadf693c26143dd5826f776d5baf0a130d",
+    "packages/runtime-core/src/frame-runtime.ts": "4b9f9c7cd6df7be0b561418c8945f6e9971d59619d03760c038f8a6e9f558e0f",
+    "tests/conformance/manifests/phase-3h-exit.json": "d827525784ff6d0b5670e76af67db7734fd0332c2647fb5483c8a9df383c2fa2",
+    "tests/conformance/carts/phase-3/audio-input.p8": "e9119c48be3317982f89f23535e8c55c048b3c1ceb6e3d94b799045a75ceabf0",
+    "tests/conformance/carts/phase-3/persistence-overlay.p8": "583dd2e9dc5f4c8f50850669dcf8fe35f9c7ce213f1c92228ed11e487c2caadc",
+    "tests/conformance/carts/phase-3/host-api-fault.p8": "445018dbc810e9e52008ce3d47a4aafc4589f93413cacc876b4e2acaa27d05ee",
+    "tests/browser/phase-3h.mjs": "2f78194072ad5e218a1400ec297fef4784a3c39547fdb1d6c804840b479322d2"
+  },
+  "browser": "Google Chrome 150.0.7871.189",
+  "machine": {
+    "machineId": "fe2d5602ee3db315",
+    "os": "darwin 25.5.0",
+    "architecture": "arm64",
+    "cpuModel": "Apple M4 Pro",
+    "logicalCpuCount": 14,
+    "totalMemoryBytes": 51539607552
+  }
+}

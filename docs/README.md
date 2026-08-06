@@ -5,14 +5,15 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-当前 active phase 是 [Phase 3 — Audio、Input 与 Persistence](./phases/3-audio-input-persistence.md)，
-active work unit 为 **3H Conformance and Phase Exit**。Phase 3A–3G 已完成；Phase 2A–2F 已归档。
+Phase 3A–3H 已完成并归档；当前没有 active phase。Phase 4 尚未激活，开始实现前必须先从
+当前源码与 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
+创建新的 phase 文档和机器合同。
 
 日常实现只读取以下入口，不通读已完成阶段的执行过程：
 
 1. 本页。
-2. [active Phase 3 文档](./phases/3-audio-input-persistence.md) 展开的当前 work unit。
-3. 它明确链接的 machine contract、owner 章节和 ADR。
+2. 若存在 active phase，读取 [`docs/phases/`](./phases/) 中的唯一入口。
+3. 该入口明确链接的 machine contract、owner 章节和 ADR。
 
 日常实现默认只读：本页 → active phase → 它明确链接的 contract
 小节。不要把 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

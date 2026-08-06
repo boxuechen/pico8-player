@@ -11,7 +11,7 @@
 | **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
 | **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
 | **Implemented through Phase 2 exit** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font、display-palette frame transport 与 project-owned production conformance gate |
-| **Implemented through Phase 3G** | browser-neutral audio/input/cartdata/current-cart core 与 ports；Worker-owned IndexedDB/current-cart COW adapters 和 lifecycle wiring；device/storage adapters 仍由 app 拥有 |
+| **Implemented through Phase 3 exit** | browser-neutral audio/input/cartdata/current-cart core 与 ports；Worker-owned IndexedDB/current-cart COW adapters 和 lifecycle wiring；device/storage adapters 仍由 app 拥有；3H exit 未新增 production 边界 |
 | **Scaffold** | host cart resolver adapter 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -19,9 +19,9 @@
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
 浏览器证据已归档到
 [`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1/2
-已完成，Phase 3A–3G 已独立关闭，当前 active work unit 是 Phase 3H，入口位于
-[`phases/3-audio-input-persistence.md`](./phases/3-audio-input-persistence.md)。Phase 2 边界由
-[exit evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 锁定。
+已完成，Phase 3A–3H 已独立关闭，当前没有 active phase。Phase 2/3 边界分别由
+[Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 和
+[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) 锁定。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -184,7 +184,7 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 3F 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。Phase 3 exit 当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
 `graphics/map-memory.ts`、`graphics/p8scii-text.ts`、`graphics/p8scii-font.ts`、
 `memory/pico-ram.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、`persistence/cart-data-core.ts`、`scheduler/frame-scheduler.ts`、
@@ -202,7 +202,7 @@ device mapping 已在 app。package-private `CartDataCore` 从 prehydrated seed 
 `0x5e00..0x5eff`，并只在 committed boot/frame 输出 copy-owned dirty snapshot；browser-neutral
 `CartDataPersistencePort` 由 Worker-owned IndexedDB adapter 实现，RuntimeCore 不依赖 storage API。
 browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已在 3G
-完成；3H 只执行 conformance、performance、recovery 与 Phase exit，不扩大 production API。
+完成；3H 只增加 conformance、performance、recovery 与 Phase exit evidence，没有扩大 production API。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。

@@ -895,6 +895,26 @@ Known Differences：只实现 current-cart 同步子集；`cstore` 更新 Worker
 overlay 不 durable，Worker dispose 后丢失；单 Worker 最多登记 64 个 cart identity；不支持 Firefox/WebKit。
 Phase 3G 开放 P0/P1 为 `0`。
 
+### 15.19 Phase 3H Audio/Input/Persistence Exit 矩阵
+
+本表关闭 Phase 3 project profile；完整数据和 raw Chrome result 见
+[Phase 3 exit evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
+
+| 行为 | Phase 3H 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| project corpus | 2 个原创组合 flow + 1 个原创 fault cart；无 BBS、第三方或 `ref/` dependency | gate passed | Phase 4 corpus 需单独激活 |
+| Node real-WASM | audio/input fresh/reset exact；canonical PCM `33508201…8c0b`；persistence/overlay `21→22→23`；fresh scenario 重复 exact | `compatible`（project oracle） | official exact 仍为 `unknown` |
+| Chrome cross-oracle | production Worker 的 audio/input final/reset 与 persistence generation 1/2/3 screen/palette 全部匹配 Node | gate passed | Chrome/Chromium only |
+| performance | audio/input 与 persistence/overlay 各 20 warm-up + 120 measured；最大 p95 `0.4001ms`，预算 `8ms` | gate passed | Phase 4 增加 stress corpus |
+| bounded soak | 60.0088 秒、3603 frames；计量窗口 startup/steady underrun 增量 `0/0`；steady underrun、overrun、drop、discontinuity、stale chunk 与 Worker error 均 `0` | gate passed | 启动期 counter 独立报告，不豁免稳态 |
+| recovery | structured `E_HOST_API`、Worklet queue reset、stale input/work 拒绝、fresh valid cart 恢复、persistence read/write failure 可见且非致命 | gate passed | hang/CPU calibration 仍属 Phase 4 |
+| lifecycle | Workers created/terminated `6/6`；AudioContext closed；IndexedDB schema 1 / 256-byte record | gate passed | current-cart overlay 仍为 Worker-local |
+
+Known Differences：canonical PCM/hash 是项目 oracle，不是官方 bit-exact 声明；正式 soak baseline
+之前记录的 startup underrun 单独保留，60 秒计量窗口增量为 0；guest `load`、external ref、
+BBS/network/multicart 与完整 `stat()` 不支持；current-cart overlay 不 durable；Firefox/WebKit 不在
+支持范围。Phase 3H 与 Phase 3 exit 开放 P0/P1 为 `0`。
+
 ## 16. Definition of Done
 
 ### 16.1 单个功能或 bugfix

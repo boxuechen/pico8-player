@@ -2,16 +2,17 @@
   "schemaVersion": 1,
   "phase": "3",
   "name": "Audio, Input and Persistence",
-  "status": "active",
+  "status": "complete",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
     "phase2Contract": "spec/phase-2-graphics-memory-text-contract.json",
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E", "3F", "3G"],
-  "activeWorkUnit": "3H",
+  "completedWorkUnits": ["3A", "3B", "3C", "3D", "3E", "3F", "3G", "3H"],
+  "activeWorkUnit": null,
   "nextWorkUnit": null,
+  "nextPhase": "4",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -579,7 +580,7 @@
     },
     "3H": {
       "name": "Conformance and Phase Exit",
-      "status": "active",
+      "status": "complete",
       "corpus": {
         "ownership": "project-owned",
         "location": "tests/conformance/carts/phase-3",
@@ -627,7 +628,69 @@
         "zero-open-p0-or-p1",
         "immutable-phase-evidence-roadmap-and-active-doc-closure",
         "independent-commit-and-clean-worktree"
-      ]
+      ],
+      "result": {
+        "manifest": "tests/conformance/manifests/phase-3h-exit.json",
+        "projectOwnedCases": [
+          {
+            "id": "phase-3/audio-input",
+            "cartSha256": "e9119c48be3317982f89f23535e8c55c048b3c1ceb6e3d94b799045a75ceabf0",
+            "canonicalPcmSha256": "33508201a56a81befe22c6db209b863f7c058e9d28a33707b07adf6a90e08c0b",
+            "inputRamTraceSha256": "377faf115857284f35a1ab50f944fef5705137a06c883b403b8549fb9beca077",
+            "screenSha256": "10a3f93d5c9391501e2077c19b6b92a850e0dcce77a3f39f3ad1f45d3cf34377"
+          },
+          {
+            "id": "phase-3/persistence-overlay",
+            "cartSha256": "583dd2e9dc5f4c8f50850669dcf8fe35f9c7ce213f1c92228ed11e487c2caadc",
+            "initialResetSameIdentityValues": [21, 22, 23],
+            "initialScreenSha256": "998974aec9a4a95aaf7a5c76fd21233ac26ded0f55047dfdce6ca876f223e2b9",
+            "resetScreenSha256": "4ff277ca2fbe07bbc9aebca350813c0612a4fd2a2ef7b6a50fcc2ed7eee8932c",
+            "sameIdentityScreenSha256": "f993146719df160bf2ec19ead00ee365eaacf449424c8a74053e8b78c31c75d0"
+          }
+        ],
+        "nodeGate": "real-wasm-fresh-reset-same-identity-and-fault-recovery-exact",
+        "chromeGate": {
+          "browser": "Google Chrome 150.0.7871.189",
+          "maximumP95Milliseconds": 0.40000009536743164,
+          "measuredTicksPerCase": 120,
+          "boundedSoakSeconds": 60,
+          "boundedSoakFrames": 3603,
+          "soakStartupUnderrunDelta": 0,
+          "soakSteadyUnderrunDelta": 0,
+          "steadyUnderruns": 0,
+          "audioDiscontinuities": 0,
+          "staleAudioChunks": 0,
+          "workerErrors": 0,
+          "workersCreated": 6,
+          "workersTerminated": 6
+        },
+        "recovery": {
+          "faultCode": "E_HOST_API",
+          "audioQueueReset": true,
+          "staleInputRejected": true,
+          "staleWorkRejected": true,
+          "validCartRecovered": true,
+          "persistenceReadFailureVisibleAndNonfatal": true,
+          "persistenceWriteFailureVisibleAndNonfatal": true
+        },
+        "knownDifferences": [
+          "canonical PCM and exact hashes are project oracles, not an official bit-exact audio claim",
+          "startup underruns before the post-unlock soak baseline are reported separately; the measured 60-second window added zero startup or steady underruns",
+          "guest load, external cart references, BBS and network resolution remain unsupported",
+          "current-cart cstore overlay is Worker-local and is not durable across Worker disposal",
+          "Chrome and Chromium are the only browser gates"
+        ],
+        "openP0P1": 0,
+        "rawEvidence": "benchmarks/phase-3/results/chromium-macos-arm64-phase-3-exit.json",
+        "rawEvidenceSha256": "d69cf16c78d622c0000e56e34584508d1b68649f7fa7e1df878302e13ac623d6",
+        "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
+        "verification": [
+          "pnpm run test:phase-3h",
+          "pnpm run test:phase-3h:chrome",
+          "pnpm run evidence:phase-3h",
+          "pnpm run verify"
+        ]
+      }
     }
   },
   "scope": [
