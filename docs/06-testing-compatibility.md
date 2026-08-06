@@ -16,6 +16,7 @@
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
+| **Active Phase 4 baseline** | 112 项 API 四维清单、38 binding 对账、7-case 项目原创 corpus 与 local-only 外部 schema；当前 runner/triage 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 

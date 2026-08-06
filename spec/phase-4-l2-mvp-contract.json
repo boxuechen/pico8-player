@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "phase": "4",
+  "name": "L2 / MVP Compatibility Hardening",
+  "status": "active",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase3Contract": "spec/phase-3-audio-input-persistence-contract.json",
+    "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
+    "baselineCommit": "73dc57e"
+  },
+  "completedWorkUnits": ["4A"],
+  "activeWorkUnit": "4B",
+  "nextWorkUnit": "4C",
+  "workUnits": {
+    "4A": {
+      "name": "Capability Inventory and Corpus Contract",
+      "status": "complete",
+      "result": {
+        "apiInventory": "spec/pico-api-inventory.yaml",
+        "apiCount": 112,
+        "abiBindings": 38,
+        "implementationCounts": {
+          "implemented": 76,
+          "partial": 7,
+          "unimplemented": 21,
+          "unsupported": 8
+        },
+        "conformanceCounts": {
+          "compatible": 41,
+          "partial": 7,
+          "unknown": 56,
+          "unsupported": 8
+        },
+        "projectCorpus": "tests/conformance/manifests/phase-4-l2-corpus.json",
+        "projectCorpusCases": 7,
+        "initialPhase4Classifications": { "CU": 7 },
+        "localExternalSchema": "tests/conformance/local-corpus.example.json",
+        "verification": ["pnpm run test:phase-4a", "pnpm run verify"]
+      }
+    },
+    "4B": {
+      "name": "Compatibility Runner and Baseline Triage",
+      "status": "active"
+    },
+    "4C": { "name": "P8 Lua and Core Library Compatibility", "status": "planned" },
+    "4D": { "name": "Graphics, Memory and Text Hardening", "status": "planned" },
+    "4E": { "name": "System, Audio, Input, Persistence and Player Integration", "status": "planned" },
+    "4F": { "name": "CPU Cost, Slow-frame and Scheduler Calibration", "status": "planned" },
+    "4G": { "name": "Resource Sizing and Chrome Long-run", "status": "planned" },
+    "4H": { "name": "Phase 4 / L2 Exit", "status": "planned" }
+  },
+  "corpusPolicy": {
+    "publishedDenominator": "project-authored tracked corpus only",
+    "localExternalCarts": "hash-and-metadata-only; bytes and result artifacts remain gitignored",
+    "classifications": ["C0", "C1", "C2", "C3", "CU"],
+    "playableRate": "(C2+C3)/(C0+C1+C2+C3)",
+    "minimumPlayableRate": 0.95,
+    "openP0Maximum": 0,
+    "openP1Maximum": 0
+  },
+  "nonGoals": [
+    "guest-load",
+    "external-cart-resolver",
+    "bbs-network-access",
+    "multicart",
+    "writable-cart-files",
+    "gpio-and-serial",
+    "firefox-webkit-and-mobile-release"
+  ],
+  "phaseExit": [
+    "all required MVP APIs are compatible or have an explicit accepted scope decision",
+    "project corpus playable rate is at least 95 percent with corpus size reported",
+    "open P0 and P1 counts are zero and every P2 is a published Known Difference",
+    "CPU and fixed-memory budgets are calibrated against the official 4M VM instruction model",
+    "30-minute Chrome soak and sequential multi-cart lifecycle gates pass",
+    "Node real-WASM and Chrome production-path oracles agree",
+    "pnpm run verify passes and Phase 4 evidence is archived"
+  ]
+}

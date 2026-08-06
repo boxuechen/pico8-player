@@ -1,9 +1,9 @@
 # Phase documents
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
-phase 预建愿望清单。当前没有 active phase；Phase 4 尚未激活。Phase 3 的完成事实位于
-[`spec/phase-3-audio-input-persistence-contract.json`](../../spec/phase-3-audio-input-persistence-contract.json)
-和不可变的 [Phase 3 evidence](../evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
+phase 预建愿望清单。当前入口是
+[`4-l2-mvp-hardening.md`](./4-l2-mvp-hardening.md)，唯一 active work unit 为 4B。
+机器状态位于 [`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)。
 
 ## Activation contract
 

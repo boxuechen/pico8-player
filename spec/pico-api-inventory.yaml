@@ -1,250 +1,142 @@
-schema_version: 1
-target: pico8-0.2.7-player
-owner: packages/runtime-core
-status_values:
-  - unimplemented
-  - partial
-  - implemented
-  - unsupported
-apis:
-  - name: cls
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1A
-    note: standard-4bpp mapped screen clear with clip/cursor reset; advanced screen modes excluded
-  - name: pset
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1A
-    note: RAM-backed pen, camera, clip, draw palette, fill pattern and secondary-global mapping in standard 4bpp
-  - name: btn
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3C
-    note: synchronous generated binding to TS; fixed eight-player six-button snapshot, 0x5f4c..0x5f53 registers and P0/P1 no-argument bitfield; active 3D may add the documented devkit mouse button 6 overlay
-  - name: line
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1D
-    note: integer raster with optional colour, RAM-backed continuation and full Phase 2B draw state
-  - name: rect
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1D
-    note: reversed inclusive standard-4bpp outline with camera, clip, palette and fill pattern
-  - name: rectfill
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1D
-    note: reversed inclusive standard-4bpp fill with camera, clip, palette, fill pattern and inversion
-  - name: circ
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1D
-    note: integer outline with default/negative radius and full Phase 2B draw state
-  - name: circfill
-    status: implemented
-    owner: packages/runtime-core
-    phase: 1D
-    note: integer fill with default/negative radius, Phase 2B draw state and inversion
-  - name: btnp
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3C
-    note: independent player 0..7 six-button logical-tick edge/repeat with 0x5f5c/0x5f5d overrides; keyboard P0/P1, standard Gamepad and multitouch sources merge in the app
-  - name: time
-    aliases: [t]
-    status: partial
-    owner: packages/runtime-core
-    phase: 0E
-    note: Q16.16 committed-slice time; official Web Player locks startup to 1/30 second
-  - name: flip
-    status: partial
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 0E
-    note: root top-level continuation implemented; guest-nested suspension unsupported
-  - name: peek
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: canonical scalar and bounded 8192-result reads
-  - name: peek2
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: unaligned little-endian read through the canonical per-byte mapper
-  - name: peek4
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: signed Q16.16 raw bits over canonical byte-wise mapper
-  - name: poke
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: canonical scalar and bounded 8192-value writes with preflight arity validation
-  - name: poke2
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: unaligned little-endian write through the canonical per-byte mapper
-  - name: poke4
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: raw Q16.16 bits over canonical byte-wise mapper
-  - name: memcpy
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: canonical logical mapping with overlap-safe source snapshot
-  - name: memset
-    status: implemented
-    owner: wasm/bridge/p8w_frame_runtime.cpp
-    phase: 2A
-    note: canonical logical mapping and bounded deterministic fill
-  - name: color
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: RAM-backed 8-bit primary/alternate pen with previous-value result
-  - name: camera
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: RAM-backed signed int16 offset observed by standard-4bpp draw/read operations
-  - name: clip
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: RAM-backed exclusive rectangle with reset and intersect mode
-  - name: pal
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: scalar/table reset and draw/display/secondary mappings; display supports 0x80..0x8f
-  - name: palt
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: scalar boolean and 16-bit mask forms share draw-palette transparency bits
-  - name: fillp
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2C
-    note: primitives and sprites share RAM-backed pattern, transparency, apply-to-sprites, secondary-global and colour override/inversion flags
-  - name: pget
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: mapped logical screen index with camera/clip and documented custom out-of-bounds register
-  - name: oval
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: deterministic reversed/fractional standard-4bpp ellipse with Phase 2B draw state
-  - name: ovalfill
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2B
-    note: deterministic standard-4bpp fill with Phase 2B draw state and inversion
-  - name: sget
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2C
-    note: canonical mapped GFX nibble read with fractional/bounds and custom out-of-bounds behavior
-  - name: sset
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2C
-    note: canonical mapped GFX nibble write with optional pen and draw-palette mapping
-  - name: spr
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2C
-    note: standard-4bpp fractional sprite extents, camera, clip, flip, palette, transparency and fill-pattern path
-  - name: sspr
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2C
-    note: deterministic nearest source sampling with scaling, negative destination dimensions and sprite draw state
-  - name: mget
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2D
-    note: RAM-backed lower-ring and upper-region map resolver with width, alias and custom out-of-bounds behavior
-  - name: mset
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2D
-    note: bounded physical map write through the same live base/width resolver as mget/map/tline
-  - name: fget
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2D
-    note: whole-byte and boolean bit reads over canonical 0x3000 sprite flags
-  - name: fset
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2D
-    note: whole-byte and optional-boolean bit writes with invalid index no-op behavior
-  - name: map
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2D
-    note: bounded visible tile raster with defaults, camera, clip, layers, sprite-zero override and shared sprite draw state
-  - name: tline
-    status: partial
-    owner: packages/runtime-core
-    phase: 2D
-    note: signed Q16.16 tile-coordinate sampler with default/explicit deltas, RAM masks/offsets and layers; one-argument precision mode deferred
-  - name: print
-    status: partial
-    owner: packages/runtime-core
-    phase: 2E
-    note: byte-oriented built-in/custom font raster plus Phase 3B synchronous P8SCII audio side effects; timed frame delays remain intentionally deferred
-  - name: cursor
-    status: implemented
-    owner: packages/runtime-core
-    phase: 2E
-    note: RAM-backed cursor, print-home and optional pen update through generated host binding
-  - name: sfx
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3A
-    note: deterministic four-channel live-RAM SFX core, typed binding 31, exact 22050Hz PCM slice clock and project golden; official bit-exact waveform parity remains unclaimed
-  - name: music
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3B
-    note: typed binding 32, live 64-pattern sequencer, channel arbitration/fade, P8SCII audio and production dedicated-port AudioWorklet output; project oracle is not official bit-exact audio
-  - name: stat
-    status: partial
-    owner: packages/runtime-core
-    phase: 3D
-    note: documented devkit input selectors 30,31,32,33,34,36,38,39 are implemented through typed binding 33; complete stat remains deferred
-  - name: cartdata
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3E
-    note: synchronous one-shot validated slot selection through binding 34; prehydrated 256-byte seed is copied into live 0x5e00 RAM and the boolean reports seed presence
-  - name: dget
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3E
-    note: binding 35 returns signed Q16.16 raw little-endian values from the selected live 0x5e00 cartdata region
-  - name: dset
-    status: implemented
-    owner: packages/runtime-core
-    phase: 3E
-    note: binding 36 writes signed Q16.16 raw little-endian values; committed transaction snapshots also detect direct RAM writes
-  - name: reload
-    status: unimplemented
-    owner: packages/runtime-core
-    phase: 3G
-    note: only current-cart synchronous ROM/overlay path is planned; external refs remain unsupported
-  - name: cstore
-    status: unimplemented
-    owner: packages/runtime-core
-    phase: 3G
-    note: only current-cart copy-on-write overlay path is planned; source bytes remain immutable
+{
+  "schemaVersion": 2,
+  "target": "pico-8-v0.2.7-player",
+  "manual": "https://www.lexaloffle.com/dl/docs/pico-8_manual.html",
+  "owner": "phase-4-l2-mvp-contract",
+  "representation": "JSON-compatible YAML 1.2",
+  "dimensions": {
+    "mvpDisposition": ["required", "conditional", "excluded"],
+    "implementationStatus": ["implemented", "partial", "unimplemented", "unsupported"],
+    "conformanceStatus": ["compatible", "partial", "unknown", "unsupported"]
+  },
+  "claimRules": [
+    "implementation status describes current source only and is not a compatibility claim",
+    "only compatible conformance status counts as supported for the bounded profile in evidence",
+    "partial and unknown never count toward supported API coverage",
+    "excluded APIs fail closed and do not enter the Phase 4 MVP denominator"
+  ],
+  "apis": [
+    { "name": "load", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported", "note": "guest cart switching, external resolver, BBS and multicart are Phase 5 scope" },
+    { "name": "save", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported", "note": "player does not expose a writable virtual cart filesystem" },
+    { "name": "folder", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported" },
+    { "name": "ls", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported" },
+    { "name": "run", "category": "system", "surface": "runtime-control", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "current-cart restart only; parameter strings are corpus-driven" },
+    { "name": "stop", "category": "system", "surface": "runtime-control", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "resume", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported", "note": "console command rather than guest player capability" },
+    { "name": "assert", "category": "system", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "reboot", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported" },
+    { "name": "reset", "category": "system", "surface": "runtime-control", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "guest reset of 0x5f00..0x5f7f; distinct from host session reset" },
+    { "name": "info", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported" },
+    { "name": "flip", "category": "system", "surface": "vm-control", "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md", "note": "root custom-loop continuation only; nested suspension is unsupported" },
+    { "name": "printh", "category": "system", "surface": "app-sink", "mvpDisposition": "conditional", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "only a bounded diagnostic sink can enter Phase 4; files and clipboard remain excluded" },
+    { "name": "time", "aliases": ["t"], "category": "system", "surface": "vm-control", "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md", "note": "committed logical-slice clock; slow-frame calibration remains Phase 4F" },
+    { "name": "stat", "category": "system", "surface": "host-binding", "hostBindingId": 33, "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md", "note": "selectors 30,31,32,33,34,36,38,39 only" },
+    { "name": "extcmd", "category": "system", "surface": "app-command", "mvpDisposition": "conditional", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "only safe player commands proven by corpus may be added" },
+
+    { "name": "clip", "category": "graphics", "surface": "host-binding", "hostBindingId": 12, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "pset", "category": "graphics", "surface": "host-binding", "hostBindingId": 2, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "pget", "category": "graphics", "surface": "host-binding", "hostBindingId": 16, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "sget", "category": "graphics", "surface": "host-binding", "hostBindingId": 19, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "sset", "category": "graphics", "surface": "host-binding", "hostBindingId": 20, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "fget", "category": "graphics", "surface": "host-binding", "hostBindingId": 25, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "fset", "category": "graphics", "surface": "host-binding", "hostBindingId": 26, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "print", "category": "graphics", "surface": "host-binding", "hostBindingId": 29, "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md", "note": "visual, custom-font and synchronous audio controls implemented; timed delays remain unsupported" },
+    { "name": "cursor", "category": "graphics", "surface": "host-binding", "hostBindingId": 30, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "color", "category": "graphics", "surface": "host-binding", "hostBindingId": 10, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "cls", "category": "graphics", "surface": "host-binding", "hostBindingId": 1, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "camera", "category": "graphics", "surface": "host-binding", "hostBindingId": 11, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "circ", "category": "graphics", "surface": "host-binding", "hostBindingId": 7, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "circfill", "category": "graphics", "surface": "host-binding", "hostBindingId": 8, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "oval", "category": "graphics", "surface": "host-binding", "hostBindingId": 17, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "ovalfill", "category": "graphics", "surface": "host-binding", "hostBindingId": 18, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "line", "category": "graphics", "surface": "host-binding", "hostBindingId": 4, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "rect", "category": "graphics", "surface": "host-binding", "hostBindingId": 5, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "rectfill", "category": "graphics", "surface": "host-binding", "hostBindingId": 6, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "rrect", "category": "graphics", "surface": "host-binding", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "rrectfill", "category": "graphics", "surface": "host-binding", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "pal", "category": "graphics", "surface": "host-binding", "hostBindingId": 13, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "palt", "category": "graphics", "surface": "host-binding", "hostBindingId": 14, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "spr", "category": "graphics", "surface": "host-binding", "hostBindingId": 21, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "sspr", "category": "graphics", "surface": "host-binding", "hostBindingId": 22, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "fillp", "category": "graphics", "surface": "host-binding", "hostBindingId": 15, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+
+    { "name": "add", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "del", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "deli", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "count", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "all", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "foreach", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "pairs", "category": "table", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+
+    { "name": "btn", "category": "input", "surface": "host-binding", "hostBindingId": 3, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+    { "name": "btnp", "category": "input", "surface": "host-binding", "hostBindingId": 9, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+    { "name": "sfx", "category": "audio", "surface": "host-binding", "hostBindingId": 31, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+    { "name": "music", "category": "audio", "surface": "host-binding", "hostBindingId": 32, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+
+    { "name": "mget", "category": "map", "surface": "host-binding", "hostBindingId": 23, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "mset", "category": "map", "surface": "host-binding", "hostBindingId": 24, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "map", "category": "map", "surface": "host-binding", "hostBindingId": 27, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "tline", "category": "map", "surface": "host-binding", "hostBindingId": 28, "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md", "note": "one-argument precision mode is unimplemented" },
+
+    { "name": "peek", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "poke", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "peek2", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "poke2", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "peek4", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "poke4", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "memcpy", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+    { "name": "reload", "category": "memory", "surface": "host-binding", "hostBindingId": 37, "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md", "note": "current-cart ROM and overlay only; external reference is unsupported" },
+    { "name": "cstore", "category": "memory", "surface": "host-binding", "hostBindingId": 38, "mvpDisposition": "required", "implementationStatus": "partial", "conformanceStatus": "partial", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md", "note": "current-cart copy-on-write overlay only; external reference is unsupported" },
+    { "name": "memset", "category": "memory", "surface": "vm-memory", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md" },
+
+    { "name": "max", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "min", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "mid", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "flr", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "ceil", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "cos", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "sin", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "atan2", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "sqrt", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "abs", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "sgn", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rnd", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "srand", "category": "math", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "band", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "bor", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "bxor", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "bnot", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "shl", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "shr", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "lshr", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rotl", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rotr", "category": "bitwise", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+
+    { "name": "menuitem", "category": "menu", "surface": "app-command", "mvpDisposition": "conditional", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "only enters MVP if the frozen corpus requires a pause-menu callback" },
+    { "name": "tostr", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "tonum", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "chr", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "ord", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "sub", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown" },
+    { "name": "split", "category": "string", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "type", "category": "string", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+
+    { "name": "cartdata", "category": "persistence", "surface": "host-binding", "hostBindingId": 34, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+    { "name": "dget", "category": "persistence", "surface": "host-binding", "hostBindingId": 35, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+    { "name": "dset", "category": "persistence", "surface": "host-binding", "hostBindingId": 36, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },
+
+    { "name": "serial", "category": "gpio", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported", "note": "GPIO, serial and host bytestreams are outside the web player sandbox" },
+
+    { "name": "setmetatable", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "getmetatable", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rawset", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rawget", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rawequal", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "rawlen", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "select", "category": "lua", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
+    { "name": "cocreate", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.create exists but the documented PICO global alias does not" },
+    { "name": "coresume", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.resume exists but the documented PICO global alias does not" },
+    { "name": "costatus", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.status exists but the documented PICO global alias does not" },
+    { "name": "yield", "category": "lua", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "unimplemented", "conformanceStatus": "unknown", "note": "Lua coroutine.yield exists but the documented PICO global alias does not" }
+  ]
+}

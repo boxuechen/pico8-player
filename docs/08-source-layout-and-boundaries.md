@@ -14,8 +14,10 @@
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
 目录树是归属契约，不是“文件全部存在”的清单。Phase 0–3 的完成边界只在对应
-[`evidence/`](./evidence/) 与机器合同中保存；当前没有 active phase。最新 production 边界由
-[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) 锁定。
+[`evidence/`](./evidence/) 与机器合同中保存；当前 Phase 4 的唯一授权入口是
+[`4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md)。最新 production 边界仍由
+[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) 锁定；
+4A 只新增 contract、corpus 和测试事实，没有扩大 production surface。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "policy": "local research only; never committed, published, bundled or included in the Phase 4 playable-rate denominator",
+  "entries": [
+    {
+      "id": "local/example-cart-revision",
+      "file": "tests/conformance/local-corpus/example.p8.png",
+      "sha256": "replace-with-64-lowercase-hex-digits",
+      "pico8Version": "0.2.7",
+      "sourceUrl": "https://www.lexaloffle.com/bbs/?pid=replace-me",
+      "permissionBasis": "record the applicable permission or research basis",
+      "retrievedAt": "YYYY-MM-DD",
+      "testFlow": "describe an input trace or a manual critical flow",
+      "expectedObservables": ["boot", "first-fault", "screen", "input", "audio"],
+      "classification": "CU"
+    }
+  ]
+}
