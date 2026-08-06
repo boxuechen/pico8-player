@@ -73,3 +73,16 @@ SHA-256 `a36a2826466ec5e8834462d8d438ddffa617b7bf938b46260eb7f80dfa4c5ea6`；
 `814991a…/source/p8GlobalLuaFunctions.h` 与 `source/vm.cpp` 交叉检查 table 删除中迭代和
 `0x5f44..0x5f4b` PRNG state transition。相关文件采用 WTFPL-2.0 或仓库登记的适用 notice；
 项目 bridge 是按行为合同独立编写的 C++，没有引入 reference build/test dependency。
+
+## Phase 5G 官方服务边界复核
+
+2026-08-06 只通过普通页面读取复核了
+[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos)（页面更新于 2026-06-22）、
+[PICO-8 v0.2.7 manual](https://www.lexaloffle.com/dl/docs/pico-8_manual.html) 和
+[PICO-8 resources](https://www.lexaloffle.com/pico-8.php?page=resources)。本次没有调用、枚举或探测
+BBS/cart endpoint，没有下载第三方 cart，也没有把网页内容保存为 fixture。
+
+手册只作为 PICO-8 与 SPLORE 行为规范；它没有为第三方 Web Player 定义稳定公开的 cart-download
+接口。Terms 的自动访问和作者许可边界由 [ADR-020](./adr/020-phase-5-bbs-adapter.md) 固化为 Deferred。
+这项在线复核不是 `ref/` checkout，也不成为 production/test 网络依赖；后续 release candidate 必须
+重新核验，不能沿用本页日期推断当前许可。

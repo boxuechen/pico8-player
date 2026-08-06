@@ -498,12 +498,17 @@ Chrome/Chromium 至少覆盖：
 
 这一节是工程门禁，不是法律意见。发布前仍应由项目负责人核验最新条款。
 
-截至 2026-08-05，[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 页面标注更新于 2026-06-22，并明确说明：
+截至 2026-08-06，[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 页面标注更新于 2026-06-22，并明确说明：
 
 - BBS 上的 cart 和其他作品默认仍属于各自作者；没有作者许可或适用许可证时，不应分发或 remix。
 - Lexaloffle 网站和在线服务原则上只供人通过浏览器或 Lexaloffle 软件使用；未经 Lexaloffle 及相关作者许可，不应由自动脚本、第三方客户端、crawler 或其他自动系统访问（条款列出的搜索索引/归档例外不适用于本项目测试）。
 
 因此必须执行：
+
+Phase 5G 同日复核 [PICO-8 v0.2.7 手册](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
+和官方 [resources 页面](https://www.lexaloffle.com/pico-8.php?page=resources)，未发现面向第三方 Web
+Player 的稳定公共 cart-download API。ADR-020 因此将自动 BBS adapter 标为 Deferred；production
+network surface 保持不变。
 
 - CI、fuzzer、benchmark、crawler、BBS URL resolver 测试均不得访问 `lexaloffle.com` 或其 cart endpoint。
 - 不自动抓取、镜像、缓存、批量枚举 BBS cart；不要用 CORS proxy 绕过限制。
@@ -655,8 +660,9 @@ Phase 5 active profile 在 Phase 4 历史表之上增加一个已接受差异：
 - Conditional：`printh`、`extcmd`、`menuitem`。
 - Excluded platform API：`load`、`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`。
 - External/local corpus、BBS bytes 和第三方结果对公开分母贡献为 `0`。
-- guest `load`、external resolver、multicart、BBS access 和 nested async suspension 仍需新 phase/ADR；
-  不能从 Target interface 或现有 host-driven sequential load 推断已支持。
+- caller-authorized local guest `load`、external resolver 和 multicart 已进入 Phase 5 profile；BBS access
+  仍按 ADR-020 Deferred，nested async suspension 按 ADR-019 保持 root-only。两者不能从 local 成功率
+  推断为受支持。
 
 ### 15.7 历史结果路由
 

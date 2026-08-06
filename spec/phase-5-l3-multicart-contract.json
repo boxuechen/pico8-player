@@ -52,9 +52,9 @@
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E", "5F"],
-  "activeWorkUnit": "5G",
-  "nextWorkUnit": "5H",
+  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E", "5F", "5G"],
+  "activeWorkUnit": "5H",
+  "nextWorkUnit": null,
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -290,8 +290,8 @@
     },
     "5G": {
       "name": "Optional BBS Adapter",
-      "status": "active",
-      "decisionOutcomes": ["implemented-opt-in", "rejected", "deferred"],
+      "status": "complete",
+      "decisionOutcomes": ["deferred"],
       "allowedPaths": [
         "apps/web-player/src/worker/adapters/bbs-cart-resolver-adapter.ts",
         "apps/web-player/src/worker/compose-runtime.ts",
@@ -317,9 +317,65 @@
         "implemented-opt-in requires explicit caller authorization, a bounded allowlisted origin, cancellation, byte limits and no cart-controlled URL authority",
         "rejected or deferred leaves production network capability unchanged and proves local L3 exit remains independent",
         "no BBS or third-party cart bytes enter the tracked corpus or published compatibility denominator"
-      ]
+      ],
+      "result": {
+        "outcome": "deferred",
+        "decision": "ADR-020",
+        "reviewedOn": "2026-08-06",
+        "termsPageUpdated": "2026-06-22",
+        "officialSources": [
+          "https://www.lexaloffle.com/info.php?page=tos",
+          "https://www.lexaloffle.com/dl/docs/pico-8_manual.html",
+          "https://www.lexaloffle.com/pico-8.php?page=resources"
+        ],
+        "reason": "current Terms require permission for automated third-party access and no documented stable third-party cart-download API was found",
+        "productionNetworkCapabilityChanged": false,
+        "productionAdapterAdded": false,
+        "bbsIsCoreExitGate": false,
+        "thirdPartyCorpusBytes": 0,
+        "publishedDenominatorContribution": 0,
+        "verification": [
+          "pnpm run test:phase-5g",
+          "pnpm run test:architecture",
+          "pnpm run test:phase-5b",
+          "pnpm run verify"
+        ]
+      }
     },
-    "5H": { "name": "L3 Exit / Resource Gate", "status": "pending" }
+    "5H": {
+      "name": "L3 Exit / Resource Gate",
+      "status": "active",
+      "allowedPaths": [
+        "tests/conformance/phase-5/",
+        "tests/conformance/phase-5h-exit.test.mjs",
+        "tests/conformance/manifests/phase-5-l3-corpus.json",
+        "tests/conformance/manifests/phase-5h-exit.json",
+        "tests/browser/phase-5h.html",
+        "tests/browser/phase-5h.mjs",
+        "tests/browser/phase-5h-worker.mjs",
+        "tools/browser/build-phase-5h-worker.mjs",
+        "tools/browser/run-phase-5h.mjs",
+        "benchmarks/phase-5/results/",
+        "docs/evidence/phase-5/",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/5-l3-local-multicart.md",
+        "spec/phase-5-l3-multicart-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "classify all six project-authored L3 corpus lanes and prove Node real-WASM and Chrome production-path agreement",
+        "run 100 sequential guest cart swaps with exact generation and replacement ownership and zero stale frame, audio, input, request or persistence commits",
+        "run a 1800-second Chrome mixed callback/custom/load/reload/cstore/fault-recovery soak with bounded fixed WASM and Lua resources",
+        "prove cancellation, late completion, resolver failure, staged boot failure and fresh-session recovery release all request and runtime resources",
+        "publish a hash-locked aggregate exit manifest and immutable Phase 5 evidence with zero open P0 or P1",
+        "keep BBS and third-party compatibility outside the corpus, denominator and release claim",
+        "pass the complete repository verification gate and leave Phase 5 closed with no active work unit"
+      ]
+    }
   },
   "phaseExitGate": {
     "claim": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",

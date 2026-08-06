@@ -9,11 +9,11 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | --- | --- |
 | 最近完成 | Phase 4；[L2/MVP project-profile evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
 | Active phase | Phase 5；[L3 local/multicart](./phases/5-l3-local-multicart.md) |
-| Active work unit | 5G Optional BBS Adapter Decision |
+| Active work unit | 5H L3 Exit / Resource Gate |
 | 机器合同 | [`spec/phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) |
 
-Phase 5 已由 5A 激活，5B–5F 已关闭资源解析、root suspension、atomic guest load、external cart-data
-与 accepted root-only coroutine 边界。后续实现只按 active phase 当前展开的 work unit 推进；roadmap、Target 示例
+Phase 5 已由 5A 激活，5B–5G 已关闭资源解析、root suspension、atomic guest load、external cart-data、
+accepted root-only coroutine 边界与 Deferred BBS 决策。后续实现只按 active phase 当前展开的 work unit 推进；roadmap、Target 示例
 和历史 evidence 仍不能单独授权实现。
 
 日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把

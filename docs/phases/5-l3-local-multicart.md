@@ -1,6 +1,6 @@
 # Phase 5 — L3 Local / Multicart
 
-> 状态：Active；5A–5F complete，5G active
+> 状态：Active；5A–5G complete，5H active
 > 机器合同：[`spec/phase-5-l3-multicart-contract.json`](../../spec/phase-5-l3-multicart-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 4 L2/MVP exit](../evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)
@@ -37,8 +37,8 @@ Phase 5 完成 caller-authorized local bundle、root recoverable HostRequest、g
 | 5D Guest `load()` / Atomic Cart Swap | Complete | versioned guest request、staged session、replacement handshake |
 | 5E External `reload/cstore` | Complete | versioned request、调用点 snapshot、resume-before-RAM |
 | 5F Coroutine / L3 Compatibility | Complete | ADR-019、28-case matrix、accepted root-only |
-| 5G Optional BBS Adapter | **Active** | 下节；条件 work unit，允许 Rejected/Deferred 结论 |
-| 5H L3 Exit / Resource Gate | Pending | aggregate exit |
+| 5G Optional BBS Adapter | Complete | ADR-020；Deferred，无 production network capability |
+| 5H L3 Exit / Resource Gate | **Active** | 下节；aggregate exit |
 
 ## 5A closure
 
@@ -93,45 +93,53 @@ budget 继续跨 guest coroutine 继承，fault 后 fresh session 可恢复。AD
 `accepted-root-only`，不修改 production WASM；project corpus lane 在 Node/Chrome 均为 C3。验证入口是
 `pnpm run test:phase-5f` 与 `pnpm run test:phase-5f:chrome`。
 
-## Active work unit：5G Optional BBS Adapter Decision
+## 5G closure
+
+5G 于 2026-08-06 复核更新于 2026-06-22 的 Lexaloffle Terms、PICO-8 v0.2.7 手册和官方
+resources 页面。Terms 要求自动第三方访问取得 Lexaloffle 与相关作者许可；官方材料没有提供稳定、
+有文档的第三方 cart-download API。ADR-020 因此选择唯一结论 `deferred`：不新增 adapter、endpoint、
+transport 或第三方 bytes，production network capability 不变，BBS 仍不是 L3 exit gate。验证入口是
+`pnpm run test:phase-5g`。
+
+## Active work unit：5H L3 Exit / Resource Gate
 
 ### Observable behavior
 
-1. 先复核当前 Lexaloffle Terms、官方 cart/BBS 资源接口与现有 caller-authorized boundary；在决定前
-   禁止编写 production network adapter、下载或提交第三方 cart bytes。
-2. 5G 必须在 ADR-020 中只选择一个结论：`implemented-opt-in`、`rejected` 或 `deferred`。BBS adapter
-   不是 Phase 5 exit gate；证据不足、授权边界不清或 Terms 不允许时必须保持 Deferred/Rejected。
-3. 只有 Terms 与技术接口都允许时才可选择 `implemented-opt-in`，且必须由 caller 显式启用、固定
-   allowlisted Lexaloffle origin、限定 ref grammar/redirect/content-type/1 MiB bytes、支持 cancellation，
-   并复用 `CartLoader` 的 decode/capability 二次检查。guest string 不能成为任意 URL 权限。
-4. 无论结论为何，RuntimeCore、z8lua/WASM、cart codec、local bundle 默认路径与 ADR-018 都不得获得
-   browser/network dependency；具体 adapter 只能位于 Worker app boundary 并由 composition root 注入。
-5. 禁止 crawler、搜索/列表发现、登录态、cookie/session 复用、公共镜像、持久缓存和跨 origin fallback；
-   BBS/第三方结果及 bytes 对 tracked corpus 和公开 playable-rate 分母贡献保持 0。
-6. 若结论为 Deferred/Rejected，必须以 architecture/policy tests 证明 production source 没有新增网络
-   capability，local 5B–5F gates 仍通过；不得为了“预留”留下不可达的半实现 adapter。
+1. 用同一份 6-lane 项目原创 corpus 在 Node real-WASM 与 Chrome production Worker 路径运行；逐 case
+   固化 C0–C3 分类、关键 observable 和 cross-path agreement。CU 不得进入最终 denominator。
+2. 运行 100 次连续 guest cart swap，交替 callback/custom launch，并穿插 local external
+   `reload/cstore`；每次 old→next generation、replacement handshake 和 target identity 必须精确一次。
+3. Chrome 执行至少 1800 秒 mixed soak，覆盖 callback/custom、load、reload、cstore、resolver failure、
+   cancellation、late completion、staged boot failure 与 fresh recovery。测试只使用逻辑时间驱动的原创
+   cart，不访问网络或第三方资源。
+4. 全程 stale frame/audio/input/request/persistence commit 为 0；pending request、Worker、RAF、DOM
+   listener、audio source 和 overlay/session ownership 在 replace/fault/dispose 后全部释放。
+5. WASM 固定 16 MiB 且不增长，Lua heap 使用已冻结的 1 MiB 默认值；soak 后 heap/resource delta 必须
+   满足既有 Phase 4 resource gate，不得通过扩大上限关闭问题。
+6. 生成 hash-locked aggregate exit manifest 和 immutable Phase 5 evidence；发布声明只覆盖
+   `PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop`，BBS/第三方兼容率、
+   official bit-exact 和非 Chrome 浏览器均不在声明中。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.5G.allowedPaths` 控制。只有选择 `implemented-opt-in` 才允许增加
-Worker-owned adapter/transport；Deferred/Rejected 路径只修改 policy tests、ADR、compatibility 与机器
-合同。不得修改 RuntimeCore、WASM、graphics/audio/input、persistence schema 或 tracked corpus。
+精确允许路径由机器合同 `workUnits.5H.allowedPaths` 控制。5H 是 aggregate/evidence work unit，不得修改
+RuntimeCore、WASM、production Worker、cart codec、persistence schema 或 network boundary。若 exit runner
+发现 production defect，停止 5H、记录问题，并先激活独立修复 work unit；不得把功能修复混入退出证据。
 
-### Proposed tests（5G 实现时加入 package scripts）
+### Proposed tests（5H 实现时加入 package scripts）
 
-- `pnpm run test:phase-5g`
-- 若实现 adapter：`pnpm run test:phase-5g:chrome`
-- `pnpm run test:architecture`
-- production/public contract 发生变化时最终运行 `pnpm run verify`
+- `pnpm run test:phase-5h`
+- `pnpm run test:phase-5h:chrome`
+- `pnpm run evidence:phase-5h`（唯一允许写入 tracked result/evidence 的显式入口）
+- `pnpm run verify`
 
 ### Exit gate
 
-- 当前 Terms 与接口依据、访问日期和结论进入 ADR-020；机器合同只保留一个 outcome。
-- implemented 路径通过 allowlist、redirect/content-type/size、cancel/late result、generation 与 Chrome
-  production tests；Deferred/Rejected 路径证明 production network surface 未增加。
-- local bundle、root request、guest load、external data 与 nested-policy 回归无变化。
-- tracked BBS/第三方 bytes 为 0，published denominator contribution 为 0。
-- 5G 结果折叠入机器合同，5H 成为唯一 active work unit并独立提交。
+- 6/6 project lanes 都有最终分类，playable rate ≥ 95%，Node/Chrome 分类与 cross-oracle 一致。
+- 100 cart swaps 和 1800 秒 Chrome mixed soak 达标，stale commits、steady faults、开放 P0/P1 均为 0。
+- cancellation/fault/recovery 后资源释放；固定 WASM/Lua 上限和 Phase 4 heap/resource budget 不回退。
+- aggregate manifest 锁定 input/result/runtime hashes；evidence 记录环境、命令、时长、限制与已知差异。
+- 全量 `pnpm run verify` 通过；机器合同关闭 5H/Phase 5，active/next unit 均为 null，并独立提交。
 
 ## Phase exit gate
 
