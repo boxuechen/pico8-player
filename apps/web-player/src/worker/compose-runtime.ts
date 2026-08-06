@@ -200,6 +200,8 @@ export interface PlayerWorkerController {
 export interface PlayerWorkerControllerOptions {
   readonly audioTransport?: WorkerPcmTransport;
   readonly persistence?: CartDataPersistencePort;
+  /** Fixed per-VM diagnostic override; zero/undefined selects the 1 MiB production default. */
+  readonly luaHeapLimit?: number;
 }
 
 type PlayerWorkerLifecycle =
@@ -254,6 +256,7 @@ export function createPlayerWorkerController(
 ): PlayerWorkerController {
   const audioTransport = options.audioTransport;
   const persistence = options.persistence;
+  const luaHeapLimit = options.luaHeapLimit;
   const cartRepository = new CartRepositoryAdapter();
   const localPersistenceDiagnostics: SerializedRuntimeError[] = [];
   let cartDataSeeds: readonly PicoCartDataSeed[] = [];
@@ -264,7 +267,9 @@ export function createPlayerWorkerController(
   const session = new CartSession({
     createRuntime(context) {
       const router = createPicoApiHostRouter(module);
-      const vm = new Z8LuaFrameVm(module, router);
+      const vm = new Z8LuaFrameVm(module, router, {
+        ...(luaHeapLimit === undefined ? {} : { luaHeapLimit }),
+      });
       try {
         return new FrameSliceRuntime(vm, {
           ...(instructionBudget === undefined ? {} : { instructionBudget }),

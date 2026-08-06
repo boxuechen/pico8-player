@@ -5,11 +5,11 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-Phase 3A–3H 已完成并归档。Phase 4 已激活：4A–4F 已完成，当前唯一 active work unit 是
-**4G Resource Sizing & Chrome Long-run**。
+Phase 3A–3H 已完成并归档。Phase 4 已激活：4A–4G 已完成，当前唯一 active work unit 是
+**4H Phase 4 / L2 Exit**。
 
 默认开工路径：本页 →
-[`docs/phases/4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md) → 4G 明确链接的
+[`docs/phases/4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md) → 4H 明确链接的
 contract 小节。机器状态以
 [`spec/phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) 为准。
 

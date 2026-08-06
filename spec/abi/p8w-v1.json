@@ -72,6 +72,9 @@
     { "name": "p8w_yield_reason", "parameters": ["u32:handle"], "result": "yieldReason" },
     { "name": "p8w_phase", "parameters": ["u32:handle"], "result": "phase" },
     { "name": "p8w_consumed_instructions", "parameters": ["u32:handle"], "result": "u32" },
+    { "name": "p8w_lua_live_bytes", "parameters": ["u32:handle"], "result": "u32" },
+    { "name": "p8w_lua_heap_limit", "parameters": ["u32:handle"], "result": "u32" },
+    { "name": "p8w_live_contexts", "parameters": [], "result": "u32" },
     { "name": "p8w_pending_request_id", "parameters": ["u32:handle"], "result": "u32" },
     { "name": "p8w_pending_request_ptr", "parameters": ["u32:handle"], "result": "ptr:u8" },
     { "name": "p8w_pending_request_length", "parameters": ["u32:handle"], "result": "u32" },
@@ -98,6 +101,7 @@
     "p8w_boot preserves its supplied time_raw through top-level and _init or the first custom-loop FLIP",
     "HOST_REQUEST payload and response are copied byte strings",
     "run parameter and run/stop control payloads are copied byte strings of at most 4096 bytes",
+    "Lua heap diagnostics are read-only and return zero for stale handles; destroyed contexts are excluded from p8w_live_contexts",
     "root run returns RESTART and root stop returns STOPPED; nested control suspension remains unsupported",
     "nested guest coroutine host suspension returns FEATURE_UNSUPPORTED with nested-host-suspend",
     "Phase 0C p8w0c_bench symbols are absent from the runtime artifact"

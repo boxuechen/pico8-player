@@ -10,7 +10,8 @@
 
 实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1 Host boundary、Phase 2
 memory/graphics/text bindings、Phase 3 audio/input/persistence/current-cart bindings、Phase 4C
-project-owned VM compatibility library、Phase 4E root control 和 Phase 4F instruction accounting 已完成；
+project-owned VM compatibility library、Phase 4E root control、Phase 4F instruction accounting 和
+Phase 4G fixed-memory/Lua-heap diagnostics 已完成；
 当前生产边界和 Chrome 退出结果见
 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
@@ -22,6 +23,7 @@ exactly-once host bind、frame stepping、host-request、budget 和 structured e
 | **Implemented through Phase 3 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；80-byte call frame/Base RAM API；append-only operation `1..38` 覆盖 Phase 2 graphics/text 与 Phase 3 audio/input/cartdata/current-cart bindings；boolean/presence/Q16/string lowering、structured host faults 与 real-WASM/Chrome conformance |
 | **Implemented in Phase 4C** | VM-local table helpers、P8 `sub`、guest coroutine aliases，以及使用 shared Pico RAM PRNG state 的 deterministic `rnd/srand`；host ABI 仍为 `1..38` |
 | **Implemented through Phase 4F** | root `run/stop`、VM-local `stat(1/6/7)`、guest `reset` binding `41`；每个 boot/frame segment 暴露 exact consumed instructions，HostRequest continuation 在 transaction 内累计；runtime ABI `0x00010003` |
+| **Implemented in Phase 4G** | fixed 16 MiB linear memory；默认/最低 `1 MiB/32 KiB` tracked Lua heap；read-only live bytes、heap limit 和 live-context diagnostics；OOM 映射为含大小明细的 `E_VM_OOM` |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -112,7 +114,7 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 
 `pcall`、`xpcall`、dynamic `load`、`collectgarbage` 等是否暴露，必须由官方行为和 conformance 决定。无论最终兼容选择如何，guest **MUST NOT** 获得修改/关闭 bridge hook 的途径。
 
-Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_ERROR_OOM`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。初始 heap cap 数值是 Phase 0 未决参数，必须用真实 heap stress 决定。
+Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_ERROR_OOM`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。Phase 4G 已锁定 production 默认 cap 为 `1 MiB`，并用 `32 KiB` minimum diagnostic profile 验证 bounded OOM 与 fresh recovery；host 不得自适应扩大它。
 
 ## 4. 生命周期与控制流
 
@@ -632,8 +634,8 @@ Phase 0 Exit 前，本 bridge 至少满足：
 
 | 问题 | 当前默认 | 关闭条件 |
 | --- | --- | --- |
-| 固定 WASM memory 容量 | Phase 0B artifact 为 16 MiB，descriptor/64-context/OOM/view identity passed | 代表 cart corpus 继续校准 production sizing；禁止开启 growth |
-| Lua heap cap | 未定 | 兼容 corpus 和恶意 allocation fixture |
+| 固定 WASM memory 容量 | 16 MiB；descriptor、growth rejection、view identity 和 1800 秒 Chrome gate passed | 禁止开启 growth |
+| Lua heap cap | 默认 1 MiB；最低 diagnostic 32 KiB | `E_VM_OOM` 必须含 live/limit bytes，fault 后 fresh recovery |
 | generic call frame 是否足够快 | 未定 | 12.1 browser benchmark |
 | `@/%/$` upper/remap 精确规则 | 上游 flat 实现不满足假设 | 官方 capture + 最小 patch + golden |
 | `^` bit mismatch | 已知风险 | 接受 known difference 或带 conformance 的 patch |

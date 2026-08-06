@@ -221,6 +221,9 @@ export interface FrameRuntimeModule {
   _p8w_yield_reason(handle: number): number;
   _p8w_phase(handle: number): number;
   _p8w_consumed_instructions(handle: number): number;
+  _p8w_lua_live_bytes(handle: number): number;
+  _p8w_lua_heap_limit(handle: number): number;
+  _p8w_live_contexts(): number;
   _p8w_pending_request_id(handle: number): number;
   _p8w_pending_request_ptr(handle: number): number;
   _p8w_pending_request_length(handle: number): number;
@@ -618,6 +621,16 @@ export class Z8LuaFrameVm implements FrameVmPort {
     return this.#hostRouter.state;
   }
 
+  get liveLuaBytes(): number {
+    this.#assertLive();
+    return this.#module._p8w_lua_live_bytes(this.#handle) >>> 0;
+  }
+
+  get luaHeapLimit(): number {
+    this.#assertLive();
+    return this.#module._p8w_lua_heap_limit(this.#handle) >>> 0;
+  }
+
   bindHost(host: PicoApiHost): void {
     this.#assertLive();
     if (host.memoryLeaseId !== this.memory.leaseId) {
@@ -795,6 +808,12 @@ export class Z8LuaFrameVm implements FrameVmPort {
     );
     const line = this.#module._p8w_error_line(this.#handle) | 0;
     const code = hostFailure?.code ?? failureCode(status);
+    const oomDetails = code === "E_VM_OOM"
+      ? {
+          liveLuaBytes: this.#module._p8w_lua_live_bytes(this.#handle) >>> 0,
+          luaHeapLimit: this.#module._p8w_lua_heap_limit(this.#handle) >>> 0,
+        }
+      : undefined;
     return {
       code,
       message,
@@ -803,7 +822,7 @@ export class Z8LuaFrameVm implements FrameVmPort {
       ...(trace.length === 0 ? {} : { trace }),
       ...(code === "E_FEATURE_UNSUPPORTED" && message === "nested-host-suspend"
         ? { details: { reason: "nested-host-suspend" } }
-        : {}),
+        : oomDetails === undefined ? {} : { details: oomDetails }),
     };
   }
 

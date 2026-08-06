@@ -8,8 +8,8 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 4E** | Phase 3 全部边界；current-cart guest `run`、root `stop`、system `reset`、`stat(6)`；versioned `runtime-control` event；同 generation runtime/audio/persistence lifecycle |
-| **Target** | slow-frame/CPU compatibility policy、guest `load`、external cart transaction、representative corpus hardening 与 release qualification |
+| **Implemented through Phase 4G** | Phase 3 全部边界；current-cart guest control；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM、bounded Lua/audio/persistence resources 与跨 generation lifecycle |
+| **Target** | guest `load`、external cart transaction 与后续 release qualification |
 | **Deferred** | nested async HostRequest、完整 cart swap/multicart、BBS resolver 和完整 L3 host integration |
 
 第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
@@ -294,8 +294,8 @@ export type RuntimeToHost =
 
 ## 11. 性能预算基线
 
-以下是已用于项目 profile 的工程预算；Phase 4 必须用代表 corpus 和长稳测试重新校准，不能把
-既有 microbench/短场景结果外推为 release 承诺：
+以下预算已由 Phase 4F deterministic CPU oracle 和 Phase 4G 1800 秒 Chrome 长稳重新校准；
+它们仍只构成当前 Chrome desktop project profile，不外推为其他平台承诺：
 
 - 60 Hz logical frame 总预算为 16.67 ms。
 - desktop 基准环境中，VM + TS Runtime 的 p95 SHOULD 不超过 8 ms/frame。
@@ -303,5 +303,10 @@ export type RuntimeToHost =
 - input-to-logical-update latency MUST 不超过 1 logical frame（不含浏览器显示延迟）。
 - Runtime 与 renderer 之间不得每帧复制超过必要的 128 × 128 RGBA/frame payload。
 - 稳态运行不得产生与运行时长线性增长的未回收消息或 buffer。
+
+Phase 4G 的 production resource contract 固定为 16 MiB WASM、64 KiB Pico RAM、默认 1 MiB
+Lua heap；最低 32 KiB diagnostic profile 必须以 `E_VM_OOM` fail closed。AudioWorklet source queue
+capacity/high-water 为 `66,150/44,100` frames，cartdata hydrate 上限为 4,096 records / 1 MiB。
+主页面 retained heap 的硬门禁使用 CDP 强制 GC 后的 isolate 值；`performance.memory` 只作趋势诊断。
 
 基准失败时按照 [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md) 的 fallback ladder 调整边界。

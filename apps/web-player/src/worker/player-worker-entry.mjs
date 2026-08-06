@@ -8,6 +8,8 @@ import { installPlayerRuntimeWorker } from "./runtime-worker.ts";
 
 const audioTransport = new WorkerPcmTransport();
 const persistence = new IndexedDbCartDataPersistenceAdapter();
+const heapLimitText = new URL(import.meta.url).searchParams.get("luaHeapLimit");
+const luaHeapLimit = heapLimitText === null ? undefined : Number(heapLimitText);
 const controller = (async () => {
   const wasmUrl = new URL(
     "../../../../wasm/dist/z8lua-runtime-v1.wasm",
@@ -19,7 +21,11 @@ const controller = (async () => {
   }
   const wasmBinary = await wasmResponse.arrayBuffer();
   const module = await createZ8LuaModule({ wasmBinary });
-  return createPlayerWorkerController(module, { audioTransport, persistence });
+  return createPlayerWorkerController(module, {
+    audioTransport,
+    persistence,
+    ...(luaHeapLimit === undefined ? {} : { luaHeapLimit }),
+  });
 })();
 
 installPlayerRuntimeWorker(self, controller, audioTransport);

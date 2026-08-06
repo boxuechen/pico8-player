@@ -86,6 +86,9 @@ uint32_t p8w_target_fps(uint32_t handle);
 uint32_t p8w_yield_reason(uint32_t handle);
 uint32_t p8w_phase(uint32_t handle);
 uint32_t p8w_consumed_instructions(uint32_t handle);
+uint32_t p8w_lua_live_bytes(uint32_t handle);
+uint32_t p8w_lua_heap_limit(uint32_t handle);
+uint32_t p8w_live_contexts(void);
 
 uint32_t p8w_pending_request_id(uint32_t handle);
 const uint8_t *p8w_pending_request_ptr(uint32_t handle);

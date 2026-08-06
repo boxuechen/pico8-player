@@ -11,12 +11,12 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4F、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4G、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| **Active Phase 4 baseline** | 112 项 API 清单、41 binding、7-case corpus `C3=7`；4C–4F 的 core/graphics/system/CPU vertical slices 已由 Node real-WASM/Chrome oracle 关闭；当前 4G resource/long-run 工作只由 [Phase 4 document](./phases/4-l2-mvp-hardening.md) 授权 |
+| **Active Phase 4 baseline** | 112 项 API 清单、41 binding、7-case corpus `C3=7`；4C–4G 的 core/graphics/system/CPU/resource vertical slices 已由 Node real-WASM/Chrome oracle 关闭；当前只剩 [4H exit](./phases/4-l2-mvp-hardening.md) 收口 |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -676,7 +676,7 @@ Player UI 已实现。
 | --- | --- | --- | --- |
 | packed 4bpp → RGBA / Canvas2D | 128×128 exact RGBA hash；DPR 1/2/1.25 与 fractional resize 无 blended colors | `implemented-boundary` | Phase 2 graphics gate 已复用 presenter contract；后续保持回归 |
 | present performance/lifetime | 10,000 frames p95 `0.0388 ms`；heap delta `15,156 B`；stale generation/dispose passed | `implemented-boundary` | Chrome 升级时重跑 evidence |
-| dedicated PCM transport | 44.1/48 kHz 并发 10 分钟；steady underrun/overrun/drop/discontinuity 均为 `0` | `implemented-boundary` | AudioSynth 实现后保留同一 queue 门禁 |
+| dedicated PCM transport | 44.1/48 kHz 并发 10 分钟；steady underrun/overrun/drop/discontinuity 均为 `0`；rAF 以实际 display cadence 中位数识别 long frame 并要求至少 29 Hz | `implemented-boundary` | AudioSynth 实现后保留同一 queue 门禁 |
 | queue/resource bound | capacity `66,150`，high water `44,100`；实测 peak `22,406` / `22,530` | `implemented-boundary` | 参数变更必须更新 spec/evidence |
 | watchdog/generation/dispose | Worker infinite loop 后 generation `1→2`，frame/audio reattach 与 AudioContext close 通过 | `implemented-integration` | Phase 1 CartSession/UI 复用 composition lifecycle |
 
@@ -877,6 +877,26 @@ inventory 更新为 implementation `96/5/1/10`、conformance `68/5/29/10`（按�
 和 41 bindings；4F 只扩展既有 frame diagnostic DTO，未移动 Canvas/AudioContext/IndexedDB owner。
 完整 exact oracle 见
 [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json)。
+
+### 15.18 Phase 4G Resource Sizing / Chrome Long-run 矩阵
+
+4G 的项目原创 resource carts 和 production-path Chrome runner 锁定 fixed memory、bounded OOM、
+多 cart lifecycle 与长稳资源释放。普通 verify 运行 10 秒 smoke，并对受审 1800 秒 artifact 做
+schema/source/runtime hash 和门槛复核；只有显式 `pnpm run evidence:phase-4g` 重生成长测。
+
+| 行为 | Phase 4G 结果 | 兼容口径 | 发布边界 |
+| --- | --- | --- | --- |
+| WASM/Pico RAM | fixed `16 MiB` / `64 KiB`；`memory.grow(1)` 抛 `RangeError` 且 buffer/view identity 不变 | implemented invariant | 不开启 memory growth |
+| Lua heap | production 默认 `1 MiB`；`32 KiB` diagnostic cart 返回 `E_VM_OOM`（live `28,616` bytes）并由 fresh cart 恢复 | bounded safety path | 不按 cart/设备自适应扩容 |
+| device/persistence bounds | PCM capacity/prebuffer/low/high `66,150/11,025/5,512/44,100` frames；hydrate `4,096 records / 1 MiB` | owner-exported machine contract | queue overflow 与 persistence read failure 必须可观测 |
+| sequential lifecycle | 20 loads、24 generations；每代 stale frame/PCM/input probe 通过，hard-cap fault 后恢复 | production Worker/Canvas/AudioWorklet/IndexedDB | host-driven only，不授权 guest `load` |
+| Chrome soak | `1800.4173s`；30/60 Hz 为 `54,013/108,026` frames；dropped tick、steady audio fault、discontinuity、long task、Worker error 全零 | Chrome 150/macOS arm64 reviewed evidence | Firefox/WebKit/mobile 不在 gate |
+| resource release | 3/3 Workers terminated，3 AudioContexts closed，RAF/listener/queue 回零；CDP GC 后 main-isolate heap `+2,776 bytes` | gate passed（上限 1 MiB） | `performance.memory` sawtooth 只作诊断 |
+
+受审 artifact 位于
+[`chromium-macos-arm64-phase-4g-long-run.json`](../benchmarks/phase-4/results/chromium-macos-arm64-phase-4g-long-run.json)，
+资源合同位于
+[`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json)。
 
 ## 16. Definition of Done
 

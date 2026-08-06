@@ -121,6 +121,7 @@ try {
       "queue exceeded configured high water",
     );
   }
+  check(result.raf.nominalIntervalMs <= 1000 / 29, "main-thread cadence fell below 29 Hz");
   check(result.raf.missedRatio <= 0.001, "main-thread missed-frame ratio exceeded 0.1%");
   check(result.actualDurationMs >= durationMs, "audio run ended before the requested duration");
   process.stdout.write(`${JSON.stringify({ ...result, resultPath }, null, 2)}\n`);

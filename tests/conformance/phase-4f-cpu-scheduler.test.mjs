@@ -301,7 +301,6 @@ test("Phase 4F machine contract and inventory expose the calibrated selectors", 
   ]);
   assert.equal(phase.workUnits["4F"].status, "complete");
   assert.ok(phase.completedWorkUnits.includes("4F"));
-  assert.equal(phase.activeWorkUnit, "4G");
   const byName = new Map(inventory.apis.map((api) => [api.name, api]));
   assert.equal(byName.get("time")?.implementationStatus, "implemented");
   assert.equal(byName.get("time")?.conformanceStatus, "compatible");

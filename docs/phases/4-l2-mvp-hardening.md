@@ -1,6 +1,6 @@
 # Phase 4 — L2 / MVP Compatibility Hardening
 
-> 状态：Active；4A–4F complete，4G active
+> 状态：Active；4A–4G complete，4H active
 > 机器合同：[`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 3 exit](../evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
@@ -31,8 +31,8 @@ serial、Firefox/WebKit 和移动 release。外部合法 cart 可以本地研究
 | 4D Graphics / Memory / Text Hardening | Complete | 9 项 API、386-byte Node/Chrome oracle 与两项 MVP scope decision 关闭 |
 | 4E System / Audio / Input / Persistence / Player | Complete | root runtime control、跨域组合流与恢复门禁关闭 |
 | 4F CPU / Slow-frame / Scheduler Calibration | Complete | 4M VM inst/s 成本模型、慢帧策略与 safety cap 可复现 |
-| 4G Resource Sizing & Chrome Long-run | **Active** | fixed memory、30 分钟 soak、多 cart lifecycle 通过 |
-| 4H Phase 4 / L2 Exit | Planned | L2 兼容报告、Known Differences、release gate 与证据归档 |
+| 4G Resource Sizing & Chrome Long-run | Complete | fixed memory、1800 秒 Chrome soak、多 cart lifecycle 与资源释放通过 |
+| 4H Phase 4 / L2 Exit | **Active** | L2 兼容报告、Known Differences、release gate 与证据归档 |
 
 ## 已完成：4A
 
@@ -91,61 +91,65 @@ hard-cap/recovery 的 Node real-WASM 与 Chrome production Worker exact trace �
 [`phase-4f-cpu-scheduler.json`](../../tests/conformance/manifests/phase-4f-cpu-scheduler.json) 和机器合同
 `workUnits.4F.result` 锁定。
 
-## Active work unit：4G Resource Sizing & Chrome Long-run
+## 已完成：4G
+
+production WASM 保持 fixed `16 MiB`、Pico RAM `64 KiB`、默认 Lua heap `1 MiB`；最低
+`32 KiB` diagnostic profile 以带 `liveLuaBytes/luaHeapLimit` 的 `E_VM_OOM` fail closed，恢复 cart
+可在 fresh VM 正常运行。AudioWorklet queue 和 cartdata hydration 上限由各自 owner 导出并由机器
+manifest 锁定。受审 Chrome 150/macOS arm64 evidence 连续运行 `1800.4173s`：30/60 Hz 分别提交
+`54,013`/`108,026` 帧，dropped tick、steady audio fault、long task、Worker error 均为 `0`；20 次
+sequential load、24 个 generation 的 stale frame/PCM/input probe 全部通过，Worker、AudioContext、
+listener、RAF 和 queue 均释放。主页面 isolate 在强制 GC 后 retained heap 增量为 `2,776 bytes`。
+机器结果由 `workUnits.4G.result`、
+[`phase-4g-resource-long-run.json`](../../tests/conformance/manifests/phase-4g-resource-long-run.json) 和
+[`reviewed long-run artifact`](../../benchmarks/phase-4/results/chromium-macos-arm64-phase-4g-long-run.json)
+锁定。
+
+## Active work unit：4H Phase 4 / L2 Exit
 
 ### Observable behavior
 
-- 审计并锁定 production runtime 的 fixed 16 MiB WASM memory、64 KiB Pico RAM、默认/最低 Lua heap
-  与 transport queue 上限；每项上限必须有 owner、机器 manifest 和可观测故障，不得通过开启
-  `ALLOW_MEMORY_GROWTH` 或 host 自适应策略绕过。
-- 用项目原创 allocation/resource carts 覆盖默认 heap 正常运行、低 heap/持续分配的 bounded
-  `E_VM_OUT_OF_MEMORY`、fault 后 fresh cart recovery。Node real-WASM 与 Chrome production Worker
-  对 fault class、session generation、RAM/frame/audio/persistence commit 边界一致。
-- 运行至少 `1800s` 的 Chrome/Chromium production-path soak；计量期必须在 AudioWorklet prebuffer 后
-  开始，持续驱动 30/60 Hz logical scheduler，并报告 logical ticks、frames、dropped ticks、steady
-  audio underrun/overrun/discontinuity/stale chunks、Worker errors、main-thread long task 与 heap trend。
-- 在同一 player 实例中顺序执行至少 20 次 host-driven cart load/start/pause-or-stop/reset/fault-recover
-  lifecycle，混合 30/60/custom 与 persistence cart；每代 stale frame/PCM/input 必须被拒绝，最终活动
-  Worker/AudioContext/listener/queue 回到明确基线。
-- 长稳结果不得依赖 Firefox/WebKit，不扩大 guest API；4G 只校准资源和 host-driven lifecycle，不修改
-  4F 的 CPU formula、logical cadence 或 slow-frame transaction policy。
+- 建立一个 machine-checked Phase 4 exit manifest/test，聚合 4A–4G 的 inventory、corpus、Node/Chrome
+  oracle、CPU/resource budget、受审 artifact hash 和命令事实；不得靠手工摘要宣告通过。
+- 发布 L2/MVP compatibility report：明确 PICO-8 版本、项目原创 corpus 分母和 playable-rate 公式，报告
+  C0–C3/CU、112 项 inventory 实现/兼容计数、开放 P0/P1/P2，以及 Chrome-only 支持边界。
+- 把所有 MVP partial/unimplemented/unsupported 项逐条对到账面上的 accepted scope decision 或
+  Known Difference；Known Differences 必须说明用户可见影响和 workaround/排除范围，不得只保留内部标签。
+- 复核 4B 的 7-case corpus 与 4C–4G vertical evidence，运行全量 Node real-WASM 和 Chrome
+  production-path gate；普通 exit 不重新生成 30 分钟 artifact，但必须 hash-lock 并验证它。
+- 归档唯一 Phase 4 exit evidence，更新机器合同/roadmap/status owner，删除本 active phase 执行文档；
+  Phase 4 完成后不得仍有 active work unit，也不得把 Phase 5 的 guest `load`/BBS scope 混入。
 
 ### 允许修改
 
-- `wasm/runtime-v1.manifest.lock.json` 与已有 Lua allocator/fixed-memory diagnostics；只有 evidence 证明
-  当前上限不足时才可调整常量，WASM memory 仍必须 fixed。
-- `apps/web-player` 既有只读 stats/diagnostic 路由与 resource lifecycle cleanup；允许增加 bounded
-  measurement 字段，不允许把 RuntimeCore policy 移到 Window/AudioWorklet。
-- `tests/conformance/` 的原创 resource carts/manifests、`tests/browser/phase-4g*`、Chrome runner、
-  `benchmarks/phase-4/results/` 的受审 long-run artifact、脚本、inventory/phase contract 和 owner 文档。
-- 默认 `test:phase-4g:chrome` 可使用短 smoke 参数；受审 1800s gate 必须有独立、显式 evidence 命令，
-  两者复用同一 runner/schema，不能用短跑结果冒充 phase exit。
+- `tests/conformance/` 下的 Phase 4 exit manifest/test、`package.json` 的 exit/aggregate scripts，以及
+  `spec/phase-4-l2-mvp-contract.json` 的最终结果。
+- `docs/06-testing-compatibility.md` 的 publishable compatibility/Known Differences 矩阵、
+  `docs/evidence/phase-4/` 的单一 exit evidence、README/roadmap/status owner 的收口更新。
+- 只允许修复 exit audit 揭示的文档、contract 或测试事实不一致；如发现 production behavior 缺口，
+  4H 必须先记录未通过并回到有边界的实现 work unit，不得在 exit 任务中暗改运行时。
 
-4G 不授权 guest `load`、external resolver/BBS/network、multicart cart format、writable filesystem、
-mobile release 或非 Chromium browser；不改变 Canvas/AudioContext/IndexedDB/input adapter ownership。
+4H 不授权新 guest API、guest `load`、external resolver/BBS/network、multicart、writable filesystem、
+mobile release 或非 Chromium browser；不重新解释 4A–4G 已锁定的 runtime policy。
 
 ### 精确 contract routing
 
-- [02 §3 Execution domains](../02-system-architecture.md#3-execution-domains)
-- [02 §9 Error 模型](../02-system-architecture.md#9-error-模型)
-- [04 §12 Worker、watchdog 与消息协议](../04-typescript-runtime.md#12-workerwatchdog-与消息协议)
-- [06 §9 Fuzz、恶意输入与资源上限](../06-testing-compatibility.md#9-fuzz恶意输入与资源上限)
-- [06 §10 JS↔WASM microbench 与性能门禁](../06-testing-compatibility.md#10-jswasm-microbench-与性能门禁)
+- [01 §3 兼容等级](../01-scope-and-success-criteria.md#3-兼容等级)
+- [01 §6 成功标准](../01-scope-and-success-criteria.md#6-成功标准)
+- [05 Phase 4 roadmap headline](../05-delivery-plan.md#phase-4-activation-baseline)
 - [06 §11 Chrome/Chromium 支持矩阵](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
-- [06 §12 Worker hang、crash 与恢复](../06-testing-compatibility.md#12-worker-hangcrash-与恢复)
-- [08 §4 Composition roots 与实例生命周期](../08-source-layout-and-boundaries.md#4-composition-roots-与实例生命周期)
+- [06 §15 当前兼容矩阵](../06-testing-compatibility.md#15-当前兼容矩阵)
+- [Evidence archive rules](../evidence/README.md)
 
 ### Verification / exit
 
-- Proposed `pnpm run test:phase-4g`：本单元创建 fixed-memory/Lua-heap/OOM、multi-cart lifecycle 与
-  manifest regression 后启用。
-- Proposed `pnpm run test:phase-4g:chrome`：本单元创建短时 production-path resource smoke 后启用。
-- Proposed `pnpm run evidence:phase-4g`：同一 Chrome runner 以 `1800s` 受审配置写入固定 evidence；
-  输出必须包含 exact Chrome/OS/CPU、build/cart hashes、计量窗口和全部 gate counters。
-- `pnpm run verify`：全量回归；普通 verify 不重复 30-minute evidence，但必须校验受审 artifact/schema/hash。
-- fixed sizing 与 OOM failure/recovery 通过，20 次 sequential lifecycle 无 stale event、资源泄漏或
-  persistence/audio ownership 回归；30-minute steady counters 达到 06 的 Chrome gate。
-- 完成后机器合同和兼容矩阵记录 exact limits/results，4H 获得唯一 exit baseline，repo 以独立提交结束且干净。
+- Proposed `pnpm run test:phase-4h`：创建后验证 exit manifest、所有阶段 artifact/hash、兼容统计、
+  Known Differences coverage、phase contract 和 evidence 文档互相一致。
+- `pnpm run verify`：必须包含 `test:phase-4h`，并完整通过既有 Chrome smoke gates；已受审 4G long-run
+  由哈希和 schema 复核，不重复执行 `evidence:phase-4g`。
+- Phase contract 最终为 `status=complete`、`completedWorkUnits=4A..4H`、active/next work unit 均为 null；
+  exit evidence 记录精确验证结果、Chrome/机器、artifact hash 和未扩大的 scope。
+- 完成后把 Phase 4 roadmap 压缩为一行并删除本执行文档；repo 以独立提交结束且干净。
 
 ## Phase exit gate
 

@@ -8,7 +8,7 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
-| **Implemented through Phase 4F** | Phase 3 browser-neutral Runtime/app 边界；WASM VM-local helpers、root runtime controls 与 deterministic instruction accounting；RuntimeCore CPU classification/system reset；Worker-owned diagnostics/restart/stop routing；project-owned Node/Chrome conformance gates |
+| **Implemented through Phase 4G** | Phase 3 browser-neutral Runtime/app 边界；WASM VM-local helpers、root controls、instruction/resource diagnostics；RuntimeCore CPU classification/system reset；app-owned bounded queues、Worker lifecycle 与 project-owned Node/Chrome conformance gates |
 | **Scaffold** | host cart resolver adapter 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
@@ -20,8 +20,9 @@
 4A–4B 只新增 contract、corpus、runner 与受审 baseline；4C 新增 `wasm/bridge` 内的 VM/library
 surface；4D append graphics host bindings `39..40`；4E append browser-neutral guest `reset` 为
 binding `41`，并让 root `run/stop` 经 VM → RuntimeCore → Worker control result 路由；4F 在既有
-VM → RuntimeCore → Worker frame DTO 上增加 deterministic CPU diagnostics。AudioContext、IndexedDB、
-Canvas 和浏览器 input adapter 的 owner 未改变；4G 也不得借 resource measurement 移动这些边界。
+VM → RuntimeCore → Worker frame DTO 上增加 deterministic CPU diagnostics。4G 只在 z8lua bridge
+增加 Lua heap/live-context 只读诊断、在 Worker composition 注入 diagnostic heap limit，并由 Worklet
+导出其自有 queue constants；AudioContext、IndexedDB、Canvas 和浏览器 input adapter 的 owner 未改变。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 

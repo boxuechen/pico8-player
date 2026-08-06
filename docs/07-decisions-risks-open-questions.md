@@ -2,7 +2,7 @@
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
 如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1–3 已完成；当前没有 active
-phase，Phase 4 尚未激活。
+phase；Phase 4 当前由 4H exit work unit 收口。
 
 ## 1. ADR registry
 
@@ -41,7 +41,6 @@ input、cartdata/IndexedDB、current-cart overlay 与 aggregate exit gate，见
 
 | ID | 问题 | 何时回答 |
 | --- | --- | --- |
-| Q-02 | production WASM/Lua heap sizing 是否适合代表 cart corpus？ | Phase 4 corpus；不得开启 memory growth |
 | Q-10 | HostRequest 能否跨任意 guest coroutine 层恢复？ | L3；当前 nested 固定 unsupported，只允许预供给/同步 cache |
 
 ### Closed questions
@@ -57,6 +56,7 @@ input、cartdata/IndexedDB、current-cart overlay 与 aggregate exit gate，见
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
 | Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
 | Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，hard cap 独立负责安全 | [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) / `pnpm run test:phase-4f:chrome` |
+| Q-02 | production 固定为 16 MiB WASM / 1 MiB Lua heap；32 KiB diagnostic profile 验证 structured OOM/recovery，不开启 memory growth 或 adaptive sizing | [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json) / `pnpm run evidence:phase-4g` |
 
 ## 3. Risk register
 
@@ -67,9 +67,9 @@ evidence，不在本表复制测试步骤。
 | --- | --- | --- |
 | R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 ladder；Phase 2 exit 通过，Phase 4 stress profile 重评 |
 | R-02 | z8lua 与 PICO-8 0.2.7 语义差异 | pinned patches + conformance |
-| R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；artifact verifier |
+| R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；Phase 4G growth rejection/view identity/long-run gate |
 | R-04 | PNG low-bit corruption / decompression bomb | ADR-005 limits、property/malformed tests |
-| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + Phase 3 Chrome soak；Phase 4 stress/long-run 重跑 |
+| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue；Phase 4G 双速率 1800 秒 steady counters 全零 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
 | R-08 | hard budget 与官方 CPU 不一致 | Phase 4F 已拆分 4M/s soft classification 与 1M instruction safety cap；4G 保持回归 |

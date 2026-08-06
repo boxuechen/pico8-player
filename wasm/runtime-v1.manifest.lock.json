@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "4F",
+  "phase": "4G",
   "abiContract": "spec/abi/p8w-v1.json",
   "hostApiContract": "spec/abi/pico-host-api-v1.json",
   "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
@@ -16,7 +16,7 @@
     "wasm/bridge/p8w_frame_runtime.cpp"
   ],
   "z8luaSourceInventorySha256": "a1fdf06e85812e71517e3c6987759cd62637220aa3935b2420b45ca7d221981f",
-  "buildFlagsSha256": "4d13d27087159e56561255fe9bb8f1931ca8356e7a80bfc124174a201281e45b",
+  "buildFlagsSha256": "1fd2ab78c389329ef5df84ea171c859661f65042242d40a5a4aebfff8100cc33",
   "productionExportPrefix": "p8w_",
   "forbiddenExportPrefixes": ["p8w0a_", "p8w0b_", "p8w0c_bench_"],
   "limits": {
@@ -35,19 +35,19 @@
     "files": [
       {
         "path": "z8lua-runtime-v1.mjs",
-        "bytes": 8259,
-        "sha256": "fec109d5a63293c399f0ccead24b56d749f8364dc09d63751430b9553d7de77d"
+        "bytes": 8567,
+        "sha256": "45cd2ad68398c0337785451fae57f229f4c059c9d8ce1a2007039618b3f85761"
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 189434,
-        "sha256": "9cccbe0618fe74ab8828d421831ae3bad47f7625f41e1a4e8dd98e828de31be5"
+        "bytes": 189719,
+        "sha256": "749b206a5ff456a028593a5706bb5d574724b152cec5a02e079fc39004f66373"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs + tests/runtime/phase-3b-music-audio.test.mjs + tests/runtime/phase-3c-controller-input.test.mjs + tests/runtime/phase-3d-devkit-input.test.mjs + tests/runtime/phase-3e-cartdata.test.mjs + tests/runtime/phase-3g-current-cart.test.mjs + tests/conformance/phase-4c-core-library.test.mjs + tests/conformance/phase-4d-graphics-memory-text.test.mjs + tests/conformance/phase-4e-system-integration.test.mjs + tests/conformance/phase-4f-cpu-scheduler.test.mjs",
-    "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html + tests/browser/phase-2d.html + tests/browser/phase-2e.html + tests/browser/phase-3b.html + tests/browser/phase-3c.html + tests/browser/phase-3d.html + tests/browser/phase-3f.html + tests/browser/phase-3g.html + tests/browser/phase-4c.html + tests/browser/phase-4d.html + tests/browser/phase-4e.html + tests/browser/phase-4f.html",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs + tests/runtime/phase-3b-music-audio.test.mjs + tests/runtime/phase-3c-controller-input.test.mjs + tests/runtime/phase-3d-devkit-input.test.mjs + tests/runtime/phase-3e-cartdata.test.mjs + tests/runtime/phase-3g-current-cart.test.mjs + tests/conformance/phase-4c-core-library.test.mjs + tests/conformance/phase-4d-graphics-memory-text.test.mjs + tests/conformance/phase-4e-system-integration.test.mjs + tests/conformance/phase-4f-cpu-scheduler.test.mjs + tests/conformance/phase-4g-resource-long-run.test.mjs",
+    "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html + tests/browser/phase-2d.html + tests/browser/phase-2e.html + tests/browser/phase-3b.html + tests/browser/phase-3c.html + tests/browser/phase-3d.html + tests/browser/phase-3f.html + tests/browser/phase-3g.html + tests/browser/phase-4c.html + tests/browser/phase-4d.html + tests/browser/phase-4e.html + tests/browser/phase-4f.html + tests/browser/phase-4g.html",
     "fixtures": "project-owned synthetic source and p8.png only"
   }
 }

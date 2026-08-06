@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 4F；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 4G；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -16,6 +16,7 @@
 | **Implemented through Phase 3 exit** | browser-neutral four-channel SFX/music/P8SCII synth；fixed eight-player + devkit input；synchronous cartdata + Worker-owned IndexedDB；current-cart `reload/cstore` COW repository；dedicated PCM、production Chrome cross-oracle、performance/soak/recovery/dispose gate |
 | **Implemented through Phase 4E** | root guest `run/stop` VM control outcome；copy-owned `stat(6)` parameter；system-register-only guest `reset`；Worker same-session fresh runtime、audio reset、persistence flush 与 public `runtime-control` event |
 | **Implemented through Phase 4F** | deterministic 4M/s Q16.16 CPU accounting；`stat(1/7)`；boot/frame `cpuInstructions/cpuFractionRaw/slowFrame`；ordinary slow-frame atomic commit 与独立 1M instruction safety cap |
+| **Implemented in Phase 4G** | Worker composition 可注入 bounded Lua heap diagnostic profile；production 默认仍为 1 MiB；AudioWorklet queue limits 由唯一 owner 导出；OOM/recovery 与跨 generation resource release 有 Node/Chrome gate |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
 
@@ -94,7 +95,7 @@ TypeScript 负责：
 
 | ID | 状态 | 方向 | Phase 0 所需证据 |
 |---|---|---|---|
-| `P0-RT-01` | Accepted（ADR-013；Phase 0B passed） | WASM memory 固定 `initial === maximum`，不增长；Phase 0B artifact 为 16 MiB / 默认 1 MiB Lua cap | binary descriptor、heap/OOM、64-context 与 typed-view identity 已通过；production corpus sizing 后续继续测 |
+| `P0-RT-01` | Accepted（ADR-013；Phase 4G passed） | WASM memory 固定 `initial === maximum`，不增长；production 为 16 MiB / 默认 1 MiB Lua cap | descriptor、heap/OOM、typed-view identity、20-load lifecycle 与 1800 秒 Chrome 长稳通过 |
 | `P0-RT-02` | Accepted / Phase 0D passed（ADR-005） | `.p8.png` 不经 Canvas；项目自有 bounded TS PNG/zlib/DEFLATE/code decoder | raw/legacy/PXA ROM/source hash、malformed/limit、architecture、manifest 与许可证证据已通过 |
 | `P0-RT-03` | Accepted / Phase 0F passed（ADR-010） | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM；不实现 relay/SAB fallback | Chrome/Chromium transferable `MessagePort`、44.1/48 kHz 并发 10 分钟 bounded-queue soak 已通过 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
@@ -386,6 +387,10 @@ packed-screen snapshot 与 `L1Graphics` pixel path 均使用这条路径。Emscr
 和 `WebAssembly.Memory` 仍不越过 adapter boundary。
 
 v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值，并对 z8lua heap 设置经 Phase 0 校准的上限，避免 `memory.grow()` 使 JS typed views 失效。真实 `WebAssembly.Memory` 只由 z8lua bridge 持有；RuntimeCore 只接收 runtime-neutral `PicoMemoryLease`，验证固定长度、范围和 session-local `leaseId`。Bridge 可以在 debug/test build 比较 `memory.buffer` identity 并在变化时立即触发 `E_INVARIANT`，但不能把 view 重建当成 production growth 支持；不满足固定内存的 artifact 不得发布。
+
+Phase 4G 把 production 数值锁定为 16 MiB fixed WASM / 1 MiB Lua heap；`luaHeapLimit` 只作为
+Worker diagnostic composition option，用于 32 KiB OOM/recovery gate，不是按 cart 或宿主压力调整的
+自适应策略。Worklet queue capacity/prebuffer/low/high water 常量由 `pcm-queue.ts` 唯一拥有并导出。
 
 `PicoRam` 的 layout views 是物理 64KiB，不把 raw `DataView` 连续访问伪装成 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还会绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。Phase 0B 已用 `P0-RT-08` 证明 upper RAM、`0x5f54/0x5f55` 与 direct operators 收敛；未来实现不得把 raw physical `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
 

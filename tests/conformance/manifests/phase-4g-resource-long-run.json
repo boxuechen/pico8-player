@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "ownership": "Project-authored resource carts and reviewed local Chrome measurements only; no BBS, network or ref content",
+  "target": "PICO-8 0.2.7 Phase 4G fixed-resource and Chrome long-run profile",
+  "limits": {
+    "wasmMemory": {
+      "owner": "tools/wasm/config.mjs",
+      "bytes": 16777216,
+      "pages": 256,
+      "growth": false,
+      "observableFailure": "WebAssembly.Memory.grow throws RangeError without detaching the original buffer"
+    },
+    "picoRam": {
+      "owner": "@pico8-web/contracts PICO_RAM_SIZE",
+      "bytes": 65536,
+      "observableFailure": "logical copy/map ranges outside 64 KiB fail closed"
+    },
+    "luaHeap": {
+      "owner": "wasm/bridge/p8w_frame_runtime.cpp tracked_lua_allocator",
+      "defaultBytes": 1048576,
+      "minimumBytes": 32768,
+      "adaptive": false,
+      "observableFailure": "E_VM_OOM with liveLuaBytes and luaHeapLimit details"
+    },
+    "audioQueue": {
+      "owner": "apps/web-player/src/worklet/pcm-queue.ts",
+      "capacityFrames": 66150,
+      "prebufferFrames": 11025,
+      "lowWaterFrames": 5512,
+      "highWaterFrames": 44100,
+      "observableFailure": "bounded overrun and droppedSourceFrames counters"
+    },
+    "cartdataHydration": {
+      "owner": "apps/web-player/src/worker/adapters/indexeddb-persistence-adapter.ts",
+      "maximumRecords": 4096,
+      "maximumBytes": 1048576,
+      "observableFailure": "recoverable E_PERSISTENCE_READ diagnostic and empty durable mirror"
+    }
+  },
+  "carts": [
+    {
+      "id": "phase-4/resource-stable-30",
+      "source": "tests/conformance/carts/phase-4/resource-stable-30.p8",
+      "sourceSha256": "ea9657a764990ce19ccdf69ef3a2b6583868cbcd52a76f9ce19ebfd17ca50a9e",
+      "cartSha256": "ea9657a764990ce19ccdf69ef3a2b6583868cbcd52a76f9ce19ebfd17ca50a9e",
+      "mode": "callback",
+      "targetFps": 30
+    },
+    {
+      "id": "phase-4/resource-stable-60",
+      "source": "tests/conformance/carts/phase-4/resource-stable-60.p8",
+      "sourceSha256": "602125b1a2391b9ab704cca66397791f834e3fd785466a794f4e2042d0eec21a",
+      "cartSha256": "602125b1a2391b9ab704cca66397791f834e3fd785466a794f4e2042d0eec21a",
+      "mode": "callback",
+      "targetFps": 60
+    },
+    {
+      "id": "phase-4/resource-stable-custom",
+      "source": "tests/conformance/carts/phase-4/resource-stable-custom.p8",
+      "sourceSha256": "20cf872c129ca73b69bbad2a7b53e191f17fda5d296b3b620a4d05a29b0f5540",
+      "cartSha256": "20cf872c129ca73b69bbad2a7b53e191f17fda5d296b3b620a4d05a29b0f5540",
+      "mode": "custom",
+      "targetFps": 30
+    },
+    {
+      "id": "phase-4/resource-oom",
+      "source": "tests/conformance/carts/phase-4/resource-oom.p8",
+      "sourceSha256": "2248c6864d4f77cc2d3253876252f938389cff1b7ac42cb41a42622978c2c455",
+      "cartSha256": "2248c6864d4f77cc2d3253876252f938389cff1b7ac42cb41a42622978c2c455",
+      "luaHeapBytes": 32768,
+      "expectedCode": "E_VM_OOM"
+    },
+    {
+      "id": "phase-4/resource-minimum-recovery",
+      "source": "tests/conformance/carts/phase-4/resource-minimum-recovery.p8",
+      "sourceSha256": "9ffa54bc065f80682a574e70401db0d34ac062112d3c9fd98be612d3fe464706",
+      "cartSha256": "9ffa54bc065f80682a574e70401db0d34ac062112d3c9fd98be612d3fe464706",
+      "luaHeapBytes": 32768,
+      "mode": "callback",
+      "targetFps": 30
+    },
+    {
+      "id": "phase-3/persistence-overlay",
+      "source": "tests/conformance/carts/phase-3/persistence-overlay.p8",
+      "sourceSha256": "583dd2e9dc5f4c8f50850669dcf8fe35f9c7ce213f1c92228ed11e487c2caadc",
+      "cartSha256": "583dd2e9dc5f4c8f50850669dcf8fe35f9c7ce213f1c92228ed11e487c2caadc",
+      "mode": "callback",
+      "targetFps": 60
+    },
+    {
+      "id": "phase-4/cpu-hard-cap-fault",
+      "source": "tests/conformance/carts/phase-4/cpu-hard-cap-fault.p8",
+      "sourceSha256": "1b8c1448870d0abd51d8438b880f58ef2c01e77060b5d27b90fec9bac06c468a",
+      "cartSha256": "1b8c1448870d0abd51d8438b880f58ef2c01e77060b5d27b90fec9bac06c468a",
+      "instructionBudget": 10000,
+      "expectedCode": "E_VM_INSTRUCTION_BUDGET"
+    }
+  ],
+  "lifecycle": {
+    "requiredLoads": 20,
+    "sequence": [
+      "phase-4/resource-stable-30",
+      "phase-4/resource-stable-60",
+      "phase-4/resource-stable-custom",
+      "phase-3/persistence-overlay",
+      "phase-4/resource-stable-30",
+      "phase-4/resource-stable-60",
+      "phase-4/cpu-hard-cap-fault",
+      "phase-4/resource-stable-custom",
+      "phase-3/persistence-overlay",
+      "phase-4/resource-stable-30",
+      "phase-4/resource-stable-60",
+      "phase-4/resource-stable-custom",
+      "phase-3/persistence-overlay",
+      "phase-4/resource-stable-30",
+      "phase-4/resource-stable-60",
+      "phase-4/resource-stable-custom",
+      "phase-3/persistence-overlay",
+      "phase-4/resource-stable-30",
+      "phase-4/resource-stable-60",
+      "phase-4/resource-stable-custom"
+    ],
+    "staleChannelsPerSuccessfulGeneration": ["frame", "pcm", "input"]
+  },
+  "chrome": {
+    "smokeSeconds": 10,
+    "evidenceSeconds": 1800,
+    "preMeasurementWarmupSeconds": 5,
+    "minimumCadenceRatio": 0.995,
+    "maximumDroppedTickRatio": 0.001,
+    "maximumSteadyAudioUnderruns": 0,
+    "maximumAudioOverruns": 0,
+    "maximumAudioDiscontinuities": 0,
+    "maximumWorkerErrors": 0,
+    "maximumMainThreadLongTasks": 0,
+    "longTaskThresholdMs": 50,
+    "maximumMeasuredHeapGrowthBytes": 1048576
+  }
+}

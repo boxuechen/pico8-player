@@ -9,9 +9,9 @@
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E", "4F"],
-  "activeWorkUnit": "4G",
-  "nextWorkUnit": "4H",
+  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E", "4F", "4G"],
+  "activeWorkUnit": "4H",
+  "nextWorkUnit": null,
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -294,7 +294,7 @@
     },
     "4G": {
       "name": "Resource Sizing and Chrome Long-run",
-      "status": "active",
+      "status": "complete",
       "requiredProfiles": [
         "fixed-wasm-memory-and-lua-heap-sizing",
         "bounded-allocation-fault-and-recovery",
@@ -310,9 +310,79 @@
         "external-cart-resolver",
         "adaptive-host-resource-policy",
         "non-Chromium-browsers"
-      ]
+      ],
+      "result": {
+        "resourceManifest": "tests/conformance/manifests/phase-4g-resource-long-run.json",
+        "resourceManifestSha256": "91fef7708ba4e179159ba5560ad71ca8038137cccdd419d9370021e0bd2a6b02",
+        "reviewedEvidence": "benchmarks/phase-4/results/chromium-macos-arm64-phase-4g-long-run.json",
+        "reviewedEvidenceSha256": "f4f2b3197ef57bf8f5aa07b19480baaff8c322e798a27a7cd4f73ba7af6e8fab",
+        "limits": {
+          "fixedWasmBytes": 16777216,
+          "picoRamBytes": 65536,
+          "defaultLuaHeapBytes": 1048576,
+          "minimumLuaHeapBytes": 32768,
+          "audioQueueCapacityFrames": 66150,
+          "audioQueueHighWaterFrames": 44100,
+          "cartdataHydrationMaximumRecords": 4096,
+          "cartdataHydrationMaximumBytes": 1048576
+        },
+        "allocationFault": "E_VM_OOM",
+        "sequentialCartLoads": 20,
+        "sessionGenerations": 24,
+        "soakSeconds": 1800.4173,
+        "cadence": {
+          "30Hz": { "frames": 54013, "droppedTicks": 0 },
+          "60Hz": { "frames": 108026, "droppedTicks": 0 }
+        },
+        "steadyAudioFaultCounters": 0,
+        "mainThreadLongTasks": 0,
+        "workerErrors": 0,
+        "mainIsolateRetainedHeapGrowthBytes": 2776,
+        "resourcesReleased": true,
+        "chrome": "Google Chrome 150.0.7871.189",
+        "hostAbiBindings": 41,
+        "runtimeAbiVersion": "0x00010003",
+        "runtimeWasmSha256": "749b206a5ff456a028593a5706bb5d574724b152cec5a02e079fc39004f66373",
+        "inventoryCounts": {
+          "implementationCounts": {
+            "implemented": 96,
+            "partial": 5,
+            "unimplemented": 1,
+            "unsupported": 10
+          },
+          "conformanceCounts": {
+            "compatible": 68,
+            "partial": 5,
+            "unknown": 29,
+            "unsupported": 10
+          }
+        },
+        "verification": [
+          "pnpm run test:phase-4g",
+          "pnpm run test:phase-4g:chrome",
+          "pnpm run evidence:phase-4g",
+          "pnpm run verify"
+        ]
+      }
     },
-    "4H": { "name": "Phase 4 / L2 Exit", "status": "planned" }
+    "4H": {
+      "name": "Phase 4 / L2 Exit",
+      "status": "active",
+      "requiredOutputs": [
+        "machine-checked-phase-exit",
+        "published-l2-compatibility-report",
+        "published-known-differences",
+        "reviewed-phase-4-evidence-archive",
+        "clean-full-verification"
+      ],
+      "nonGoals": [
+        "new-guest-api-implementation",
+        "guest-load",
+        "external-cart-resolver",
+        "bbs-network-access",
+        "non-Chromium-browsers"
+      ]
+    }
   },
   "corpusPolicy": {
     "publishedDenominator": "project-authored tracked corpus only",

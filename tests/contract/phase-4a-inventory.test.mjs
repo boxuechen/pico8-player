@@ -78,8 +78,12 @@ test("all current append-only host bindings reconcile with the inventory", () =>
       .map((api) => [api.hostBindingId, api]),
   );
 
-  const expectedBindings = phase.workUnits[phase.completedWorkUnits.at(-1)].result.hostAbiBindings ??
-    phase.workUnits["4A"].result.abiBindings;
+  const latestBindingUnit = [...phase.completedWorkUnits]
+    .reverse()
+    .find((workUnit) => phase.workUnits[workUnit].result?.hostAbiBindings !== undefined);
+  const expectedBindings = latestBindingUnit === undefined
+    ? phase.workUnits["4A"].result.abiBindings
+    : phase.workUnits[latestBindingUnit].result.hostAbiBindings;
   assert.equal(abi.bindings.length, expectedBindings);
   assert.equal(byBindingId.size, abi.bindings.length);
   assert.deepEqual(

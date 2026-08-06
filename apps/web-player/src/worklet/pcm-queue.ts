@@ -18,6 +18,11 @@ export interface PcmPushResult {
   readonly resynced: boolean;
 }
 
+export const PICO_AUDIO_QUEUE_CAPACITY_FRAMES = 66_150;
+export const PICO_AUDIO_QUEUE_PREBUFFER_FRAMES = 11_025;
+export const PICO_AUDIO_QUEUE_LOW_WATER_FRAMES = 5_512;
+export const PICO_AUDIO_QUEUE_HIGH_WATER_FRAMES = 44_100;
+
 function positiveInteger(value: number, name: string): number {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new RangeError(`${name} must be a positive safe integer`);
@@ -49,10 +54,22 @@ export class Pcm16Queue {
   #renderedDeviceFrames = 0;
 
   constructor(options: PcmQueueOptions = {}) {
-    const capacity = positiveInteger(options.capacityFrames ?? 66_150, "capacityFrames");
-    const prebuffer = positiveInteger(options.prebufferFrames ?? 11_025, "prebufferFrames");
-    const lowWater = positiveInteger(options.lowWaterFrames ?? 5_512, "lowWaterFrames");
-    const highWater = positiveInteger(options.highWaterFrames ?? 44_100, "highWaterFrames");
+    const capacity = positiveInteger(
+      options.capacityFrames ?? PICO_AUDIO_QUEUE_CAPACITY_FRAMES,
+      "capacityFrames",
+    );
+    const prebuffer = positiveInteger(
+      options.prebufferFrames ?? PICO_AUDIO_QUEUE_PREBUFFER_FRAMES,
+      "prebufferFrames",
+    );
+    const lowWater = positiveInteger(
+      options.lowWaterFrames ?? PICO_AUDIO_QUEUE_LOW_WATER_FRAMES,
+      "lowWaterFrames",
+    );
+    const highWater = positiveInteger(
+      options.highWaterFrames ?? PICO_AUDIO_QUEUE_HIGH_WATER_FRAMES,
+      "highWaterFrames",
+    );
     if (!(lowWater < prebuffer && prebuffer <= highWater && highWater <= capacity)) {
       throw new RangeError(
         "queue watermarks must satisfy low < prebuffer <= high <= capacity",

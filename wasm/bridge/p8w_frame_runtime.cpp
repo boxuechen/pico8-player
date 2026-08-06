@@ -925,6 +925,14 @@ extern "C" {
 
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_abi_version(void) { return kAbiVersion; }
 
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_live_contexts(void) {
+  uint32_t count = 0;
+  for (const auto &slot : g_slots) {
+    if (slot.context != nullptr) count += 1;
+  }
+  return count;
+}
+
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_create(uint32_t lua_heap_limit) {
   const uint32_t resolved_limit =
       lua_heap_limit == 0 ? kDefaultLuaHeapLimit : lua_heap_limit;
@@ -964,6 +972,16 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_destroy(uint32_t handle) {
   delete context;
   g_slots[slot_index].context = nullptr;
   return P8W_STATUS_OK;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_lua_live_bytes(uint32_t handle) {
+  Context *context = context_from_handle(handle);
+  return context == nullptr ? 0 : context->allocations.live_bytes;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_lua_heap_limit(uint32_t handle) {
+  Context *context = context_from_handle(handle);
+  return context == nullptr ? 0 : context->allocations.limit_bytes;
 }
 
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_bind_host(uint32_t handle,

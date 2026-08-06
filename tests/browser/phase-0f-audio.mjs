@@ -63,13 +63,11 @@ async function prepareCase(requestedSampleRate) {
 
 function startRafMonitor() {
   let callbacks = 0;
-  let missedFrames = 0;
+  const intervals = [];
   let last;
   let requestId;
   function frame(now) {
-    if (last !== undefined) {
-      missedFrames += Math.max(0, Math.round((now - last) / (1000 / 60)) - 1);
-    }
+    if (last !== undefined) intervals.push(now - last);
     last = now;
     callbacks += 1;
     requestId = requestAnimationFrame(frame);
@@ -77,8 +75,18 @@ function startRafMonitor() {
   requestId = requestAnimationFrame(frame);
   return () => {
     cancelAnimationFrame(requestId);
+    const sortedIntervals = intervals.toSorted((left, right) => left - right);
+    const nominalIntervalMs = sortedIntervals.length === 0
+      ? Number.POSITIVE_INFINITY
+      : sortedIntervals[Math.floor(sortedIntervals.length / 2)];
+    const missedFrames = intervals.reduce(
+      (total, interval) => total
+        + Math.max(0, Math.round(interval / nominalIntervalMs) - 1),
+      0,
+    );
     return {
       callbacks,
+      nominalIntervalMs,
       missedFrames,
       missedRatio: missedFrames / Math.max(1, callbacks + missedFrames),
     };
