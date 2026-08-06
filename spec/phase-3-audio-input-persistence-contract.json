@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "phase": "3",
+  "name": "Audio, Input and Persistence",
+  "status": "active",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase2Contract": "spec/phase-2-graphics-memory-text-contract.json",
+    "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
+    "baselineCommit": "e130db0"
+  },
+  "completedWorkUnits": [],
+  "activeWorkUnit": "3A",
+  "nextWorkUnit": "3B",
+  "workUnits": {
+    "3A": {
+      "name": "Deterministic SFX Core",
+      "status": "active",
+      "apis": ["sfx"],
+      "hostBinding": {
+        "allocation": "append-only-after-operation-30",
+        "argumentEncoding": "signed-q16.16-raw-int32",
+        "optionalEncoding": "uint32-presence-mask",
+        "resultEncoding": "none",
+        "failureEncoding": "nonzero-status"
+      },
+      "sfxMemory": {
+        "range": "0x3200..0x42ff",
+        "count": 64,
+        "bytesPerSfx": 68,
+        "notesPerSfx": 32,
+        "access": "live-pico-ram"
+      },
+      "synthesis": {
+        "channels": 4,
+        "sampleRate": 22050,
+        "format": "mono-signed-pcm16le",
+        "clock": "committed-logical-slice-plus-integer-sample-index",
+        "samplesPer30HzSlice": 735,
+        "samplesPer60HzSlices": [367, 368],
+        "browserNeutral": true
+      },
+      "behavior": [
+        "default-and-explicit-channel-selection",
+        "sfx-wide-stop",
+        "channel-stop-and-loop-release",
+        "offset-length-loop-and-length-mode",
+        "built-in-and-custom-waveforms",
+        "note-effects-and-v027-filters",
+        "live-ram-observation-at-defined-note-boundaries",
+        "reset-destroy-fault-clears-all-channel-state"
+      ],
+      "exit": [
+        "typed-sfx-host-binding",
+        "four-channel-browser-neutral-synth",
+        "canonical-pcm-event-and-channel-golden",
+        "real-wasm-and-regression-tests-pass",
+        "independent-commit-and-clean-worktree"
+      ]
+    },
+    "3B": { "name": "Music and Browser Audio", "status": "planned" },
+    "3C": { "name": "Controller Input", "status": "planned" },
+    "3D": { "name": "Devkit Input", "status": "planned" },
+    "3E": { "name": "Cartdata Core", "status": "planned" },
+    "3F": { "name": "IndexedDB Persistence", "status": "planned" },
+    "3G": { "name": "Current-cart reload and cstore", "status": "planned" },
+    "3H": { "name": "Conformance and Phase Exit", "status": "planned" }
+  },
+  "scope": [
+    "deterministic-sfx-and-music",
+    "chrome-audioworklet-device-output",
+    "controller-and-devkit-input",
+    "cartdata-and-indexeddb-persistence",
+    "current-cart-reload-cstore-synchronous-cache",
+    "audio-input-persistence-chrome-production-gates"
+  ],
+  "nonGoals": [
+    "guest-load-or-multicart",
+    "external-cart-filename-or-ref",
+    "bbs-or-network-cart-resolution",
+    "complete-stat-gpio-serial-or-file-input",
+    "sharedarraybuffer-baseline",
+    "firefox-webkit-safari",
+    "android-device-release-gate",
+    "third-party-cart-corpus",
+    "official-full-or-bit-exact-compatibility"
+  ]
+}

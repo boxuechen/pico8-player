@@ -208,3 +208,40 @@ apis:
     owner: packages/runtime-core
     phase: 2E
     note: RAM-backed cursor, print-home and optional pen update through generated host binding
+  - name: sfx
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3A
+    note: active work unit; deterministic four-channel SFX core and typed host binding required
+  - name: music
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3B
+    note: planned music sequencer and browser audio integration
+  - name: stat
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3D
+    note: Phase 3 only plans documented devkit input selectors; complete stat remains deferred
+  - name: cartdata
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3E
+  - name: dget
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3E
+  - name: dset
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3E
+  - name: reload
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3G
+    note: only current-cart synchronous ROM/overlay path is planned; external refs remain unsupported
+  - name: cstore
+    status: unimplemented
+    owner: packages/runtime-core
+    phase: 3G
+    note: only current-cart copy-on-write overlay path is planned; source bytes remain immutable
