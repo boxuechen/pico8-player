@@ -219,7 +219,6 @@ test("Phase 4 contract and published evidence are closed", async () => {
     new URL("docs/06-testing-compatibility.md", projectRoot),
     "utf8",
   );
-  const phaseRouting = await readFile(new URL("docs/phases/README.md", projectRoot), "utf8");
 
   assert.equal(contract.status, "complete");
   assert.deepEqual(contract.completedWorkUnits, ["4A", "4B", "4C", "4D", "4E", "4F", "4G", "4H"]);
@@ -238,7 +237,6 @@ test("Phase 4 contract and published evidence are closed", async () => {
     assert.ok(compatibility.includes(id), id);
   }
   assert.ok(evidence.includes(exit.target));
-  assert.ok(phaseRouting.includes("当前没有 active phase"));
   assert.ok(packageJson.scripts.test.includes("test:phase-4h"));
   assert.ok(packageJson.scripts.verify.includes("test:phase-4h"));
   assert.equal(

@@ -8,12 +8,12 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 4；[L2/MVP project-profile evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
-| Active phase | 无 |
-| 下一候选阶段 | Phase 5；Deferred，尚未授权 production implementation |
-| 最近关闭的机器合同 | [`spec/phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) |
+| Active phase | Phase 5；[L3 local/multicart](./phases/5-l3-local-multicart.md) |
+| Active work unit | 5B CartLoader / Resolver / Repository |
+| 机器合同 | [`spec/phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) |
 
-下一阶段开工前必须按 [`docs/phases/`](./phases/) 的 lifecycle contract 创建并激活 bounded phase
-document / machine contract；roadmap、Target 示例和历史 evidence 都不能单独授权实现。
+Phase 5 已由 5A 激活。后续实现只按 active phase 当前展开的 work unit 推进；roadmap、Target 示例
+和历史 evidence 仍不能单独授权实现。
 
 日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

@@ -127,7 +127,8 @@ L3 是后续候选阶段；在 active phase 与机器合同明确扩展范围前
 
 ## 9. BBS 与内容边界
 
-截至 2026-08-05，[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 说明：
+截至 2026-08-06，[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 页面标注
+updated 2026-06-22，并说明：
 
 - BBS cart 默认仍属于各自作者。
 - 未经许可不应分发或 remix cart。

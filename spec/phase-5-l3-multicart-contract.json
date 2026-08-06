@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "phase": "5",
+  "name": "L3 Local / Multicart",
+  "status": "active",
+  "target": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase4Contract": "spec/phase-4-l2-mvp-contract.json",
+    "phase4ContractSha256": "0a95a3b1181923430559d01ef278590964a10cf366590c1a24a675684302d453",
+    "phase4Evidence": "docs/evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md",
+    "phase4EvidenceSha256": "6fb1290e2102e276052ae31c2fdc3d8529e847216eeb64a8c12d65d2133503c8",
+    "phase4ExitManifest": "tests/conformance/manifests/phase-4h-exit.json",
+    "phase4ExitManifestSha256": "974d496c1db81fff6d44d4838b2bdc2bda659161d620b6f8165eb24882ee98f8",
+    "runtimeManifest": "wasm/runtime-v1.manifest.lock.json",
+    "runtimeManifestSha256": "c72542bd7882bc72436388ea3e83cddcf1420c48ad3a97f1f80c48a8e9eafd95",
+    "baselineCommit": "56a9137"
+  },
+  "activationPolicy": {
+    "decision": "docs/adr/018-caller-authorized-cart-resolution.md",
+    "decisionSha256": "34dcfb5dfc41aad5c6ac62d67363834892bc57455a840febca41bf35f17ce100",
+    "manualTarget": "PICO-8 v0.2.7",
+    "termsReviewedOn": "2026-08-06",
+    "termsPageUpdated": "2026-06-22",
+    "resourceSources": ["caller-provided-bytes", "caller-authorized-local-bundle"],
+    "bbsAccess": "deferred-no-automated-access",
+    "bbsIsCoreExitGate": false,
+    "nestedHostSuspension": "root-only; nested-host-suspend until Phase 5F decision",
+    "thirdPartyCorpusPublishedDenominatorContribution": 0
+  },
+  "capabilityProfile": {
+    "required": ["local-bundle-resolve", "root-host-request", "guest-load", "external-reload", "external-cstore", "atomic-cart-swap"],
+    "conditional": ["include", "nested-host-suspension", "bbs-resolver", "menuitem", "printh", "extcmd"],
+    "excluded": ["save", "folder", "ls", "resume", "reboot", "info", "serial", "arbitrary-url", "host-filesystem", "bbs-crawler", "public-cart-mirror"],
+    "accessBits": ["load", "reloadData", "cstoreData", "include"]
+  },
+  "resourceLimits": {
+    "maximumCartInputBytes": 1048576,
+    "maximumCartRefBytes": 256,
+    "maximumLocalBundleEntries": 64,
+    "maximumExternalCstoreTargetsPerExecution": 64,
+    "maximumHostRequestPayloadBytes": 4096,
+    "fixedWasmBytes": 16777216,
+    "defaultLuaHeapBytes": 1048576
+  },
+  "corpus": {
+    "manifest": "tests/conformance/manifests/phase-5-l3-corpus.json",
+    "manifestSha256": "34689e150a4afa5913d207c93ef59db9201315cb3d6804efe9c8e2d2f9fd32e1",
+    "cases": 6,
+    "repositoryEntries": 2,
+    "ownership": "project-authored",
+    "networkAccess": false,
+    "thirdPartyOrBbsContent": false
+  },
+  "completedWorkUnits": ["5A"],
+  "activeWorkUnit": "5B",
+  "nextWorkUnit": "5C",
+  "workUnits": {
+    "5A": {
+      "name": "Activation / Capability / Corpus",
+      "status": "complete",
+      "result": {
+        "acceptedDecision": "ADR-018",
+        "projectCorpusCases": 6,
+        "requiredCapabilityLanes": 6,
+        "bbsAccess": "deferred-no-automated-access",
+        "nestedHostSuspension": "root-only",
+        "verification": ["pnpm run test:phase-5a"]
+      }
+    },
+    "5B": {
+      "name": "CartLoader / Resolver / Repository",
+      "status": "active",
+      "allowedPaths": [
+        "packages/contracts/src/public.ts",
+        "packages/runtime-core/src/ports/",
+        "packages/runtime-core/src/cart/",
+        "packages/runtime-core/src/public.ts",
+        "apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts",
+        "apps/web-player/src/worker/adapters/cart-repository-adapter.ts",
+        "tests/runtime/phase-5b-cart-resolver.test.mjs",
+        "tests/architecture/",
+        "docs/phases/5-l3-local-multicart.md",
+        "spec/phase-5-l3-multicart-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "browser-neutral resolver/repository ports use opaque refs and immutable access capabilities",
+        "local bundle adapter resolves only caller-provided entries and never fetches",
+        "decode, cancellation, stale result, limits, copy ownership and capability denial are tested",
+        "RuntimeCore and cart-codec remain free of browser/network/storage globals",
+        "pnpm run test:phase-5b and pnpm run test:architecture pass"
+      ]
+    },
+    "5C": { "name": "Root HostRequest Pipeline", "status": "pending" },
+    "5D": { "name": "Guest load / Atomic Cart Swap", "status": "pending" },
+    "5E": { "name": "External reload / cstore", "status": "pending" },
+    "5F": { "name": "Coroutine / L3 Compatibility", "status": "pending" },
+    "5G": { "name": "Optional BBS Adapter", "status": "pending" },
+    "5H": { "name": "L3 Exit / Resource Gate", "status": "pending" }
+  },
+  "phaseExitGate": {
+    "claim": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
+    "minimumPlayableRate": 0.95,
+    "maximumOpenP0": 0,
+    "maximumOpenP1": 0,
+    "sequentialCartSwaps": 100,
+    "chromeMixedSoakSeconds": 1800,
+    "staleCommitCount": 0,
+    "requiresNodeChromeAgreement": true,
+    "requiresFullVerify": true,
+    "bbsCompatibilityClaimed": false
+  }
+}

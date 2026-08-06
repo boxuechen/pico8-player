@@ -17,7 +17,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-004 | Accepted | Runtime 在 Worker，Window 只拥有 host/UI |
 | ADR-005 | [Accepted](./adr/005-lossless-p8png.md) | bounded、bytes-only `.p8.png` codec |
 | ADR-006 | [Accepted](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length hybrid ABI 与 profile-driven fallback |
-| ADR-007 | Accepted | 首版只接受 caller-provided/local cart bytes |
+| ADR-007 | Superseded by ADR-018 | 首版只接受 caller-provided/local cart bytes |
 | ADR-008 | [Accepted](./adr/008-schema-generated-host-bindings.md) | production schema 单向生成 C/TS host bindings；prototype 不暴露未实现 API |
 | ADR-009 | [Accepted](./adr/009-canvas2d-frame-presenter.md) | Canvas2D 是唯一默认 presenter；WebGL fallback 未实现 |
 | ADR-010 | [Accepted](./adr/010-dedicated-messageport-audio-transport.md) | dedicated MessagePort 是唯一默认 PCM transport；不实现 relay/SAB |
@@ -28,6 +28,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-015 | Accepted | 四 package DAG + main/worker/worklet execution domains |
 | ADR-016 | Accepted | pnpm workspace 和精确 tool versions |
 | ADR-017 | [Accepted](./adr/017-coroutine-frame-slice-and-fault-containment.md) | host-driven frame slice、budget/watchdog、nested suspension 降级 |
+| ADR-018 | [Accepted](./adr/018-caller-authorized-cart-resolution.md) | caller-authorized local bundle resolver；BBS 自动访问保持 Deferred |
 
 ## 2. 当前未决问题
 
