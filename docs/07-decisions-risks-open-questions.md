@@ -1,8 +1,8 @@
 # 架构决定、风险与未决问题
 
-本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1–4 已完成并归档；当前没有
-active phase，Phase 5 保持 Deferred。
+本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务、阶段状态或完成证据。当前
+activation 状态由 [`docs/README.md`](./README.md) 与 [`docs/phases/`](./phases/) 唯一维护；
+active phase 如何回答 Proposed 项由其 phase 文档定义。
 
 ## 1. ADR registry
 
@@ -33,10 +33,9 @@ active phase，Phase 5 保持 Deferred。
 
 ### Active blockers
 
-当前没有已登记 blocker。Phase 4A–4H 已完成 capability inventory、project corpus、兼容性
-加固、CPU 校准、资源长跑和 aggregate exit gate；发布边界、Known Differences 与未验证覆盖面
-均已显式固化，见
-[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
+当前没有已登记 blocker。最后关闭阶段的发布边界、Known Differences 与未验证覆盖面见
+[MVP exit evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)；候选下一阶段尚未激活的
+设计问题不登记为 blocker。
 
 ### Deferred open questions
 

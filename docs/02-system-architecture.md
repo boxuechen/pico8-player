@@ -1,22 +1,22 @@
 # 系统架构
 
-> 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码和
-> [Phase 4 机器合同](../spec/phase-4-l2-mvp-contract.json)为准。
+> 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码、自动测试和
+> [最近关闭的机器合同](../spec/phase-4-l2-mvp-contract.json)为准。
 
 ## 状态路由
 
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 4 exit** | Phase 3 全部边界；current-cart guest control；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM、bounded Lua/audio/persistence resources 与跨 generation lifecycle |
+| **Implemented** | 三执行域 production path；current-cart guest control；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM、bounded Lua/audio/persistence resources 与跨-generation lifecycle |
 | **Target** | guest `load`、external cart transaction 与后续 release qualification |
 | **Deferred** | nested async HostRequest、完整 cart swap/multicart、BBS resolver 和完整 L3 host integration |
 
 第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
 当前 production player 协议由
-[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；阶段能力与完成状态由
+[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；最近关闭能力由
 [`phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json)
-及其前置合同锁定。Phase 0E `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
+及其前置合同锁定。早期 `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
 定义。
 
@@ -91,7 +91,7 @@ export interface PicoMemoryView {
 
 - z8lua 的 `lua_setpico8memory()` 指向同一块地址。
 - JS view 与 WASM pointer 生命周期绑定。
-- v1 **MUST** 固定 WASM memory（`initial === maximum`，growth off）；Phase 0 用 heap/cart stress 确定容量。未来若要允许 growth，必须先用 ADR 修改所有权契约，并实现集中式 view identity 检查与原子重建，普通功能任务不得自行开启。
+- v1 **MUST** 固定 WASM memory（`initial === maximum`，growth off）；当前容量已由 heap/cart stress 锁定。未来若要允许 growth，必须先用 ADR 修改所有权契约，并实现集中式 view identity 检查与原子重建，普通功能任务不得自行开启。
 - debug/test build 可以在内部断言 `memory.buffer` identity 未改变；变化时 fail-fast 为 `E_INVARIANT`，不暴露 production refresh API。
 - Cart ROM 是独立 32 KiB 逻辑对象；load/run/reload 时按规范拷贝到 Base RAM。
 - Renderer 可以复制或转换 8 KiB screen region，但不得把 renderer buffer 变成 Runtime 权威状态。
@@ -215,7 +215,7 @@ export type RuntimeToHost =
 
 ## 6. Boot transaction
 
-> 状态：host-driven load/reset transaction 已实现并通过 Phase 1–3 recovery gate；guest `load`
+> 状态：Implemented；host-driven load/reset transaction 已覆盖 recovery gate，guest `load`
 > 与 external resolver staging 仍是 Target。
 
 一次 cart load 按以下顺序执行：
@@ -234,7 +234,7 @@ export type RuntimeToHost =
 
 ## 7. Frame transaction
 
-> 状态：Phase 4F 已实现 input → VM → CPU classification → audio/frame → persistence 的 committed
+> 状态：Implemented；input → VM → CPU classification → audio/frame → persistence 的 committed
 > transaction；external cart HostRequest 仍是 Target。
 
 每个 logical frame 的权威顺序为：
@@ -253,14 +253,14 @@ export type RuntimeToHost =
 
 ## 8. 时间模型
 
-> 状态：startup/manual slice、bounded interactive scheduler 与 Phase 4F deterministic slow-frame
-> classification 已实现；4G 只验证资源与长稳，不改变 guest cadence。
+> 状态：Implemented；覆盖 startup/manual slice、bounded interactive scheduler 与 deterministic
+> slow-frame classification；资源验证不改变 guest cadence。
 
 - Runtime 维护自己的 accumulator 和 logical simulation clock。
 - `_update()` 模式逻辑速率为 30 Hz；`_update60()` 模式为 60 Hz。
 - display refresh 只决定何时请求/显示最新 frame，不直接决定 update 数。
 - `time()` / `t()` 必须由 logical simulation clock 推导，不等同于 callback 调用计数。官方 Web Player 差分锁定 startup 为 `1/30s`；custom main loop 的首次 `flip()` commit 这个 startup epoch，之后从 continuation 到每个受控 `flip()` 再 commit 一个 30 Hz slice。callback 60 Hz 用 2 个 target-rate slices 表示同一 startup epoch。
-- Phase 1E scheduler 最多追赶 5 ticks/vsync；超出后丢弃 backlog 并发出
+- scheduler 最多追赶 5 ticks/vsync；超出后丢弃 backlog 并发出
   `E_TIME_DISCONTINUITY`，避免 spiral of death。
 - [ADR-011](./adr/011-hidden-tab-pause.md) 已锁定默认 hidden/blur pause：清输入并重建
   scheduler anchor，恢复时不补跑隐藏期间的所有帧。
@@ -294,7 +294,7 @@ export type RuntimeToHost =
 
 ## 11. 性能预算基线
 
-以下预算已由 Phase 4F deterministic CPU oracle 和 Phase 4G 1800 秒 Chrome 长稳重新校准；
+以下预算已由 deterministic CPU oracle 和 1800 秒 Chrome 长稳重新校准；
 它们仍只构成当前 Chrome desktop project profile，不外推为其他平台承诺：
 
 - 60 Hz logical frame 总预算为 16.67 ms。
@@ -304,7 +304,7 @@ export type RuntimeToHost =
 - Runtime 与 renderer 之间不得每帧复制超过必要的 128 × 128 RGBA/frame payload。
 - 稳态运行不得产生与运行时长线性增长的未回收消息或 buffer。
 
-Phase 4G 的 production resource contract 固定为 16 MiB WASM、64 KiB Pico RAM、默认 1 MiB
+production resource contract 固定为 16 MiB WASM、64 KiB Pico RAM、默认 1 MiB
 Lua heap；最低 32 KiB diagnostic profile 必须以 `E_VM_OOM` fail closed。AudioWorklet source queue
 capacity/high-water 为 `66,150/44,100` frames，cartdata hydrate 上限为 4,096 records / 1 MiB。
 主页面 retained heap 的硬门禁使用 CDP 强制 GC 后的 isolate 值；`performance.memory` 只作趋势诊断。

@@ -1,149 +1,47 @@
 # 可执行交付计划
 
-本文件只维护跨阶段 roadmap、状态和 exit gate。当前阶段的任务拆解、文件归属和测试
-命令由 [`docs/phases/`](./phases/) 唯一定义；已完成阶段的详细记录只存在于
-[`docs/evidence/`](./evidence/)。
+本文件只维护跨阶段 roadmap 状态和下一阶段的激活边界。当前 work unit、允许文件和精确验收只由
+[`docs/phases/`](./phases/) 定义；完成细节只存在于 [`docs/evidence/`](./evidence/) 和关闭的机器合同。
 
-## 1. 执行原则
+## 1. Roadmap 规则
 
-- 按可观察 vertical slice 推进，不按“先实现全部 API”推进。
-- 一个阶段只有在自动验证、可审阅 artifact、ADR/兼容矩阵同步后才能完成。
-- 新模块先确定 public contract，再实现；跨模块临时 import 不能成为完成状态。
-- fake-08/zepto8 只作为带 commit/license provenance 的参考，不是规范。
-- Phase 任务展开后进入独立 phase 文档，不在 roadmap、README、09 中复制。
-
-源码布局只由 [`08-source-layout-and-boundaries.md`](./08-source-layout-and-boundaries.md)
-定义；本文件不维护第二份目录树。
+- 按可观察 vertical slice 推进，不按 API 清单顺序填 stub。
+- 新阶段必须先冻结输入、范围、non-goals、owner 章节、机器合同和单一 active work unit。
+- roadmap headline、Target interface 和历史 evidence 都不是 production implementation 授权。
+- 完成阶段只在本页保留一行状态；环境、测量、hash 和执行过程进入 immutable evidence。
+- 源码布局只由 [`08-source-layout-and-boundaries.md`](./08-source-layout-and-boundaries.md) 定义。
 
 ## 2. 当前状态
 
-| Phase | 状态 | 结论或入口 |
+| Phase | 状态 | 关闭证据或入口 |
 | --- | --- | --- |
-| 0S Workspace Scaffold | Complete | [Evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
-| 0A z8lua WASM baseline | Complete | [Evidence](./evidence/phase-0/12-phase-0a-evidence.md) / [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) |
-| 0B Shared Pico RAM | Complete | [Evidence](./evidence/phase-0/13-phase-0b-evidence.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
-| 0C Interop Microbenchmark | Complete | [Evidence](./evidence/phase-0/14-phase-0c-evidence.md) / [ADR-006](./adr/006-interop-hot-path-boundary.md) |
-| 0D Lossless `.p8.png` | Complete | [Evidence](./evidence/phase-0/15-phase-0d-evidence.md) / [ADR-005](./adr/005-lossless-p8png.md) |
-| 0E Coroutine Frame Slice | Complete | [Evidence](./evidence/phase-0/16-phase-0e-evidence.md) / [ADR-017](./adr/017-coroutine-frame-slice-and-fault-containment.md) |
-| 0F Browser Render / Audio Transport | Complete | [Evidence](./evidence/phase-0/17-phase-0f-evidence.md) / [ADR-009](./adr/009-canvas2d-frame-presenter.md) / [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
-| 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
-| 2 Graphics、Memory、Text | **Complete；2A–2F** | [Evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
-| 3 Audio、完整 Input、Persistence | **Complete；3A–3H** | [Evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| 4 L2 / MVP 兼容加固 | **Complete；4A–4H** | [Evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [Machine contract](../spec/phase-4-l2-mvp-contract.json) |
-| 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
+| 0 Architecture Validation（0S–0F） | Complete | [`evidence/phase-0/`](./evidence/phase-0/) |
+| 1 L1 最小可玩闭环（1A–1F） | Complete | [Phase 1 exit](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
+| 2 Graphics / Memory / Text（2A–2F） | Complete | [Phase 2 exit](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
+| 3 Audio / Input / Persistence（3A–3H） | Complete | [Phase 3 exit](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
+| 4 L2 / MVP Compatibility（4A–4H） | Complete | [Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [contract](../spec/phase-4-l2-mvp-contract.json) |
+| 5 L3 / optional BBS integration | Deferred | 未激活；无 production 授权 |
 
-## 3. Phase 0 — 架构验证
+Phase 4 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 corpus。
+Known Differences、coverage limitation 与范围排除以 Phase 4 evidence 和
+[`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 为准，不在 roadmap 重复。
 
-Phase 0 用最小、可丢弃或可重写的 spike 证明混合架构、ABI、memory、codec、frame
-control 和浏览器设备边界成立。0S–0F 已完成；不要继续向旧 spike ABI 添加新产品
-行为。
+## 3. Phase 5 激活边界
 
-### Phase 0F 完成结论
+Phase 5 的候选方向是 L3、guest cart switching 与可选 BBS integration，但默认全部 Deferred。
+激活前必须显式决定并机器化以下边界：
 
-- Canvas2D 是唯一默认 presenter；pixel/DPR/resize/performance 门禁已通过。
-- dedicated Worker → `MessagePort` → AudioWorklet 是唯一默认 PCM transport；
-  44.1/48 kHz 并发 10 分钟 soak 中 steady underrun/overrun/drop 均为 0。
-- composition 已覆盖 trusted gesture、watchdog/recreate、generation reattach 和 dispose。
+1. 目标 capability profile 和合法 corpus；不得用“支持 BBS cart”作为无分母承诺。
+2. caller-provided/local bytes、guest `load`、external resolver、BBS access、缓存和分享各自的授权范围。
+3. current-cart、host-driven sequential load、guest cart swap 和 multicart 的 transaction/rollback 语义。
+4. root HostRequest 与 nested coroutine suspension 的支持级别；若改变 ADR-017，先提交替代 ADR。
+5. 网络、持久化、版权、Terms、隐私和资源上限；默认不得自动访问 BBS 或跟踪第三方 cart bytes。
 
-详细数据与历史执行契约见
-[`17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)。
+激活产物至少包括：Accepted/Rejected 决策、版本化 `spec/` 机器合同、一个 active phase 文档、
+唯一 active work unit、精确 Chrome gate 和前置 Phase 4 evidence hash。条件未满足时只允许调研、
+只读审计或独立 spike，不允许把 Target 代码路径接入 production。
 
-### Phase 0 Exit Gate
+## 4. Phase 5 之外
 
-**Status: Passed by Phase 0F.** 以下进入 Phase 1 前的条件已全部由自动测试、
-Chrome device-run、Accepted ADR 和归档 evidence 覆盖：
-
-- 0S–0F 自动测试通过；真实 Chrome 手势/音频 evidence 可作为版本化 device-run。
-- z8lua pin、patch、license、fixed memory、interop hot-path 和 HostRequest 限制已有
-  Accepted ADR/evidence。
-- ADR-009 已选择唯一默认 presenter；pixel/resize/context/performance gate 通过。
-- ADR-010 已选择唯一默认 PCM transport；prebuffer 后 10 分钟 underrun=0，queue
-  有界，SAB 是否需要已有明确结论。
-- ADR-014 的 canonical PCM event/sample 与 44.1/48 kHz device resampling 证据已记录。
-- custom-loop startup clock、Worker watchdog/recreate 和 stale generation 不变量保持。
-- 02/04 的状态、06 的兼容矩阵和 08 的实际边界与源码一致。
-- 失败 fallback 没有未决阻断项，`pnpm run verify` 通过。
-
-## 4. Future roadmap
-
-未来阶段在激活前只保留目标和 exit headline；激活时必须创建独立 phase 文档，从当前
-源码重新确认输入，不得直接照 roadmap 实现。
-
-### Phase 1 — L1 最小可玩闭环
-
-目标：让项目原创单 cart 具备输入、逻辑、像素输出和基本故障恢复。
-
-主要范围：`.p8` parser、CartSession/reset、callback/custom loop、基础
-`cls/pset/line/rect/circ`、keyboard `btn/btnp`、Phase 0F presenter 和最小 Player shell。
-
-Exit headline：30/60/custom-loop carts 可逐帧复现；reset/fault 后 session、RAM、input
-和 placeholder audio 状态正确；UI 能重新加载。
-
-**Status: Passed by Phase 1F.** 三个项目原创 cart 的 Node real-WASM/Chrome production Worker
-trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload 和 ordinary 60Hz p95
-门禁通过。兼容声明严格限于 L1 bounded profile，详见
-[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
-
-### Phase 2 — Graphics、Memory 与 Text
-
-> 状态：Complete；2A–2F。以下只保存 roadmap headline；完成细节见
-> [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)。
-
-目标：完成大多数可视 cart 所需 graphics/memory/text 行为。
-
-主要范围：palette/clip/camera/fillp、sprite/map/tline、P8SCII/custom font、完整
-memory API 和对应 framebuffer/RAM golden。
-
-Exit headline：图形与 remap conformance 覆盖关键交互，优化仍服从 ADR-006 ladder。
-
-**Status: Passed by Phase 2F.** 两个项目原创 60Hz cart 在 Node real-WASM fresh/reset 和
-Chrome production Worker/Canvas 路径得到相同的 frame、screen、palette、RGBA 与相关 RAM
-oracle；graphics/text p95 均约 `0.4ms`，资源故障、stale generation 拒绝和有效 cart 恢复通过。
-兼容声明严格限于 standard packed-4bpp project profile，开放 P0/P1 为 `0`。
-
-### Phase 3 — Audio、完整 Input 与 Persistence
-
-> 状态：Complete；3A–3H。以下只保存 roadmap headline；完成细节见
-> [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
-
-目标：完成可听、可控制、可保存的 player runtime。
-
-主要范围：SFX/music synth、现有 keyboard/`btnp` 回归、gamepad/touch 与
-multiplayer/devkit input、cartdata、IndexedDB 和 reload/cstore 的已授权同步-cache 路径。
-
-Exit headline：canonical audio golden、device output、input traces、persistence
-transaction/error/recovery 全部通过。
-
-**Status: Passed by Phase 3H.** 两个项目原创 flow 在 Node real-WASM 与 Chrome production
-Worker 获得一致的 screen/palette oracle；canonical PCM、input/RAM、cartdata/overlay、真实
-AudioWorklet/Canvas/IndexedDB、120-tick p95、60 秒 soak、fault/stale/persistence recovery 和
-dispose 门禁通过。兼容声明严格限于 Phase 3 project profile，开放 P0/P1 为 `0`。
-
-<a id="phase-4-activation-baseline"></a>
-
-### Phase 4 — L2 / MVP 兼容加固
-
-> 状态：Complete；4A–4H。以下只保存 roadmap headline；完成细节见
-> [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
-
-目标：以获准的代表 cart corpus 驱动剩余 API、CPU budget、性能和长稳测试。
-
-主要范围：先建立合法 corpus/claim 口径与 coverage gap inventory，再按可观察失败补齐常用
-API/语义，校准 CPU/resource budget，并固化多 cart lifecycle、30-minute Chrome soak 和
-release/Known Differences 输出。这里的多 cart lifecycle 仅指 host-driven sequential load/reset/
-dispose 压力，不授权 guest `load`、external resolver 或 multicart。不得按 API inventory 顺序盲目填 stub。
-
-Exit headline：兼容矩阵和 Known Differences 可发布；Chrome release gate、资源上限、
-30-minute soak 与多 cart lifecycle 通过。
-
-**Status: Passed by Phase 4H.** 7-case 项目原创 corpus 在 Node real-WASM 与 Chrome production
-path 均为 `C3`，playable rate `100%`；CPU/resource、30-minute soak、20-load lifecycle 与 release
-cleanup gate 通过。兼容声明严格限于 Chrome/Chromium desktop L2/MVP project profile；不包含
-official bit-exact、第三方/BBS cart 或 28 项仍缺 official edge vectors 的 required VM builtin。
-
-### Phase 5 — L3 与可选 BBS 集成
-
-目标：在独立授权、服务条款和安全评审后评估 multi-cart、BBS resolver 与分享能力。
-
-该阶段默认 Deferred。不得把 BBS 自动访问、第三方 cart 缓存或通用 nested async
-suspension 混入 Phase 1–4。
+编辑器、命令行、SPLORE 替代、公共 cart 镜像、任意 URL/文件系统访问、非 Chrome 浏览器和
+未经授权的第三方内容分发不因 Phase 5 名称自动进入范围；如需评估，必须另立产品决策与 phase。

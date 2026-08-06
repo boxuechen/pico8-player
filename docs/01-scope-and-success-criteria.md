@@ -79,41 +79,26 @@
 | L2 Playable | 主流单 cart 游戏可完整游玩 | audio、gamepad/touch、persistence、常用 draw/audio state、pause/reset |
 | L3 Extended | 复杂和多 cart 内容可运行 | `load/reload/cstore`、cart swap、custom font、advanced registers、兼容数据库 |
 
-Phase 1 已通过 **L1 bounded profile**：项目原创 30Hz callback、60Hz `.p8.png` callback 和
-30Hz custom-loop cart 在固定 trace 下可重复，Chrome keyboard/player/fault path 通过。该结论只
-覆盖 Phase 1 机器契约列出的基础 API，不等于完整 L1 API 面、官方 bit-exact 或第三方 cart
-兼容声明；具体边界见 [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
+当前已关闭 **L2/MVP project profile**：范围严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop、
+项目原创 7-case corpus 和已发布 Known Differences。它不表示 official bit-exact、第三方/BBS cart
+成功率或完整 L3。精确分母、未验证 API 与资源结果只由
+[兼容性当前口径](./06-testing-compatibility.md#154-当前发布-profile)和
+[MVP exit evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)维护。
 
-Phase 2/3 已分别关闭项目自有 graphics/memory/text 与 audio/input/persistence profile，证明
-核心 production path 可组合、可恢复且满足当前 Chrome 门禁；完成边界见
-[Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 和
-[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
+L3 是后续候选阶段；在 active phase 与机器合同明确扩展范围前，不改变当前产品承诺。
 
-Phase 4 已通过 **L2/MVP project profile**：7 个项目原创 case 在 Node real-WASM 与 Chrome
-production path 均为 `C3`，playable rate `7/7`；CPU/fixed-memory、30 分钟长稳、多 cart lifecycle、
-fault recovery 和 resource release 通过。该结论只适用于 PICO-8 v0.2.7、Chrome/Chromium desktop
-和已发布 Known Differences；28 项 required VM builtin 仍是 accepted unverified baseline。因此它
-不表示 official bit-exact、广泛第三方/BBS cart 或第 6 节之外的正式 release qualification。见
-[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
+## 6. 当前成功标准
 
-首个对外 MVP 的目标是 L2。L3 是后续兼容阶段，不阻塞核心架构稳定。
+当前 L2/MVP profile 必须持续满足：
 
-## 6. MVP 成功标准
+1. cart code 只在可终止 Worker 内运行，fault/watchdog 后可创建 fresh session。
+2. `.p8` / `.p8.png`、30/60/custom-loop、RAM/graphics/audio/input/persistence 的项目 profile 回归通过。
+3. Chrome/Chromium desktop 的 production path、fixed resources、long-run 与 lifecycle release gate 通过。
+4. 当前公开分母中无开放 P0/P1/P2，所有差异和未验证覆盖面都在兼容性文档中可见。
+5. corpus 不包含未经授权取得或再分发的 BBS cart fixture。
 
-MVP 必须同时满足：
-
-1. 所有 Phase 0 spike 通过，且关键 ADR 已落档。
-2. Runtime 完全运行在 Worker；构造无限循环 cart 后，主 UI 仍可响应并能重启 Runtime。
-3. `.p8` 与 `.p8.png` parser 的有效/无效 fixture 测试通过。
-4. 30 fps 和 60 fps conformance cart 的 logical update count、draw count 和 input edge 一致。
-5. 核心 RAM alias、screen、gfx、map、cartdata 测试通过。
-6. 基础 graphics golden tests 在所有支持浏览器中像素一致。
-7. 基础 SFX/music 能连续播放 10 分钟且无可检测 underrun。
-8. keyboard、至少一种标准 Gamepad 和 touch overlay 可用。
-9. reload、reset、pause、visibility change 和 AudioContext resume 行为有自动或可重复手工测试。
-10. 不包含未经授权取得或再分发的 BBS cart fixture。
-
-精确性能与浏览器门禁由 [06-testing-compatibility.md](./06-testing-compatibility.md) 定义。
+精确分母、性能、浏览器命令和 release 门禁只由
+[06-testing-compatibility.md](./06-testing-compatibility.md) 定义；本节不复制测量数字。
 
 ## 7. 架构不变量
 

@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（production implemented through Phase 4G；Phase 4 exit complete；Target 内容不授权实现）
+> 状态：Living boundary contract（当前 production 边界 + Deferred target；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -12,17 +12,13 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
-| **Implemented through Phase 3 exit** | browser-neutral four-channel SFX/music/P8SCII synth；fixed eight-player + devkit input；synchronous cartdata + Worker-owned IndexedDB；current-cart `reload/cstore` COW repository；dedicated PCM、production Chrome cross-oracle、performance/soak/recovery/dispose gate |
-| **Implemented through Phase 4E** | root guest `run/stop` VM control outcome；copy-owned `stat(6)` parameter；system-register-only guest `reset`；Worker same-session fresh runtime、audio reset、persistence flush 与 public `runtime-control` event |
-| **Implemented through Phase 4F** | deterministic 4M/s Q16.16 CPU accounting；`stat(1/7)`；boot/frame `cpuInstructions/cpuFractionRaw/slowFrame`；ordinary slow-frame atomic commit 与独立 1M instruction safety cap |
-| **Implemented in Phase 4G** | Worker composition 可注入 bounded Lua heap diagnostic profile；production 默认仍为 1 MiB；AudioWorklet queue limits 由唯一 owner 导出；OOM/recovery 与跨 generation resource release 有 Node/Chrome gate |
+| **Implemented** | browser-neutral CartSession/RuntimeCore；canonical RAM/graphics/audio/input/persistence；root controls；deterministic scheduler/CPU accounting；Worker/Canvas/AudioWorklet/IndexedDB adapters；bounded resource lifecycle |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
+| **Deferred** | include/external resolver、label presentation、advanced Graphics、guest `load`、完整 cart swap/multicart、nested async HostRequest 与 BBS integration |
 
-Phase 0E control 协议以
-[`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
-boundary 以 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)为准。
+早期 control baseline 以
+[`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；browser boundary
+baseline 以 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)为准。
 本文不得被用来提前实现未激活 phase 范围外的完整 Runtime。
 
 ## 1. 文档目的与规范用语
@@ -74,7 +70,7 @@ TypeScript 负责：
 | PICO Base RAM allocation/pointer lifetime | z8lua bridge context | `PicoMemoryLease`；固定 typed views |
 | PICO Base RAM runtime 语义与 hardware writes | `PicoRam`（Worker 内） | 对同一 lease 的同步 typed views；不另分配 RAM |
 | 当前 normalized Cart ROM/code snapshot | RuntimeCore `CartSession` | session-private byte copies 用于无 payload `reset`；只暴露 frozen identity/format/version metadata |
-| 当前 cart 原始 source bytes | main `PlayerRuntimeClient`（Phase 1E）/ future repository | 用于 Worker watchdog 重建、重新 decode 与 future resolver；不进入逐帧 core state |
+| 当前 cart 原始 source bytes | main `PlayerRuntimeClient` / future repository | 用于 Worker watchdog 重建、重新 decode 与 future resolver；不进入逐帧 core state |
 | Lua/协程/GC | z8lua WASM | ABI 命令，不直接读内部结构 |
 | 图形 draw state | RAM `0x5f00..` | `Graphics` 每次从 RAM 读取/写回 |
 | SFX/Music 播放状态 | `AudioSynth` | 只由逻辑 tick/采样推进 |
@@ -87,28 +83,13 @@ TypeScript 负责：
 
 同一状态不得有两个可写权威来源。派生缓存必须能从权威状态重建。
 
-### 2.3 Phase 0 决策与验证账本
+### 2.3 决策归属
 
-下表保留 Phase 0 decision ledger 的当前结论。`Accepted` 不能由普通 spike 改写；实验失败时
-必须新建 ADR。仍为 `Proposed` 的阈值或兼容范围不构成实现授权，必须由后续 active phase
-明确认领、验证并同步本文。
-
-| ID | 状态 | 方向 | Phase 0 所需证据 |
-|---|---|---|---|
-| `P0-RT-01` | Accepted（ADR-013；Phase 4G passed） | WASM memory 固定 `initial === maximum`，不增长；production 为 16 MiB / 默认 1 MiB Lua cap | descriptor、heap/OOM、typed-view identity、20-load lifecycle 与 1800 秒 Chrome 长稳通过 |
-| `P0-RT-02` | Accepted / Phase 0D passed（ADR-005） | `.p8.png` 不经 Canvas；项目自有 bounded TS PNG/zlib/DEFLATE/code decoder | raw/legacy/PXA ROM/source hash、malformed/limit、architecture、manifest 与许可证证据已通过 |
-| `P0-RT-03` | Accepted / Phase 0F passed（ADR-010） | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM；不实现 relay/SAB fallback | Chrome/Chromium transferable `MessagePort`、44.1/48 kHz 并发 10 分钟 bounded-queue soak 已通过 |
-| `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
-| `P0-RT-05` | Project policy Implemented；完整官方兼容仍 Proposed | fresh VM graph；64 KiB clear + hardware defaults + Cart ROM `0..0x42ff` copy；input/audio/frame reset；cartdata prehydrate；current-cart overlay reattach | Phase 1–3 lifecycle/RAM/reload/cartdata tests 已通过；official warm-run preservation 仍待代表 corpus/differential |
-| `P0-RT-06` | Accepted with constraints（ADR-017；Phase 0E） | root host-call 可恢复；nested guest coroutine 固定 unsupported，L3 外部数据只用预供给/同步 cache | root byte-string continuation 与 nested sentinel tests 已通过；一般 bubbling 需新 ADR |
-| `P0-RT-07` | Mechanism Accepted / thresholds Proposed（ADR-017） | Window command watchdog terminate/recreate + generation；各命令 deadline 后续校准 | fake stale-generation test 与 Chrome JS-stall recovery 已通过；250ms/2s/8ms 尚不作为最终 release threshold |
-| `P0-RT-08` | Accepted（ADR-013；Phase 0B/0C passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 与 real-WASM interop benchmark 已通过 |
-| `P0-RT-09` | Accepted（ADR-015；Phase 0S passed） | 四 package DAG + main/worker/worklet execution domains | exports/project references、architecture tests 与 negative fixtures 已通过 |
-| `P0-RT-10` | Accepted（ADR-017；Phase 0E passed） | `FrameSliceRuntime` 通过 `FrameVmPort` 驱动 callback/custom loop；startup epoch 和后续 logical time 只按 committed slice 推进 | 官方 Web Player clock capture、60-step counts、Q16.16 time、input/frame RAM hash、budget/error/HostRequest 与 Chrome Worker gate |
-
-`P0-RT-03` 现为与系统架构图一致的唯一默认数据路径。Window relay
-与 SAB 未实现；任何 fallback 都必须有可复现失败、新背压证据并取代 ADR-010，
-不得成为无规则运行时分支。
+历史 decision ledger 已由 [`docs/adr/`](./adr/) 和
+[`07-decisions-risks-open-questions.md`](./07-decisions-risks-open-questions.md) 接管，本文件不复制其
+阶段状态。当前必须保持的结论包括：fixed WASM memory、bytes-only `.p8.png`、dedicated
+MessagePort audio、四 package/三 execution-domain 边界、root-only recoverable HostRequest，以及
+callback/custom-loop committed-slice clock。改变其中任一项必须先替代对应 Accepted ADR。
 
 ## 3. 运行拓扑与数据流
 
@@ -205,17 +186,17 @@ interface IncludeResolver {
 }
 ```
 
-Phase 1B 已实现同步、无 I/O 的 `decodeCart(Uint8Array)`、`decodeP8(Uint8Array)` 和
+当前实现提供同步、无 I/O 的 `decodeCart(Uint8Array)`、`decodeP8(Uint8Array)` 和
 `decodeP8Png(Uint8Array)`；`CartParser`/`CartSource`/`IncludeResolver` 是后续 loader facade
 目标。`decodeCart` **MUST** 先检查文件 magic，而不是信任扩展名或 `mediaType`。
 
 `CartIdentity` 由 `@pico8-web/contracts` 拥有且只含内容 SHA-256。display name、locator、
 origin 和 future canonical resolver ref 是 loader/session metadata，不得污染 raw-byte content
-identity。`ParsedCart` 和 format-specific metadata 由 `@pico8-web/cart-codec` 拥有；Phase 0D
+identity。`ParsedCart` 和 format-specific metadata 由 `@pico8-web/cart-codec` 拥有；早期 contract
 字段 `cartVersion`/`luaSource` 暂作为 `version`/`code` 的兼容 alias。
 
 record、identity 和 warning records 在运行时 freeze；typed-array 元素受 JavaScript 限制不能
-freeze。每次 decode 返回无内部 alias 的 caller-owned snapshot；Phase 1C `CartSession.load`
+freeze。每次 decode 返回无内部 alias 的 caller-owned snapshot；`CartSession.load`
 会再次复制 ROM/code 并且每次 boot 只把 generation-local copy 交给 runtime，因此 caller 后续
 修改 decoder snapshot 不影响 reset。需要 `cstore` 时仍须创建 copy-on-write overlay。
 
@@ -233,7 +214,7 @@ freeze。每次 decode 返回无内部 alias 的 caller-owned snapshot；Phase 1
 
 `__label__` 是展示数据，不得覆盖 `__gfx__`。空缺 section 对应 ROM 区域填零。所有 section 汇总后，`rom.byteLength` 必须严格为 `0x8000`。
 
-Phase 1B 已锁定的 ingestion policy 还包括：可选 UTF-8 BOM、LF/CRLF/mixed 输入统一为 LF；
+当前 ingestion policy 还包括：可选 UTF-8 BOM、LF/CRLF/mixed 输入统一为 LF；
 known section 不可重复；data row 使用官方完整宽度；label 以 base32 palette index 验证但
 不暴露 presentation buffer；map rows 32..63 与 gfx2 共享区按位 OR。非法 UTF-8、无法映射
 的 Unicode、lone CR、row 溢出均 fail closed，并以原始输入 byte offset 诊断。无 resolver
@@ -374,27 +355,27 @@ interface PicoRam {
 }
 ```
 
-Phase 0B 已在 `@pico8-web/contracts` 落地 `PICO_RAM_SIZE` / `PicoMemoryLease`，
-并在 `@pico8-web/z8lua-bridge` 落地 bounded `Phase0BMemoryBinding`。该 binding
+`@pico8-web/contracts` 提供 `PICO_RAM_SIZE` / `PicoMemoryLease`；隔离 probe 的
+`Phase0BMemoryBinding` 只用于历史 boundary 验证。该 binding
 只证明 adapter 内 zero-copy views、lease freshness 与 canonical mapper，不是完整
 `PicoRam`、`VmPort` 或 production `p8w_*` lifecycle。
 
-Phase 2A 已在 production `FrameVmPort` 增加 browser-neutral
+production `FrameVmPort` 提供 browser-neutral
 `PicoLogicalMemoryPort { memoryLeaseId, mapAddress() }`。z8lua adapter 对每次 mapping 验证
 固定 lease、handle 与 buffer identity，再调用 `_p8w_map_address`；RuntimeCore internal
 `PicoRam` 组合 lease 和该 port，提供 logical read/write/fill/copy。`FrameSliceRuntime` 的
 packed-screen snapshot 与 `L1Graphics` pixel path 均使用这条路径。Emscripten module、handle
 和 `WebAssembly.Memory` 仍不越过 adapter boundary。
 
-v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值，并对 z8lua heap 设置经 Phase 0 校准的上限，避免 `memory.grow()` 使 JS typed views 失效。真实 `WebAssembly.Memory` 只由 z8lua bridge 持有；RuntimeCore 只接收 runtime-neutral `PicoMemoryLease`，验证固定长度、范围和 session-local `leaseId`。Bridge 可以在 debug/test build 比较 `memory.buffer` identity 并在变化时立即触发 `E_INVARIANT`，但不能把 view 重建当成 production growth 支持；不满足固定内存的 artifact 不得发布。
+v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值，并使用机器契约锁定的 z8lua heap 上限，避免 `memory.grow()` 使 JS typed views 失效。真实 `WebAssembly.Memory` 只由 z8lua bridge 持有；RuntimeCore 只接收 runtime-neutral `PicoMemoryLease`，验证固定长度、范围和 session-local `leaseId`。Bridge 可以在 debug/test build 比较 `memory.buffer` identity 并在变化时立即触发 `E_INVARIANT`，但不能把 view 重建当成 production growth 支持；不满足固定内存的 artifact 不得发布。
 
-Phase 4G 把 production 数值锁定为 16 MiB fixed WASM / 1 MiB Lua heap；`luaHeapLimit` 只作为
+production 数值固定为 16 MiB WASM / 1 MiB Lua heap；`luaHeapLimit` 只作为
 Worker diagnostic composition option，用于 32 KiB OOM/recovery gate，不是按 cart 或宿主压力调整的
 自适应策略。Worklet queue capacity/prebuffer/low/high water 常量由 `pcm-queue.ts` 唯一拥有并导出。
 
-`PicoRam` 的 layout views 是物理 64KiB，不把 raw `DataView` 连续访问伪装成 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还会绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。Phase 0B 已用 `P0-RT-08` 证明 upper RAM、`0x5f54/0x5f55` 与 direct operators 收敛；未来实现不得把 raw physical `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
+`PicoRam` 的 layout views 是物理 64KiB，不把 raw `DataView` 连续访问伪装成 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还会绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。upper RAM、`0x5f54/0x5f55` 与 direct operators 已由共享 mapper 测试证明收敛；未来实现不得把 raw physical `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
 
-Phase 2A 已关闭上述 production gap：`peek/poke` family、`memcpy/memset`、direct operators、
+当前 production 已关闭上述 gap：`peek/poke` family、`memcpy/memset`、direct operators、
 RuntimeCore graphics 与 frame snapshot 均由同一 mapper 决定 physical byte；`copyRam()` 继续只作
 明确命名的 physical diagnostic snapshot，不可用于 guest/remapped semantics。
 
@@ -406,20 +387,20 @@ RuntimeCore graphics 与 frame snapshot 均由同一 mapper 决定 physical byte
 - Host 内部方法必须严格验证范围，失败返回结构化 internal error；Guest 地址归一化只能发生在 API adapter。
 - `resetForColdBoot()` 必须产生可复现的全零初态，再应用硬件默认寄存器。
 - `resetForCartRun()` 必须集中实现“哪些区清零、哪些区保留、何时把 ROM `0..0x42ff` reload 到 RAM”的矩阵。禁止各模块自行 `fill(0)`。
-- Phase 1C 的 L1 cold-run policy 已固定为：每次 load/reset 创建全新 VM/router/runtime/RAM
+- 当前 cold-run policy 固定为：每次 load/reset 创建全新 VM/router/runtime/RAM
   object graph；64 KiB 全零后设置 `0x5f54=0x00`、`0x5f55=0x60`，再复制 Cart ROM
   `0x0000..0x42ff`。input 固定从六键全零开始，frame clock/frame id 由新 runtime 重建。
 - 上述 policy 已由真实 z8lua RAM/lifecycle 测试覆盖，但不是完整官方 `run()` compatibility
   声明。fake-08 的 warm preservation 行为仍只作参考；未来 `reload()`、`cartdata()`、GPIO、
-  AudioSynth 和完整 hardware defaults 必须由对应 phase 与官方 golden 扩展矩阵。
+  AudioSynth 和完整 hardware defaults 必须由 active phase 与官方 golden 扩展矩阵。
 - `0x5e00..0x5eff` 在新 cart 执行时必须先处于未映射/零状态；成功 `cartdata(id)` 后才加载对应持久化镜像。
 
 不能只依赖高层 Graphics/API hook 做 dirty tracking：cart 可以通过 `poke`、`memcpy` 或 VM 的低层 memory path 改 screen/cartdata。首版每个呈现帧解码固定 8KiB screen，并在逻辑 tick 后比较 256-byte cartdata；这是正确性优先的有界成本。
 
 ## 7. Graphics
 
-> 状态：Phase 2 exit 已实现 standard 128×128 packed-4bpp graphics/text profile 与
-> Phase 0F presenter boundary；advanced screen/bitplane 和 `tline(bits)` 仍 Deferred。
+> 状态：Implemented。当前覆盖 standard 128×128 packed-4bpp graphics/text、presenter boundary
+> 与 bounded `tline()` precision profile；advanced screen/bitplane 仍 Deferred。
 
 ### 7.1 分层
 
@@ -428,7 +409,7 @@ Graphics 在 Worker 内做确定性 software rendering，直接读写 mapped pac
 palette-to-RGBA、Canvas2D 最近邻呈现和 letterbox。精确 DTO 由 app transport source 拥有，
 本节不维护第二份 TypeScript wire interface。
 
-Phase 2 exit 实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`、
+当前实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`、
 `graphics/p8scii-text.ts` 与 `graphics/p8scii-font.ts`：支持
 `cls/color/camera/clip/pal/palt/fillp/pget/pset/line/rect/rectfill/circ/circfill/oval/ovalfill`，
 使用 mapped packed screen，并从 `0x5f00..0x5f3f` 与 `0x5f60..0x5f6f` 即时读写 draw state。
@@ -441,8 +422,8 @@ RAM，并复用 sprite raster；lower map 在 `0x1000..0x2fff` ring 中排列，
 font；cursor、scroll、camera/clip 与 palette 仍经过同一 RAM/pixel path。P8SCII audio
 通过窄 sink 同步进入唯一 AudioSynth；timed controls 仍只消费、不产生 suspension。`RuntimeFrame`
 另外快照 `0x5f10..0x5f1f` 的 16-byte display
-palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当前兼容声明仅是 standard
-128×128 packed 4bpp；bitplane、advanced screen mode 与 `tline(bits)` precision overload 延后。
+palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当前兼容声明包含 standard
+128×128 packed 4bpp 与 `tline()` 13/16 fractional-bit profile；bitplane 和 advanced screen mode 延后。
 
 ### 7.2 必须保持的行为
 
@@ -460,8 +441,8 @@ palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当�
 
 ## 8. AudioSynth 与 AudioWorklet
 
-> 状态：Implemented。SFX/music/P8SCII AudioSynth 与 production Worker PCM 已由 Phase 3
-> exit gate 覆盖；Phase 0F transport/queue/device adapter 保持 ADR-010 边界。
+> 状态：Implemented。SFX/music/P8SCII AudioSynth、production Worker PCM 与
+> transport/queue/device adapter 保持 ADR-010 边界。
 
 ### 8.1 责任边界
 
@@ -502,8 +483,8 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 ## 9. Input
 
-> 状态：Implemented。controller 与 input-only devkit `stat()`、mouse/keyboard event batch、
-> pointer-lock lifecycle 均由 Phase 3 exit gate 覆盖。
+> 状态：Implemented。覆盖 controller、input-only devkit `stat()`、mouse/keyboard event batch
+> 与 pointer-lock lifecycle。
 
 RuntimeCore 在每个 boot/step transaction 前锁存固定 `PicoInputSnapshot.controllers[8]`，写
 `0x5f4c..0x5f53` 并按 30/60Hz 与 `0x5f5c/0x5f5d` 计算独立 `btnp`。HostRequest completion
@@ -523,15 +504,14 @@ pointer lock 和 event normalization 仍由 app 拥有。
 
 ## 10. FrameScheduler
 
-> 状态：Phase 1E 已实现 `FrameScheduler` 的 browser-neutral interactive decision 子集：
+> 状态：Implemented。`FrameScheduler` 覆盖 browser-neutral interactive decision 子集：
 > 30/60Hz accumulator、首 pulse anchor、0..5 ticks、overflow drop/diagnostic 与 pause/resume
-> re-anchor。Phase 4F 已锁定 deterministic 单 transaction CPU classification；不会按宿主性能自动
+> re-anchor，以及 deterministic 单 transaction CPU classification；不会按宿主性能自动
 > 合并 update、跳过 draw 或降频。
 
-Phase 1F 已从 production Worker 外部用 fixed synthetic pulses 重放 30/60/custom carts；具体
-设备测量只保存在 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。该
-bounded-profile 结果不表示下方 target `stepExact` API 已实现，也不替代 Phase 2/4 stress
-corpus。
+production Worker 已用 fixed synthetic pulses 重放 30/60/custom carts；历史设备测量只保存在
+[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。下方 `stepExact` API 仍是
+Target，不得从已实现 interactive scheduler 推导为 production API。
 
 ### 10.1 双模式
 
@@ -569,7 +549,7 @@ type StepResult = Readonly<{
 
 ### 10.3 CPU budget 与慢帧
 
-> 状态：Implemented by Phase 4F；机器 oracle 见
+> 状态：Implemented；机器 oracle 见
 > [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json)。
 
 - compatibility cost 只使用 z8lua deterministic guest instruction count，参考速率固定为每秒
@@ -589,9 +569,8 @@ type StepResult = Readonly<{
 
 ## 11. Persistence
 
-> 状态：Implemented。browser-neutral 同步 guest mirror、Worker-owned IndexedDB
-> hydrate/commit transaction、migration、lifecycle flush 与 recoverable diagnostics 已由
-> Phase 3 exit gate 覆盖。
+> 状态：Implemented。覆盖 browser-neutral 同步 guest mirror、Worker-owned IndexedDB
+> hydrate/commit transaction、migration、lifecycle flush 与 recoverable diagnostics。
 
 ### 11.1 同步 guest、异步浏览器
 
@@ -611,7 +590,7 @@ type StepResult = Readonly<{
 
 ## 12. Worker、watchdog 与消息协议
 
-> 状态：Mixed；Phase 0E bounded subset 已实现，完整协议仍是 Target。
+> 状态：Mixed；当前 wire protocol 已实现，下面包含 resolver 消息的完整协议仍是 Target。
 
 ```ts
 type RuntimeCommand =
@@ -813,108 +792,18 @@ type SerializedRuntimeError = Readonly<{
 - 错误 message 面向开发者，UI 文案由主线程映射；错误对象不得包含整个 cart code、用户路径或未脱敏 URL。
 - 捕获未知异常时转成 `E_INVARIANT`，保留安全的 `causeName`，不得跨 Worker 丢失 stage/session/tick。
 
-## 16. 实施顺序
+## 16. 变更与验证路由
 
-### Milestone A：可验证的最小闭环
+- 实施顺序、允许文件和 observable exit：只由当前
+  [active phase](./phases/README.md) 定义。
+- 单功能、MVP 与 release 门禁：只由
+  [测试兼容契约](./06-testing-compatibility.md#16-definition-of-done) 定义。
+- package owner、import edge、composition root 与 public export：只由
+  [源码边界契约](./08-source-layout-and-boundaries.md) 定义。
+- 产品 non-goals、浏览器和兼容等级：只由
+  [范围文档](./01-scope-and-success-criteria.md) 定义。
+- 已完成能力、性能数字和环境 hash：只从 [evidence](./evidence/) 与机器合同按需追溯。
 
-1. `CartParser`：`.p8` + `.p8.png` + raw/legacy/PXA golden。
-2. 固定 WASM memory 中的 `PicoRam`，完成共享 64KiB view。
-3. Graphics：`cls/pset/pget/spr` + 8KiB screen → RGBA。
-4. Input：P1 六键、按 tick 锁存。
-5. FrameScheduler：`_init/_update/_update60/_draw/flip`。
-6. Worker protocol + 主线程 watchdog。
-7. 静音运行一组获准测试 carts，输出 frame/RAM hash。
-
-### Milestone B：Player 完整基础能力
-
-1. 补齐官方 graphics/map/memory API 与 draw/hardware state。
-2. AudioSynth + AudioWorklet + 10 分钟 underrun soak test。
-3. IndexedDB cartdata，直接 poke dirty detection。
-4. Gamepad、P2、移动端输入、pause/resume。
-5. Runtime error overlay 与可复制诊断。
-
-### Milestone C：兼容性工程
-
-1. P8SCII/control codes/custom font、devkit input、GPIO policy。
-2. `load/reload/cstore` host suspension、多 cart 和 breadcrumb。
-3. 不同 PICO-8 cart version 的兼容矩阵。
-4. graphics/audio/API conformance corpus、fuzz 与性能回归。
-5. 仅在 profile 证明需要时把热点下沉 WASM。
-
-每个 milestone 必须保持模块边界，不允许用 UI 特判 cart 来“先跑起来”。
-
-## 17. 验收标准
-
-### 17.1 CartParser
-
-- 项目原创 raw、legacy、PXA 合法向量的 code/ROM SHA-256 完全匹配，并覆盖
-  stored/fixed/dynamic DEFLATE、filter 0–4、拆分 IDAT 与 current literal/backref。
-- `.p8` parser 与官方导出 differential 属于后续增量，不阻塞 Phase 0D `.p8.png` codec。
-- 160×205 RGBA high bits 的 property 变化不改变 payload，因为解析路径不经过 Canvas。
-- malformed PNG/code corpus 和随机 fuzz 输入不会越界、无限循环或分配超过上限；只返回定义内错误码。
-
-### 17.2 RAM/Graphics
-
-- z8lua 的 direct memory operator 与 TS `PicoRam.bytes` 读到同一地址、同一值，无每帧 RAM copy。
-- 共享 GFX2/MAP2、screen nibble 顺序、palette、clip、camera、remap、fillp 和 custom font 各有独立 cart golden。
-- 同一输入运行 10,000 ticks，RAM/frame hash 在支持的 Chrome/Chromium 版本一致。
-
-### 17.3 Audio
-
-- 固定 SFX/music vectors 的 sample 数精确，60Hz 长时间运行无 0.5-sample 漂移。
-- 同 build 重复运行 PCM16LE hash bit-exact；与官方/fake-08 参考的差异有可审计报告和兼容 issue。
-- 完成 AudioContext 解锁与规定 prebuffer 后再开始计量；前台正常播放 10 分钟时目标浏览器 underrun 计数严格为 0。启动前事件单独记录、不混入窗口；故障注入强制 underrun 时游戏 tick 不改变。
-
-### 17.4 Input/Scheduler
-
-- 记录的逐 tick replay 重放后 RAM/frame/audio hash 一致。
-- 30Hz、60Hz、rAF jitter、后台恢复、catch-up 上限分别有 fake clock 测试。
-- `btnp` edge/repeat 不受浏览器键盘 repeat 设置影响；blur 后无 stuck key。
-
-### 17.5 Persistence/Multi-cart
-
-- `cartdata` 首次 false/全零、再次 true/完整 256 bytes；direct poke、swap、reload 后数据正确。
-- IndexedDB 写失败可见且不伪造成功；旧 schema fixture 可迁移。
-- `load` 原子切换，旧 generation 的 frame/audio 不会泄漏；外部 `reload` 在 host request 返回后从调用点继续。
-- resolve cancel/race、目标损坏、网络失败均有状态机测试。
-
-### 17.6 Worker/可靠性
-
-- 测试 cart 的无穷循环触发 instruction budget；禁用指令 hook 的故障注入会被主线程 watchdog 终止。
-- Worker fault 后 UI 线程仍可交互，并能用原始 cart + 已提交存档创建全新 session。
-- 所有 worker 消息通过 runtime schema 校验；乱序、重复、旧 generation 消息被安全忽略。
-
-### 17.7 性能门槛
-
-- CI 必须保存 `16K pset/frame`、大量 `peek/poke`、满屏 `spr/map` 三组基准趋势。
-- `P0-RT-07` 的暂定门槛是：在项目指定的 desktop reference browser/hardware 上，ordinary 60Hz corpus 的 VM + TS Runtime core tick p95 应不超过 8ms；任何 60Hz 单帧超过 16.67ms 的比例另记为 missed-frame 指标，不能用该硬上限替代 8ms p95 门禁。专项压力 case 使用 [测试文档的场景预算](./06-testing-compatibility.md#102-场景预算)。Phase 1/2 的 project gates 已证明 bounded corpus 通过；最终 release threshold 仍是 Proposed，必须由后续性能 work unit 和 ADR 同步定案。
-- 若 JS↔WASM 边界未达门槛，先以 profile 定位 API，再决定批处理或下沉；不得以关闭 conformance 功能换性能。
-
-## 18. 明确不做
-
-本 Runtime 不实现：
-
-- PICO-8 console、代码/精灵/地图/SFX/music 编辑器；
-- SPLORE、BBS 搜索、自动抓取、公共 cart 镜像；
-- cart authoring、token counter、官方 exporter 的完整替代品；
-- 任意宿主文件系统访问或由 cart 发起的任意 URL fetch；
-- 网络多人、通用 Lua 运行平台或非 P8 Lua 插件；
-- 首版 save-state/rewind、GIF 录制、shader/filter 系统；
-- 首版 SharedArrayBuffer/pthreads、GPU 实现核心图形语义；
-- 对未来 PICO-8 版本和未记录 quirks 的虚假“100% 兼容”承诺。
-
-这些能力若未来加入，必须通过 port/adapter 扩展，不能让 core 依赖 UI、网络或具体存储实现。
-
-## 19. 开发检查清单
-
-每个 Runtime PR 合并前检查：
-
-- [ ] 改动属于本文定义的单一模块，依赖方向无反转。
-- [ ] 新增 guest 行为有官方手册链接或 golden 来源说明。
-- [ ] Q16.16、P8SCII、地址 endian/边界没有偷偷转成普通 JS 语义。
-- [ ] direct RAM write 路径仍可被 renderer/persistence 观察。
-- [ ] interactive 与 deterministic 模式使用同一核心算法。
-- [ ] 新异步操作通过 HostRequest/port，没有 Promise 穿过同步 WASM import。
-- [ ] 错误可序列化，包含 stage/session/tick，不泄漏 cart 内容或用户路径。
-- [ ] 单元、conformance、race/failure 测试与性能基准按风险补齐。
-- [ ] 没有为某个 BBS cart 添加名称、hash 或 URL 特判。
+本文件中的 Target interface，尤其第 5.4 和第 13 节的 resolver/cart-swap 设计，只是后续阶段的
+边界输入。没有 active phase 与版本化机器合同，不得据此创建 production path。`.p8.png`、
+single-cart、RuntimeCore 和当前 Chrome 边界的回归仍使用同一实现与测试，不为 Phase 5 复制一套 core。

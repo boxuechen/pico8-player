@@ -7,23 +7,16 @@
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
-| **Implemented through Phase 4 exit** | Phase 3 browser-neutral Runtime/app 边界；WASM VM-local helpers、root controls、instruction/resource diagnostics；RuntimeCore CPU classification/system reset；app-owned bounded queues、Worker lifecycle 与 project-owned Node/Chrome conformance gates |
+| **Implemented** | 四个 package；main/transport/worker/worklet execution-domain 边界；package exports；browser-neutral RuntimeCore；WASM/Canvas/Audio/IndexedDB adapters；architecture negative tests；`ref/` quarantine |
 | **Scaffold** | host cart resolver adapter 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
-目录树是归属契约，不是“文件全部存在”的清单。Phase 0–4 的完成边界只在对应
-[`evidence/`](./evidence/) 与机器合同中保存；当前没有 active phase，Phase 5 仍为 Deferred。
-最新 production 边界由
-[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) 锁定；
-4A–4B 只新增 contract、corpus、runner 与受审 baseline；4C 新增 `wasm/bridge` 内的 VM/library
-surface；4D append graphics host bindings `39..40`；4E append browser-neutral guest `reset` 为
-binding `41`，并让 root `run/stop` 经 VM → RuntimeCore → Worker control result 路由；4F 在既有
-VM → RuntimeCore → Worker frame DTO 上增加 deterministic CPU diagnostics。4G 只在 z8lua bridge
-增加 Lua heap/live-context 只读诊断、在 Worker composition 注入 diagnostic heap limit，并由 Worklet
-导出其自有 queue constants；4H 只聚合 contract/evidence，未改变 production ownership。
-AudioContext、IndexedDB、Canvas 和浏览器 input adapter 的 owner 未改变。
+目录树是归属契约，不是“文件全部存在”的清单。当前 source truth 是实际文件、package exports、
+TypeScript project references 和 architecture tests；阶段完成历史只在
+[`evidence/`](./evidence/) 与机器合同中保存。Phase 5 激活前，不得因为 scaffold 或 Target 路径存在
+就接入 guest `load`、external resolver、multicart 或 BBS。AudioContext、IndexedDB、Canvas 和
+browser input 始终属于 app adapters，RuntimeCore 保持 browser-neutral。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -160,17 +153,15 @@ AudioContext、IndexedDB、Canvas 和浏览器 input adapter 的 owner 未改变
 - 不定义 `MessagePort`、DOM event 等 Web transport 类型；它们属于 app 的 `transport/`。
 - `RuntimeCommand`、`RuntimeEvent`、frame/audio transferable DTO 仍属于 app transport；contracts 只提供其中跨 core/main 共享的稳定字段类型，防止 main 为复用一个 type 而依赖 RuntimeCore。
 - 不成为 `utils/common/shared` 垃圾桶。一个类型只有被两个以上合法上层 consumer 共享、且语义稳定时才进入此 package。
-- Phase 0B 已加入稳定的 `PICO_RAM_SIZE` 与 runtime-neutral `PicoMemoryLease`；
-  lease 只携带 `ArrayBuffer` range 和 opaque ID，不携带 WASM/module/handle。
-- Phase 0E 加入 `PicoInputSnapshot`、`SerializedRuntimeError` 和 stable error/phase
-  unions；versioned Worker command/event 仍留在 app transport。
-- Phase 1B 加入只含 raw-input `contentSha256` 的 `CartIdentity`；display name、locator、
-  origin 和 resolver metadata 不属于 content identity。
+- 稳定值包括 `PICO_RAM_SIZE`、runtime-neutral `PicoMemoryLease`、`PicoInputSnapshot`、
+  `SerializedRuntimeError` 和只含 raw-input `contentSha256` 的 `CartIdentity`。
+- lease 不携带 WASM/module/handle；display name、locator、origin/resolver metadata 不属于 content identity；
+  versioned Worker command/event 仍留在 app transport。
 
 ### `@pico8-web/cart-codec`
 
 负责纯 bytes → immutable-record `ParsedCart`：`.p8`、`.p8.png`、code decompression、
-section packing、校验和诊断。Phase 1B 已落地 bytes-magic `decodeCart`、text `decodeP8`
+section packing、校验和诊断。当前 bytes-magic `decodeCart`、text `decodeP8`
 和 lossless `decodeP8Png`，两种格式统一返回 content identity、32 KiB ROM、P8SCII code、
 version 和 warnings。typed arrays 是独立 caller-owned snapshots，由 consumer 只读对待；
 loader/include resolution 仍是后续增量。
@@ -187,7 +178,7 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 
 ### `@pico8-web/runtime-core`
 
-最终拥有 player simulation 和 session 权威状态。Phase 3 exit 当前公共实现分为
+最终拥有 player simulation 和 session 权威状态。当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
 `graphics/map-memory.ts`、`graphics/p8scii-text.ts`、`graphics/p8scii-font.ts`、
 `memory/pico-ram.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、`persistence/cart-data-core.ts`、`scheduler/frame-scheduler.ts`、
@@ -204,8 +195,7 @@ AudioWorklet 独占 device queue/resampling。固定八玩家/devkit latch 已�
 device mapping 已在 app。package-private `CartDataCore` 从 prehydrated seed 复制到 live
 `0x5e00..0x5eff`，并只在 committed boot/frame 输出 copy-owned dirty snapshot；browser-neutral
 `CartDataPersistencePort` 由 Worker-owned IndexedDB adapter 实现，RuntimeCore 不依赖 storage API。
-browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已完成；
-Phase 3 exit gate 只增加 conformance、performance、recovery 与 evidence，没有扩大 production API。
+browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已完成。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。
@@ -228,39 +218,19 @@ Phase 3 exit gate 只增加 conformance、performance、recovery 与 evidence，
 允许依赖：`@pico8-web/contracts`、`@pico8-web/runtime-core` 的显式 public port types、WASM artifact。对 RuntimeCore 的依赖必须是 `import type`；bridge 运行时不得加载 core implementation。
 禁止依赖：cart parser、graphics/audio 实现、UI、IndexedDB、Canvas、AudioContext、网络。
 
-Phase 0B 的 public `Phase0BMemoryBinding` 与 `Phase0BMemoryModule` 是明确命名的
-bounded adapter probe：它负责验证 pointer/size、创建 zero-copy views、检查 stale
-lease，并把 logical access 路由到 WASM canonical mapper。它不是 production
-`VmPort`，也不把 Emscripten concrete objects 交给 RuntimeCore。
+Production adapter 包含 session-local `PicoApiHostRouter`、package-private linear-memory binding 和
+RuntimeCore-owned `PicoLogicalMemoryPort` 实现。module-local dispatcher 只按 binding id 路由，不保存
+跨 module delegate；每次 memory map 检查 lease freshness 并调用 canonical mapper。generated
+80-byte call frame 复用固定 scalar scratch，byte string view 只在同步调用期间借用；bridge 只做
+Lua stack/presence/boolean/Q16/string lowering，不复制 graphics、audio、input 或 persistence 语义。
 
-Phase 1A 的 production public adapter 还包含 session-local `PicoApiHostRouter`；
-module-local dispatcher 只负责按 binding id 路由，不保存跨 module global delegate。
-linear-memory binding/view 保持 package-private。adapter 只实现 RuntimeCore 的 `FrameVmPort`，编译 artifact
-为 `z8lua-runtime-v1`；`p8w0c_bench_*` 不得出现在该 artifact 或 adapter interface。
+Host bindings `1..41` 保持 append-only；`rrect/rrectfill` 为 `39..40`，system-register-only `reset`
+为 `41`。guest `run/stop` 使用 VM control outcome，不占 binding id。VM-local table/string/random
+helpers 位于 `p8w_pico8_compat.*`，table/function handle 不进入 TypeScript，PRNG state 位于 shared
+Pico RAM。精确 operation 列表只以 `spec/abi/` 和生成 manifest 为准。
 
-Phase 2A 的 package-private production memory binding 同时实现 RuntimeCore-owned
-`PicoLogicalMemoryPort`，每次 map 都检查 lease freshness 并调用 C++ canonical mapper。host
-dispatcher 读取 schema-generated 80-byte frame，复用固定 scalar scratch；byte-string 只借用当前
-同步调用的 WASM view。该 adapter 不实现 graphics/memory hardware semantics，也不把 module 暴露给 core。
-
-Phase 2B 继续使用同一 80-byte frame，descriptor 新增 boolean scalar mask，Q16.16 result 由 C
-按 raw bits 压回 z8lua。`pal(table,[p])` 只在 C 薄 wrapper 中遍历最多 16 个 entry，并逐项调用
-同一个 typed `PicoApiHost.pal`，不在 bridge 复制 palette/draw-state 语义。
-
-Phase 2C append `sget/sset/spr/sspr` operation id `19..22`，复用 boolean mask 和最多 10 个
-scalar slot；bridge 仍只做 Lua stack lowering，sprite sampling/remap/draw-state 语义全部留在 RuntimeCore。
-
-Phase 2D append `mget/mset/fget/fset/map/tline` operation id `23..28`；bridge 只保持
-presence/boolean/Q16 lowering，map resolver、flags、tile selection 与 texture sampling 均留在 RuntimeCore。
-
-Phase 2E append `print/cursor` operation id `29..30`；bridge 只同步借出 Lua byte string view 并
-lower optional Q16 arguments，P8SCII parsing、font state、cursor/scroll 与 software glyph raster 均留在 RuntimeCore。
-
-Phase 4C 的 `p8w_pico8_compat.*` 注册 VM-local table/string/random helpers；table/function
-handle 不进入 TypeScript，PRNG state 直接位于 shared Pico RAM `0x5f44..0x5f4b`。Phase 4D 已将
-`rrect/rrectfill` 作为 generated operation `39..40` append 到 ABI；`1..38` 的含义与顺序保持不变。
-Phase 4E append `reset` 为 operation `41`；它只调用 RuntimeCore 的 system-register reset，guest
-`run/stop` 不占 host-binding id，而是使用 VM control outcome。`1..40` 继续保持 append-only。
+明确命名的 Phase 0 memory bindings 和 `p8w0c_bench_*` 只属于隔离 probe；不得进入
+`z8lua-runtime-v1` artifact、production adapter interface 或 RuntimeCore。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
 
@@ -275,7 +245,7 @@ RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worke
 
 `apps/web-player` 可以依赖 packages；任何 package **MUST NOT** import `apps/web-player`。
 
-Phase 1E 的 `player-worker-entry.mjs` 是异步 WASM bootstrap/bundle entry：它必须先调用
+`player-worker-entry.mjs` 是异步 WASM bootstrap/bundle entry：它必须先调用
 `installPlayerRuntimeWorker` 注册 message listener，再等待 WASM/controller promise；esbuild 只
 解析 workspace specifier 生成 Chrome Module Worker artifact，不改变 execution-domain ownership。
 
@@ -431,7 +401,7 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 8. 至少保留一组 negative fixture，证明故意加入的反向 import 会使门禁失败。
 9. workspace、production/test import graph 和构建配置均不包含 `ref/**`，并有一个故意引用 `ref/` 会失败的 negative fixture。
 
-边界检查不得只靠 code review。Phase 0S 在已锁定的 pnpm workspace 上选择 dependency-cruiser、ESLint boundaries rule 或等价方案，但结果必须在 CI 中阻断。
+边界检查不得只靠 code review。当前 architecture test 必须在已锁定的 pnpm workspace 上检查上述规则，并在 CI 中阻断违规依赖。
 
 ## 9. 变更规则
 
@@ -446,16 +416,9 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 
 普通功能任务可以在既有目录内部增加文件，但必须能明确回答：state owner 是谁、consumer port 在哪里、concrete adapter 在哪里、由哪个 composition root 注入、由哪层测试验证。
 
-## 10. Scaffold Exit Gate
+## 10. 历史验证路由
 
-> 状态：Evidence；Complete。
-
-Phase 0S 完成前不得开始把 cart behavior 填入 production modules。门禁为：
-
-- workspace、四个 packages 和三个 app execution domains 可独立 typecheck/build。
-- package exports、project references 和 dependency graph 与本文一致。
-- `test:architecture` 正向与 negative fixtures 均通过。
-- main、worker、worklet 三个最小 entrypoint 能构建；可以为空壳，但不得共享隐式 mutable state。
-- `spec/pico-api-inventory.yaml`、WASM pin/patch/manifest 目录存在并有 ownership README 或 schema。
-- `ref/` 未进入 workspace/build/import graph；其本地 clone 不是完成 Phase 0S 或 Phase 0A 的隐式前置条件。
-- README、05 交付计划和 09 Codex 协议不再包含竞争性的目录树。
+Scaffold exit 已关闭，不再作为 living checklist。workspace/package/execution-domain 的当前约束由
+`test:architecture`、package manifests 和本文件第 1–9 节持续执行；原始 Phase 0S 结果见
+[`11-phase-0s-evidence.md`](./evidence/phase-0/11-phase-0s-evidence.md)。未来阶段只补充受影响边界的
+测试，不复制旧 scaffold exit gate。

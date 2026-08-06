@@ -5,13 +5,15 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-Phase 0–4 已完成并归档；当前没有 active phase。Phase 4 的发布口径是 Chrome/Chromium desktop
-上的 L2/MVP project profile，精确 claim boundary、Known Differences 与 coverage limitation 见
-[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。Phase 5 保持 Deferred。
+| 项目状态 | 唯一入口 |
+| --- | --- |
+| 最近完成 | Phase 4；[L2/MVP project-profile evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
+| Active phase | 无 |
+| 下一候选阶段 | Phase 5；Deferred，尚未授权 production implementation |
+| 最近关闭的机器合同 | [`spec/phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) |
 
-下一阶段开工前必须先创建并激活 bounded phase document / machine contract；不得直接从 roadmap
-实现 Phase 5。当前机器状态以
-[`spec/phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) 为准。
+下一阶段开工前必须按 [`docs/phases/`](./phases/) 的 lifecycle contract 创建并激活 bounded phase
+document / machine contract；roadmap、Target 示例和历史 evidence 都不能单独授权实现。
 
 日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

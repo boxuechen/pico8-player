@@ -11,12 +11,9 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4H、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–4 evidence |
-| **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
-| **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
-| **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
-| **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| **Implemented Phase 4 exit** | 112 项 API 清单、41 binding、7-case corpus `C3=7`；core/graphics/system/CPU/resource、30-minute Chrome 和 Known Differences 已关闭；见 [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
+| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance 与 Chrome scripts；Phase 4 L2/MVP project-profile exit 已关闭 |
+| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、项目原创 7-case corpus；精确 Known Differences/coverage limitation 见第 15 节 |
+| **Historical results** | Phase 0–4 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -452,10 +449,10 @@ Chrome/Chromium 至少覆盖：
 - `WebAssembly.instantiateStreaming` 及 MIME 不正确时的 ArrayBuffer fallback。
 - module Worker 创建、加载、销毁、异常映射和 CSP 场景。
 - 非 cross-origin-isolated 环境可播放；首版不得把 SharedArrayBuffer 当作必要条件。
-- Canvas 2D/WebGL 最终采用路径的 128×128 palette、nearest-neighbor、resize、fullscreen、DPR 1/2/非整数。
+- Canvas2D production presenter 的 128×128 palette、nearest-neighbor、resize、fullscreen、DPR 1/2/非整数。
 - Keyboard `code` 映射、阻止页面滚动、focus/blur 清键、Gamepad connect/disconnect。
 - AudioContext 用户手势解锁、44.1/48 kHz、suspend/resume、设备切换后恢复、静音。
-- Window 创建并转交专用 audio `MessagePort`；旧 `sessionGeneration` PCM、reset/underrun/overrun 和 fallback relay 路径按 ADR 分别验证，控制协议不得意外携带 PCM。
+- Window 创建并转交专用 audio `MessagePort`；旧 `sessionGeneration` PCM、reset/underrun/overrun 与 dispose 路径按 ADR 验证，控制协议不得意外携带 PCM。
 - IndexedDB 可用、被拒绝、quota/error 和 private mode 下的降级。
 - 页面 visibility、后台节流、前进后退缓存和 tab 恢复。
 - 正常 HTTP header 与 COOP/COEP 环境各一次，避免可选优化改变行为。
@@ -613,302 +610,21 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 - P2：特定 API/模式明显不兼容但有规避方式，或部分 cart 的可玩性受损。
 - P3：轻微视觉/听觉/性能差异，不影响核心玩法。
 
-### 15.4 Phase 0A P8 Lua baseline 矩阵
+### 15.4 当前发布 profile
 
-本表只记录 [Phase 0A artifact](./evidence/phase-0/12-phase-0a-evidence.md) 的 z8lua baseline，
-不等同于完整 Player API 支持。没有正版 PICO-8 capture 的项目保持 `unknown`，即使
-上游 fixture 已稳定。
+当前可发布口径严格为 **PICO-8 v0.2.7 L2/MVP project profile on Chrome/Chromium
+desktop**。它绑定项目原创 corpus、受审 build 和 Chrome production path，不是 official
+bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 
-| 行为 | Phase 0A 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| short-if、`?`、compound assignment | z8lua/WASM fixture passed | `unknown`（尚无官方 capture） | official differential 收录最小原创 cart |
-| Q16.16 wrap 与 division-by-zero | raw bits fixture passed | `unknown`（baseline locked） | 与 PICO-8 0.2.7 edge capture 对比 |
-| `sin/cos` | raw table result deterministic | `unknown`（baseline locked） | official differential 扩充角度边界 |
-| coroutine yield/return | nested Lua fixture passed | `unknown`（仅 VM 语义） | Phase 0E 验证 frame/host continuation |
-| `^` power | `2^0.5` baseline raw = `92681` | `partial` / Known Difference | 上游明确使用 floating point；不得宣称 bit-exact |
-| `@/%/$` lower/upper/remap | Phase 0A artifact 未实现；已由后续 Phase 0B artifact 取代 | `unsupported`（仅 Phase 0A 历史 artifact） | 见下表与 ADR-013 |
+| 指标 | 当前结论 | 权威来源 |
+| --- | --- | --- |
+| Project corpus | `C3=7/7`，playable `100%`，开放 P0/P1/P2=`0/0/0` | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
+| API inventory | 112 项；implementation `96/5/1/10`；conformance `68/5/29/10` | [`pico-api-inventory.yaml`](../spec/pico-api-inventory.yaml) |
+| Runtime boundary | host bindings `1..41`；runtime ABI `0x00010003` | [`spec/abi/`](../spec/abi/) / runtime manifest |
+| Resource gate | fixed 16 MiB WASM、1 MiB default Lua heap、1800 秒 Chrome long-run、20 loads | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
+| Aggregate claim | profile、inputs、scope 与 hash machine-checked | [`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) |
 
-`^` 的当前记录是 upstream-declared difference，不伪造未知的官方 raw expected。
-获得合法官方 capture 后，必须补充官方值、artifact hash、PICO-8 版本和平台。
-
-### 15.5 Phase 0B Shared Pico RAM 矩阵
-
-本表只记录 [Phase 0B artifact](./evidence/phase-0/13-phase-0b-evidence.md) 的 RAM boundary，不代表
-完整 memory/graphics API 或 cart lifecycle 已实现。手册明确项目可标为
-`implemented-baseline`；未定义/尚无正版 capture 的行为保持 `unknown`。
-
-| 行为 | Phase 0B 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| physical 64 KiB / lower+upper alias | Lua direct/API 与 JS 双向 passed | `implemented-baseline` | production `VmPort/PicoRam` 复用 lease，不另分配 |
-| negative / 16-bit address wrap | `-1`、`-0.5`、超 `0xffff` passed | `implemented-baseline` | official edge capture 扩充 invalid/fraction corpus |
-| `peek2/peek4` little-endian + `0xffff` wrap | direct/API raw bits 一致 passed | `implemented-baseline` | 保留逐-byte mapper 回归 |
-| GFX/SCREEN documented bases | `00/60/80/a0/c0/e0` 两窗口 passed | `implemented-baseline` | graphics/API 实现必须调用 canonical mapper |
-| invalid `0x5f54/55` base | 防御性回退对应 default | `unknown` | 正版 PICO-8 capture 前不宣称兼容 |
-| context reset 初态 | 全零 + `5f54=00`,`5f55=60` | `implemented-baseline`（仅 Shared RAM） | cart-run/reset matrix 留给 Phase 1 official golden |
-| fixed memory/OOM | descriptor 256/256 pages；growth/heap pressure 受控 | `implemented-baseline` | 代表 cart corpus 继续校准 production sizing |
-
-### 15.6 Phase 0E Coroutine Frame Slice 矩阵
-
-本表只覆盖 [Phase 0E evidence](./evidence/phase-0/16-phase-0e-evidence.md) 的 lifecycle/safety slice，
-不把最小 `cls/pset/btn` 宣称为完整 API conformance。startup time 已由官方 Web
-Player capture 锁定；custom 60 Hz/fps-selection 仍留给后续 conformance。
-
-| 行为 | Phase 0E 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| `_init/_update60/_draw` lifecycle | 1/60/60 counters、60 frame boundaries passed | `implemented-baseline` | official representative cart differential |
-| `_update60` 优先于 `_update` | 0/60 counters passed | `implemented-baseline` | dynamic callback replacement 另测 |
-| callback 30/60 Hz logical time | startup `1/30s`；60 steps → slices 61/62 passed | `implemented-baseline` | slow-frame multi-update policy 后续 |
-| top-level custom `flip()` | official samples 1..8；startup + 后续 60 boundaries passed | `implemented-baseline`（30 Hz） | custom fps-selection 后续 |
-| root HostRequest continuation | embedded-NUL request/response、一次 frame passed | `implemented-prototype` | 用真实同步-cache API 替换非公开 probe |
-| nested HostRequest/`flip()` | host side-effect 未发出；structured unsupported | `unsupported` | `nested-host-suspend`；L3 只用预供给/同步 cache |
-| instruction budget | infinite Lua loop → poisoned fault；不可再 step | `implemented-safety` | Phase 4F 已将 hard cap 与 4M/s soft classification 分离 |
-| Worker watchdog | Chrome JS stall → terminate/recreate/generation passed | `implemented-safety` | boot/step deadline 与 background policy 后续校准 |
-| Lua error record | phase/line/safe trace passed | `implemented-baseline` | Wasm trap/JS import/OOM 分类 corpus 继续扩充 |
-| minimal framebuffer | packed screen golden SHA-256 locked | `implemented-probe` | Phase 0F presenter 已通过；Phase 1 graphics conformance |
-
-### 15.7 Phase 0F Browser Boundary 矩阵
-
-本表只覆盖 [Phase 0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) 的 browser
-presenter、PCM transport 和 lifecycle composition，不代表完整 Graphics、AudioSynth 或
-Player UI 已实现。
-
-| 行为 | Phase 0F 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| packed 4bpp → RGBA / Canvas2D | 128×128 exact RGBA hash；DPR 1/2/1.25 与 fractional resize 无 blended colors | `implemented-boundary` | Phase 2 graphics gate 已复用 presenter contract；后续保持回归 |
-| present performance/lifetime | 10,000 frames p95 `0.0388 ms`；heap delta `15,156 B`；stale generation/dispose passed | `implemented-boundary` | Chrome 升级时重跑 evidence |
-| dedicated PCM transport | 44.1/48 kHz 并发 10 分钟；steady underrun/overrun/drop/discontinuity 均为 `0`；rAF 以实际 display cadence 中位数识别 long frame 并要求至少 29 Hz | `implemented-boundary` | AudioSynth 实现后保留同一 queue 门禁 |
-| queue/resource bound | capacity `66,150`，high water `44,100`；实测 peak `22,406` / `22,530` | `implemented-boundary` | 参数变更必须更新 spec/evidence |
-| watchdog/generation/dispose | Worker infinite loop 后 generation `1→2`，frame/audio reattach 与 AudioContext close 通过 | `implemented-integration` | Phase 1 CartSession/UI 复用 composition lifecycle |
-
-### 15.8 Phase 1D L1 Graphics/Input 矩阵
-
-本表只覆盖 Phase 1D 的 player 0 六键与基础 integer raster。测试 cart 和 framebuffer/input
-vectors 均为项目原创；Phase 2 project exit 见 15.11，完整官方 differential 留给 Phase 4。
-
-| 行为 | Phase 1D 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| `line/rect/rectfill/circ/circfill` generated dispatch | raw Q16.16、optional、stable id `4..9` 与 stack path passed | `partial` | Phase 2 exit summary 见 15.11；official edge differential 留 Phase 4 |
-| packed mapped screen | `0x5f55=0xe0` project vector、nibble/corner/radius/physical bounds passed | `partial` | camera/clip/palette/fillp/bitplane/screen mode deferred |
-| pen/polyline state | `0x5f25`、`0x5f35`、`0x5f3c..0x5f3f` reset/readback passed | `implemented-l1` | Phase 2 project interaction matrix 见 15.11；official differential 留 Phase 4 |
-| `btn` held / `0x5f4c` | player 0 six bits、update 前可见、invalid player/button passed | `implemented-l1` | multiplayer、pause/mouse/devkit input deferred |
-| `btnp` edge/repeat | release/repress、30Hz 15/4、60Hz 30/8、自定义寄存器和 255 disable passed | `implemented-l1` | 1F trace differential；完整 device input 属于后续阶段 |
-| input transaction | invalid snapshot 不消费；HostRequest resume 不 double-advance；generation reset passed | `implemented-l1` | Phase 1E physical mapping/scheduling passed；1F trace differential |
-
-### 15.9 Phase 1E Scheduler/Player Shell 矩阵
-
-本表覆盖 project-authored cart 的可执行 player path，不替代 1F original-cart compatibility
-matrix，也不声明 audio synthesis、resolver 或完整 device input 已完成。
-
-| 行为 | Phase 1E 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| wall-clock pacing | fake clock 30/60Hz、zero-tick、5-tick cap、backlog drop、pause/resume/non-monotonic anchor passed | `implemented-l1` | 1F real-rAF/custom result见 15.10 |
-| Worker/session freshness | distinct Worker/session generation、stale input、in-flight pulse supersession、watchdog byte recovery passed | `implemented-l1` | 1F fault/reset/reload result见 15.10 |
-| production composition | text cart decode → CartSession fresh VM → frame event；cold reset/frame id restart passed | `implemented-l1` | 1F generated `.p8.png` matrix passed |
-| Chrome player path | real Worker+WASM+rAF、Canvas、keyboard aliases、blur pause、reset/stop/fault UI passed | `implemented-l1` | Phase 1 exit evidence archived |
-
-### 15.10 Phase 1F L1 Exit 矩阵
-
-本表关闭 Phase 1 的 **L1 bounded profile**。三个 cart 和所有像素/code 均为项目原创；Node
-real-WASM 与 Chrome production Worker 使用同一 manifest/input trace，完整 8,192-byte screen、
-logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与环境见
-[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
-
-| Cart / behavior | Phase 1F result | 功能/Cart 状态 | Claim boundary / 后续动作 |
-| --- | --- | --- | --- |
-| `l1/callback-30-input` | text `.p8`；30Hz callback；held + `btnp`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | standard graphics 与 project-profile device input 已由 Phase 2/3 关闭；无 official-exact 声明 |
-| `l1/callback-60-p8png` | generated project `.p8.png`；60Hz `_update60`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | 压缩/codec 广度由 parser suite；代表游戏 corpus 属于 Phase 4 |
-| `l1/custom-flip-30` | text `.p8`；top-level `flip()`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | custom slow-frame/host suspension 未扩大 |
-| Chrome real-rAF pacing | callback/custom 30Hz median `33.40/33.20ms`；60Hz `16.00ms`；frame/slice continuous | `compatible`（Chrome desktop L1） | background/slow-frame policy保持 ADR-011；release soak deferred |
-| Chrome keyboard visible response | Player 0 position `8→11`；O `btnp` edge visible；无 browser repeat dependence | `compatible`（bounded six-button） | multiplayer/gamepad/touch/devkit project profile 见 Phase 3 exit |
-| fault/reload | instruction budget fault structured；main responsive；generation `4→5`；valid cart reloaded | `compatible` host-safety path | CPU cost calibration Phase 4；hard Worker hang由 0F/1E gate继续覆盖 |
-| ordinary 60Hz performance | 120 measured Worker round-trips；p95 `0.1001ms`；`>16.67ms` `0/120` | gate passed | Phase 2 representative gate 已通过；Phase 4 stress corpus 另测 |
-
-三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
-corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
-
-- Phase 2/3 已关闭项目自有 standard graphics/text 与 audio/input/persistence/current-cart profile；
-  统一完成边界和 Known Differences 见 15.11–15.12。
-- Phase 4D 已关闭 `tline(bits)` 的 13/16-bit bounded profile；timed P8SCII controls 是 accepted
-  partial Known Difference，advanced screen/bitplane 是 MVP 外 `unsupported`。完整 `stat()`、guest
-  `load`、external resolver 和 multicart 仍待后续 unit 决策或保持排除。
-- 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
-  official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
-
-以上均为已声明后续范围，不是开放 P0/P1；Phase 1 exit 时开放 P0/P1 为 `0`。
-
-### 15.11 Phase 2 Graphics/Memory/Text Exit 矩阵
-
-2A–2E 的逐 work-unit 数值与执行历史只由
-[`phase-2-graphics-memory-text-contract.json`](../spec/phase-2-graphics-memory-text-contract.json)、
-相关 tests 和不可变 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)
-保存，不在 living compatibility contract 中重复。本表汇总 Phase 2A–2F 的 project-owned
-standard packed-4bpp profile。它只证明机器合同列出的
-memory/draw/sprite/map/text 组合在相同 production path 中可复现，不表示第三方 playable rate、
-完整官方 differential、advanced video mode 或 Phase 3 audio/input/persistence 已完成。
-
-| 行为 | Phase 2F 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| corpus/provenance | `graphics-memory`、`text-remap` 和 resource fault 均为项目原创；source/cart hash 锁定；无 BBS、第三方或 `ref/` dependency | gate passed | Phase 4 代表 corpus 需要独立合法授权与口径 |
-| memory/draw/sprite/map | Base RAM widths/block、draw state/primitives、draw/display palette、sprite、map/flags/tline 和 remap 在一个 60Hz flow 中通过 | `compatible`（Phase 2 project profile） | `tline(bits)` 已由 4D 关闭；advanced video mode 保持 MVP 外 unsupported |
-| P8SCII/custom font | built-in/custom/one-off/outline/raw write、cursor/default attrs、GFX/SCREEN remap 与 extended display palette 在一个 60Hz flow 中通过 | `compatible`（同步 visual profile） | synchronous audio 已由 Phase 3 关闭；timed controls 由 4D 接受为 partial Known Difference |
-| Node determinism | 每 cart 两个 fresh real-WASM session；每个 session cold reset；4-frame trace、screen、palette、RGBA 和列出的 RAM region exact | gate passed | oracle 变更必须人工审阅 manifest diff |
-| Chrome production path | Worker initial/reset trace 与 Node hash 一致；Canvas RGBA `17614085…a0ae` / `0db0886d…45f6` exact；无 Worker error | gate passed（Chrome 150） | Chrome 版本升级时重跑 reviewed evidence |
-| performance | graphics/text 各 20 warm-up + 120 measured；p95 均 `0.4001ms` 以下；`>16.67ms` 均 `0/120` | gate passed（≤8ms） | 不是 Phase 4 stress 或长稳 soak 的替代品 |
-| fault/recovery | 65,537-byte print → structured `E_HOST_API`；main responsive；stale generation rejected；generation `3→4` 后有效 cart 出帧 | gate passed | hard hang/watchdog 继续由 Phase 0F/1E regression 覆盖 |
-
-Phase 2 exit 时开放 P0/P1 为 `0`。后续状态：timed P8SCII controls 不产生 suspension，并由 4D
-接受为 partial Known Difference；`tline(bits)` precision overload 已由 4D 关闭，advanced
-screen/bitplane modes 明确为 MVP 外 unsupported；
-未记录的 invalid/overflow edge 和未运行的官方/第三方 cart 保持 `unknown`。这些是显式范围边界，
-不升级为 official bit-exact 或第三方兼容声明。
-
-### 15.12 Phase 3 Audio/Input/Persistence Exit 矩阵
-
-3A–3G 的逐 work-unit 数值与执行历史只由
-[`phase-3-audio-input-persistence-contract.json`](../spec/phase-3-audio-input-persistence-contract.json)、
-相关 tests 和不可变 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
-保存，不在 living compatibility contract 中重复。本表汇总 Phase 3 project profile；它不表示
-official bit-exact、第三方 playable rate、完整 `stat()`、guest `load` 或 multicart 已完成。
-
-| 行为 | Phase 3H 结果 | 功能状态 | Phase 4 边界 |
-| --- | --- | --- | --- |
-| corpus/provenance | 2 个原创组合 flow + 1 个原创 fault cart；无 BBS、第三方或 `ref/` dependency | gate passed | 代表 corpus 必须单独确认许可与 claim 口径 |
-| audio | four-channel SFX/music/P8SCII、22050Hz canonical PCM、dedicated Worker→AudioWorklet 与 48kHz device output 通过 | `compatible`（project oracle） | official waveform/cost edge 仍为 `unknown`；timed P8SCII controls 不 suspension |
-| input | fixed eight-player `btn/btnp`、keyboard/Gamepad/multitouch、input-only devkit `stat()`、mouse/wheel/pointer-lock lifecycle 通过 | `compatible`（project/device profile） | 完整 `stat()`、IME/clipboard/remap UI Deferred |
-| persistence/current cart | synchronous cartdata、256-byte IndexedDB record/lifecycle、current-cart `reload/cstore` COW overlay 与 same-identity reset 通过 | `compatible`（project storage profile） | overlay 不 durable；guest `load`、external ref/BBS/network/multicart Deferred |
-| deterministic/Chrome | Node real-WASM fresh/reset/replay 与 production Worker screen/palette cross-oracle exact；Chrome/Chromium only | gate passed | official/third-party exact 仍为 `unknown` |
-| performance/soak | 两个 120-tick 场景最大 p95 `0.4001ms`；60 秒计量窗口 underrun/overrun/drop/discontinuity/stale/error 为 0 | gate passed | 不替代 Phase 4 stress corpus、CPU calibration 或 30-minute soak |
-| recovery/lifecycle | structured host fault、audio reset、stale work/input rejection、persistence read/write failure、valid recovery、Workers `6/6` 与 AudioContext close 通过 | gate passed | hard budget/Worker hang 继续纳入 release regression |
-
-Phase 3 exit 开放 P0/P1 为 `0`。Known Differences：canonical PCM/hash 是项目 oracle，不是官方
-bit-exact 声明；startup underrun 与正式 soak 窗口分开计数；current-cart overlay 仅 Worker-local；
-未列出的 API/invalid edge 和未运行的合法代表 cart 保持 `unknown`，不得从项目 profile 外推 L2。
-
-### 15.13 Phase 4B L2 Baseline 矩阵
-
-`phase4-l2-runner@1` 统一编排 Phase 1–3 的真实出口入口，并把结果绑定到 production source/
-WASM build id、cart/source hash、固定 input trace、frame/time 范围和执行环境。普通执行只写
-gitignored smoke；受审 Node/Chrome 结果及 SHA-256 由
-[`phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) 锁定。
-
-| 行为 | Phase 4B 结果 | 兼容口径 | 后续边界 |
-| --- | --- | --- | --- |
-| project corpus | 7 个原创 cart，覆盖 30/60Hz、custom loop、p8png、graphics/RAM/text、audio/input、persistence | `C3=7`，`C0/C1/C2/CU=0`；playable `7/7=100%` | 是项目 oracle，不外推第三方/BBS playable rate |
-| Node/Chrome cross-oracle | real-WASM 与 production Worker/Canvas/AudioWorklet/IndexedDB 的 case oracle digest 全部一致 | gate passed；Chrome 150 desktop | 其他 Chrome 版本由后续 release/long-run gate 复验 |
-| fault/triage | boot 全部 ready；first fault/divergent frame 均为空；开放 P0/P1 与 issue registry 均为 0 | 当前冻结 corpus 无已知失败 | 新 gap 必须先登记 severity/owner/原创 repro |
-| provenance | external/local corpus bytes、结果、名称均未跟踪，公开分母贡献为 0 | gate passed | guest load、BBS/network、multicart 仍 non-goal |
-
-Phase 4B 没有改变 production behavior。它证明冻结 corpus 的既有覆盖稳定，不代表 inventory 中
-未实现的 required VM/library API 已完成；这些 gap 从 4C 起按 surface 收敛。
-
-### 15.14 Phase 4C P8 Lua/Core Library 矩阵
-
-4C 以项目原创 `p8lua-core` 和 nested-budget fault cart 锁定 VM/library surface；table、string、
-function 值不离开 z8lua，PRNG state 只通过 shared Pico RAM `0x5f44..0x5f4b` 与内存 API 共享，
-host ABI 保持 38 entries。
-
-| 行为 | Phase 4C 结果 | 兼容口径 | 后续边界 |
-| --- | --- | --- | --- |
-| table helpers | `add/del/deli/count/all/foreach` 的 1-based sequence、hole、删除中迭代与 identity 通过 | `compatible`（项目 oracle） | 未记录的 invalid/非 sequence edge 不外推 exact |
-| random/string | `srand`、numeric/table `rnd`、PRNG RAM state、正负位置和 single-byte `sub` 可复现 | `compatible`（显式 seed/profile） | fresh VM 使用确定性项目 seed，不声明官方启动随机源 |
-| guest coroutine | aliases、status、yield/resume multi-return 通过；root frame coroutine 仍由 bridge 独占 | `compatible`（nested guest coroutine） | nested host suspension 继续 unsupported |
-| fault/recovery | nested infinite coroutine 无法用 `coresume` 吞掉 budget fault；Chrome 后续有效 cart 恢复 | safety gate passed | CPU 数值和慢帧策略属于 4F |
-| Node/Chrome | real-WASM 与 production Worker 的 60-byte RAM/screen oracle、reset/recovery hash exact | gate passed；Chrome 150 desktop | 不等于未测试官方/第三方 cart bit-exact |
-
-13 项 API 从 `unimplemented/unknown` 更新为 `implemented/compatible`；inventory 当前为
-implementation `89/7/8/8`、conformance `54/7/43/8`（按各自状态顺序）。4C 无开放 P0/P1。
-
-### 15.15 Phase 4D Graphics/Memory/Text Hardening 矩阵
-
-4D 以项目原创 `graphics-memory-text` cart 锁定新增 graphics 与 VM-local string surface；字符串
-值不跨 host ABI，rounded rectangle 与 `tline` hardware 语义仍由 browser-neutral RuntimeCore
-拥有。ABI 只 append `rrect/rrectfill` 为 `39..40`，既有 `1..38` 不变。
-
-| 行为 | Phase 4D 结果 | 兼容口径 | 后续边界 |
-| --- | --- | --- | --- |
-| rounded rectangles | width/height、radius clamp、outline/fill、camera/clip/palette/fillp/inversion 组合通过 | `compatible`（PICO-8 0.2.7 bounded profile） | 未记录的 invalid/fractional edge 不外推 official exact |
-| `tline(bits)` | 默认 13-bit 与 one-argument 16-bit source-coordinate 输出一致 | `compatible`（13/16-bit profile） | 不扩展 advanced video/bitplane |
-| strings | `tostr/tonum/chr/ord/split/type` 的 fixed-point flags、nil/default、embedded NUL、byte length、multi-return 与 split modes 通过 | `compatible`（manual/project vectors） | pure VM；无 string host binding |
-| memory/graphics interaction | 64 KiB wrap、overlap copy、screen remap、draw state 与 sprite/map source 组合可复现 | regression passed | canonical mapper 与 presenter ownership 不变 |
-| Node/Chrome/recovery | real-WASM 与 production Worker/Canvas 的 386-byte RAM/screen oracle、reset、budget fault/recovery exact | gate passed；Chrome 150 desktop | 项目 oracle 不等于完整官方 differential |
-
-9 项 required API 获得 `implemented/compatible`；inventory 更新为 implementation
-`92/6/6/8`、conformance `63/6/35/8`（按各自状态顺序）。timed P8SCII controls 为 accepted
-partial Known Difference，因为当前 VM/scheduler contract 没有 guest timed suspension boundary；
-advanced screen/bitplane modes 为 MVP 外 unsupported，若未来引入必须先修改 RuntimeFrame/presenter
-schema 与 ADR。4D 无开放 P0/P1。
-
-### 15.16 Phase 4E System/Player Integration 矩阵
-
-4E 以项目原创 `system-integration` flow 把 VM control、RuntimeCore、production Worker、Canvas、
-AudioWorklet 与 IndexedDB 放进同一确定性路径；ABI append guest `reset` 为 `41`，既有 `1..40`
-不变。
-
-| 行为 | Phase 4E 结果 | 兼容口径 | 后续边界 |
-| --- | --- | --- | --- |
-| guest controls | `run("again")` fresh runtime、`stat(6)`、`stop("done")` 与 public `runtime-control` event 通过 | `compatible`（root/current-cart、payload ≤4096 bytes） | guest `load`、external resolver、nested host suspend 不进入 MVP |
-| system routing | `assert` structured fault；`reset` 只恢复 `0x5f00..0x5f7f`/graphics private defaults；`time` same-frame route | bounded compatible；slow-frame clock 由 4F 关闭 | host `CartSession.reset` 与 guest `reset` 保持不同 contract |
-| cross-domain flow | canonical audio、`btn/btnp` edge、cartdata、current-cart overlay 在 run/stop 边界保持一致并 flush | Node/Chrome exact | AudioContext/IndexedDB/input ownership不变 |
-| lifecycle/recovery | same-generation audio reset、guest stop、assert fault、stale generation、有效 cart recovery、Worker/AudioContext dispose 通过 | safety gate passed；Chrome 150 desktop | 30-minute/multi-cart resource gate 属于 4G |
-
-inventory 更新为 implementation `95/6/1/10`、conformance `67/6/29/10`（按各自状态顺序）。
-external `reload/cstore` 保持 current-cart-only；nested `flip` 为 accepted unsupported；未列出的
-`stat` selector 返回 false；conditional `printh/extcmd` 因无项目 corpus 需要且会扩大 host capability，
-明确排除在 MVP。4E 无开放 P0/P1。
-
-### 15.17 Phase 4F CPU/Slow-frame/Scheduler Calibration 矩阵
-
-4F 以五个项目原创 cart 锁定 z8lua instruction accounting、30/60/custom cadence、ordinary
-slow-frame transaction 与 hard-cap containment；同一 manifest 同时作为 Node real-WASM 和 Chrome
-production Worker oracle。
-
-| 行为 | Phase 4F 结果 | 兼容口径 | 后续边界 |
-| --- | --- | --- | --- |
-| CPU 换算 | `floor(instructions * accountingFps * 65536 / 4,000,000)`，startup 固定 30、普通 frame 使用 target FPS，signed Q16.16，0 instruction 容差 | deterministic project cost model | 不使用 wall-clock，不声称 z8lua 每条指令与官方内部 opcode 一一对应 |
-| 30 Hz threshold | instructions `133329/133334/133336` → raw `65533/65536/65537` → slow `false/false/true` | exact Node/Chrome oracle | raw 恰为 `1.0` 保持非 slow |
-| 60 Hz threshold | instructions `66665/66667/66669` → raw `65534/65536/65538` → slow `false/false/true` | exact Node/Chrome oracle | 第一个量化 slow instruction 为 `66668` |
-| custom loop | boot/每个 `flip()` transaction 为 `3033` instructions、raw `1490`、30 Hz | compatible bounded custom profile | 不增加 custom FPS selector |
-| `stat(1/7)` | 当前 transaction 到调用点的累计 CPU fraction；logical FPS；HostRequest continuation 累计通过 | deterministic/compatible | `stat(0)` 与未支持 selector 继续 false Known Difference |
-| ordinary slow transaction | input/btnp、draw、canonical audio、cartdata 与 time 在 `150074` instructions/raw `73764` 帧原子提交 | `slowFrame=true`，非 VM fault | 不自动降频、跳 draw 或拆帧 |
-| hard cap/recovery | 10k cap infinite update → `E_VM_INSTRUCTION_BUDGET`；fresh valid cart 恢复 | safety gate passed；Chrome 150 desktop | Window watchdog 仍只处理 Worker 无响应 |
-
-inventory 更新为 implementation `96/5/1/10`、conformance `68/5/29/10`（按各自状态顺序）。
-`time/t` 进入 implemented/compatible；`stat` 因 selector 子集仍为 partial。ABI 保持 `0x00010003`
-和 41 bindings；4F 只扩展既有 frame diagnostic DTO，未移动 Canvas/AudioContext/IndexedDB owner。
-完整 exact oracle 见
-[`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json)。
-
-### 15.18 Phase 4G Resource Sizing / Chrome Long-run 矩阵
-
-4G 的项目原创 resource carts 和 production-path Chrome runner 锁定 fixed memory、bounded OOM、
-多 cart lifecycle 与长稳资源释放。普通 verify 运行 10 秒 smoke，并对受审 1800 秒 artifact 做
-schema/source/runtime hash 和门槛复核；只有显式 `pnpm run evidence:phase-4g` 重生成长测。
-
-| 行为 | Phase 4G 结果 | 兼容口径 | 发布边界 |
-| --- | --- | --- | --- |
-| WASM/Pico RAM | fixed `16 MiB` / `64 KiB`；`memory.grow(1)` 抛 `RangeError` 且 buffer/view identity 不变 | implemented invariant | 不开启 memory growth |
-| Lua heap | production 默认 `1 MiB`；`32 KiB` diagnostic cart 返回 `E_VM_OOM`（live `28,616` bytes）并由 fresh cart 恢复 | bounded safety path | 不按 cart/设备自适应扩容 |
-| device/persistence bounds | PCM capacity/prebuffer/low/high `66,150/11,025/5,512/44,100` frames；hydrate `4,096 records / 1 MiB` | owner-exported machine contract | queue overflow 与 persistence read failure 必须可观测 |
-| sequential lifecycle | 20 loads、24 generations；每代 stale frame/PCM/input probe 通过，hard-cap fault 后恢复 | production Worker/Canvas/AudioWorklet/IndexedDB | host-driven only，不授权 guest `load` |
-| Chrome soak | `1800.4173s`；30/60 Hz 为 `54,013/108,026` frames；dropped tick、steady audio fault、discontinuity、long task、Worker error 全零 | Chrome 150/macOS arm64 reviewed evidence | Firefox/WebKit/mobile 不在 gate |
-| resource release | 3/3 Workers terminated，3 AudioContexts closed，RAF/listener/queue 回零；CDP GC 后 main-isolate heap `+2,776 bytes` | gate passed（上限 1 MiB） | `performance.memory` sawtooth 只作诊断 |
-
-受审 artifact 位于
-[`chromium-macos-arm64-phase-4g-long-run.json`](../benchmarks/phase-4/results/chromium-macos-arm64-phase-4g-long-run.json)，
-资源合同位于
-[`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json)。
-
-### 15.19 Phase 4 L2/MVP project-profile exit
-
-Phase 4 的发布口径是 **PICO-8 v0.2.7 L2/MVP project profile on Chrome/Chromium desktop**。
-项目原创 corpus 为 `C3=7/7`、playable rate `100%`、开放 P0/P1/P2 均为 `0`；Node real-WASM 与
-Chrome production-path oracle 一致。这个百分比不包含 third-party/BBS/local external carts，也不
-声称 official bit-exact。完整证据见
-[Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
-
-最终 112 项 inventory 为 implementation `96/5/1/10`、conformance `68/5/29/10`（按各自状态
-顺序）。101 项 required 中，68 项 compatible；5 项 required partial 由 `P4-KD-01`–`04` 覆盖，
-另有 2 项 profile-level Known Differences：
+### 15.5 Published Known Differences
 
 | ID | API / 模式 | 用户可见影响 | Workaround / scope |
 | --- | --- | --- | --- |
@@ -919,10 +635,32 @@ Chrome production-path oracle 一致。这个百分比不包含 third-party/BBS/
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
 
-`P4-CL-01` 是公开 coverage limitation，不是伪装的 compatible：28 个 required VM builtin 已实现、
-但仍缺 official edge vectors，继续标为 `unknown`。精确名单和 conditional/excluded scope decision 由
-[`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 机器锁定。因此 Phase 4 exit
-不能外推为广泛第三方 cart、官方完整 API conformance 或第 16.3 节正式 release qualification。
+### 15.6 Coverage limitation 与范围排除
+
+`P4-CL-01` 覆盖 28 个已实现但仍缺 official edge vectors 的 required VM builtin；它们继续标为
+`unknown`，不能计作 official-compatible。精确 API 名单只由
+[`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 维护，不在 living 文档复制。
+
+- Conditional：`printh`、`extcmd`、`menuitem`。
+- Excluded platform API：`load`、`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`。
+- External/local corpus、BBS bytes 和第三方结果对公开分母贡献为 `0`。
+- guest `load`、external resolver、multicart、BBS access 和 nested async suspension 仍需新 phase/ADR；
+  不能从 Target interface 或现有 host-driven sequential load 推断已支持。
+
+### 15.7 历史结果路由
+
+逐阶段矩阵、环境版本、性能数字、artifact hash 和执行过程已从 living contract 移除：
+
+| 完成范围 | 历史事实入口 |
+| --- | --- |
+| Phase 0 architecture / browser boundary | [`evidence/phase-0/`](./evidence/phase-0/) |
+| Phase 1 L1 bounded profile | [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
+| Phase 2 graphics/memory/text | [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
+| Phase 3 audio/input/persistence | [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
+| Phase 4 L2/MVP hardening | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
+
+新回归只更新当前 compatibility entry、机器 inventory/issue registry 和新 phase evidence；不得把
+旧 work-unit 表重新复制回本文件。
 
 ## 16. Definition of Done
 

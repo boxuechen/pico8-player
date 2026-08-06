@@ -1,35 +1,28 @@
 # z8lua WASM Bridge 契约
 
-本文定义 z8lua 与 TypeScript Runtime 之间的可执行边界。它服务于 Phase 0 spike 和后续生产实现，不把拟定接口误写成 z8lua 上游能力。
+本文定义 z8lua 与 TypeScript Runtime 之间的当前可执行边界，并把 production、隔离 probe 与未来目标明确分开；拟定接口不得误写成 z8lua 上游能力。
 
 本文使用以下标记：
 
 - **已核验上游事实**：来自固定提交的源码或上游说明。
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
-- **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
+- **Target / Deferred**：尚未进入机器契约；只有 active phase、测试与必要 ADR 完成后才能视为稳定公共契约。
 
-实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1 Host boundary、Phase 2
-memory/graphics/text bindings、Phase 3 audio/input/persistence/current-cart bindings、Phase 4C
-project-owned VM compatibility library、Phase 4E root control、Phase 4F instruction accounting 和
-Phase 4G fixed-memory/Lua-heap diagnostics 已完成；
-当前生产边界和 Chrome 退出结果见
+当前 production `p8w_*` 已覆盖 context lifecycle、64 KiB shared Pico RAM、append-only host
+bindings `1..41`、frame stepping、root HostRequest、VM-local P8 helpers、instruction accounting、
+fixed memory/Lua heap 和 structured errors。`p8w0a_*`/`p8w0b_*` 仍是隔离 probe，不是产品 ABI。
+精确操作、版本和 artifact 只以 [`p8w-v1.json`](../spec/abi/p8w-v1.json)、runtime manifest、
+public adapter 与自动测试的交集为准；完成测量见
 [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
-`p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
-exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
-只有机器契约、public adapter 与测试共同覆盖的部分才算 Implemented。
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented through Phase 3 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；80-byte call frame/Base RAM API；append-only operation `1..38` 覆盖 Phase 2 graphics/text 与 Phase 3 audio/input/cartdata/current-cart bindings；boolean/presence/Q16/string lowering、structured host faults 与 real-WASM/Chrome conformance |
-| **Implemented in Phase 4C** | VM-local table helpers、P8 `sub`、guest coroutine aliases，以及使用 shared Pico RAM PRNG state 的 deterministic `rnd/srand`；host ABI 仍为 `1..38` |
-| **Implemented through Phase 4F** | root `run/stop`、VM-local `stat(1/6/7)`、guest `reset` binding `41`；每个 boot/frame segment 暴露 exact consumed instructions，HostRequest continuation 在 transaction 内累计；runtime ABI `0x00010003` |
-| **Implemented in Phase 4G** | fixed 16 MiB linear memory；默认/最低 `1 MiB/32 KiB` tracked Lua heap；read-only live bytes、heap limit 和 live-context diagnostics；OOM 映射为含大小明细的 `E_VM_OOM` |
-| **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
-| **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
-| **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
+| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/root controls、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors |
+| **Accepted invariant** | 同步且不可重入的 import、append-only binding IDs、同一 Pico RAM、root-only recoverable host suspension、host-owned capability policy |
+| **Deferred** | general nested coroutine suspension、guest `load`/external resolver、multi-return/result vectors 和未激活的 capability/API 扩展 |
 
-机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter；
-第 11–12 节是 Phase 0 的历史实施/测量说明，不是下一阶段任务入口。
+机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter。历史实施顺序、
+benchmark 数值和关闭 checklist 只从 evidence/ADR 按需追溯，不在本 living contract 重复。
 
 ## 1. 结论与边界
 
@@ -114,7 +107,7 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 
 `pcall`、`xpcall`、dynamic `load`、`collectgarbage` 等是否暴露，必须由官方行为和 conformance 决定。无论最终兼容选择如何，guest **MUST NOT** 获得修改/关闭 bridge hook 的途径。
 
-Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_ERROR_OOM`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。Phase 4G 已锁定 production 默认 cap 为 `1 MiB`，并用 `32 KiB` minimum diagnostic profile 验证 bounded OOM 与 fresh recovery；host 不得自适应扩大它。
+Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_STATUS_OUT_OF_MEMORY`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。Phase 4G 已锁定 production 默认 cap 为 `1 MiB`，并用 `32 KiB` minimum diagnostic profile 验证 bounded OOM 与 fresh recovery；host 不得自适应扩大它。
 
 ## 4. 生命周期与控制流
 
@@ -136,18 +129,18 @@ EMPTY -> COMPILED -> BOOTING -> CALLBACK_LOOP | CUSTOM_LOOP
 
 所有状态转换 **MUST** 可查询并有 invalid-state 测试。
 
-这是 C/guest execution phase。外层 TS adapter 还必须遵守 [Worker 两阶段 bootstrap](./08-source-layout-and-boundaries.md#worker-两阶段-bootstrap) 的 `memory-ready -> host-bound -> runnable` gate：host router 未 exactly-once 绑定时，禁止调用 `p8w_resume()`。该 bootstrap state 不得伪装成新的 guest yield reason。
+这是 C/guest execution phase。外层 TS adapter 还必须遵守 [Worker 两阶段 bootstrap](./08-source-layout-and-boundaries.md#worker-两阶段-bootstrap) 的 `memory-ready -> host-bound -> runnable` gate：host router 未 exactly-once 绑定时，禁止进入 compile/boot/step。该 bootstrap state 不得伪装成新的 guest yield reason。
 
 ### 4.2 默认 callback loop
 
-默认 cart 的 top-level 返回后，bridge 执行 `_init()`。当 `p8w_resume(..., P8W_STEP_DEFAULT)` 驱动一个完整 callback frame 时，bridge 按以下顺序执行：
+默认 cart 的 top-level 返回后，bridge 执行 `_init()`。当 `p8w_step()` 驱动一个完整 callback frame 时，bridge 按以下顺序执行：
 
 1. 在 frame boundary 重新确认 `_update60` / `_update` 模式。
 2. 优先调用 `_update60()`；否则调用 `_update()`。
 3. 调用 `_draw()`（若存在）。
 4. 通过 bridge 私有 frame-end yield 返回 Runtime。
 
-`P8W_STEP_UPDATE`、`P8W_STEP_DRAW`、`P8W_STEP_PRESENT` 的非默认组合可以按第 6 节 `step_flags` 契约跳过相应阶段；它们不会推翻上述 default path。Phase 1 只允许 `P8W_STEP_DEFAULT`，其他组合必须在慢帧/catch-up conformance 固定后才能用于生产调度。
+当前 production scheduler 只使用机器契约和自动测试覆盖的 step 路径。任何用于慢帧、catch-up 或拆分 update/draw/present 的新组合，都必须先由 active phase 固定 conformance，不能仅因目标草图可表达就进入生产调度。
 
 Bridge **MUST NOT** 把 cart source 与 glue 字符串拼接后重新编号；应保存原 chunk name/line。callback driver 可以由 C continuation 或单独预编译 glue 实现，但 runtime error 必须仍指向 cart source。
 
@@ -168,10 +161,10 @@ end
 
 - bridge 将 context 标记为 `CUSTOM_LOOP`，不得额外启动 callback loop。
 - `flip()` wrapper **MUST** 用 `lua_yieldk()` 和 continuation；下一次 Runtime resume 后，该 Lua 调用正常返回并从下一条语句继续。
-- 一次 `p8w_resume()` 最多提交一个受控 frame/flip boundary。
+- 一次 `p8w_boot()` 或 `p8w_step()` 最多提交一个受控 frame/flip boundary。
 - top-level 的首次 `P8W_YIELD_FLIP` 建立 custom startup boundary。官方 Web Player capture 已锁定：boot transaction 内 `time()` 为 `1/30s`，该 boundary 成功后 Runtime commit 1 个 30 Hz startup slice；从 continuation resume 到下一个 `P8W_YIELD_FLIP` 再 commit 1 slice。VM bridge 只保存 host 传入的 `time_raw`，clock counter 与 commit policy 仍归 RuntimeCore。
 
-custom loop 在 Phase 0E 固定为 30 Hz；未来若支持其他 rate，必须由独立 conformance 固定，不得把 display refresh 直接当作 guest frame rate。
+当前 custom loop profile 固定为 30 Hz；未来若支持其他 rate，必须由独立 conformance 固定，不得把 display refresh 直接当作 guest frame rate。
 
 ### 4.4 Nested coroutine 陷阱
 
@@ -179,10 +172,9 @@ custom loop 在 Phase 0E 固定为 30 Hz；未来若支持其他 rate，必须�
 
 因此：
 
-- Phase 0 **MUST** 分别测试 root coroutine 与至少两层 nested coroutine 中的 `flip/load/reload/cstore`。
 - host request **MUST** 带 out-of-band `pendingRequest` 状态；不能仅靠 Lua yield return values 猜测。
-- 在可靠的 root bubbling（例如受测试的 `coresume` glue/最小 VM patch）完成前，缺失的多-cart 数据只允许从预供给或同步内存 cache 取得。
-- 若 nested suspension 不能安全恢复，MVP **MUST** 返回 `E_FEATURE_UNSUPPORTED`，并在结构化 details 中标记 `reason: "nested-host-suspend"`；禁止伪装成通用异步暂停已经解决。
+- 当前仅 root HostRequest 可恢复；nested `flip/load/reload/cstore` suspension 返回 `E_FEATURE_UNSUPPORTED`，并在结构化 details 中标记 `reason: "nested-host-suspend"`。
+- missing-cart resolver、nested suspension 或 root bubbling 只能由 active phase 在精确 coroutine conformance 下扩展，不能从本目标说明推导为已支持。
 - 不得使用 Asyncify 来掩盖 Lua coroutine 所有权问题。
 
 ## 5. Shared Pico RAM
@@ -205,7 +197,7 @@ const data = new DataView(wasm.HEAPU8.buffer, base, size);
 - Cart ROM 是独立对象，不得把其 pointer 冒充 Base RAM。
 - TS 必须以 unsigned address 和显式 little-endian `DataView` 操作 multi-byte 数据。
 
-v1 production **MUST** 禁止 WASM memory growth，并令 `initial === maximum`。Emscripten 明确说明 growth 会替换 buffer、使既有 typed-array views 失效。[Emscripten memory view 说明](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#access-memory-from-javascript) Phase 0 负责用 heap/cart/multi-instance stress 确定固定容量；未来若要启用 growth，必须先有新 ADR、集中式 view factory 和完整 alias 回归，普通实现任务不得自行打开。
+v1 production **MUST** 禁止 WASM memory growth，并令 `initial === maximum`。Emscripten 明确说明 growth 会替换 buffer、使既有 typed-array views 失效。[Emscripten memory view 说明](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#access-memory-from-javascript) 当前固定容量已由 heap/cart/multi-instance stress 锁定；未来若要启用 growth，必须先有新 ADR、集中式 view factory 和完整 alias 回归，普通实现任务不得自行打开。
 
 ### 5.2 `@/%/$` 与 remap gap
 
@@ -232,136 +224,52 @@ memory probes 和 `Phase0BMemoryBinding` 都调用它；未来 graphics/memory f
 不得复制 remap switch。非法 video base 当前防御性回退默认值，因手册未定义该
 输入，其兼容状态保持 unknown。
 
-Phase 2A production `p8w_*` 已注册 `peek/peek2/peek4`、`poke/poke2/poke4`、
+production `p8w_*` 已注册 `peek/peek2/peek4`、`poke/poke2/poke4`、
 `memcpy/memset`。只有 `peek/poke` 是最多 8192 项的 variadic API；width variants 为单值。
 `memcpy` 先建立 source snapshot 以保持 remap 后的重叠复制语义。RuntimeCore 通过
 `PicoLogicalMemoryPort` 调 production `_p8w_map_address`，frame snapshot 和 software raster
 不再复制 video-base switch。
 
-### 5.3 Phase 0B bounded ABI（已实现）
+### 5.3 隔离的 bounded memory probe
 
-Phase 0B 只新增 `p8w0b_*` probe：context create/destroy/run/result、RAM
+`p8w0b_*` 是历史 Phase 0B probe：context create/destroy/run/result、RAM
 pointer/size/reset、canonical map/read/write 和 source alloc/free。ABI version 为
 `0x00020000`。它用于锁定 RAM boundary 与测试，不含 compile/resume/frame/request
 state machine，不得被 RuntimeCore 当作 production `VmPort`。
 
 ## 6. C ABI v1
 
-> 状态：机器契约中的 Phase 2A subset 已实现；下方 capability/step-vector 草图仍是 Target。
+当前 public ABI version 为 `0x00010003`。唯一完整 symbol/status/state/yield 列表是
+[`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)；public adapter 与 artifact tests 必须与其
+完全一致。本文不复制容易漂移的 C header。
 
-当前事实只由 [`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)、public adapter 与真实
-artifact tests 共同定义。下方较宽接口保留为未来能力草图，不能据此调用不存在的 symbol。
-
-所有 public symbol 使用 `extern "C"`，只传 `i32/u32` 和 wasm32 pointer；禁止把 `lua_State *`、`z8::fix32`、C++ object、`i64` 或 JS object 暴露到边界。
-
-```c
-#define P8W_ABI_VERSION 0x00010001u /* implemented major << 16 | minor */
-
-typedef uint32_t p8w_handle_t; /* opaque; 0 is invalid */
-
-enum p8w_status {
-  P8W_OK                    = 0,
-  P8W_READY                 = 1,
-  P8W_YIELD_FRAME           = 2,
-  P8W_YIELD_FLIP            = 3,
-  P8W_NEEDS_CART            = 4,
-  P8W_STOPPED               = 5,
-  P8W_YIELD_SLICE           = 6,
-
-  P8W_ERROR_INVALID_STATE   = -1,
-  P8W_ERROR_SYNTAX          = -2,
-  P8W_ERROR_RUNTIME         = -3,
-  P8W_ERROR_OOM             = -4,
-  P8W_ERROR_BUDGET          = -5,
-  P8W_ERROR_HOST            = -6,
-  P8W_ERROR_INTERNAL        = -7
-};
-
-enum p8w_step_flags {
-  P8W_STEP_UPDATE           = 1u << 0,
-  P8W_STEP_DRAW             = 1u << 1,
-  P8W_STEP_PRESENT          = 1u << 2,
-  P8W_STEP_DEFAULT          = P8W_STEP_UPDATE |
-                              P8W_STEP_DRAW |
-                              P8W_STEP_PRESENT
-};
-
-enum p8w_request_result {
-  P8W_REQUEST_OK            = 0,
-  P8W_REQUEST_NOT_FOUND     = 1,
-  P8W_REQUEST_DENIED        = 2,
-  P8W_REQUEST_CANCELLED     = 3,
-  P8W_REQUEST_HOST_ERROR    = 4
-};
-
-enum p8w_capability {
-  P8W_CAP_STEP_PLAN         = 1u << 0,
-  P8W_CAP_REQUEST_COMPLETE  = 1u << 1,
-  P8W_CAP_HOST_VECTORS      = 1u << 2
-};
-
-uint32_t     p8w_abi_version(void);
-uint32_t     p8w_capabilities(void);
-p8w_handle_t p8w_create(uint32_t host_context_id,
-                        uint32_t lua_heap_limit_bytes);
-void         p8w_destroy(p8w_handle_t handle);
-int32_t      p8w_reset(p8w_handle_t handle);
-
-uint32_t     p8w_ram_ptr(p8w_handle_t handle);
-uint32_t     p8w_ram_size(p8w_handle_t handle); /* always 65536 */
-
-int32_t      p8w_compile(p8w_handle_t handle,
-                         uint32_t source_ptr, uint32_t source_len,
-                         uint32_t chunk_name_ptr, uint32_t chunk_name_len);
-int32_t      p8w_resume(p8w_handle_t handle,
-                        uint32_t instruction_budget,
-                        uint32_t step_flags);
-
-uint32_t     p8w_phase(p8w_handle_t handle);
-uint32_t     p8w_target_fps(p8w_handle_t handle);
-uint32_t     p8w_last_instruction_count(p8w_handle_t handle);
-
-int32_t      p8w_last_error_code(p8w_handle_t handle);
-uint32_t     p8w_last_error_ptr(p8w_handle_t handle);
-uint32_t     p8w_last_error_len(p8w_handle_t handle);
-int32_t      p8w_last_error_line(p8w_handle_t handle);
-
-uint32_t     p8w_pending_request_id(p8w_handle_t handle);
-uint32_t     p8w_pending_request_kind(p8w_handle_t handle);
-uint32_t     p8w_pending_request_ptr(p8w_handle_t handle);
-uint32_t     p8w_pending_request_len(p8w_handle_t handle);
-int32_t      p8w_complete_request(p8w_handle_t handle,
-                                  uint32_t request_id,
-                                  int32_t result_code,
-                                  uint32_t payload_ptr,
-                                  uint32_t payload_len);
-```
+所有 public symbol 使用 `extern "C"`，只传 `i32/u32` 和 wasm32 pointer；禁止把
+`lua_State *`、`z8::fix32`、C++ object、`i64` 或 JS object 暴露到边界。
 
 契约：
 
 - `p8w_create()` 返回 opaque handle；TS 不得假设它是 C pointer。
-- `p8w_compile()` 按 `source_len` 读取 bytes，只编译、不执行；source/chunk buffers 仅需在调用期间有效。
-- `p8w_resume()` 驱动 top-level、`_init`、callback 或 custom loop，直到一个受控 boundary 或 fatal status。
-- `step_flags` 在 boot/custom-loop mode 被忽略；在 callback mode 中决定本 slice 是否调用 update、draw，以及是否提交 visible frame。Phase 1 只需 `P8W_STEP_DEFAULT`。支持 catch-up 时，Runtime 可以先执行若干 `UPDATE` slice（返回 `P8W_YIELD_SLICE`），最后执行 `UPDATE | DRAW | PRESENT`（返回 `P8W_YIELD_FRAME`）。跳过 `_draw` 是否符合目标 CPU/frame-drop 行为仍必须由 conformance 决定，不能仅因 ABI 可表达就默认启用。
-- syntax/runtime/OOM/budget/host/internal fatal error 后 context 进入 `FAULTED`；`P8W_ERROR_BUDGET` 不可继续 resume。对 stale handle、错误 request ID 等 API misuse 返回 `P8W_ERROR_INVALID_STATE` 时不得改变当前有效 context。
+- `p8w_compile()` 按 byte length 读取 source，只编译、不执行；临时输入 buffer 仅需在调用期间有效。
+- `p8w_boot()` / `p8w_step()` 驱动 top-level、`_init`、callback 或 custom loop，直到一个受控 boundary 或 fatal status。
+- 当前 ABI 不发布通用 step-plan/capability vector；catch-up、拆分 update/draw/present 和 host result vector 都是 Deferred，必须先修改机器契约和 conformance。
+- syntax/runtime/OOM/budget/host/internal fatal error 后 context 进入 `FAULTED`；`P8W_STATUS_INSTRUCTION_BUDGET` 不可继续 step。对 stale handle、错误 request ID 等 API misuse 返回 `P8W_STATUS_INVALID_STATE` 时不得改变当前有效 context。
 - error/request pointer 由 context 拥有，有效期到下一次 mutating ABI call 或 destroy。TS 若需保留必须立即 copy。
-- ABI major 不匹配必须 fail closed；minor capability 通过 `p8w_capabilities()` 协商。
+- ABI version 不匹配必须 fail closed；新增 capability 必须先进入机器契约。
 - `_malloc/_free` 只用于 `withWasmBytes()` 形式的短期输入 copy，必须成对；业务模块不得长期持有任意 malloc pointer。
 
 Pending request 的完成契约：
 
 - 一个 context 同时最多有一个 pending request；request ID 在 handle 生命周期内单调、非零且不得复用。
-- `P8W_NEEDS_CART` 后，未完成 request 时再次 `p8w_resume()` 只能幂等返回同一状态，不得推进 guest。
-- `p8w_complete_request()` 只接受当前 pending ID。stale/mismatch、重复 completion、reset/destroy 后 completion 都返回 `P8W_ERROR_INVALID_STATE`，不得影响新 session。
-- `payload` 是 request-kind schema 定义的 opaque bytes；成功时是对应结果，失败时可以是受限 diagnostic bytes。Bridge **MUST** 在调用返回前完成 copy，不得借用 TS pointer；`payload_len` 必须有 kind-specific cap。
-- `P8W_REQUEST_CANCELLED`、拒绝和 host error 必须在下一次 resume 进入对应 continuation/结构化错误路径；不得无限保持 pending。停止或 reset 可以直接使旧 request 失效。
+- `P8W_YIELD_HOST_REQUEST` 后 context 进入 `WAITING_HOST`，普通 step 不得推进 guest。
+- `p8w_complete_host_request()` 只接受当前 pending ID。stale/mismatch、重复 completion、reset/destroy 后 completion 都返回 invalid state，不得影响新 session。
+- response 是 copied opaque bytes，并带 `is_error`；Bridge **MUST** 在调用返回前完成 copy，不得借用 TS pointer，长度遵守机器契约的 host-byte cap。
+- 拒绝、取消和 host error 必须由 response schema 显式表达并进入对应 continuation/结构化错误路径；不得无限保持 pending。停止或 reset 可以直接使旧 request 失效。
 - request kind、payload schema version、一次性语义及 nested-coroutine 可恢复性必须有 ABI tests。多-cart `load()` 若采用“销毁旧 VM、原子换新 cart”，Runtime 仍须明确取消旧 request，而不能向已销毁 handle 回填。
 
 ## 7. WASM import 与 host-call frame
 
-Phase 2A 已将 scalar import 升级为 ABI minor `0x00010002`：binding id 加一个 bridge-owned
-80-byte call frame，同步调用 module-local TS dispatcher。它捕获 TS throw，并映射为
-`P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。当前 artifact layout 为：
+当前 host import 使用 binding id 与 bridge-owned 80-byte call frame，同步调用 module-local TS
+dispatcher。它捕获 TS throw，并映射为 `P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。artifact layout 为：
 
 ```c
 int32_t p8_host_call(uint32_t host_context_id,
@@ -388,23 +296,22 @@ offset、descriptor、operation 到参数的映射由 machine-readable API schem
 和 TS dispatcher，并由 hash manifest 锁定。一个 operation layout 进入 ABI v1 后不能静默改变。
 byte-string view 只在同步调用期间有效；embedded NUL 不改变 `byte_buffer_len`。
 
-Phase 2B 不改变 frame byte layout 或 ABI minor：boolean 参数仍占一个 scalar slot，descriptor 的
-boolean mask 决定 C 侧 Lua truthiness lowering；`q16.16-raw-i32` result 直接以 raw bits 返回。
+boolean 参数仍占一个 scalar slot，descriptor 的 boolean mask 决定 C 侧 Lua truthiness lowering；
+`q16.16-raw-i32` result 直接以 raw bits 返回。
 `pal(table,[p])` 是 bounded dedicated wrapper：最多读取 16 个 table entry，再同步复用 operation
 `13` 的 typed host method；它不在 bridge 实现 palette mapping。
 
-Phase 2C–2D append operation id `19..28`，最多 10 个 scalar；sprite/map/flags/tline
-均只使用既有 presence、boolean 与 Q16 lowering。Phase 2E append `print/cursor` id `29..30`；
+sprite/map/flags/tline operation `19..28` 最多使用 10 个 scalar，并复用既有 presence、boolean 与
+Q16 lowering。`print/cursor` operation `29..30` 使用 production byte-string slot；
 `print` 是 production byte-string slot 的首个语义 consumer，C wrapper 以 pointer + explicit length
 同步借出 guest bytes。map/text hardware semantics、texture sampling 与 glyph raster 均不进入 bridge。
 
-Phase 3 在不改变 80-byte frame、ABI minor 或 lowering 规则的前提下 append operation `31..38`：
-`sfx/music/stat/cartdata/dget/dset/reload/cstore`。bridge 只处理 Lua stack、optional/presence、
-boolean/Q16/string result 与同步错误边界；synthesis、input latch、RAM authority、IndexedDB 和
-current-cart repository 语义均由 RuntimeCore/app adapter 拥有。operation id、签名和生成物 hash
-以 [`pico-host-api-v1.json`](../spec/abi/pico-host-api-v1.json) 及 generated manifest 为准。
+operation `31..41` 覆盖 audio/input/persistence/memory/root controls。bridge 只处理 Lua stack、
+optional/presence、boolean/Q16/string result 与同步错误边界；synthesis、input latch、RAM authority、
+IndexedDB 和 current-cart repository 语义均由 RuntimeCore/app adapter 拥有。operation id、签名和
+生成物 hash 以 [`pico-host-api-v1.json`](../spec/abi/pico-host-api-v1.json) 及 generated manifest 为准。
 
-`scalar_slots[12]` 不是 PICO-8 vararg/multi-return 上限。Phase 2A 的 `peek(addr,n)` 和
+`scalar_slots[12]` 不是 PICO-8 vararg/multi-return 上限。`peek(addr,n)` 和
 `poke(addr,val...)` 使用 dedicated C wrapper，因此不会穿过 host frame：
 
 - bridge 在 push 大量 Lua return values 前必须 `lua_checkstack()`，失败转 OOM/runtime error。
@@ -420,7 +327,7 @@ Host adapter **MUST**：
 - 不得返回 Promise。
 - 使用无 allocation 的 DataView/typed-array access 处理 steady-state numeric hot path。
 
-Phase 0 先测 generic import。只有 benchmark 触发阈值时，才为 `pset/pget/peek/poke` 等加入 typed fast imports；fast path 必须与 generic path 共享 conformance，并通过 capability bit 协商。
+只有当前 benchmark ladder 触发阈值时，才允许为 `pset/pget/peek/poke` 等加入 typed fast imports；fast path 必须与 generic path 共享 conformance，并通过机器契约协商。
 
 ## 8. 值编解码
 
@@ -471,10 +378,10 @@ count hook 的安全策略已经锁定：budget exhaustion **MUST** poison conte
 
 建议实现：
 
-1. `p8w_resume(handle, budget, step_flags)` 设置 `remaining` 和 `budgetPoisoned=false`。
+1. `p8w_boot()` / `p8w_step()` / `p8w_complete_host_request()` 开始 execution segment 时设置 `remaining` 和 `budgetPoisoned=false`。
 2. `lua_sethook(..., LUA_MASKCOUNT, quantum)` 每 `quantum` VM instructions 进入 C hook。
 3. hook 更新计数；达到预算时先设置 `budgetPoisoned=true`，再 `luaL_error()`。
-4. protected outer resume 无论 guest 是否尝试捕获 sentinel，都在返回路径优先检查 poison，并报告 `P8W_ERROR_BUDGET`。
+4. protected outer resume 无论 guest 是否尝试捕获 sentinel，都在返回路径优先检查 poison，并报告 `P8W_STATUS_INSTRUCTION_BUDGET`。
 5. 所有新 coroutine 必须继承 hook；上游 `lua_newthread()` 当前会复制 hook fields，但仍需回归测试。[上游 thread 初始化](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lstate.c#L237-L250)
 
 `quantum`/safety cap 与 compatibility CPU cost 不是一回事。Phase 4F 已锁定每条 count hook
@@ -493,13 +400,13 @@ Bridge error 至少包含：
 - raw message bytes、chunk name、best-effort line 和 sanitized trace。
 - recoverable flag；syntax 可通过加载新 cart 恢复，faulted VM 不可原地 resume。
 
-错误 buffer 不保证是 UTF-8。TS 负责 copy，并把 bridge code 映射到 [Runtime 的 `SerializedRuntimeError`](./04-typescript-runtime.md#15-错误模型)，例如 `P8W_ERROR_BUDGET` → `E_VM_INSTRUCTION_BUDGET`。生产错误不得包含宿主绝对路径、任意 JS object dump 或 secret。
+错误 buffer 不保证是 UTF-8。TS 负责 copy，并把 bridge code 映射到 [Runtime 的 `SerializedRuntimeError`](./04-typescript-runtime.md#15-错误模型)，例如 `P8W_STATUS_INSTRUCTION_BUDGET` → `E_VM_INSTRUCTION_BUDGET`。生产错误不得包含宿主绝对路径、任意 JS object dump 或 secret。
 
-WebAssembly trap、JS import exception 和 Lua error 必须可区分。bridge 内只有未知 invariant failure 使用 `P8W_ERROR_INTERNAL`，Runtime 再映射为 `E_INVARIANT`。
+WebAssembly trap、JS import exception 和 Lua error 必须可区分。bridge 内只有未知 invariant failure 使用 `P8W_STATUS_INTERNAL_ERROR`，Runtime 再映射为 `E_INVARIANT`。
 
 ## 10. Emscripten 构建基线
 
-z8lua 没有上游 WASM build。Phase 0A 已把 baseline 落为真实命令：
+z8lua 没有上游 WASM build。本仓库的可复现构建入口为：
 
 ```sh
 pnpm run build:wasm
@@ -508,146 +415,43 @@ pnpm run verify:wasm
 
 Emscripten 锁定为 6.0.5；emsdk manager、release commit、完整 source list、flags、
 imports 与 artifact hash 分别由 `wasm/toolchain.lock.json` 和
-`wasm/manifest.lock.json` 机器验证。实际 Phase 0B artifact 使用 16 MiB fixed memory、
+`wasm/manifest.lock.json` 机器验证。production artifact 使用 16 MiB fixed memory、
 `worker,node` ES module、Wasm EH、`SUPPORT_LONGJMP=wasm`、filesystem/dynamic
 execution/growth off。binary descriptor 已验证 `initial=maximum=256` pages，
-`grow(1)` 失败且 view identity 不变。`node` 只服务 CI Worker smoke；16 MiB 与默认
-1 MiB Lua cap 是 Phase 0B artifact 参数，不是代表 cart corpus 的最终容量决定。
+`grow(1)` 失败且 view identity 不变。`node` 只服务 CI Worker smoke；当前资源契约固定为
+16 MiB linear memory 与 1 MiB default Lua heap，变更必须先修改机器契约与资源测试。
 
 z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try/throw`，
-因此不能使用 `-fno-exceptions`。Phase 0A 选择 native Wasm exceptions；正式浏览器
+因此不能使用 `-fno-exceptions`。工具链固定使用 native Wasm exceptions；正式浏览器
 支持结论只须经过 Chrome/Chromium 目标矩阵。
 
 构建要求：
 
 - 使用 ES module factory，以便 Worker 中显式实例化并隔离 module scope。Emscripten 的 `MODULARIZE`/ES module 行为见[官方文档](https://emscripten.org/docs/compiling/Modularized-Output.html)。
 - 业务热路径直接调用 exported function；不使用 Embind，默认也不导出 `ccall/cwrap`。Emscripten 说明 direct call 更快，但调用者必须自行处理 primitive/pointer。[官方 interop 文档](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html)
-- 禁止 Asyncify、pthreads 和 WASM Workers 作为 Phase 0 依赖。pthreads 会引入 SharedArrayBuffer 及 COOP/COEP 部署要求。[Emscripten pthread 文档](https://emscripten.org/docs/porting/pthreads.html)
-- error/exception mode 必须显式 pin，避免工具链升级静默改变；Phase 0A 是 Wasm EH + `SUPPORT_LONGJMP=wasm`。[官方 longjmp 文档](https://emscripten.org/docs/porting/setjmp-longjmp.html)
-- production 禁止 memory growth；Phase 0B 已验证 16 MiB descriptor、64 context、受控 OOM 与 view identity。若后续代表 corpus 证明固定 memory 不足，先测量并调整，不得静默改为 growth。
+- production 禁止 Asyncify、pthreads 和 WASM Workers。pthreads 会引入 SharedArrayBuffer 及 COOP/COEP 部署要求。[Emscripten pthread 文档](https://emscripten.org/docs/porting/pthreads.html)
+- error/exception mode 必须显式 pin，避免工具链升级静默改变；当前是 Wasm EH + `SUPPORT_LONGJMP=wasm`。[官方 longjmp 文档](https://emscripten.org/docs/porting/setjmp-longjmp.html)
+- production 禁止 memory growth；固定 16 MiB descriptor、64 context、受控 OOM 与 view identity 已有验证。若后续代表 corpus 证明固定 memory 不足，先测量并修改资源契约，不得静默改为 growth。
 - debug build 应开启 assertions、source map、stack overflow check；release build 与 debug build 分离。
 - `.wasm` 与 `.mjs` 分文件发布；不默认 `SINGLE_FILE`，不嵌入文件系统或网络 shim。
 - build 输出必须记录 z8lua SHA、patch hash、emsdk version、flags 与 artifact hash，支持可复现检查。
 
-## 11. Phase 0 实施顺序
+## 11. 验证与变更路由
 
-> 状态：Evidence / historical。
+- ABI operation、binding ID、artifact hash 与资源常量：以 `spec/abi/`、runtime manifest 和生成验证为准。
+- 当前兼容范围、Known Differences 与 coverage limitation：见
+  [测试兼容契约](./06-testing-compatibility.md#15-兼容等级已知差异与质量口径)。
+- z8lua pin、patch、许可证、interop 与历史 Chrome 数据：从
+  [ADR registry](./07-decisions-risks-open-questions.md#1-adr-registry) 和
+  [evidence index](./evidence/) 按需追溯。
+- 实现任务的测试层级和完成条件：由 active phase 路由到
+  [Codex 协议](./09-codex-task-protocol.md) 与精确 contract 小节。
 
-Codex 应按以下 vertical slices 实现，不能一次提交全部 bridge：
+任何 ABI version、host-call frame、memory ownership、suspension model 或 sandbox 变更都必须先由
+active phase 明确授权；影响 Accepted 决定时先提交替代 ADR。不得把历史 spike checklist 或
+benchmark 门槛当作下一阶段的待办清单。
 
-1. **Baseline VM（Phase 0A Complete）**：pin source、tracked allocator、白名单 libs、compile/execute shorthand/fixed/coroutine fixture、instruction budget、NOTICE。
-2. **Shared RAM（Phase 0B Complete）**：64 KiB stable allocation、`lua_setpico8memory` alias、TS 双向读写、upper/wrap/remap conformance、fixed memory/OOM。
-3. **Raw ABI**：`p8w_*` lifecycle、Q16.16、byte string、structured error 和 stack tests。
-4. **Host schema prototype**：保持最多 12 个异构签名，生成 generic call frame wrapper/binding。
-5. **Frame control**：callback loop、root custom `flip()`、instruction error、Window watchdog。
-6. **Nested control flow**：nested `flip/load/reload/cstore`；决定可靠 bubble、同步-cache 降级或 unsupported contract。
-7. **Interop benchmark**：依据结果接受 generic ABI 或增加最小 typed fast paths。
-
-每个 slice 必须同时提交 tests 和相应 ADR/本文更新；spike 结果不能只存在于聊天或 benchmark 截图。
-
-## 12. 性能 Spike
-
-> 状态：Evidence / historical。
-
-### 12.1 必测 workload
-
-Phase 0C browser harness 只以 Chrome/Chromium 为浏览器门禁；缺失 Chromium
-必须记录 `not-run`/`unavailable`，不能生成替代值。bridge-only matrix 为：
-
-| Case | 规模 | 要回答的问题 |
-| --- | ---: | --- |
-| no-op scalar / raw Q16.16×3 | 1K / 16K / 64K calls/frame | 纯边界与 raw 多参数成本 |
-| `pset(rawX, rawY, color)` | 16,384/frame | pixel hot path 是否需 typed import/下沉 |
-| `peek_poke` | 1K / 16K / 64K pairs | per-call import 与 shared RAM 成本 |
-| `spr_8x8` | 1K / 4K / 16K / 64K | block operation 边界与 total pixel work |
-| byte string | 1024 calls × 0/8/64/1024 B | pointer + length、embedded NUL 与 payload cost |
-
-四条路径分别是 JS→WASM export、WASM→JS import、pure-WASM control 和
-canonical-mapped JS shared memory。每轮记录 calls、calibration、p50/p95/p99、
-calls/s、ns/call、allocation availability、result checksum、完整 RAM hash 和 buffer
-identity。Phase 0C 刻意不运行 Lua parser/VM，因此不记录伪造的 VM instruction
-count；direct `@/%/$` correctness 属于 Phase 0B，nested HostRequest/coroutine 属于
-Phase 0E。
-
-### 12.2 初始 Go gate
-
-- 代表性 60 Hz cart 的 VM + TS Runtime desktop p95 **SHOULD** ≤ 8 ms/frame，与 [系统架构预算](./02-system-architecture.md#11-初始性能预算)一致。
-- bridge-only 16K no-op/raw calls 不得产生每 call JS object/string allocation。
-- 16K `pset` stress 的 desktop p95 目标为 ≤ 5 ms，以给 VM/audio 留出总计 8 ms 的 core budget；超出时不能宣布 generic ABI Go。该数值与 [测试性能门禁](./06-testing-compatibility.md#102-场景预算) 同步维护。
-- 实际 Chrome/Chromium 版本与设备必须写入 ADR/证据。
-- 所有 workload 在优化前后 output/RAM hash 必须一致。
-- steady state 不得 memory grow，不得随帧数线性增长 heap、message 或 buffer。
-
-若失败，必须按 [全局 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder) 从第 1 级逐级评估。某一级对当前 workload 不适用时，也必须记录 profile 与 `not-applicable` 理由后才能继续；不得用本节的 bridge 局部视角跳过 raw buffer、批量输出或 audio 层级，直接宣布 full-core WASM。每次升级只移动被 profile 证明的热点。
-
-Phase 0C 的已测 Chrome 结论为 Go：16K `pset`、65,536
-`peek_poke`、4K `spr_8x8` import p95 为 0.090/0.599/0.442 ms；80/80
-cross-path hash 与 fixed-buffer 门禁通过，未触发下沉。由于支持范围已收敛为
-Chrome/Chromium，浏览器 portability condition 已关闭；representative-cart 8 ms
-gate 仍留给后续完整 Runtime。见
-[ADR-006](./adr/006-interop-hot-path-boundary.md) 与
-[Phase 0C 证据](./evidence/phase-0/14-phase-0c-evidence.md)。
-
-## 13. 验收标准
-
-Phase 0 Exit 前，本 bridge 至少满足：
-
-### Build / supply chain
-
-- [x] z8lua 与 emsdk 均 pin，clean build outputs 可重复构建相同 artifact hash。
-- [x] Phase 0A 比较后选定的 z8lua upstream branch、精确 commit 与所有本地 patch 都有 provenance。
-- [x] Lua/WTFPL notices 和 third-party 清单进入生成 artifact。
-
-### Language / sandbox
-
-- [x] shorthand、compound assignment、overflow、division by zero、sin/cos 和 coroutine fixture 通过。
-- [x] `^` 差异有明确 baseline result/known-difference；未宣称 bit-exact。
-- [x] guest 无法取得 `debug.sethook`、filesystem、network 或 native module。
-- [x] 创建/销毁 100 contexts 后无可观察 session/tracked-Lua-heap 线性泄漏。
-
-### RAM / ABI
-
-- [x] `p8w_abi_version`、invalid state、reset/destroy 和 adapter major mismatch contract 已落地；stale/invalid completion 继续扩充 corpus。
-- [x] TS 与 Lua 对同一 64 KiB RAM 双向 alias，无 logical-frame RAM copy；frame event 只复制 8 KiB packed screen。
-- [x] lower/upper、negative、`0xffff` wrap、multi-byte cross-boundary、GFX/SCREEN remap conformance 由 Phase 0B patch/tests 锁定。
-- [ ] raw fixed、nil/default、embedded NUL、multi-return、host error、stack balance 全覆盖。
-- [ ] 8K vararg/result vector 不截断、不过界，Lua stack 不足时受控失败。
-- [x] Phase 0E error/request/response pointer 由 adapter 立即 defensive copy；embedded NUL regression 通过。
-- [ ] pending request 的 ID 匹配、success/error/cancel、重复/stale completion、payload copy 与 size cap 测试通过。
-
-### Control / safety
-
-- [x] callback cart 手动推进 60 次得到精确的 update/draw count。
-- [x] root 手写 `flip()` loop 每 resume 只前进一个 boundary，且不重复启动 callback loop。
-- [x] nested coroutine 的 control/HostRequest 原型明确为 `E_FEATURE_UNSUPPORTED:nested-host-suspend`；`reload/cstore` 使用预供给/同步 cache 或 unsupported。
-- [x] Lua 无限循环由 count hook 转成不可恢复 `P8W_STATUS_INSTRUCTION_BUDGET`，Runtime 映射为 `E_VM_INSTRUCTION_BUDGET`，不是 yield 后继续。
-- [x] JS host import throw 映射为不可恢复 `E_HOST_API`；Lua runtime、OOM、budget 和 HostRequest error 保持独立分类。raw Wasm trap 的最终分类仍待后续 hardening。
-- [x] hook 无法中断的 Worker JS stall 在真实 Chrome 中由 Window watchdog 终止并重建，generation 防 stale response。
-
-### Performance
-
-- [ ] 12.1 workload 在浏览器矩阵有可复现 p50/p95/p99。
-- [ ] generic/fast/downshift 决策形成 ADR，并更新 capability/ABI。
-- [ ] 优化前后 semantic hash 一致。
-
-## 14. 风险与未决问题
-
-| 问题 | 当前默认 | 关闭条件 |
-| --- | --- | --- |
-| 固定 WASM memory 容量 | 16 MiB；descriptor、growth rejection、view identity 和 1800 秒 Chrome gate passed | 禁止开启 growth |
-| Lua heap cap | 默认 1 MiB；最低 diagnostic 32 KiB | `E_VM_OOM` 必须含 live/limit bytes，fault 后 fresh recovery |
-| generic call frame 是否足够快 | 未定 | 12.1 browser benchmark |
-| `@/%/$` upper/remap 精确规则 | 上游 flat 实现不满足假设 | 官方 capture + 最小 patch + golden |
-| `^` bit mismatch | 已知风险 | 接受 known difference 或带 conformance 的 patch |
-| callback 动态替换及 custom loop fps | 未定 | 30/60/custom conformance |
-| nested coroutine HostRequest | 不宣称通用支持 | root bubbling + resume tests；否则显式降级 |
-| count quantum/default budget | 未定 | Chrome/Chromium determinism + representative corpus |
-| generated binding（ADR-008） | Accepted；production 22 bindings + isolated 12-signature prototype | 新增 vector/multi-return/general-table shape 时扩 schema/prototype/lifetime tests |
-| Emscripten exception/longjmp mode | Phase 0A 为 Wasm EH + `SUPPORT_LONGJMP=wasm` | browser matrix 后接受或替换 production mode |
-
-实现者不得自行“顺手解决”这些问题并静默改变契约。每项必须以 fixture、benchmark 或官方依据关闭，并同步 [07-decisions-risks-open-questions.md](./07-decisions-risks-open-questions.md)。
-
-## 15. 主要参考
+## 12. 主要参考
 
 - [PICO-8 User Manual](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
 - [z8lua repository](https://github.com/samhocevar/z8lua)
