@@ -1,22 +1,20 @@
 # 系统架构
 
 > 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码、自动测试和
-> [最近关闭的机器合同](../spec/phase-4-l2-mvp-contract.json)为准。
+> [最近关闭的机器合同](../spec/phase-5-l3-multicart-contract.json)为准。
 
 ## 状态路由
 
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented** | 三执行域 production path；current-cart guest control；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM、bounded Lua/audio/persistence resources 与跨-generation lifecycle |
-| **Target** | guest `load`、external cart transaction 与后续 release qualification |
-| **Deferred** | nested async HostRequest、完整 cart swap/multicart、BBS resolver 和完整 L3 host integration |
+| **Implemented** | 三执行域 production path；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
+| **Deferred** | general nested-coroutine HostRequest、include resolution、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
 
-第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
-当前 production player 协议由
-[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；最近关闭能力由
-[`phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json)
-及其前置合同锁定。早期 `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
+第 4–11 节只维护稳定架构约束，不复制容易漂移的 DTO 和 error union。当前 production player
+协议由 [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；最近关闭
+能力由 [`phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) 及其
+前置合同锁定。早期 `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
 定义。
 
@@ -79,13 +77,9 @@ Runtime Worker 是一局 player session 的唯一权威状态源。
 
 z8lua 的 WASM linear memory 内必须预留一块连续 64 KiB Base RAM，并导出其 pointer。TypeScript Runtime 通过 `Uint8Array` / `DataView` 建立零复制视图。
 
-```ts
-export interface PicoMemoryView {
-  readonly bytes: Uint8Array;
-  readonly data: DataView;
-  readonly baseAddress: number;
-}
-```
+跨 package 只传 runtime-neutral `PicoMemoryLease`；精确字段由
+[`packages/contracts/src/public.ts`](../packages/contracts/src/public.ts) 定义，不暴露
+`WebAssembly.Memory`、Emscripten module 或 raw handle。
 
 要求：
 
@@ -131,7 +125,7 @@ player UI
 模块约束：
 
 - `graphics`、`audio`、`input` 依赖 RAM interface，不依赖 UI。
-- `cart` 只产生规范化 CartImage，不直接启动 VM。
+- `cart` 只产生规范化 `ParsedCart`，不直接启动 VM。
 - `z8lua bridge` 不导入 DOM、Canvas、AudioContext 或 IndexedDB。
 - `runtime orchestrator` 是唯一允许同时协调 VM、RAM、input、graphics 和 audio 的模块。
 - `player UI` 只消费协议消息，不得读取 WASM memory。
@@ -140,69 +134,54 @@ player UI
 
 ## 4. Session 状态机
 
-> 状态：Mixed。host-driven load/reset 与 `idle/loading/ready/running/paused/faulted/stopped`
-> 主路径已实现；`waiting_cart`、guest `load` 和 external cart transaction 仍是 Target。
+> 状态：Implemented。对外状态以 `player-protocol.ts` 的
+> `ready/running/waiting-host/paused/stopped/disposed` 为准；staging 与 fault containment 是
+> Worker 内部事务状态，不额外扩张 wire protocol。
 
 ```mermaid
 stateDiagram-v2
-    [*] --> idle
-    idle --> loading: loadCart
-    loading --> ready: parsed + VM booted
-    loading --> faulted: parse/boot error
+    [*] --> empty
+    empty --> staging: Window loadCart
+    staging --> ready: boot commit
+    staging --> faulted: parse/boot error
     ready --> running: start
     running --> paused: pause / hidden policy
     paused --> running: resume
     running --> running: guest run / fresh runtime graph
-    paused --> loading: reset
-    running --> waiting_cart: load/reload/cstore dependency missing
-    waiting_cart --> running: reload/cstore bytes supplied
-    waiting_cart --> loading: load target supplied
-    waiting_cart --> faulted: rejected/timeout
+    ready --> staging: reset
+    paused --> staging: reset
+    running --> waiting_host: root HostRequest
+    waiting_host --> running: external reload/cstore commit
+    waiting_host --> staging: guest load target resolved
+    staging --> running: guest replacement commit
+    waiting_host --> faulted: rejected/cancelled/malformed
     running --> faulted: runtime error/budget exceeded
     paused --> faulted: host/session fault
-    faulted --> loading: reset or loadCart
-    idle --> stopped: stop
-    loading --> stopped: stop / cancel
+    faulted --> staging: reset or loadCart
+    empty --> stopped: stop
+    staging --> stopped: stop / cancel
     ready --> stopped: stop
     running --> stopped: host or guest stop
     paused --> stopped: stop
-    waiting_cart --> stopped: stop
+    waiting_host --> stopped: stop
     faulted --> stopped: stop
-    stopped --> loading: loadCart
+    stopped --> staging: loadCart
 ```
 
-状态转换必须原子化。新 cart load 失败时，不得留下旧 VM 与新 RAM 混合状态。
+状态转换必须原子化。guest `load()` 只有在独立 staged session 成功 boot 后才替换 generation，
+且 `session-replaced` 必须是新 generation 的第一个 event；失败时不得发布 staging frame/audio，
+也不得留下旧 VM 与新 RAM 混合状态。
 
 ## 5. Worker 协议
 
-> 状态：Mixed。当前 source 已实现 load/start/input/vsync/pause/resume/reset/stop/dispose、
-> state/frame/heartbeat/runtime-control/diagnostic/fault 和独立 audio/persistence lifecycle；下方
-> `supplyCart`/`needsCart` 仍是 Target 示例。
+> 状态：Implemented。精确字段、validator 和 transfer ownership 只以
+> [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 及同目录 source 为准，
+> 本文不维护第二份协议 union。
 
-协议必须带版本，并使用可判别 union。下面是 v1 的跨线程基线；更具体字段以 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准，不能再引入 `boot`、`host-response` 等同义消息。
-
-```ts
-export type HostToRuntime =
-  | { v: 1; type: "loadCart"; requestId: string; bytes: ArrayBuffer; sourceName?: string }
-  | { v: 1; type: "attachAudioPort"; port: MessagePort }
-  | { v: 1; type: "start" }
-  | { v: 1; type: "vsync"; sequence: number; timestampMs: number }
-  | { v: 1; type: "pause" }
-  | { v: 1; type: "resume" }
-  | { v: 1; type: "stop" }
-  | { v: 1; type: "reset" }
-  | { v: 1; type: "input"; snapshot: NormalizedInputSnapshot }
-  | { v: 1; type: "supplyCart"; requestId: string; bytes?: ArrayBuffer; error?: SerializedRuntimeError };
-
-export type RuntimeToHost =
-  | { v: 1; type: "state"; state: RuntimeState; sessionGeneration: number }
-  | { v: 1; type: "frame"; sessionGeneration: number; frameId: number; tick: string; width: 128; height: 128; rgba: ArrayBuffer }
-  | { v: 1; type: "needsCart"; request: HostRequest }
-  | { v: 1; type: "heartbeat"; sessionGeneration: number; tick: string; sequence?: number }
-  | { v: 1; type: "runtime-control"; control: "run" | "stop"; payload: ArrayBuffer }
-  | { v: 1; type: "diagnostic"; diagnostic: SerializedRuntimeError }
-  | { v: 1; type: "fault"; error: SerializedRuntimeError };
-```
+v1 Window → Worker 包含 `loadCart`（可携带 caller-authorized local bundle）、
+`start/vsync/pause/resume/reset/stop/dispose`、versioned input 与 persistence flush；Worker → Window
+包含 `session-replaced`、state/frame/heartbeat/runtime-control/diagnostic/fault。root HostRequest
+属于 Worker 内部 RuntimeCore port，不把 resolver request/completion 绕到 Window。
 
 协议要求：
 
@@ -215,27 +194,32 @@ export type RuntimeToHost =
 
 ## 6. Boot transaction
 
-> 状态：Implemented；host-driven load/reset transaction 已覆盖 recovery gate，guest `load`
-> 与 external resolver staging 仍是 Target。
+> 状态：Implemented；覆盖 Window load/reset、guest root `load()` 的独立 staging 和
+> caller-authorized local resolution。
 
 一次 cart load 按以下顺序执行：
 
 1. 验证输入长度和 signature。
-2. 解析为不可变 `CartImage`，产生 source hash、cart version 和 diagnostics。
+2. 解析为不可变 `ParsedCart`，产生 source hash、cart version 和 diagnostics。
 3. 检查版本支持策略。
 4. 创建或重置 VM、Base RAM、Cart ROM、graphics/audio/input state。
 5. 将 Cart ROM 规定区域复制到 Base RAM。
 6. 注册受控 PICO-8 globals 和 Lua glue。
 7. 编译 cart code；失败则回滚整个 transaction。
 8. 以官方差分锁定的 `1/30s` clock 启动 root coroutine：若 top-level 返回，进入 callback mode 并执行 `_init()`；若先到达受控 `flip()` boundary，进入 custom-loop mode，把该 boundary 作为成功 startup，禁止再额外调用 `_init()` 或启动 callback driver。commit 时把 startup epoch 换算为 target-rate slices（30 Hz 为 1、60 Hz 为 2），但不发布 host frame event。
-9. 只有全部成功后，Window `loadCart` 才把 session 提交为 `ready`；显式 `start` 后进入 `running`。guest `run(param)` 使用 retained current cart 创建 fresh runtime graph，并在同一 player session 中继续 `running`；它不是 Window reset，也不授权 guest `load()`。
+9. 只有全部成功后，Window `loadCart` 才把 session 提交为 `ready`；显式 `start` 后进入
+   `running`。guest `run(param)` 使用 retained current cart 创建 fresh runtime graph，并在同一
+   player session 中继续 `running`。guest `load()` 则解析 caller-authorized ref、boot 独立 staged
+   session，并在成功时用 `session-replaced` 原子提交新 generation。
 
-旧 session 在新 session commit 前应保持可销毁但不可继续写入的状态。
+旧 session 在新 session commit 前必须停止继续 step；staging 失败时旧 session 进入 fault
+containment，不恢复已被 `load()` 放弃的执行路径。
 
 ## 7. Frame transaction
 
 > 状态：Implemented；input → VM → CPU classification → audio/frame → persistence 的 committed
-> transaction；external cart HostRequest 仍是 Target。
+> transaction；root HostRequest 通过 `waiting-host` 暂停 logical clock，并在通过 generation、
+> request 和 cancellation 检查后恢复或替换 session。
 
 每个 logical frame 的权威顺序为：
 

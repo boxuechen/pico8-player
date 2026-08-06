@@ -1,25 +1,25 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（当前 production 边界 + Deferred target；Target 内容不授权实现）
+> 状态：Living boundary contract（当前 production 边界 + 明确 Deferred 项）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
 
 ## 状态路由
 
-本文同时保存已接受边界和未来 Runtime 目标。代码示例默认是 Target interface；只有被
-机器契约、public export 和测试共同覆盖时，才可视为当前 API。
+本文同时保存已接受边界和明确 Deferred 项。示意代码只解释稳定语义；精确 API 必须以
+机器契约、public export 和测试的交集为准，避免在文档中维护第二套类型。
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented** | browser-neutral CartSession/RuntimeCore；canonical RAM/graphics/audio/input/persistence；root controls；deterministic scheduler/CPU accounting；Worker/Canvas/AudioWorklet/IndexedDB adapters；bounded resource lifecycle |
+| **Implemented** | browser-neutral CartSession/RuntimeCore；canonical RAM/graphics/audio/input/persistence；CartLoader/local resolver/repository；root controls 与 root HostRequest；atomic guest `load`、external `reload/cstore`；deterministic scheduler/CPU accounting；Worker/Canvas/AudioWorklet/IndexedDB adapters；bounded resource lifecycle |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include/external resolver、label presentation、advanced Graphics、guest `load`、完整 cart swap/multicart、nested async HostRequest 与 BBS integration |
+| **Deferred** | include resolution、label presentation、advanced Graphics、general nested-coroutine HostRequest、BBS/network resolver 与未激活 capability |
 
-早期 control baseline 以
-[`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；browser boundary
-baseline 以 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)为准。
-本文不得被用来提前实现未激活 phase 范围外的完整 Runtime。
+当前 L3 local/multicart profile 以
+[`phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) 为准；早期
+control 与 browser boundary 分别由 `phase-0e-runtime-contract.json` 和
+`phase-0f-browser-boundary.json` 保留。本文不得被用来提前实现未激活 phase 范围。
 
 ## 1. 文档目的与规范用语
 
@@ -70,7 +70,7 @@ TypeScript 负责：
 | PICO Base RAM allocation/pointer lifetime | z8lua bridge context | `PicoMemoryLease`；固定 typed views |
 | PICO Base RAM runtime 语义与 hardware writes | `PicoRam`（Worker 内） | 对同一 lease 的同步 typed views；不另分配 RAM |
 | 当前 normalized Cart ROM/code snapshot | RuntimeCore `CartSession` | session-private byte copies 用于无 payload `reset`；只暴露 frozen identity/format/version metadata |
-| 当前 cart 原始 source bytes | main `PlayerRuntimeClient` / future repository | 用于 Worker watchdog 重建、重新 decode 与 future resolver；不进入逐帧 core state |
+| 当前 cart 原始 source bytes | main `PlayerRuntimeClient` / Worker repository | 用于 Worker watchdog 重建、重新 decode 与 caller-authorized local resolution；不进入逐帧 core state |
 | Lua/协程/GC | z8lua WASM | ABI 命令，不直接读内部结构 |
 | 图形 draw state | RAM `0x5f00..` | `Graphics` 每次从 RAM 读取/写回 |
 | SFX/Music 播放状态 | `AudioSynth` | 只由逻辑 tick/采样推进 |
@@ -186,12 +186,14 @@ interface IncludeResolver {
 }
 ```
 
-当前实现提供同步、无 I/O 的 `decodeCart(Uint8Array)`、`decodeP8(Uint8Array)` 和
-`decodeP8Png(Uint8Array)`；`CartParser`/`CartSource`/`IncludeResolver` 是后续 loader facade
-目标。`decodeCart` **MUST** 先检查文件 magic，而不是信任扩展名或 `mediaType`。
+当前 codec 提供同步、无 I/O 的 `decodeCart(Uint8Array)`、`decodeP8(Uint8Array)` 和
+`decodeP8Png(Uint8Array)`；RuntimeCore 已提供 `CartLoader` 和 resolver/repository ports，Worker
+已提供 caller-authorized local adapters。上方 `CartParser`/`CartSource` 只是 codec 输入语义示意，
+不是待复制的 public facade；`IncludeResolver` 仍 Deferred。`decodeCart` **MUST** 先检查文件
+magic，而不是信任扩展名或 `mediaType`。
 
 `CartIdentity` 由 `@pico8-web/contracts` 拥有且只含内容 SHA-256。display name、locator、
-origin 和 future canonical resolver ref 是 loader/session metadata，不得污染 raw-byte content
+origin 和 opaque resolver ref 是 loader/session metadata，不得污染 raw-byte content
 identity。`ParsedCart` 和 format-specific metadata 由 `@pico8-web/cart-codec` 拥有；早期 contract
 字段 `cartVersion`/`luaSource` 暂作为 `version`/`code` 的兼容 alias。
 
@@ -248,42 +250,24 @@ fake-08/zepto8 参考路径做格式交叉检查；production 实现和 fixtures
 
 ### 5.4 CartLoader 与资源边界
 
-```ts
-interface CancellationToken {
-  readonly cancelled: boolean;
-  onCancel(listener: () => void): () => void; // 返回 unsubscribe；不得暴露 AbortSignal
-}
+> 状态：Implemented。精确 public shape 只以 RuntimeCore 的
+> [`cart-loader.ts`](../packages/runtime-core/src/cart/cart-loader.ts)、
+> [`cart-resolver-port.ts`](../packages/runtime-core/src/ports/cart-resolver-port.ts)、
+> [`cart-repository-port.ts`](../packages/runtime-core/src/ports/cart-repository-port.ts) 和 package
+> exports 为准；本文不复制接口定义。
 
-interface CartResolverPort {
-  resolve(
-    ref: string,
-    context: { current?: CartIdentity; purpose: "load" | "reload" | "cstore" | "include" },
-    cancellation: CancellationToken,
-  ): Promise<ResolvedCartSource>;
-}
+Runtime 只认识 opaque cart ref。当前 Worker 的
+[`LocalCartBundleResolver`](../apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts) 只解析
+调用方随 `loadCart` 显式提供的 bounded bundle，不做 discovery、文件系统或网络访问；
+[`CartRepositoryAdapter`](../apps/web-player/src/worker/adapters/cart-repository-adapter.ts) 负责
+Worker-local parsed-cart cache 与 copy-on-write data overlay。BBS、URL 或其他来源必须由未来 phase
+显式授权新的 adapter，RuntimeCore **MUST NOT** 内建抓取 Lexaloffle BBS 的逻辑。
 
-type ResolvedCartSource = Readonly<{
-  source: CartSource;
-  access: {
-    load: boolean;
-    reloadData: boolean; // 官方语义要求是 local cart；BBS cart 为 false
-    cstoreData: boolean; // Web 中表示可写 virtual overlay，不代表可覆写用户文件
-  };
-}>;
-
-interface CartRepositoryPort {
-  get(identity: CartIdentity): ParsedCart | undefined;
-  put(cart: ParsedCart): void;
-  readDataRom(identity: CartIdentity, src: number, length: number): Uint8Array;
-  writeDataOverlay(identity: CartIdentity, dest: number, bytes: Uint8Array): Promise<void>;
-}
-```
-
-Runtime 只认识 opaque cart ref。BBS、URL、本地文件和缓存策略由注入的 `CartResolverPort` 实现；Runtime **MUST NOT** 内建抓取 Lexaloffle BBS 的逻辑。解析前后都必须应用大小上限。取消旧 load 后，晚到的 resolver 结果必须通过 `sessionGeneration` 丢弃。
-
-`CancellationToken` 是 RuntimeCore 自己的 runtime-neutral contract。Worker adapter 可以用 `AbortController` 实现它，但 `AbortSignal`/DOM type 不得进入 core public exports。
-
-`access` 是 trusted resolver/loader adapter 产生的 capability，不从 cart 内容、文件名或 `origin` 字段推断，并作为 immutable metadata 附在 `CartSession` 上。Window 直接 `loadCart(bytes)` 的默认 capability 为：允许运行、允许当前 cart data region 的 `reload`、允许写当前 cart 的内存/IndexedDB overlay，但不授予解析任意外部 filename 的权限。每个 `reload/cstore` 必须先检查 session/target capability，再调用 `CartRepositoryPort`；repository adapter 仍须重复做范围检查。这样“用户从磁盘选择的 cart”与“未来 resolver 返回的 BBS cart”不会因相同扩展名获得相同宿主权限。
+`CartCancellationToken` 是 RuntimeCore 自己的 runtime-neutral contract；`AbortSignal`/DOM type 不得
+进入 core public exports。resolver 返回的四项 `CartAccess` capability（`load/reloadData/cstoreData/include`）
+必须由 caller/adapter 显式提供，不能从 cart 内容、文件名或 locator 推断。`CartLoader` 在 decode/cache
+前检查对应 purpose；repository adapter 仍须重复做范围和 copy-ownership 检查。取消、reset、stop、
+dispose 或 generation 变化后的晚到结果必须被丢弃。
 
 `ParsedCart.rom` 使用 32KiB container 是为了保留 `.p8.png` 的原始 code block 与版本诊断，不等于 guest 可以访问整个 container。官方手册明确保护 `>= 0x4300` 的 code section：
 
@@ -395,7 +379,7 @@ RuntimeCore graphics 与 frame snapshot 均由同一 mapper 决定 physical byte
   AudioSynth 和完整 hardware defaults 必须由 active phase 与官方 golden 扩展矩阵。
 - `0x5e00..0x5eff` 在新 cart 执行时必须先处于未映射/零状态；成功 `cartdata(id)` 后才加载对应持久化镜像。
 
-不能只依赖高层 Graphics/API hook 做 dirty tracking：cart 可以通过 `poke`、`memcpy` 或 VM 的低层 memory path 改 screen/cartdata。首版每个呈现帧解码固定 8KiB screen，并在逻辑 tick 后比较 256-byte cartdata；这是正确性优先的有界成本。
+不能只依赖高层 Graphics/API hook 做 dirty tracking：cart 可以通过 `poke`、`memcpy` 或 VM 的低层 memory path 改 screen/cartdata。当前 baseline 每个呈现帧解码固定 8KiB screen，并在逻辑 tick 后比较 256-byte cartdata；这是正确性优先的有界成本。
 
 ## 7. Graphics
 
@@ -479,7 +463,8 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 - 队列超过高水位时应丢弃/重同步设备队列并上报 `audio-overrun`，不得让音频反压阻塞 VM。
 - cart swap/reset/fault 必须使旧 `sessionGeneration` 的 chunk 失效，并重置 synth 与 worklet 队列。
 
-首版可用 transferable `ArrayBuffer`。SharedArrayBuffer ring buffer 仅在实测需要且部署具备 COOP/COEP 时采用，不是基线依赖。
+当前 baseline 使用 transferable `ArrayBuffer`。SharedArrayBuffer ring buffer 仅在实测需要且部署
+具备 COOP/COEP 时采用，不是基线依赖。
 
 ## 9. Input
 
@@ -590,38 +575,21 @@ type StepResult = Readonly<{
 
 ## 12. Worker、watchdog 与消息协议
 
-> 状态：Mixed；当前 wire protocol 已实现，下面包含 resolver 消息的完整协议仍是 Target。
+> 状态：Implemented。精确 union、validator 与 transfer list 只以
+> [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts)、
+> [`audio-protocol.ts`](../apps/web-player/src/transport/audio-protocol.ts) 和同目录 source 为准；本文
+> 不维护第二份 wire type。
 
-```ts
-type RuntimeCommand =
-  | { v: 1; type: "loadCart"; requestId: string; bytes: ArrayBuffer; sourceName?: string }
-  | { v: 1; type: "attachAudioPort"; port: MessagePort }
-  | { v: 1; type: "start" }
-  | { v: 1; type: "vsync"; sequence: number; timestampMs: number }
-  | { v: 1; type: "input"; snapshot: NormalizedInputSnapshot }
-  | { v: 1; type: "pause" }
-  | { v: 1; type: "resume" }
-  | { v: 1; type: "reset" }
-  | { v: 1; type: "stop" }
-  | { v: 1; type: "supplyCart"; requestId: string; bytes?: ArrayBuffer; error?: SerializedRuntimeError };
+Window → Worker 的 v1 control surface 是 `loadCart`（cart bytes + optional caller-authorized local
+bundle）、`start/vsync/pause/resume/reset/stop/dispose`，另有 versioned input、persistence flush
+与 audio attachment envelope。Worker → Window 事件是 `session-replaced`、state/frame/heartbeat/
+runtime-control/diagnostic/fault。root HostRequest 在 Worker 内通过 RuntimeCore port 处理，不使用
+额外的 resolver DTO 跨线程往返。
 
-type RuntimeEvent =
-  | { v: 1; type: "state"; state: RuntimeState; sessionGeneration: number }
-  | { v: 1; type: "frame"; sessionGeneration: number; frameId: number; tick: string; width: 128; height: 128; rgba: ArrayBuffer }
-  | { v: 1; type: "needsCart"; request: HostRequest }
-  | { v: 1; type: "heartbeat"; sessionGeneration: number; tick: string; sequence?: number }
-  | { v: 1; type: "runtime-control"; control: "run" | "stop"; payload: ArrayBuffer }
-  | { v: 1; type: "diagnostic"; diagnostic: SerializedRuntimeError }
-  | { v: 1; type: "fault"; error: SerializedRuntimeError };
-```
-
-> 状态：上方仍是包含 future `supplyCart`/`needsCart` 的 Target 示例。当前 wire shape 只以
-> [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 和阶段机器合同为准；
-> 已实现 control command 为 load/start/vsync/pause/resume/reset/stop/dispose，另有 versioned
-> input、persistence flush 与 audio attachment envelope；事件为 state/frame/heartbeat/
-> runtime-control/diagnostic/fault。
-
-- 这是 [02-system-architecture.md](./02-system-architecture.md) 中方向性协议的 Runtime 实施命名：`loadCart` 只完成 load transaction 并进入 `ready`，Window 随后用 `start` 进入 `running`；guest `load()` 因官方语义在事务成功后自动 start。禁止再引入 `boot`/`host-response` 等同义命令。
+- 这是 [02-system-architecture.md](./02-system-architecture.md) 中架构协议的 Runtime 实施命名：
+  Window `loadCart` 完成 transaction 并进入 `ready`，随后用 `start` 进入 `running`；guest
+  `load()` 成功时按当前 controller continuation policy 原子替换 session。禁止再引入
+  `boot`/`host-response` 等同义 wire command。
 - `reset` 无 payload：Worker 必须调用当前 `CartSession`，使用其 private normalized
   ROM/code snapshot 创建全新 generation；`reset` 不得依赖主线程临时回传，也不得在原
   VM/RAM 上就地清零后继续。Worker 若被 watchdog 整体终止，则由 loader/repository 或主线程
@@ -634,7 +602,9 @@ type RuntimeEvent =
   `workerGeneration`，每次 load/reset transaction 有跨 Worker restart 单调的
   `sessionGeneration`；`frameId`、vsync/input/audio sequence 各自在所属通道单调。主线程/
   Worklet 必须丢弃旧 generation 的 frame、audio 和 reply。
-- bridge 的 request ID 是 handle-local `uint32`；Worker 协议必须将其编码为包含 `sessionGeneration` 的 opaque string（例如 `<generation>:<bridge-id>`），只通过映射表还原，禁止让旧 session 的同号 ID 命中新 handle。
+- bridge request ID 是 handle-local `uint32`，只在 Worker 内与 runtime generation、session
+  generation 和 cancellation owner 共同校验；它不暴露为 Window wire request。旧 session 的
+  同号 completion 不得命中新 handle。
 - `loadCart` 输入 bytes 应 transferable；Worker decode 后把 normalized `ParsedCart` 交给
   `CartSession` 复制，主线程或 Worker repository 还必须独立保留可在 watchdog 终止后重新发送
   的原始来源/缓存副本。两类 copy 用途不同，不作为逐帧同步机制。
@@ -648,75 +618,65 @@ type RuntimeEvent =
 
 ## 13. `load`、`reload`、`cstore` 与 cart swap
 
-> 状态：Mixed。host 驱动的 load/reset 与 guest current-cart `reload/cstore` 同步 cache 已实现。
-> guest `load`、external ref、HostRequest cart suspension、BBS/network 和
-> multicart 仍是 Target/Deferred，不得由本节自动扩大范围。
+> 状态：Implemented for the closed local L3 profile。覆盖 Window load/reset、current-cart
+> `reload/cstore`、caller-authorized external cart-data、root guest `load()` 和原子 generation
+> replacement。BBS/network、include resolution 与 general nested-coroutine recovery 仍 Deferred。
 
 ### 13.1 状态机
 
-```ts
-type RuntimeState =
-  | "idle"
-  | "loading"
-  | "ready"
-  | "running"
-  | "waiting_cart"
-  | "paused"
-  | "faulted"
-  | "stopped";
-```
-
-合法主路径：
+对外状态枚举只由
+[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；Worker 内部还拥有
+`empty/faulted` 等 lifecycle state。合法主路径：
 
 ```text
-idle -> loading -> ready -> running
-running -> waiting_cart -> running (external reload/cstore resumes)
-running -> waiting_cart -> loading -> ready -> running (external load)
-running -> loading (cached load or reset) -> ready -> running
-paused -> loading (reset) -> ready -> running
-loading -> faulted
-running/paused/waiting_cart -> faulted
-faulted -> loading (loadCart or reset)
-stopped -> loading (loadCart)
-* -> stopped
+Window loadCart/reset -> ready -> running
+running -> waiting-host -> running                      (root external reload/cstore)
+running -> waiting-host -> session-replaced -> running  (root guest load)
+ready/running <-> paused                                (host lifecycle policy)
+any live state -> stopped/disposed
+transaction failure -> fault event + internal fault containment
 ```
 
 ### 13.2 HostRequest
 
-```ts
-type HostRequest = Readonly<{
-  requestId: string;
-  sessionGeneration: number;
-  kind: "resolve-cart";
-  operation: "load" | "reload" | "cstore";
-  ref: string;
-  dest?: number;
-  src?: number;
-  length?: number;
-  breadcrumb?: Uint8Array;
-  param?: Uint8Array;
-}>;
-```
+精确 public port 是
+[`RootHostRequestHandlerPort`](../packages/runtime-core/src/ports/root-host-request-handler-port.ts)；
+guest cart payload 由
+[`guest-cart-request.ts`](../packages/runtime-core/src/cart/guest-cart-request.ts) 和
+[`external-cart-data-request.ts`](../packages/runtime-core/src/cart/external-cart-data-request.ts) 版本化
+编码。它们是 Worker 内部边界，不是 Window transport DTO。
 
-- `load(ref, breadcrumb, param)`：API 触发 `CART_SWAP` trap，立即结束旧 cart 的当前执行路径。它可以使用具有 `access.load` 的目标；未来获授权的 `#bbs-id` resolver 也只能经此能力进入。
-- `reload(dest=0, src=0, len=0x4300, ref?)`：无 ref 或当前 cart 可同步从 `CartSession.rom` 的 data region 复制；外部 ref 未缓存时必须产生可恢复 HostRequest，VM 停在该 API 调用点，资源返回后完成 copy，再从调用点之后继续。外部目标必须有 `access.reloadData`，BBS cart 按官方语义必须拒绝。
+- `load(ref, breadcrumb, param)`：root API 触发受控 HostRequest，停止旧 cart 的当前执行路径；
+  `CartLoader` 只接受 caller-authorized local bundle 中具有 `access.load` 的目标。
+- `reload(dest=0, src=0, len=0x4300, ref?)`：无 ref 或当前 cart 可同步从 `CartSession.rom` 的 data region 复制；外部 ref 未缓存时必须产生可恢复 HostRequest，VM 停在该 API 调用点，资源返回后完成 copy，再从调用点之后继续。外部目标必须有 `access.reloadData`；当前 resolver 只接受 caller-authorized local bundle。
 - `cstore(dest=0, src=0, len=0x4300, ref?)`：先从 RAM 复制稳定 bytes，再写当前/目标 cart data overlay。异步目标解析/提交同样需要可恢复 HostRequest。目标必须有 `access.cstoreData`；每 execution 最多写入 64 个目标 cart。范围保护见 5.4，具体无效参数行为用 golden 校准。
-- Runtime 不得用“这一帧末尾再悄悄 reload”替代同步语义。若 z8lua ABI 尚不支持 host-call suspension，外部 `reload/cstore` 必须明确返回 `E_FEATURE_UNSUPPORTED` 并列入兼容矩阵，不能给出错误数据。
-- breadcrumb stack 属于 Runtime session：只有 `load` 成功后 push；返回 breadcrumb 是显式 UI/runtime command，不是浏览器 history 猜测。
+- Runtime 不得用“这一帧末尾再悄悄 reload”替代同步语义。当前只接受 root suspension；
+  nested coroutine 组合按 ADR-019 的 28-case matrix 产生结构化 fault，不返回伪造数据。
+- breadcrumb 是 copy-owned replacement metadata，只有 successful commit 才进入新 generation；不得从
+  browser history 或 locator 猜测。
 - resolve 期间逻辑 tick、`time()` 和 AudioSynth 全部暂停；UI 可以继续绘制 loading overlay，但 overlay 不写 PICO screen RAM。
 
 ### 13.3 原子 load transaction
 
-所有 Window `loadCart` 和 guest `load()` 使用同一事务骨架：
+Window `loadCart/reset` 与 guest `load()` 共享 cold-boot、rollback、generation 和 output isolation
+原则；guest replacement 额外遵守以下握手：
 
-1. 分配新的 `sessionGeneration`，冻结旧 session；旧 VM 从此不得再 step。对旧 cartdata 执行 best-effort flush，并立即向 AudioWorklet 发送新 generation 的 `reset-audio`，使已排队的旧 PCM 失效。
-2. resolve source，验证 capability、输入上限、signature、version，并解析为 immutable `ParsedCart`。
-3. 创建完全独立的 `StagedSession`：新 VM、新 Audio/Input 状态和按 reset policy 初始化的 RAM；不得在旧 RAM 上就地拼装新 cart。
-4. 按 cart startup 顺序复制 data ROM、安装受控 globals/glue、编译 code 并驱动 startup：top-level 返回时执行 `_init()` 并进入 callback mode；top-level 先 `flip()` 时进入 custom-loop mode，不再额外调用 `_init()`。在 commit 前不发布 staging frame/audio。
-5. 任一步失败：销毁 staging，将 Runtime 置为 `faulted`；旧 session 不自动恢复执行，且不得留下“旧 VM + 新 RAM”。
-6. 全部成功：原子替换 current session，提交 breadcrumb/param，销毁旧 session，再发布新 generation 的首个 state/frame/audio。
+1. 暂停 scheduler，flush 旧 cartdata，并用 request/session/runtime generation 与 cancellation owner
+   锁定 pending request。
+2. 通过 `CartLoader` resolve、检查 purpose capability/size/ref，decode 并缓存 copy-owned cart。
+3. 创建完全独立的 staged `CartSession`，用新 VM/RAM/audio/input state 完成 startup；commit 前不得
+   发布 staging frame/audio/state。
+4. 任一步失败时销毁 staging、停止旧 session 并发布 fault；不发布 replacement handshake，也不
+   恢复已被 guest `load()` 放弃的旧协程。
+5. 全部成功后销毁旧 session、安装 staged session 并递增 generation；新 generation 的第一个 event
+   必须是 `session-replaced(previous,next,ref,breadcrumb)`。
+6. main 接受该握手后原子切换 generation、清理旧 pending/输入序列并 reset presenter ownership；
+   Worker 随后开始新 audio generation，并发布新 state/audio。所有旧 frame/audio/reply 都按
+   generation 丢弃。
 
-resolver 取消或晚到结果必须同时匹配 `requestId` 与 `sessionGeneration` 才能进入第 3 步。事务中的“旧 session 失败后是否允许由 UI 显式恢复”不是基础 Player 保证；若未来加入，必须有单独 ADR，不能复用已被 guest `load()` 放弃的协程。
+resolver 取消或晚到结果必须同时匹配 pending identity、worker/session/runtime generation 与
+cancellation token 才能进入 commit。改变失败恢复策略或 replacement event ordering 必须先更新
+机器合同与 conformance。
 
 ## 14. 确定性契约
 
@@ -754,43 +714,22 @@ type DeterminismSnapshot = Readonly<{
 
 ## 15. 错误模型
 
-```ts
-type RuntimeStage =
-  | "source" | "png" | "cart" | "compile" | "vm"
-  | "api" | "graphics" | "audio" | "persistence"
-  | "resolver" | "worker";
-
-type SerializedRuntimeError = Readonly<{
-  code: RuntimeErrorCode;
-  stage: RuntimeStage;
-  severity: "warning" | "recoverable" | "fatal";
-  message: string;
-  cart?: CartIdentity;
-  tick?: string;          // bigint 的十进制字符串
-  luaLine?: number;
-  luaTrace?: string;
-  details?: Readonly<Record<string, string | number | boolean>>;
-}>;
-```
-
-最低错误码集合：
-
-| 类别 | 错误码 |
-|---|---|
-| Source/cart | `E_SOURCE_TOO_LARGE`, `E_CART_UNKNOWN_FORMAT`, `E_CART_HEADER`, `E_CART_FUTURE_VERSION`, `E_CART_SECTION`, `E_CART_INCLUDE_UNRESOLVED` |
-| PNG/code | `E_PNG_INVALID`, `E_PNG_DIMENSIONS`, `E_PNG_LIMIT`, `E_CART_CODE_CORRUPT`, `E_CART_CODE_TOO_LARGE` |
-| VM | `E_VM_COMPILE`, `E_VM_RUNTIME`, `E_VM_INSTRUCTION_BUDGET`, `E_VM_WATCHDOG`, `E_VM_OOM` |
-| Host | `E_CART_RESOLVE`, `E_CART_ACCESS_DENIED`, `E_CART_ROM_PROTECTED`, `E_CART_SWAP_ABORTED`, `E_FEATURE_UNSUPPORTED`, `E_PERSISTENCE_READ`, `E_PERSISTENCE_WRITE` |
-| Timing/device | `E_TIME_DISCONTINUITY`, `E_AUDIO_UNDERRUN`, `E_AUDIO_OVERRUN`, `E_RENDER_CONTEXT_LOST` |
-| Internal | `E_PROTOCOL`, `E_INVARIANT` |
+跨 package/Worker 的精确 `RuntimeErrorCode`、`RuntimePhase` 与 `SerializedRuntimeError` 只由
+[`packages/contracts/src/public.ts`](../packages/contracts/src/public.ts) 定义。cart byte-format 错误
+由 [`CartCodecError`](../packages/cart-codec/src/errors.ts) 单独拥有；resolver/repository 的细分失败
+在 RuntimeCore 内分类，并在 app boundary 转为公共 runtime error + safe `details`。本文不维护第二份
+code、stage 或 severity union。
 
 规则：
 
-- 解析/编译/VM panic/invariant/watchdog 是 fatal，必须停止当前 session。
-- 音频 underrun、context lost、持久化写失败通常是 recoverable；必须上报但不得擅自结束 cart。
+- `recoverable` 与 `phase` 必须反映发生 transaction 的真实恢复能力；同一 codec failure 在初始
+  Window load 与已放弃旧协程的 guest replacement 中可以有不同 lifecycle 后果。
+- VM panic、instruction budget、OOM、invariant 和 watchdog 不得伪装成可继续 step 的结果。
+- persistence/device diagnostics 不得擅自改变 simulation；是否恢复由对应 owner contract 决定。
 - Guest 传入 PICO-8 本就会截断/忽略的参数不是 RuntimeError，应复刻 guest 行为。
-- 错误 message 面向开发者，UI 文案由主线程映射；错误对象不得包含整个 cart code、用户路径或未脱敏 URL。
-- 捕获未知异常时转成 `E_INVARIANT`，保留安全的 `causeName`，不得跨 Worker 丢失 stage/session/tick。
+- 错误 message 面向开发者，UI 文案由主线程映射；错误对象不得包含整个 cart code、用户路径或
+  未脱敏 URL。
+- 捕获未知异常时转成 `E_INVARIANT`，只保留安全 details；不得跨 Worker 发送原生 `Error`。
 
 ## 16. 变更与验证路由
 
@@ -804,6 +743,7 @@ type SerializedRuntimeError = Readonly<{
   [范围文档](./01-scope-and-success-criteria.md) 定义。
 - 已完成能力、性能数字和环境 hash：只从 [evidence](./evidence/) 与机器合同按需追溯。
 
-本文件中的 Target interface，尤其第 5.4 和第 13 节的 resolver/cart-swap 设计，只是后续阶段的
-边界输入。没有 active phase 与版本化机器合同，不得据此创建 production path。`.p8.png`、
-single-cart、RuntimeCore 和当前 Chrome 边界的回归仍使用同一实现与测试，不为 Phase 5 复制一套 core。
+第 5.4 和第 13 节描述的是已关闭 local L3 profile 的稳定边界；精确接口仍以 public source、
+[`phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) 与 conformance 的
+交集为准。当前没有 active phase，不得据此增加 BBS/network/include、nested recovery 或其他
+production path；未来扩展继续复用同一 RuntimeCore 和 Chrome boundary，不复制第二套 core。

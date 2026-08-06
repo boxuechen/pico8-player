@@ -30,7 +30,8 @@ RuntimeCore 保持 browser-neutral。
 
 ## 1. Canonical workspace
 
-项目采用单仓库 workspace。首版不把所有代码塞入一个 `src/`，也不为每个小类创建 package；package 只用于强制真正的架构边界。
+项目采用单仓库 workspace。当前 profile 不把所有代码塞入一个 `src/`，也不为每个小类创建
+package；package 只用于强制真正的架构边界。
 
 ```text
 .
@@ -165,7 +166,8 @@ RuntimeCore 保持 browser-neutral。
 section packing、校验和诊断。当前 bytes-magic `decodeCart`、text `decodeP8`
 和 lossless `decodeP8Png`，两种格式统一返回 content identity、32 KiB ROM、P8SCII code、
 version 和 warnings。typed arrays 是独立 caller-owned snapshots，由 consumer 只读对待；
-loader/include resolution 仍是后续增量。
+CartLoader/resolver/repository 位于 RuntimeCore 与 Worker adapter，不能反向塞进 codec；include
+resolution 仍 Deferred。
 
 允许依赖：`@pico8-web/contracts`。
 禁止依赖：RuntimeCore、z8lua bridge、DOM、Canvas、File API、IndexedDB、网络 resolver。
@@ -182,7 +184,9 @@ runtime dependency、fixture ownership 与 reference provenance；统一 verify 
 最终拥有 player simulation 和 session 权威状态。当前公共实现分为
 `frame-runtime.ts`、`session/cart-session.ts`、`graphics/l1-graphics.ts`、
 `graphics/map-memory.ts`、`graphics/p8scii-text.ts`、`graphics/p8scii-font.ts`、
-`memory/pico-ram.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、`persistence/cart-data-core.ts`、`scheduler/frame-scheduler.ts`、
+`memory/pico-ram.ts`、`cart/cart-loader.ts`、`cart/guest-cart-request.ts`、
+`cart/external-cart-data-request.ts`、`audio/sfx-synth.ts`、`input/l1-input.ts`、
+`persistence/cart-data-core.ts`、`scheduler/frame-scheduler.ts`、
 `pico-api/pico-api-host.ts` 和只负责
 re-export 的 `public.ts`。
 `FrameSliceRuntime` + `FrameVmPort` + browser-neutral `PicoApiHost` 拥有单 generation 的
@@ -196,7 +200,8 @@ AudioWorklet 独占 device queue/resampling。固定八玩家/devkit latch 已�
 device mapping 已在 app。package-private `CartDataCore` 从 prehydrated seed 复制到 live
 `0x5e00..0x5eff`，并只在 committed boot/frame 输出 copy-owned dirty snapshot；browser-neutral
 `CartDataPersistencePort` 由 Worker-owned IndexedDB adapter 实现，RuntimeCore 不依赖 storage API。
-browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已完成。
+browser-neutral `CartResolverPort`、`CartRepositoryPort`、`RootHostRequestHandlerPort`、
+`CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已完成。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。

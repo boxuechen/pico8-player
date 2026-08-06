@@ -139,7 +139,7 @@ updated 2026-06-22，并说明：
 
 因此：
 
-- 本项目首版只实现本地 file picker / drag-and-drop / caller-provided bytes。
+- 当前 profile 只实现本地 file picker / drag-and-drop / caller-provided 或 caller-authorized bytes。
 - “从 BBS ID/URL 打开”是独立集成，不是 Runtime 的默认能力。
 - 获得许可之前，测试 fixture 只使用项目自有 cart、明确许可的 cart 或人工编写的 conformance cart。
 - 即使未来获得许可，BBS resolver 也必须与 player core 分离，并遵守 allowlist、rate limit、缓存和删除策略。

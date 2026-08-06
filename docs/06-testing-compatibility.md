@@ -359,12 +359,13 @@ Fuzz 的目标不是“接受一切”，而是保证 parser/VM 有清晰上限�
 
 ### 9.2 默认安全界限
 
-- 上传的单文件默认不超过 4 MiB；产品若调整必须有资源评估和测试。
+- Worker protocol 的 cart 输入上限固定为 1 MiB；产品若调整必须先更新公共合同、资源评估和测试。
 - `.p8.png` 必须先验证预期尺寸和可支持的 PNG 格式，再解压；根据 IHDR 预计算最大输出，禁止无界 inflate 和无界 ancillary chunk 累积。
 - cart 解码结果不得超过格式允许的 cart 大小；代码 decompressor 在写入前检查目标上限。
 - parser 单 case 在参考 CI 机器上 100 ms 内完成；超时按失败处理。
 - 单帧 fuzz 执行 250 ms 未返回时由宿主终止 Worker；不得依赖 VM 自己有机会抛异常。
-- WASM linear memory 设硬上限并在 manifest/build config 中可见；首版建议最大 64 MiB。提高上限需要专门 ADR 和 OOM 测试。
+- production WASM linear memory 固定为 16 MiB，growth off，并在 manifest/build config 中可见；
+  调整容量需要专门 ADR、artifact hash 更新和 OOM/resource 测试。
 
 ### 9.3 运行量和回归
 
@@ -448,7 +449,7 @@ Chrome/Chromium 至少覆盖：
 
 - `WebAssembly.instantiateStreaming` 及 MIME 不正确时的 ArrayBuffer fallback。
 - module Worker 创建、加载、销毁、异常映射和 CSP 场景。
-- 非 cross-origin-isolated 环境可播放；首版不得把 SharedArrayBuffer 当作必要条件。
+- 非 cross-origin-isolated 环境可播放；当前 baseline 不得把 SharedArrayBuffer 当作必要条件。
 - Canvas2D production presenter 的 128×128 palette、nearest-neighbor、resize、fullscreen、DPR 1/2/非整数。
 - Keyboard `code` 映射、阻止页面滚动、focus/blur 清键、Gamepad connect/disconnect。
 - AudioContext 用户手势解锁、44.1/48 kHz、suspend/resume、设备切换后恢复、静音。

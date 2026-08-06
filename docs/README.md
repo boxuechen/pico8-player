@@ -70,7 +70,8 @@ cart-data、accepted root-only coroutine 边界、Deferred BBS 决策与 30 分�
 - Runtime 在 Web Worker；Canvas/WebGL 和 AudioContext/AudioWorklet 是 app adapters。
 - Chrome/Chromium 是唯一浏览器支持和发布门禁；Firefox/WebKit 不在范围。
 - `.p8.png` 从 bytes 无损解析，禁止用 Canvas 读取 cart payload。
-- 首版只接受 caller-provided/local cart bytes；未经授权不实现 BBS 自动访问。
+- 当前 profile 只接受 caller-provided/caller-authorized local cart bytes；未经授权不实现 BBS
+  自动访问。
 - `ref/` 只用于隔离的本地阅读，不进入 workspace、production、tests 或 build。
 
 ## 规范优先级

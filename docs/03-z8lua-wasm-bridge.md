@@ -13,13 +13,13 @@ bindings `1..41`、frame stepping、root HostRequest、VM-local P8 helpers、ins
 fixed memory/Lua heap 和 structured errors。`p8w0a_*`/`p8w0b_*` 仍是隔离 probe，不是产品 ABI。
 精确操作、版本和 artifact 只以 [`p8w-v1.json`](../spec/abi/p8w-v1.json)、runtime manifest、
 public adapter 与自动测试的交集为准；完成测量见
-[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
+[Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)。
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/root controls、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors |
+| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors |
 | **Accepted invariant** | 同步且不可重入的 import、append-only binding IDs、同一 Pico RAM、root-only recoverable host suspension、host-owned capability policy |
-| **Deferred** | general nested coroutine suspension、guest `load`/external resolver、multi-return/result vectors 和未激活的 capability/API 扩展 |
+| **Deferred** | general nested-coroutine HostRequest recovery、include resolution、multi-return/result vectors 和未激活的 capability/API 扩展 |
 
 机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter。历史实施顺序、
 benchmark 数值和关闭 checklist 只从 evidence/ADR 按需追溯，不在本 living contract 重复。
@@ -42,7 +42,7 @@ TypeScript Runtime 负责：
 
 Bridge **MUST NOT** 依赖 DOM、Canvas、AudioContext、IndexedDB、`fetch()` 或 wall-clock scheduler。WASM import **MUST** 是同步函数；Promise 不得穿过正在执行的 Lua/WASM 栈。
 
-Bridge 可以为已测得的热点执行最小 RAM primitive，但这属于 [ADR-006 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder)，必须先有基准、conformance 和 ADR，不能在首版无证据下扩张成 full-core WASM。
+Bridge 可以为已测得的热点执行最小 RAM primitive，但这属于 [ADR-006 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder)，必须先有基准、conformance 和 ADR，不能在当前架构中无证据扩张成 full-core WASM。
 
 ## 2. 已核验的 z8lua 上游基线
 
@@ -269,7 +269,9 @@ Pending request 的完成契约：
 - `p8w_complete_host_request()` 只接受当前 pending ID。stale/mismatch、重复 completion、reset/destroy 后 completion 都返回 invalid state，不得影响新 session。
 - response 是 copied opaque bytes，并带 `is_error`；Bridge **MUST** 在调用返回前完成 copy，不得借用 TS pointer，长度遵守机器契约的 host-byte cap。
 - 拒绝、取消和 host error 必须由 response schema 显式表达并进入对应 continuation/结构化错误路径；不得无限保持 pending。停止或 reset 可以直接使旧 request 失效。
-- request kind、payload schema version、一次性语义及 nested-coroutine 可恢复性必须有 ABI tests。多-cart `load()` 若采用“销毁旧 VM、原子换新 cart”，Runtime 仍须明确取消旧 request，而不能向已销毁 handle 回填。
+- request kind、payload schema version、一次性语义及 nested-coroutine 可恢复性必须有 ABI tests。
+  guest `load()` 已采用“销毁旧 VM、原子换新 cart”，Runtime 必须明确取消旧 request，不能向已
+  销毁 handle 回填。
 
 ## 7. WASM import 与 host-call frame
 
@@ -373,7 +375,9 @@ table、function、userdata 和 coroutine handle **MUST NOT** 直接跨 JS/WASM�
 
 ### 9.1 受控 yield
 
-每次 yield 都必须带 bridge 内部 reason，至少区分 `FRAME_END`、`FLIP`、`NEEDS_CART`、`STOP`。reason 不能只编码进 guest-visible Lua value。
+每次 yield 都必须带 bridge 内部 reason；精确枚举只由
+[`p8w-v1.json`](../spec/abi/p8w-v1.json) 定义。frame/flip、root HostRequest 与 control outcome
+必须可区分，reason 不能只编码进 guest-visible Lua value。
 
 `flip()` 与可恢复 host API 使用 `lua_yieldk()` continuation；普通 C wrapper 在返回前必须恢复 Lua stack invariant。不是所有 host request 都天然可恢复，尤其 nested coroutine 情况按 4.4 节降级。
 

@@ -20,7 +20,7 @@
 | 2 Graphics / Memory / Text（2A–2F） | Complete | [Phase 2 exit](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | 3 Audio / Input / Persistence（3A–3H） | Complete | [Phase 3 exit](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
 | 4 L2 / MVP Compatibility（4A–4H） | Complete | [Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [contract](../spec/phase-4-l2-mvp-contract.json) |
-| 5 L3 local/multicart / optional BBS | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
+| 5 L3 local/multicart | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
 
 Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
 corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
