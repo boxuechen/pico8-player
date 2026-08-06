@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "phase": "6",
+  "name": "Real-cart Qualification",
+  "status": "active",
+  "target": "local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase5Contract": "spec/phase-5-l3-multicart-contract.json",
+    "phase5ContractSha256": "15606abd67a65fc04c0c8326fb5da80769ab759f75ce7eae96d2524c77b12672",
+    "phase5Evidence": "docs/evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md",
+    "phase5EvidenceSha256": "8b1a354a24b12cbc17782557d797d9f8f31a1e1878aeef6dfac64d9abb0a1a47",
+    "phase5ExitManifest": "tests/conformance/manifests/phase-5h-exit.json",
+    "phase5ExitManifestSha256": "a66aec36c1ea2a9a488a2aa6a8b0053f4e50ee852c6aa8e764ff0bb83b0ccd08",
+    "runtimeManifest": "wasm/runtime-v1.manifest.lock.json",
+    "runtimeManifestSha256": "1d1dffbc214ac92c3d7c97609d31ef3a94a5e55bfa497a2d5788b3cb59461519",
+    "baselineCommit": "1b65360"
+  },
+  "corpusPolicy": {
+    "mode": "developer-supplied-local-only",
+    "minimumCases": 12,
+    "trackedManifest": "schema-and-policy-only",
+    "localManifest": "tests/conformance/local-corpus.json",
+    "localCartDirectory": "tests/conformance/local-corpus/",
+    "sourceRevisionRequired": true,
+    "cartSha256Required": true,
+    "permissionStatusRequired": true,
+    "networkAccess": false,
+    "automatedBbsAccess": false,
+    "repositoryCartBytes": 0,
+    "repositoryThirdPartyScreenshots": 0,
+    "ciDependency": false,
+    "publicDenominatorContribution": 0,
+    "refRuntimeDependency": false
+  },
+  "capabilityProfile": {
+    "required": [
+      "external-local-corpus-runner",
+      "deterministic-cart-classification",
+      "stat-20",
+      "menuitem-policy",
+      "cpu-slicing-decision",
+      "chrome-playability-pass"
+    ],
+    "conditional": ["menuitem-ui", "cpu-slicing-implementation"],
+    "excluded": [
+      "bbs-crawler",
+      "automated-cart-download",
+      "public-cart-mirror",
+      "third-party-cart-redistribution",
+      "third-party-screenshot-publication",
+      "non-chrome-browser-gate",
+      "cart-specific-runtime-hack"
+    ]
+  },
+  "classification": {
+    "cartResults": ["C0", "C1", "C2", "C3", "CU"],
+    "failureClusters": [
+      "parse",
+      "language",
+      "ram",
+      "graphics",
+      "audio",
+      "input",
+      "timing",
+      "persistence",
+      "unsupported-host-feature"
+    ],
+    "requiredEnvironmentFields": [
+      "playerCommit",
+      "runtimeWasmSha256",
+      "chromeVersion",
+      "cartSha256",
+      "sourceRevision",
+      "permissionStatus",
+      "durationOrTrace"
+    ]
+  },
+  "completedWorkUnits": ["6A"],
+  "activeWorkUnit": "6B",
+  "nextWorkUnit": "6C",
+  "workUnits": {
+    "6A": {
+      "name": "Activation / Corpus Policy",
+      "status": "complete",
+      "result": {
+        "externalCorpusCases": 12,
+        "storage": "developer-supplied and gitignored",
+        "repositoryCartBytes": 0,
+        "publicDenominatorContribution": 0,
+        "verification": ["pnpm run test:phase-6a"]
+      }
+    },
+    "6B": {
+      "name": "External Corpus Runner",
+      "status": "active",
+      "allowedPaths": [
+        "tools/compat/",
+        "tests/compat/",
+        "tests/contract/phase-6a-activation.test.mjs",
+        "tests/contract/phase-6b-corpus-runner.test.mjs",
+        "tests/conformance/local-corpus.example.json",
+        ".gitignore",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/6-real-cart-qualification.md",
+        "spec/phase-6-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "a caller-provided local manifest is validated without reading ref or using network access",
+        "runner output records hashes, revisions, permission state, deterministic trace and environment identity",
+        "missing or malformed local inputs fail closed without placing third-party content in tracked paths",
+        "project-authored fixtures cover schema, redaction, deterministic ordering and result classification",
+        "6B result is folded into the machine contract and 6C becomes the only active work unit"
+      ]
+    },
+    "6C": {
+      "name": "Twelve-cart Baseline",
+      "status": "pending"
+    },
+    "6D": {
+      "name": "stat(20) Compatibility",
+      "status": "pending"
+    },
+    "6E": {
+      "name": "menuitem Boundary",
+      "status": "pending"
+    },
+    "6F": {
+      "name": "CPU Slicing Spike / Decision",
+      "status": "pending"
+    },
+    "6G": {
+      "name": "Chrome Playability Pass",
+      "status": "pending"
+    },
+    "6H": {
+      "name": "Qualification Exit / Report",
+      "status": "pending"
+    }
+  },
+  "phaseExitGate": {
+    "minimumLocalCorpusCases": 12,
+    "minimumC2ManualCases": 3,
+    "allCasesClassified": true,
+    "openP0": 0,
+    "openP1": 0,
+    "requiredDecisions": ["menuitem", "cpu-slicing"],
+    "requiredRegressionClusters": ["stat-20", "menuitem", "cpu-slicing"],
+    "browser": "Chrome/Chromium desktop only",
+    "networkAccess": false,
+    "thirdPartyBytesTracked": false,
+    "thirdPartyScreenshotsTracked": false,
+    "publicCompatibilityRateClaimed": false,
+    "fullVerification": "pnpm run verify"
+  }
+}

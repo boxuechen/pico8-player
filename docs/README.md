@@ -8,12 +8,14 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 5；[L3 local/multicart project-profile evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
-| 当前阶段 | 无；下一阶段保持 Deferred，必须先建立 phase 文档和机器合同才能实现 |
-| 最近关闭合同 | [`spec/phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) |
+| 当前阶段 | [Phase 6 Real-cart Qualification](./phases/6-real-cart-qualification.md) |
+| Active work unit | 6B External Corpus Runner |
+| 机器合同 | [`spec/phase-6-real-cart-qualification-contract.json`](../spec/phase-6-real-cart-qualification-contract.json) |
 
 Phase 5A–5H 已关闭 caller-authorized local resolution、root suspension、atomic guest load、external
 cart-data、accepted root-only coroutine 边界、Deferred BBS 决策与 30 分钟 Chrome resource gate。
-当前没有可执行 phase；roadmap、Target 示例和历史 evidence 不能单独授权后续实现。
+Phase 6A 已冻结 local-only external corpus 政策；当前只授权 6B runner。roadmap、Target 示例和
+历史 evidence 不能单独授权后续 work unit。
 
 日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
