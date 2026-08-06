@@ -8,14 +8,14 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 4G** | Phase 3 全部边界；current-cart guest control；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM、bounded Lua/audio/persistence resources 与跨 generation lifecycle |
+| **Implemented through Phase 4 exit** | Phase 3 全部边界；current-cart guest control；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM、bounded Lua/audio/persistence resources 与跨 generation lifecycle |
 | **Target** | guest `load`、external cart transaction 与后续 release qualification |
 | **Deferred** | nested async HostRequest、完整 cart swap/multicart、BBS resolver 和完整 L3 host integration |
 
 第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
 当前 production player 协议由
 [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；阶段能力与完成状态由
-[`phase-3-audio-input-persistence-contract.json`](../spec/phase-3-audio-input-persistence-contract.json)
+[`phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json)
 及其前置合同锁定。Phase 0E `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
 定义。

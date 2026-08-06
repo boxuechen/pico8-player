@@ -13,7 +13,7 @@ memory/graphics/text bindings、Phase 3 audio/input/persistence/current-cart bin
 project-owned VM compatibility library、Phase 4E root control、Phase 4F instruction accounting 和
 Phase 4G fixed-memory/Lua-heap diagnostics 已完成；
 当前生产边界和 Chrome 退出结果见
-[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
+[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
 只有机器契约、public adapter 与测试共同覆盖的部分才算 Implemented。

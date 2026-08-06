@@ -2,16 +2,17 @@
   "schemaVersion": 1,
   "phase": "4",
   "name": "L2 / MVP Compatibility Hardening",
-  "status": "active",
+  "status": "complete",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
     "phase3Contract": "spec/phase-3-audio-input-persistence-contract.json",
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E", "4F", "4G"],
-  "activeWorkUnit": "4H",
+  "completedWorkUnits": ["4A", "4B", "4C", "4D", "4E", "4F", "4G", "4H"],
+  "activeWorkUnit": null,
   "nextWorkUnit": null,
+  "nextPhase": "5-deferred",
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -367,7 +368,7 @@
     },
     "4H": {
       "name": "Phase 4 / L2 Exit",
-      "status": "active",
+      "status": "complete",
       "requiredOutputs": [
         "machine-checked-phase-exit",
         "published-l2-compatibility-report",
@@ -381,7 +382,51 @@
         "external-cart-resolver",
         "bbs-network-access",
         "non-Chromium-browsers"
-      ]
+      ],
+      "result": {
+        "exitManifest": "tests/conformance/manifests/phase-4h-exit.json",
+        "exitManifestSha256": "974d496c1db81fff6d44d4838b2bdc2bda659161d620b6f8165eb24882ee98f8",
+        "evidence": "docs/evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md",
+        "releaseClaim": "PICO-8 v0.2.7 L2/MVP project profile on Chrome/Chromium desktop",
+        "thirdPartyOrBbsCompatibilityClaimed": false,
+        "officialBitExactClaimed": false,
+        "apiCount": 112,
+        "inventoryCounts": {
+          "implementationCounts": {
+            "implemented": 96,
+            "partial": 5,
+            "unimplemented": 1,
+            "unsupported": 10
+          },
+          "conformanceCounts": {
+            "compatible": 68,
+            "partial": 5,
+            "unknown": 29,
+            "unsupported": 10
+          }
+        },
+        "requiredApis": 101,
+        "acceptedRequiredPartial": 5,
+        "acceptedRequiredCoverageLimitations": 28,
+        "publishedKnownDifferences": 6,
+        "projectCorpusCases": 7,
+        "classifications": { "C0": 0, "C1": 0, "C2": 0, "C3": 7, "CU": 0 },
+        "playableRate": 1,
+        "openP0": 0,
+        "openP1": 0,
+        "openP2": 0,
+        "chrome": "Google Chrome 150.0.7871.189",
+        "nodeChromeOracleAgreement": true,
+        "reviewedLongRunSeconds": 1800.4173,
+        "hostAbiBindings": 41,
+        "runtimeAbiVersion": "0x00010003",
+        "runtimeWasmSha256": "749b206a5ff456a028593a5706bb5d574724b152cec5a02e079fc39004f66373",
+        "verification": [
+          "pnpm run test:phase-4h",
+          "pnpm run test:browser:chromium",
+          "pnpm run verify"
+        ]
+      }
     }
   },
   "corpusPolicy": {

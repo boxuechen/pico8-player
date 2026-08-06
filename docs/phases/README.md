@@ -1,9 +1,10 @@
 # Phase documents
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
-phase 预建愿望清单。当前入口是
-[`4-l2-mvp-hardening.md`](./4-l2-mvp-hardening.md)，唯一 active work unit 为 4C。
-机器状态位于 [`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)。
+phase 预建愿望清单。Phase 4 已完成并归档，当前没有 active phase；其关闭状态位于
+[`spec/phase-4-l2-mvp-contract.json`](../../spec/phase-4-l2-mvp-contract.json)，退出证据位于
+[`docs/evidence/phase-4/`](../evidence/phase-4/)。任何新的 production 工作都必须先创建并激活一个
+有边界的 phase 文档与机器合同；Phase 5 仍为 Deferred。
 
 ## Activation contract
 

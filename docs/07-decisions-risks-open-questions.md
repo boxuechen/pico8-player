@@ -1,8 +1,8 @@
 # 架构决定、风险与未决问题
 
 本文件是 ADR/risk/question 的索引，不重复 ADR 正文、阶段任务或完成证据。active phase
-如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1–3 已完成；当前没有 active
-phase；Phase 4 当前由 4H exit work unit 收口。
+如何回答 Proposed 项由 [`docs/phases/`](./phases/) 定义。Phase 1–4 已完成并归档；当前没有
+active phase，Phase 5 保持 Deferred。
 
 ## 1. ADR registry
 
@@ -33,9 +33,10 @@ phase；Phase 4 当前由 4H exit work unit 收口。
 
 ### Active blockers
 
-当前没有已登记 blocker。Phase 3A–3H 已完成 deterministic/device audio、controller/devkit
-input、cartdata/IndexedDB、current-cart overlay 与 aggregate exit gate，见
-[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
+当前没有已登记 blocker。Phase 4A–4H 已完成 capability inventory、project corpus、兼容性
+加固、CPU 校准、资源长跑和 aggregate exit gate；发布边界、Known Differences 与未验证覆盖面
+均已显式固化，见
+[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
 
 ### Deferred open questions
 
@@ -65,14 +66,14 @@ evidence，不在本表复制测试步骤。
 
 | ID | 风险 | 当前控制 / 下一 owner |
 | --- | --- | --- |
-| R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 ladder；Phase 2 exit 通过，Phase 4 stress profile 重评 |
+| R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 ladder；Phase 2 exit 与 Phase 4 CPU/corpus calibration 均通过 |
 | R-02 | z8lua 与 PICO-8 0.2.7 语义差异 | pinned patches + conformance |
 | R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；Phase 4G growth rejection/view identity/long-run gate |
 | R-04 | PNG low-bit corruption / decompression bomb | ADR-005 limits、property/malformed tests |
 | R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue；Phase 4G 双速率 1800 秒 steady counters 全零 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
-| R-08 | hard budget 与官方 CPU 不一致 | Phase 4F 已拆分 4M/s soft classification 与 1M instruction safety cap；4G 保持回归 |
+| R-08 | hard budget 与官方 CPU 不一致 | Phase 4F 已拆分 4M/s soft classification 与 1M instruction safety cap；4G/4H 回归通过 |
 | R-09 | multi-cart 同步 API 需要 async host data | 预供给/同步 repository；L3 重评 |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | 默认禁止；独立授权和 resolver boundary |

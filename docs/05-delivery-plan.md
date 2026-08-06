@@ -29,7 +29,7 @@
 | 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | 2 Graphics、Memory、Text | **Complete；2A–2F** | [Evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | 3 Audio、完整 Input、Persistence | **Complete；3A–3H** | [Evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| 4 L2 / MVP 兼容加固 | **Active；4A–4G complete，4H active** | [Phase document](./phases/4-l2-mvp-hardening.md) / [Machine contract](../spec/phase-4-l2-mvp-contract.json) |
+| 4 L2 / MVP 兼容加固 | **Complete；4A–4H** | [Evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [Machine contract](../spec/phase-4-l2-mvp-contract.json) |
 | 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
 
 ## 3. Phase 0 — 架构验证
@@ -123,8 +123,8 @@ dispose 门禁通过。兼容声明严格限于 Phase 3 project profile，开放
 
 ### Phase 4 — L2 / MVP 兼容加固
 
-> 状态：Active；4A–4G complete，4H active。具体授权只在
-> [active phase document](./phases/4-l2-mvp-hardening.md)，以下继续只保存 roadmap headline。
+> 状态：Complete；4A–4H。以下只保存 roadmap headline；完成细节见
+> [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
 
 目标：以获准的代表 cart corpus 驱动剩余 API、CPU budget、性能和长稳测试。
 
@@ -135,6 +135,11 @@ dispose 压力，不授权 guest `load`、external resolver 或 multicart。不�
 
 Exit headline：兼容矩阵和 Known Differences 可发布；Chrome release gate、资源上限、
 30-minute soak 与多 cart lifecycle 通过。
+
+**Status: Passed by Phase 4H.** 7-case 项目原创 corpus 在 Node real-WASM 与 Chrome production
+path 均为 `C3`，playable rate `100%`；CPU/resource、30-minute soak、20-load lifecycle 与 release
+cleanup gate 通过。兼容声明严格限于 Chrome/Chromium desktop L2/MVP project profile；不包含
+official bit-exact、第三方/BBS cart 或 28 项仍缺 official edge vectors 的 required VM builtin。
 
 ### Phase 5 — L3 与可选 BBS 集成
 

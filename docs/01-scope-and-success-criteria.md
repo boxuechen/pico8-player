@@ -87,9 +87,14 @@ Phase 1 已通过 **L1 bounded profile**：项目原创 30Hz callback、60Hz `.p
 Phase 2/3 已分别关闭项目自有 graphics/memory/text 与 audio/input/persistence profile，证明
 核心 production path 可组合、可恢复且满足当前 Chrome 门禁；完成边界见
 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 和
-[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。这些结果
-仍不是 **L2 Playable** 发布声明：L2 必须由 Phase 4 的合法代表 corpus、coverage gap、CPU/resource
-校准和长稳 release gate 共同决定。
+[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
+
+Phase 4 已通过 **L2/MVP project profile**：7 个项目原创 case 在 Node real-WASM 与 Chrome
+production path 均为 `C3`，playable rate `7/7`；CPU/fixed-memory、30 分钟长稳、多 cart lifecycle、
+fault recovery 和 resource release 通过。该结论只适用于 PICO-8 v0.2.7、Chrome/Chromium desktop
+和已发布 Known Differences；28 项 required VM builtin 仍是 accepted unverified baseline。因此它
+不表示 official bit-exact、广泛第三方/BBS cart 或第 6 节之外的正式 release qualification。见
+[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
 
 首个对外 MVP 的目标是 L2。L3 是后续兼容阶段，不阻塞核心架构稳定。
 

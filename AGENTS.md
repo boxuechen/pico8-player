@@ -6,8 +6,8 @@ z8lua WASM and a TypeScript runtime.
 Before changing production code:
 
 1. Read [`docs/README.md`](docs/README.md).
-2. Phase 3 is complete. Follow the active Phase 4 document and implement only
-   its active work unit.
+2. Phase 4 is complete. Before changing production behavior, create and activate
+   a bounded next-phase work unit; Phase 5 is otherwise Deferred.
 3. Read [`docs/08-source-layout-and-boundaries.md`](docs/08-source-layout-and-boundaries.md)
    and only the contract sections routed by the current phase document.
 

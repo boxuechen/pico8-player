@@ -11,12 +11,12 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4G、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、Phase 4A–4H、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–4 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| **Active Phase 4 baseline** | 112 项 API 清单、41 binding、7-case corpus `C3=7`；4C–4G 的 core/graphics/system/CPU/resource vertical slices 已由 Node real-WASM/Chrome oracle 关闭；当前只剩 [4H exit](./phases/4-l2-mvp-hardening.md) 收口 |
+| **Implemented Phase 4 exit** | 112 项 API 清单、41 binding、7-case corpus `C3=7`；core/graphics/system/CPU/resource、30-minute Chrome 和 Known Differences 已关闭；见 [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -897,6 +897,32 @@ schema/source/runtime hash 和门槛复核；只有显式 `pnpm run evidence:pha
 [`chromium-macos-arm64-phase-4g-long-run.json`](../benchmarks/phase-4/results/chromium-macos-arm64-phase-4g-long-run.json)，
 资源合同位于
 [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json)。
+
+### 15.19 Phase 4 L2/MVP project-profile exit
+
+Phase 4 的发布口径是 **PICO-8 v0.2.7 L2/MVP project profile on Chrome/Chromium desktop**。
+项目原创 corpus 为 `C3=7/7`、playable rate `100%`、开放 P0/P1/P2 均为 `0`；Node real-WASM 与
+Chrome production-path oracle 一致。这个百分比不包含 third-party/BBS/local external carts，也不
+声称 official bit-exact。完整证据见
+[Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。
+
+最终 112 项 inventory 为 implementation `96/5/1/10`、conformance `68/5/29/10`（按各自状态
+顺序）。101 项 required 中，68 项 compatible；5 项 required partial 由 `P4-KD-01`–`04` 覆盖，
+另有 2 项 profile-level Known Differences：
+
+| ID | API / 模式 | 用户可见影响 | Workaround / scope |
+| --- | --- | --- | --- |
+| `P4-KD-01` | nested coroutine `flip()` | nested suspension structured unsupported | 只从 root custom loop 调用 |
+| `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | 使用 `1,6,7,30,31,32,33,34,36,38,39` |
+| `P4-KD-03` | timed P8SCII | delay control 不暂停 guest | 用 logical frame 驱动文字时间 |
+| `P4-KD-04` | `reload/cstore` external ref | 只访问 current-cart ROM/COW overlay | 不传 external filename/ref |
+| `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
+| `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
+
+`P4-CL-01` 是公开 coverage limitation，不是伪装的 compatible：28 个 required VM builtin 已实现、
+但仍缺 official edge vectors，继续标为 `unknown`。精确名单和 conditional/excluded scope decision 由
+[`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 机器锁定。因此 Phase 4 exit
+不能外推为广泛第三方 cart、官方完整 API conformance 或第 16.3 节正式 release qualification。
 
 ## 16. Definition of Done
 

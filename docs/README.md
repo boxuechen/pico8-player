@@ -5,16 +5,16 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-Phase 3A–3H 已完成并归档。Phase 4 已激活：4A–4G 已完成，当前唯一 active work unit 是
-**4H Phase 4 / L2 Exit**。
+Phase 0–4 已完成并归档；当前没有 active phase。Phase 4 的发布口径是 Chrome/Chromium desktop
+上的 L2/MVP project profile，精确 claim boundary、Known Differences 与 coverage limitation 见
+[Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)。Phase 5 保持 Deferred。
 
-默认开工路径：本页 →
-[`docs/phases/4-l2-mvp-hardening.md`](./phases/4-l2-mvp-hardening.md) → 4H 明确链接的
-contract 小节。机器状态以
+下一阶段开工前必须先创建并激活 bounded phase document / machine contract；不得直接从 roadmap
+实现 Phase 5。当前机器状态以
 [`spec/phase-4-l2-mvp-contract.json`](../spec/phase-4-l2-mvp-contract.json) 为准。
 
-日常实现默认只读：本页 → active phase → 它明确链接的 contract
-小节。不要把 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
+日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把
+03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务
 细节不得复制回 AGENTS、README、roadmap 和 Codex 协议。
