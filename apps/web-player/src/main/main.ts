@@ -6,6 +6,7 @@ import {
   PlayerController,
   type PlayerShellElements,
 } from "./player-controller.js";
+import type { GamepadSource } from "./gamepad-input.js";
 
 export interface MountPlayerOptions {
   readonly root: HTMLElement;
@@ -13,6 +14,7 @@ export interface MountPlayerOptions {
   readonly commandTimeoutMs?: number;
   readonly workletModuleUrl?: string | URL;
   readonly audio?: PlayerCompositionOptions["audio"];
+  readonly gamepadSource?: GamepadSource;
 }
 
 export interface MountedPlayer {
@@ -55,13 +57,30 @@ export async function mountPico8Player(
   const stopButton = button(document, "Stop");
   controls.append(playButton, pauseButton, resetButton, stopButton);
 
+  const touchControls = document.createElement("div");
+  touchControls.className = "pico8-player__touch-controls";
+  touchControls.setAttribute("aria-label", "Player 1 touch controls");
+  touchControls.style.display = "grid";
+  touchControls.style.gridTemplateColumns = "repeat(6, minmax(2.75rem, 1fr))";
+  touchControls.style.gap = "0.25rem";
+  touchControls.style.touchAction = "none";
+  for (const [label, picoButton] of [
+    ["←", 0], ["→", 1], ["↑", 2], ["↓", 3], ["O", 4], ["X", 5],
+  ] as const) {
+    const control = button(document, label);
+    control.dataset.picoButton = String(picoButton);
+    control.dataset.picoPlayer = "0";
+    control.style.touchAction = "none";
+    touchControls.append(control);
+  }
+
   const status = document.createElement("output");
   status.className = "pico8-player__status";
   const diagnostic = document.createElement("pre");
   diagnostic.className = "pico8-player__diagnostic";
   diagnostic.style.whiteSpace = "pre-wrap";
 
-  shell.append(fileInput, canvas, controls, status, diagnostic);
+  shell.append(fileInput, canvas, controls, touchControls, status, diagnostic);
   options.root.replaceChildren(shell);
 
   const composition = await PlayerComposition.create({
@@ -85,15 +104,22 @@ export async function mountPico8Player(
     pauseButton,
     resetButton,
     stopButton,
+    touchControls,
   };
   const controller = new PlayerController(composition, elements, {
     window: document.defaultView ?? window,
     document,
+    ...(options.gamepadSource === undefined
+      ? {}
+      : { gamepadSource: options.gamepadSource }),
   });
   return { composition, controller, elements };
 }
 
 export { PlayerComposition } from "./compose-player.js";
 export { KeyboardInputFrontend } from "./input-frontend.js";
+export { GamepadInputFrontend } from "./gamepad-input.js";
+export { PlayerInputFrontend } from "./player-input.js";
+export { TouchInputFrontend } from "./touch-input.js";
 export { PlayerController } from "./player-controller.js";
 export { PlayerRuntimeClient } from "./player-runtime-client.js";

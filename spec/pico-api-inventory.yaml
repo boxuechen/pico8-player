@@ -18,10 +18,10 @@ apis:
     phase: 1A
     note: RAM-backed pen, camera, clip, draw palette, fill pattern and secondary-global mapping in standard 4bpp
   - name: btn
-    status: partial
+    status: implemented
     owner: packages/runtime-core
-    phase: 1D
-    note: synchronous generated binding to TS; player 0 six-button held snapshot and 0x5f4c register only; multi-player deferred
+    phase: 3C
+    note: synchronous generated binding to TS; fixed eight-player six-button snapshot, 0x5f4c..0x5f53 registers and P0/P1 no-argument bitfield; active 3D may add the documented devkit mouse button 6 overlay
   - name: line
     status: implemented
     owner: packages/runtime-core
@@ -48,10 +48,10 @@ apis:
     phase: 1D
     note: integer fill with default/negative radius, Phase 2B draw state and inversion
   - name: btnp
-    status: partial
+    status: implemented
     owner: packages/runtime-core
-    phase: 1D
-    note: player 0 six-button tick edge and 30/60Hz repeat with 0x5f5c/0x5f5d overrides; multi-player/device mapping deferred
+    phase: 3C
+    note: independent player 0..7 six-button logical-tick edge/repeat with 0x5f5c/0x5f5d overrides; keyboard P0/P1, standard Gamepad and multitouch sources merge in the app
   - name: time
     aliases: [t]
     status: partial
@@ -222,7 +222,7 @@ apis:
     status: unimplemented
     owner: packages/runtime-core
     phase: 3D
-    note: Phase 3 only plans documented devkit input selectors; complete stat remains deferred
+    note: active Phase 3D only authorizes documented devkit input selectors 30,31,32,33,34,36,38,39; complete stat remains deferred
   - name: cartdata
     status: unimplemented
     owner: packages/runtime-core

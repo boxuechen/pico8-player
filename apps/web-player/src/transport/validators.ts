@@ -2,9 +2,11 @@ import type {
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
 } from "./worker-protocol.js";
-import type {
-  PlayerHostToRuntime,
-  PlayerRuntimeToHost,
+import {
+  PLAYER_CONTROLLER_BUTTON_MASK,
+  PLAYER_CONTROLLER_COUNT,
+  type PlayerHostToRuntime,
+  type PlayerRuntimeToHost,
 } from "./player-protocol.js";
 import {
   AUDIO_PROTOCOL_VERSION,
@@ -41,6 +43,14 @@ function isUint(value: unknown): boolean {
 
 function isPositiveUint(value: unknown): boolean {
   return isUint(value) && Number(value) > 0;
+}
+
+function isPicoInputSnapshot(value: unknown): boolean {
+  return isRecord(value) &&
+    Array.isArray(value.controllers) &&
+    value.controllers.length === PLAYER_CONTROLLER_COUNT &&
+    value.controllers.every((buttons) =>
+      isUint(buttons) && Number(buttons) <= PLAYER_CONTROLLER_BUTTON_MASK);
 }
 
 function isPlayerEnvelope(value: unknown): value is Record<string, unknown> {
@@ -99,9 +109,7 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
       value.requestId === 0 &&
       isPositiveUint(value.sessionGeneration) &&
       isUint(value.sequence) &&
-      isRecord(value.input) &&
-      isUint(value.input.buttons) &&
-      Number(value.input.buttons) <= 0x3f
+      isPicoInputSnapshot(value.input)
     );
   }
   if (!isPositiveUint(value.requestId)) return false;
@@ -255,9 +263,7 @@ export function isPhase0EHostToRuntime(value: unknown): value is Phase0EHostToRu
   }
   if (value.type === "step") {
     return (
-      isRecord(value.input) &&
-      isUint(value.input.buttons) &&
-      Number(value.input.buttons) <= 0x3f
+      isPicoInputSnapshot(value.input)
     );
   }
   if (value.type === "hostResponse") {

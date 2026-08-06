@@ -14,6 +14,7 @@ import type {
   RuntimeSessionState,
   RuntimeStepResult,
 } from "../frame-runtime.js";
+import { ZERO_PICO_INPUT } from "../input/l1-input.js";
 
 export type CartSessionState =
   | "empty"
@@ -239,7 +240,7 @@ export class CartSession {
     return this.#start(this.#cart);
   }
 
-  step(input: PicoInputSnapshot = { buttons: 0 }): RuntimeResult<CartSessionStepResult> {
+  step(input: PicoInputSnapshot = ZERO_PICO_INPUT): RuntimeResult<CartSessionStepResult> {
     const runtime = this.#runtime;
     if (this.#state !== "ready" || runtime === undefined) {
       return invalid("cart session is not ready to step");
@@ -415,7 +416,7 @@ export class CartSession {
     try {
       result = runtime.boot(
         { rom: cart.rom.slice(), code: cart.code.slice() },
-        { buttons: 0 },
+        ZERO_PICO_INPUT,
       );
     } catch (error) {
       return this.#faultCurrent(lifecycleError(

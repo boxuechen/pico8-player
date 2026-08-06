@@ -60,7 +60,11 @@ export interface SerializedRuntimeError {
   readonly details?: Readonly<Record<string, string | number | boolean>>;
 }
 
+export const PICO_CONTROLLER_COUNT = 8;
+export const PICO_CONTROLLER_BUTTON_COUNT = 6;
+export const PICO_CONTROLLER_BUTTON_MASK = 0x3f;
+
 export interface PicoInputSnapshot {
-  /** P1 left/right/up/down/O/X, bits 0..5. */
-  readonly buttons: number;
+  /** Player 0..7 left/right/up/down/O/X masks; validation fixes length to 8 and each value to 6 bits. */
+  readonly controllers: readonly number[];
 }

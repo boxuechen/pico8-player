@@ -82,14 +82,14 @@ try {
           userActivationIsActive: navigator.userActivation.isActive,
         };
         await composition.resumeAudio();
-        const firstFrame = await composition.step({ buttons: 0 });
+        const firstFrame = await composition.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
         if (firstFrame.type !== "frame") throw new Error("first frame was not published");
         const firstGeneration = composition.runtime.sessionGeneration;
         const firstRgba = canvas.getContext("2d").getImageData(0, 0, 128, 128).data;
         const firstRgbaSha256 = await sha256(firstRgba);
         let watchdogCode = "";
         try {
-          await composition.step({ buttons: 0x3f });
+          await composition.step({ controllers: [0x3f, 0, 0, 0, 0, 0, 0, 0] });
         } catch (error) {
           if (error instanceof RuntimeClientError) watchdogCode = error.record.code;
         }
@@ -101,7 +101,7 @@ try {
             stats.sessionGeneration === secondGeneration &&
             stats.queuedSourceFrames >= 11_025,
         );
-        const recoveredFrame = await composition.step({ buttons: 0 });
+        const recoveredFrame = await composition.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
         if (recoveredFrame.type !== "frame") throw new Error("replacement Worker did not frame");
         const finalStats = await composition.audio.requestStats();
         await composition.suspendAudio();

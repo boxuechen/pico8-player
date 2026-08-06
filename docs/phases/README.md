@@ -2,7 +2,7 @@
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
 phase 预建愿望清单。当前入口是
-[`Phase 3 — Audio、Input 与 Persistence`](./3-audio-input-persistence.md)，active work unit 为 3C。
+[`Phase 3 — Audio、Input 与 Persistence`](./3-audio-input-persistence.md)，active work unit 为 3D。
 Phase 2 的完成事实位于
 [`spec/phase-2-graphics-memory-text-contract.json`](../../spec/phase-2-graphics-memory-text-contract.json)
 和不可变的 [Phase 2 evidence](../evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)。

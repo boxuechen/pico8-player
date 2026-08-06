@@ -61,7 +61,7 @@ const controller = {
       };
     }
     if (command.type === "step") {
-      if (command.input.buttons === 0x3f) {
+      if (command.input.controllers[0] === 0x3f) {
         for (;;) {}
       }
       const packedScreen = packedFixture.slice().buffer;

@@ -145,7 +145,7 @@ function _init()
  poke(0x100,btnp(5.5,0.25) and 1 or 0)
 end
 function _update() end
-function _draw() end`), { buttons: 0b10_0000 });
+function _draw() end`), { controllers: [0b10_0000, 0, 0, 0, 0, 0, 0, 0] });
   assert.equal(boot.ok, true, JSON.stringify(boot));
   assert.deepEqual(calls, [
     ["line", undefined, undefined, undefined, undefined, undefined],
@@ -242,10 +242,10 @@ function _update()
 end
 function _draw() end`);
 
-  assertOk(runtime.step({ buttons: 0 }));
-  for (let tick = 0; tick < 20; tick += 1) assertOk(runtime.step({ buttons: 1 }));
-  assertOk(runtime.step({ buttons: 0 }));
-  assertOk(runtime.step({ buttons: 1 }));
+  assertOk(runtime.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] }));
+  for (let tick = 0; tick < 20; tick += 1) assertOk(runtime.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
+  assertOk(runtime.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] }));
+  assertOk(runtime.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
 
   const held = runtime.copyRam(0x100, 23);
   const pressed = runtime.copyRam(0x140, 23);
@@ -267,7 +267,7 @@ test("btnp scales repeat at 60 Hz and snapshots custom hardware registers", () =
 n=0
 function _update60() poke(0x100+n,btnp(0) and 1 or 0) n+=1 end
 function _draw() end`);
-  for (let tick = 0; tick < 32; tick += 1) assertOk(sixty.step({ buttons: 1 }));
+  for (let tick = 0; tick < 32; tick += 1) assertOk(sixty.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.deepEqual(
     [...sixty.copyRam(0x100, 32).entries()]
       .filter(([, value]) => value !== 0).map(([index]) => index),
@@ -280,7 +280,7 @@ n=0
 function _init() poke(0x5f5c,2) poke(0x5f5d,3) end
 function _update() poke(0x100+n,btnp(0) and 1 or 0) n+=1 end
 function _draw() end`);
-  for (let tick = 0; tick < 9; tick += 1) assertOk(custom.step({ buttons: 1 }));
+  for (let tick = 0; tick < 9; tick += 1) assertOk(custom.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.deepEqual(
     [...custom.copyRam(0x100, 9).entries()]
       .filter(([, value]) => value !== 0).map(([index]) => index),
@@ -293,7 +293,7 @@ n=0
 function _init() poke(0x5f5c,2) poke(0x5f5d,3) end
 function _update60() poke(0x100+n,btnp(0) and 1 or 0) n+=1 end
 function _draw() end`);
-  for (let tick = 0; tick < 12; tick += 1) assertOk(customSixty.step({ buttons: 1 }));
+  for (let tick = 0; tick < 12; tick += 1) assertOk(customSixty.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.deepEqual(
     [...customSixty.copyRam(0x100, 12).entries()]
       .filter(([, value]) => value !== 0).map(([index]) => index),
@@ -309,7 +309,7 @@ function _update()
  n+=1
 end
 function _draw() end`);
-  for (let tick = 0; tick < 20; tick += 1) assertOk(latched.step({ buttons: 1 }));
+  for (let tick = 0; tick < 20; tick += 1) assertOk(latched.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.deepEqual(
     [...latched.copyRam(0x100, 20).entries()]
       .filter(([, value]) => value !== 0).map(([index]) => index),
@@ -323,7 +323,7 @@ n=0
 function _init() poke(0x5f5c,255) end
 function _update() poke(0x100+n,btnp(0) and 1 or 0) n+=1 end
 function _draw() end`);
-  for (let tick = 0; tick < 20; tick += 1) assertOk(disabled.step({ buttons: 1 }));
+  for (let tick = 0; tick < 20; tick += 1) assertOk(disabled.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.deepEqual(
     [...disabled.copyRam(0x100, 20).entries()]
       .filter(([, value]) => value !== 0).map(([index]) => index),
@@ -345,10 +345,10 @@ function _update()
 end
 function _draw() end`);
 
-  const invalid = runtime.step({ buttons: 64 });
+  const invalid = runtime.step({ controllers: [64, 0, 0, 0, 0, 0, 0, 0] });
   assert.equal(invalid.ok, false);
   assert.equal(invalid.error.code, "E_INVALID_STATE");
-  const requested = assertOk(runtime.step({ buttons: 1 }));
+  const requested = assertOk(runtime.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.equal(requested.kind, "host-request");
   const completed = assertOk(runtime.completeHostRequest(
     requested.request.id,
@@ -357,7 +357,7 @@ function _draw() end`);
   assert.equal(completed.kind, "frame");
   assert.deepEqual([...runtime.copyRam(0x100, 1)], [1]);
   assert.deepEqual([...runtime.copyRam(0x110, 1)], [1]);
-  assertOk(runtime.step({ buttons: 1 }));
+  assertOk(runtime.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.equal(runtime.copyRam(0x101, 1)[0], 0);
   assert.equal(runtime.copyRam(0x111, 1)[0], 0);
   runtime.dispose();
@@ -382,11 +382,11 @@ function _draw() end`);
 
   assertOk(session.load(cart));
   assert.deepEqual([...assertOk(session.copyRam(0x210, 3))], [6, 1, 0]);
-  assertOk(session.step({ buttons: 1 }));
+  assertOk(session.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.equal(assertOk(session.copyRam(0x213, 1))[0], 1);
   assertOk(session.reset());
   assert.deepEqual([...assertOk(session.copyRam(0x210, 3))], [6, 1, 0]);
-  assertOk(session.step({ buttons: 1 }));
+  assertOk(session.step({ controllers: [1, 0, 0, 0, 0, 0, 0, 0] }));
   assert.equal(assertOk(session.copyRam(0x213, 1))[0], 1);
   assertOk(session.dispose());
 });

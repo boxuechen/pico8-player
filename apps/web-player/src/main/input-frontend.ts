@@ -1,16 +1,31 @@
 import type { PicoInputSnapshot } from "@pico8-web/contracts";
+import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 
-const KEY_TO_BUTTON = new Map<string, number>([
-  ["ArrowLeft", 0],
-  ["ArrowRight", 1],
-  ["ArrowUp", 2],
-  ["ArrowDown", 3],
-  ["KeyZ", 4],
-  ["KeyN", 4],
-  ["KeyC", 4],
-  ["KeyX", 5],
-  ["KeyM", 5],
-  ["KeyV", 5],
+interface KeyboardBinding {
+  readonly player: number;
+  readonly button: number;
+}
+
+const KEY_TO_BUTTON = new Map<string, KeyboardBinding>([
+  ["ArrowLeft", { player: 0, button: 0 }],
+  ["ArrowRight", { player: 0, button: 1 }],
+  ["ArrowUp", { player: 0, button: 2 }],
+  ["ArrowDown", { player: 0, button: 3 }],
+  ["KeyZ", { player: 0, button: 4 }],
+  ["KeyN", { player: 0, button: 4 }],
+  ["KeyC", { player: 0, button: 4 }],
+  ["KeyX", { player: 0, button: 5 }],
+  ["KeyM", { player: 0, button: 5 }],
+  ["KeyV", { player: 0, button: 5 }],
+  ["KeyS", { player: 1, button: 0 }],
+  ["KeyF", { player: 1, button: 1 }],
+  ["KeyE", { player: 1, button: 2 }],
+  ["KeyD", { player: 1, button: 3 }],
+  ["ShiftLeft", { player: 1, button: 4 }],
+  ["Tab", { player: 1, button: 5 }],
+  ["KeyW", { player: 1, button: 5 }],
+  ["KeyQ", { player: 1, button: 5 }],
+  ["KeyA", { player: 1, button: 5 }],
 ]);
 
 export interface KeyboardInputFrontendOptions {
@@ -19,7 +34,7 @@ export interface KeyboardInputFrontendOptions {
   readonly onChange?: (snapshot: PicoInputSnapshot) => void;
 }
 
-/** Maps physical Player 1 keys to the browser-neutral six-button snapshot. */
+/** Maps the documented player 0/1 keys into the normalized controller snapshot. */
 export class KeyboardInputFrontend {
   readonly #focusTarget: HTMLElement;
   readonly #window: Window;
@@ -27,7 +42,7 @@ export class KeyboardInputFrontend {
   readonly #onChange: ((snapshot: PicoInputSnapshot) => void) | undefined;
   readonly #heldCodes = new Set<string>();
   #enabled = false;
-  #buttons = 0;
+  readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
   #disposed = false;
 
   constructor(
@@ -45,11 +60,15 @@ export class KeyboardInputFrontend {
   }
 
   get buttons(): number {
-    return this.#buttons;
+    return this.#controllers[0]!;
+  }
+
+  get controllers(): readonly number[] {
+    return Array.from(this.#controllers);
   }
 
   snapshot(): PicoInputSnapshot {
-    return { buttons: this.#buttons };
+    return { controllers: Array.from(this.#controllers) };
   }
 
   setEnabled(enabled: boolean): void {
@@ -60,9 +79,9 @@ export class KeyboardInputFrontend {
 
   clear(): void {
     if (this.#disposed) return;
-    if (this.#heldCodes.size === 0 && this.#buttons === 0) return;
+    if (this.#heldCodes.size === 0 && this.#controllers.every((value) => value === 0)) return;
     this.#heldCodes.clear();
-    this.#setButtons(0);
+    this.#setControllers(new Uint8Array(PLAYER_CONTROLLER_COUNT));
   }
 
   dispose(): void {
@@ -76,8 +95,8 @@ export class KeyboardInputFrontend {
   }
 
   readonly #onKeyDown = (event: KeyboardEvent): void => {
-    const button = KEY_TO_BUTTON.get(event.code);
-    if (button === undefined || !this.#acceptsInput()) return;
+    const binding = KEY_TO_BUTTON.get(event.code);
+    if (binding === undefined || !this.#acceptsInput()) return;
     event.preventDefault();
     if (this.#heldCodes.has(event.code)) return;
     this.#heldCodes.add(event.code);
@@ -85,8 +104,8 @@ export class KeyboardInputFrontend {
   };
 
   readonly #onKeyUp = (event: KeyboardEvent): void => {
-    const button = KEY_TO_BUTTON.get(event.code);
-    if (button === undefined || !this.#enabled) return;
+    const binding = KEY_TO_BUTTON.get(event.code);
+    if (binding === undefined || !this.#enabled) return;
     if (this.#acceptsInput()) event.preventDefault();
     if (!this.#heldCodes.delete(event.code)) return;
     this.#recomputeButtons();
@@ -103,17 +122,19 @@ export class KeyboardInputFrontend {
   }
 
   #recomputeButtons(): void {
-    let buttons = 0;
+    const controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
     for (const code of this.#heldCodes) {
-      const button = KEY_TO_BUTTON.get(code);
-      if (button !== undefined) buttons |= 1 << button;
+      const binding = KEY_TO_BUTTON.get(code);
+      if (binding !== undefined) {
+        controllers[binding.player] = controllers[binding.player]! | (1 << binding.button);
+      }
     }
-    this.#setButtons(buttons);
+    this.#setControllers(controllers);
   }
 
-  #setButtons(buttons: number): void {
-    if (buttons === this.#buttons) return;
-    this.#buttons = buttons;
+  #setControllers(controllers: Uint8Array): void {
+    if (controllers.every((value, index) => value === this.#controllers[index])) return;
+    this.#controllers.set(controllers);
     this.#onChange?.(this.snapshot());
   }
 

@@ -78,7 +78,7 @@ test("Phase 1E protocol validators fail closed", () => {
   assert.equal(isPlayerHostToRuntime(command("input", {
     requestId: 0,
     sequence: 1,
-    input: { buttons: 0x40 },
+    input: { controllers: [0x40, 0, 0, 0, 0, 0, 0, 0] },
   })), false);
 
   const frame = {
@@ -124,7 +124,7 @@ end`);
   assert.equal(controller.handle(command("input", {
     requestId: 0,
     sequence: 1,
-    input: { buttons: 2 },
+    input: { controllers: [2, 0, 0, 0, 0, 0, 0, 0] },
   })).length, 0);
   const anchor = controller.handle(command("vsync", { sequence: 1, timestampMs: 0 }));
   assert.equal(anchor.at(-1).type, "heartbeat");
@@ -151,7 +151,7 @@ end`);
     requestId: 0,
     sessionGeneration: 1,
     sequence: 99,
-    input: { buttons: 2 },
+    input: { controllers: [2, 0, 0, 0, 0, 0, 0, 0] },
   }));
   controller.handle(command("vsync", {
     requestId: 5,
@@ -268,7 +268,7 @@ test("main client watchdog separates Worker generation and retains cart for reco
   assert.equal(client.workerGeneration, 1);
   await client.start();
   await assert.rejects(
-    client.pulse(0, { buttons: 0 }),
+    client.pulse(0, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] }),
     (error) => error instanceof RuntimeClientError && error.record.code === "E_VM_WATCHDOG",
   );
   assert.equal(workers[0].terminated, true);
@@ -288,7 +288,7 @@ test("new session cancels an in-flight vsync without tripping the Worker watchdo
   const client = new PlayerRuntimeClient(() => worker, { commandTimeoutMs: 20 });
   await client.loadCart(textCart("function _draw() cls(2) end"));
   await client.start();
-  const pendingPulse = client.pulse(0, { buttons: 0 });
+  const pendingPulse = client.pulse(0, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
   const reset = client.reset();
   await assert.rejects(
     pendingPulse,

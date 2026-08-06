@@ -99,7 +99,7 @@ class FakeRuntime {
     return result;
   }
 
-  step(input = { buttons: 0 }) {
+  step(input = { controllers: [0, 0, 0, 0, 0, 0, 0, 0] }) {
     this.stepCalls.push({ ...input });
     const result = this.script.step?.(input, this) ?? frame(this.stepCalls.length - 1);
     this.state = result.ok
@@ -166,7 +166,7 @@ test("load/reset own cart bytes, use zero input, and replace the full runtime gr
   assert.equal(Object.isFrozen(session.cart.identity), true);
   assert.equal(Object.isFrozen(contexts[0]), true);
   assert.equal(Object.isFrozen(contexts[0].cart), true);
-  assert.deepEqual(runtimes[0].bootCalls[0].input, { buttons: 0 });
+  assert.deepEqual(runtimes[0].bootCalls[0].input, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
 
   cart.rom[0] = 0xee;
   cart.code[0] = 0xee;
@@ -176,7 +176,7 @@ test("load/reset own cart bytes, use zero input, and replace the full runtime gr
   assert.equal(runtimes[0].disposeCalls, 1);
   assert.equal(runtimes[1].bootCalls[0].rom[0], 0x31);
   assert.equal(runtimes[1].bootCalls[0].code[0], 0x66);
-  assert.deepEqual(runtimes[1].bootCalls[0].input, { buttons: 0 });
+  assert.deepEqual(runtimes[1].bootCalls[0].input, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
   assert.deepEqual(contexts.map(({ generation }) => generation), [1, 2]);
 
   const badCart = { ...cart, rom: new Uint8Array(4) };

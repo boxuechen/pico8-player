@@ -1,5 +1,8 @@
 import { CartCodecError, decodeCart, decodeP8Png } from "@pico8-web/cart-codec";
-import type { SerializedRuntimeError } from "@pico8-web/contracts";
+import {
+  PICO_CONTROLLER_COUNT,
+  type SerializedRuntimeError,
+} from "@pico8-web/contracts";
 import {
   CartSession,
   type CanonicalAudioSlice,
@@ -239,7 +242,7 @@ export function createPlayerWorkerController(
   let workerGeneration = 0;
   let sessionGeneration = 0;
   let inputSequence = -1;
-  let inputButtons = 0;
+  let inputControllers: readonly number[] = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
   let mode: "none" | "callback" | "custom" = "none";
   let targetFps: 0 | 30 | 60 = 0;
 
@@ -281,7 +284,7 @@ export function createPlayerWorkerController(
   ): PlayerRuntimeToHost {
     lifecycle = "faulted";
     scheduler.pause();
-    inputButtons = 0;
+    inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
     resetAudioQueue(command.sessionGeneration);
     return { ...playerBase(command), type: "fault", error };
   }
@@ -336,7 +339,7 @@ export function createPlayerWorkerController(
       lifecycle === "disposed" || lifecycle === "faulted"
     ) return;
     inputSequence = command.sequence;
-    inputButtons = command.input.buttons;
+    inputControllers = command.input.controllers.slice();
   }
 
   function frameEvent(
@@ -389,7 +392,7 @@ export function createPlayerWorkerController(
     }
     let executedTicks = 0;
     for (let index = 0; index < decision.tickCount; index += 1) {
-      const result = session.step({ buttons: inputButtons });
+      const result = session.step({ controllers: inputControllers });
       if (!result.ok) {
         events.push(fault(command, result.error));
         return events;
@@ -402,7 +405,7 @@ export function createPlayerWorkerController(
       if (result.value.kind === "stopped") {
         scheduler.pause();
         lifecycle = "stopped";
-        inputButtons = 0;
+        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
         events.push(state(command, "stopped"));
         break;
       }
@@ -443,7 +446,7 @@ export function createPlayerWorkerController(
         instructionBudget = command.instructionBudget;
         scheduler.reset();
         inputSequence = -1;
-        inputButtons = 0;
+        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
         try {
           return [acceptBoot(command, session.load(decodeCart(new Uint8Array(command.cartBytes))))];
         } catch (error) {
@@ -467,7 +470,7 @@ export function createPlayerWorkerController(
       }
       if (command.type === "dispose") {
         scheduler.reset();
-        inputButtons = 0;
+        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
         const result = session.dispose();
         lifecycle = "disposed";
         mode = "none";
@@ -482,7 +485,7 @@ export function createPlayerWorkerController(
         sessionGeneration = command.sessionGeneration;
         scheduler.reset();
         inputSequence = -1;
-        inputButtons = 0;
+        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
         return [acceptBoot(command, session.reset())];
       }
       if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
@@ -503,7 +506,7 @@ export function createPlayerWorkerController(
         }
         scheduler.pause();
         lifecycle = "paused";
-        inputButtons = 0;
+        inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
         return [state(command, "paused")];
       }
       if (command.type === "resume") {
@@ -516,7 +519,7 @@ export function createPlayerWorkerController(
       }
       const stopped = session.stop();
       scheduler.reset();
-      inputButtons = 0;
+      inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
       if (!stopped.ok) return [fault(command, stopped.error)];
       lifecycle = "stopped";
       resetAudioQueue(command.sessionGeneration);
@@ -524,7 +527,7 @@ export function createPlayerWorkerController(
     },
     dispose() {
       scheduler.reset();
-      inputButtons = 0;
+      inputControllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
       session.dispose();
       lifecycle = "disposed";
       if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);

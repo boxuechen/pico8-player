@@ -204,11 +204,11 @@ self.addEventListener("message", async ({ data: command }) => {
       return;
     }
     const timeRawBeforeStep = logicalTimeRaw(completedSlices + 1, targetFps);
-    hostButtons = command.input.buttons;
+    hostButtons = command.input.controllers[0];
     const status = module._p8w_step(
       handle,
       100_000,
-      command.input.buttons,
+      command.input.controllers[0],
       timeRawBeforeStep,
     ) >>> 0;
     if (status !== 0 && status !== 1) {

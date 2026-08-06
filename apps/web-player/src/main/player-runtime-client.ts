@@ -5,6 +5,8 @@ import type {
 
 import {
   isPlayerRuntimeToHost,
+  PLAYER_CONTROLLER_BUTTON_MASK,
+  PLAYER_CONTROLLER_COUNT,
   type AudioPortAttachmentEnvelope,
   type PlayerHostToRuntime,
   type PlayerRuntimeControlCommand,
@@ -192,7 +194,7 @@ export class PlayerRuntimeClient {
 
   clearInput(): void {
     if (this.#disposed || this.#sessionGeneration === 0) return;
-    this.#postInput({ buttons: 0 });
+    this.#postInput({ controllers: new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0) });
   }
 
   attachAudioPort(port: MessagePort): void {
@@ -254,9 +256,12 @@ export class PlayerRuntimeClient {
 
   #postInput(input: PicoInputSnapshot): void {
     if (
-      !Number.isSafeInteger(input.buttons) || input.buttons < 0 || input.buttons > 0x3f
+      !Array.isArray(input.controllers) || input.controllers.length !== PLAYER_CONTROLLER_COUNT ||
+      input.controllers.some((buttons) =>
+        !Number.isSafeInteger(buttons) || buttons < 0 ||
+        buttons > PLAYER_CONTROLLER_BUTTON_MASK)
     ) {
-      throw new RangeError("input buttons must be a six-bit mask");
+      throw new RangeError("input controllers must contain eight six-bit masks");
     }
     this.#worker.postMessage({
       v: 1,
@@ -265,7 +270,7 @@ export class PlayerRuntimeClient {
       workerGeneration: this.#workerGeneration,
       sessionGeneration: this.#sessionGeneration,
       sequence: ++this.#inputSequence,
-      input,
+      input: { controllers: input.controllers.slice() },
     });
   }
 

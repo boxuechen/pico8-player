@@ -86,7 +86,7 @@ async function deterministicCase(entry, cart) {
     check(ready.mode === entry.mode, `${entry.id} mode was ${ready.mode}`);
     check(ready.targetFps === entry.targetFps, `${entry.id} fps was ${ready.targetFps}`);
     await client.start();
-    const anchor = await client.pulse(1_000, { buttons: 0 });
+    const anchor = await client.pulse(1_000, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
     check(anchor.type === "heartbeat" && anchor.tickCount === 0, `${entry.id} anchor advanced`);
 
     const tickMs = 1_000 / entry.targetFps;
@@ -95,7 +95,7 @@ async function deterministicCase(entry, cart) {
       const before = frames.length;
       const heartbeat = await client.pulse(
         1_000 + (index + 1) * tickMs,
-        { buttons: entry.inputTrace[index] },
+        { controllers: [entry.inputTrace[index], 0, 0, 0, 0, 0, 0, 0] },
       );
       check(heartbeat.type === "heartbeat" && heartbeat.tickCount === 1,
         `${entry.id} frame ${index} tick count drifted`);
@@ -115,9 +115,9 @@ async function deterministicCase(entry, cart) {
 
     await client.reset();
     await client.start();
-    await client.pulse(10_000, { buttons: 0 });
+    await client.pulse(10_000, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
     const beforeResetFrame = frames.length;
-    const resetHeartbeat = await client.pulse(10_000 + tickMs, { buttons: 0 });
+    const resetHeartbeat = await client.pulse(10_000 + tickMs, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
     check(resetHeartbeat.type === "heartbeat" && resetHeartbeat.tickCount === 1,
       `${entry.id} reset tick drifted`);
     check(frames.length === beforeResetFrame + 1, `${entry.id} reset frame was not published`);
@@ -260,14 +260,14 @@ async function performanceProbe(cart) {
   try {
     await client.loadCart(cart, 100_000);
     await client.start();
-    await client.pulse(0, { buttons: 0 });
+    await client.pulse(0, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
     const durations = [];
     const tickMs = 1_000 / 60;
     const warmupTicks = 20;
     const measuredTicks = 120;
     for (let index = 1; index <= warmupTicks + measuredTicks; index += 1) {
       const started = performance.now();
-      const heartbeat = await client.pulse(index * tickMs, { buttons: 0 });
+      const heartbeat = await client.pulse(index * tickMs, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
       const elapsed = performance.now() - started;
       check(heartbeat.type === "heartbeat" && heartbeat.tickCount === 1,
         `performance pulse ${index} did not execute exactly one tick`);

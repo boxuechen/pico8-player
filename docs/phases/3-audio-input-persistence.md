@@ -1,6 +1,6 @@
 # Phase 3 — Audio、Input 与 Persistence
 
-> 状态：Active；当前 work unit：3C
+> 状态：Active；当前 work unit：3D
 > 机器合同：[`spec/phase-3-audio-input-persistence-contract.json`](../../spec/phase-3-audio-input-persistence-contract.json)
 > 前置证据：[`Phase 2 Graphics/Memory/Text exit`](../evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -34,8 +34,8 @@ Non-goals：
 | --- | --- | --- | --- |
 | 3A | Deterministic SFX Core | Complete | `sfx()` 驱动 4-channel browser-neutral synth，产生 deterministic 22050Hz PCM |
 | 3B | Music 与 Browser Audio | Complete | `music()`/P8SCII audio、logical PCM chunks 和真实 AudioWorklet output 闭环 |
-| 3C | Controller Input | **Active** | player 0..7、keyboard/gamepad/touch 的 deterministic controller snapshots |
-| 3D | Devkit Input | Planned | input-only `stat()`、mouse/keyboard queue 和 pointer-lock lifecycle |
+| 3C | Controller Input | Complete | player 0..7、keyboard/gamepad/touch 的 deterministic controller snapshots |
+| 3D | Devkit Input | **Active** | input-only `stat()`、mouse/keyboard queue 和 pointer-lock lifecycle |
 | 3E | Cartdata Core | Planned | 同步 `cartdata/dget/dset` 与 256-byte browser-neutral mirror |
 | 3F | IndexedDB Persistence | Planned | preboot hydrate、durable commit、migration 与 failure-visible fallback |
 | 3G | Current-cart `reload/cstore` | Planned | 无 resolver 的 current-cart ROM/overlay 同步路径 |
@@ -57,79 +57,97 @@ binding `32`、64-pattern live music sequencer、SFX arbitration、fade 与 P8SC
 `pnpm run test:phase-3b`，兼容矩阵见
 [15.13](../06-testing-compatibility.md#1513-phase-3b-music-与-browser-audio-矩阵)。
 
-## Active work unit：3C
+## Completed work unit：3C
+
+固定八玩家 `PicoInputSnapshot.controllers`、逐 slice `btn/btnp` latch、`0x5f4c..0x5f53`、
+keyboard P0/P1、standard Gamepad 和 multitouch 已完成。snapshot shape、replay golden、Chrome
+150 production 结果与 known differences 由机器合同的 `workUnits.3C.result` 保存；可执行回归为
+`pnpm run test:phase-3c`，兼容矩阵见
+[15.14](../06-testing-compatibility.md#1514-phase-3c-controller-input-矩阵)。
+
+## Active work unit：3D
 
 ### Observable behavior
 
-1. 把 `PicoInputSnapshot` 从 player-0 单 mask 扩展为固定 8-player、每人 6-bit 的 normalized
-   snapshot。Worker 在每个 simulation slice 开始锁存一次；同一 slice、HostRequest resume 和
-   deterministic replay 都复用该 snapshot，不把 DOM timestamp 或 device object 传入 RuntimeCore。
-2. `btn(b, [pl])` 与 `btnp(b, [pl])` 支持 player `0..7`；缺省 player 为 0。`btn()` 无参数返回
-   player 0/1 的组合 bitfield（P0 bits `0..5`、P1 bits `8..13`），invalid button/player 保持既有
-   no-op/false profile。`0x5f4c..0x5f53` 是八名玩家 held mask 的 RAM 权威值。
-3. 每名玩家独立维护 held、edge、duration 与 `0x5f5c/0x5f5d` repeat；30/60Hz 换算沿用
-   Phase 1D 规则。load/reset/stop/fault/dispose 和 stale generation 清除所有玩家状态。
-4. main thread 的 input hub 以来源为单位维护 keyboard、Gamepad 与 touch mask，再按 player
-   做 bitwise OR；释放一个 alias/source 不得清除其他仍 held 的同一按钮。Worker 只接收合并后的
-   normalized snapshot，device connect/disconnect 不改变 simulation clock。
-5. keyboard 保留 player 0 aliases，并实现手册的 player 1 默认映射；Gamepad 在 rAF pulse 前
-   poll `navigator.getGamepads()`，使用稳定 browser slot `0..7`、standard mapping、d-pad/axes
-   hysteresis 和 O/X button mapping；disconnect 立即清除该 source。
-6. player shell 提供可隐藏的六键 multitouch controls。Pointer capture、multi-pointer、
-   `pointerup/cancel/lostpointercapture`、blur 与 visibility 必须成对清理；touch UI 只产生 controller
-   masks，不写 RAM、不实现 devkit mouse/pointer-lock，也不改变 Canvas renderer。
+1. 追加 operation `33` 的同步 `stat(x)` binding，但只实现手册 devkit input selectors：
+   `30` key available、`31` consume next character、`32/33` logical mouse x/y、`34` mouse buttons、
+   `36` wheel event、`38/39` pointer-lock relative movement。其他 `stat()` selectors 返回 `false`，
+   完整 system/audio/memory/clipboard/network `stat()` 保持 Deferred。
+2. `0x5f2d` 是 enable flags 的 RAM 权威值：bit `0` 启用 devkit input；bit `1` 将 left/right/middle
+   mouse buttons 叠加为 player 0 的 `btn(4)..btn(6)`；bit `2` 请求 pointer-lock relative mode。
+   controller DTO 仍保持 3C 的 8×6-bit shape；button 6 只由 RuntimeCore 的 devkit overlay 产生，
+   并在启用期间进入 `btn/btnp` 与 `0x5f4c` 的有效 held mask。
+3. `PicoInputSnapshot` 增加固定 browser-neutral `devkit` batch：Q16.16 raw logical x/y、3-bit
+   mouse buttons、signed wheel/relative x/y 和最多 64 个 P8SCII bytes。Worker 对 state 使用 latest
+   snapshot，对 delta/event 使用 accept-once accumulator；catch-up 的第一个 simulation slice 消费
+   pending batch，后续 slice 不重复 key/wheel/movement。
+4. RuntimeCore 持有最大 64-byte FIFO。`stat(30)` 只观察，`stat(31)` 每次消费一个单-byte string，
+   空队列返回空 string；同 slice mouse position/buttons 稳定，wheel/relative movement 是该 slice
+   累积值并在下一 slice 归零。queue 满时 deterministic drop newest；reset/load/stop/fault/dispose
+   和 generation change 清空 queue、delta、buttons 与 devkit flag presentation state。
+5. main thread 新增 `DevkitInputFrontend`：canvas client coordinates 映射并 clamp 到 logical
+   `0..127`；mouse bitfield 为 left/right/middle；wheel 只按方向归一到 `-1/0/1`；keyboard 使用
+   `KeyboardEvent.key` 的 Latin-1/P8SCII single byte，并显式映射 Backspace、Tab、Enter、Escape、
+   Delete。IME composition、extended Unicode/P8SCII 和 clipboard 不在 3D。
+6. Worker state/frame event 携带 `devkitFlags` 供 app adapter 使用，但 RuntimeCore 不接收 DOM object。
+   bit `2` 只在下一次 trusted canvas primary-button gesture 调用 `requestPointerLock()`；
+   `pointerlockchange/error`、context menu、blur、visibility、pause/stop/reset/fault/dispose 必须成对
+   退出 lock 并清事件。pointer-lock movement 保留 host desktop pixel 口径，不缩放为 canvas pixel。
 
 ### 允许修改的范围
 
-- `spec/phase-3-audio-input-persistence-contract.json`、`spec/pico-api-inventory.yaml` 与 input DTO owner
-- `packages/contracts/src/**` 的 normalized input contract
-- `packages/runtime-core/src/{input,frame-runtime.ts,pico-api,session,public.ts}`
-- `apps/web-player/src/{transport,worker,main}/**` 的 input protocol、hub 与 shell controls
+- `spec/{abi/pico-host-api-v1.json,phase-3-audio-input-persistence-contract.json,pico-api-inventory.yaml}`
+  与对应 generated binding manifest/artifacts
+- `packages/contracts/src/**` 的 normalized devkit input batch contract
+- `packages/runtime-core/src/{input,frame-runtime.ts,pico-api,session,public.ts}` 的 devkit latch/FIFO/stat
+- `packages/z8lua-bridge/src/**`、`wasm/bridge/**` 中 operation 33 的 selector-tagged return
+- `apps/web-player/src/{transport,worker,main}/**` 的 event accumulator、DOM adapter 与 pointer-lock lifecycle
 - `tests/{runtime,browser,architecture,conformance,golden}/**`、`tools/browser/**`、`package.json`
 - 本 work unit 直接拥有的文档状态和 compatibility matrix
 
-不得修改 `docs/evidence/**`；不得把 KeyboardEvent、Gamepad、PointerEvent、DOM 或 clock source
-带入 RuntimeCore；不得实现 3D/4D 的 `stat()`、devkit mouse/keyboard queue、pointer lock，或把
-controller state 写入 audio/graphics adapter。Phase 0F audio protocol 与 queue 水位必须保持。
+不得修改 `docs/evidence/**`；不得把 `KeyboardEvent`、`MouseEvent`、`WheelEvent`、DOM 或 pointer-lock
+API 带入 RuntimeCore；不得实现未列出的 `stat()` selectors、clipboard/IME、mobile touch-as-mouse、
+GPIO/file/drop input 或 3E persistence。不得让 pointer lock、event arrival 或 browser repeat 改变
+simulation clock。Phase 0F audio 和 Phase 3C controller protocol 回归必须保持。
 
 ### Routed contracts
 
-- [Input ownership 与逐 slice latch](../04-typescript-runtime.md#9-input)
+- [Input ownership、逐 slice latch 与 devkit boundary](../04-typescript-runtime.md#9-input)
 - [Chrome integration gate](../06-testing-compatibility.md#112-chrome--chromium-集成测试)
 - [RuntimeCore/app execution ownership](../08-source-layout-and-boundaries.md#2-package-职责)
-- [官方 BTN/BTNP 与默认 keyboard mapping](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
+- [官方 Mouse and Keyboard Input](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#Mouse_and_Keyboard_Input)
 
 ### Verification
 
-3C 必须新增 `pnpm run test:phase-3c` 与 `test:phase-3c:chrome`，覆盖：
+3D 必须新增 `pnpm run test:phase-3d` 与 `test:phase-3d:chrome`，覆盖：
 
-- real-WASM `btn/btnp` 的 player 0..7、no-arg P0/P1 bitfield、RAM registers、independent
-  edge/repeat、30/60Hz 与 invalid arguments。
-- fixed snapshot validator、Worker latest-sequence/stale-generation、catch-up slice latch、cold reset、
-  fault/stop/dispose clear 与 deterministic eight-player replay golden。
-- keyboard aliases/player 1、simultaneous multi-source merge、Gamepad axis hysteresis/button/disconnect、
-  touch multi-pointer/cancel/capture 和 focus/visibility clear 的 unit tests。
-- Chrome production cart 同时观察 keyboard、injected deterministic Gamepad source 与真实 PointerEvent
-  touch controls；Canvas、audio、rAF responsiveness 与 generation recovery 不回归。
-- `pnpm run test:phase-3b`、Phase 1D/1E input/scheduler、Phase 2/architecture regression。
+- generated operation 33、real-WASM selector return types、unsupported selector false、queue order/consume/
+  empty/full、Q16 coordinates、wheel/relative per-slice latch 和 bit `1` 的 `btn(4)..btn(6)` edge/repeat。
+- fixed devkit DTO validator、Worker accept-once event/delta accumulator、catch-up no-duplicate、latest pointer
+  state、stale sequence/generation、load/reset/fault/stop/dispose clear 与 deterministic replay golden。
+- main adapter 的 canvas coordinate/DPR-independent transform、mouse bitfield、wheel normalization、Latin-1/
+  control-key mapping、queue bound、focus/visibility 和 pointer-lock change/error/exit unit tests。
+- Chrome production cart 观察真实 mouse move/buttons/wheel/keyboard queue；trusted CDP canvas gesture 进入
+  pointer lock，relative movement可见；blur/reset/fault 后 lock 与 state 清除，Worker/Canvas/rAF/audio 不回归。
+- `pnpm run test:phase-3c`、`test:phase-3b:chrome`、Phase 1D/1E、Phase 2 和 architecture regression。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-3c
-pnpm run test:phase-3c:chrome
+pnpm run test:phase-3d
+pnpm run test:phase-3d:chrome
 pnpm run verify
 git status --short
 ```
 
-### 3C exit gate
+### 3D exit gate
 
-- RuntimeCore 只接收固定、browser-neutral 的八玩家 snapshot，所有 device policy 留在 app。
-- `btn/btnp`、RAM 和 repeat state 对八名玩家可独立验证，reset/fault/stale generation 不泄漏输入。
-- keyboard、standard Gamepad 与 multitouch production adapters 在 Chrome gate 中驱动同一 cart，
-  disconnect/cancel/blur 后没有 stuck buttons。
-- machine contract 保存 snapshot shape、mapping policy、golden、Chrome environment、known differences 和命令。
-- 3C 独立提交后 worktree 干净；随后才折叠本节并激活 3D。
+- `stat()` 只暴露列出的 input selectors，mixed string/numeric/boolean result 不破坏既有 call-frame ABI。
+- RuntimeCore 只消费 browser-neutral state/event batch；event 在 catch-up 与 replay 中 exactly once。
+- production Chrome 的 mouse、wheel、keyboard FIFO 与 trusted pointer lock 驱动同一 cart，所有 lifecycle
+  路径无 stuck lock、button、delta 或 keypress。
+- machine contract 保存 DTO/queue/ABI policy、golden、Chrome environment、known differences 和命令。
+- 3D 独立提交后 worktree 干净；随后才折叠本节并激活 3E。
 
 ## Phase exit gate
 

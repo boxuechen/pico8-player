@@ -183,7 +183,7 @@ function _init()
  btn(nil,1)
 end
 function _update() end
-function _draw() end`), { buttons: 0b10_0001 });
+function _draw() end`), { controllers: [0b10_0001, 0, 0, 0, 0, 0, 0, 0] });
   assert.equal(boot.ok, true, JSON.stringify(boot));
   assert.deepEqual(calls.slice(0, 4), [
     ["cls", undefined],
@@ -280,7 +280,7 @@ function _init()
  poke(0x170,sum) cls(1) pset(0,0,7)
 end
 function _update() end
-function _draw() end`), { buttons: 1 });
+function _draw() end`), { controllers: [1, 0, 0, 0, 0, 0, 0, 0] });
   const elapsedMs = performance.now() - started;
   assert.equal(boot.ok, true, JSON.stringify(boot));
   assert.equal(dispatchCount, 20_002);

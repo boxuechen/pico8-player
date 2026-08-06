@@ -93,7 +93,7 @@ function stepFrames(session, entry) {
   const trace = [];
   let finalFrame;
   for (let index = 0; index < manifest.frameCount; index += 1) {
-    const result = session.step({ buttons: 0 });
+    const result = session.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
     assert.equal(result.ok, true, JSON.stringify(result));
     assert.equal(result.value.kind, "frame", `${entry.id} step ${index}`);
     finalFrame = result.value.frame;

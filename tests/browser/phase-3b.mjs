@@ -65,7 +65,7 @@ async function createCase(requestedSampleRate) {
 
 async function pulseAll(cases, timestampMs) {
   await Promise.all(cases.map(({ composition }) =>
-    composition.pulse(timestampMs, { buttons: 0 })));
+    composition.pulse(timestampMs, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] })));
 }
 
 async function prepare() {

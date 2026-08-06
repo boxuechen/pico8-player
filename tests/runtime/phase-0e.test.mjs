@@ -122,7 +122,7 @@ end`;
 
   let lastFrame;
   for (let index = 0; index < 60; index += 1) {
-    const stepped = runtime.step({ buttons: index === 59 ? 1 : 0 });
+    const stepped = runtime.step({ controllers: [index === 59 ? 1 : 0, 0, 0, 0, 0, 0, 0, 0] });
     assert.equal(stepped.ok, true, JSON.stringify(stepped));
     assert.equal(stepped.value.kind, "frame");
     lastFrame = stepped.value.frame;
@@ -363,7 +363,7 @@ function _draw() cls(3) pset(0,0,7) end`);
     type: "step",
     requestId: 2,
     sessionGeneration: 4,
-    input: { buttons: 0 },
+    input: { controllers: [0, 0, 0, 0, 0, 0, 0, 0] },
   });
   assert.equal(frame.type, "frame");
   assert.equal(frame.completedSlices, "2");
@@ -423,7 +423,7 @@ test("Window watchdog terminates, recreates, and ignores stale generations", asy
   );
 
   await assert.rejects(
-    client.step({ buttons: 0 }),
+    client.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] }),
     (error) =>
       error instanceof RuntimeClientError &&
       error.record.code === "E_VM_WATCHDOG",
@@ -452,7 +452,7 @@ test("protocol validators reject malformed data and async Worker startup queues 
       type: "step",
       requestId: 1,
       sessionGeneration: 1,
-      input: { buttons: 0 },
+      input: { controllers: [0, 0, 0, 0, 0, 0, 0, 0] },
     }),
     true,
   );

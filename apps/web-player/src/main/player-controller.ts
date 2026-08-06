@@ -1,7 +1,8 @@
 import type { PlayerRuntimeToHost } from "../transport/public.js";
 import { RuntimeClientError } from "./runtime-client.js";
 import type { PlayerComposition } from "./compose-player.js";
-import { KeyboardInputFrontend } from "./input-frontend.js";
+import type { GamepadSource } from "./gamepad-input.js";
+import { PlayerInputFrontend } from "./player-input.js";
 
 export type PlayerShellState =
   | "idle"
@@ -23,6 +24,7 @@ export interface PlayerShellElements {
   readonly pauseButton?: HTMLButtonElement;
   readonly resetButton?: HTMLButtonElement;
   readonly stopButton?: HTMLButtonElement;
+  readonly touchControls?: HTMLElement;
 }
 
 export interface AnimationFrameSource {
@@ -34,6 +36,7 @@ export interface PlayerControllerOptions {
   readonly window?: Window;
   readonly document?: Document;
   readonly animationFrames?: AnimationFrameSource;
+  readonly gamepadSource?: GamepadSource;
 }
 
 export class PlayerController {
@@ -42,7 +45,7 @@ export class PlayerController {
   readonly #window: Window;
   readonly #document: Document;
   readonly #animationFrames: AnimationFrameSource;
-  readonly #input: KeyboardInputFrontend;
+  readonly #input: PlayerInputFrontend;
   readonly #removeRuntimeListener: () => void;
   readonly #removeListeners: (() => void)[] = [];
   #state: PlayerShellState = "idle";
@@ -65,9 +68,15 @@ export class PlayerController {
       cancel: (handle) => this.#window.cancelAnimationFrame(handle),
     };
     elements.canvas.tabIndex = elements.canvas.tabIndex >= 0 ? elements.canvas.tabIndex : 0;
-    this.#input = new KeyboardInputFrontend(elements.canvas, {
+    this.#input = new PlayerInputFrontend(elements.canvas, {
       window: this.#window,
       document: this.#document,
+      ...(options.gamepadSource === undefined
+        ? {}
+        : { gamepadSource: options.gamepadSource }),
+      ...(elements.touchControls === undefined
+        ? {}
+        : { touchRoot: elements.touchControls }),
     });
     this.#removeRuntimeListener = composition.runtime.onEvent(
       (event) => this.#onRuntimeEvent(event),
@@ -117,6 +126,10 @@ export class PlayerController {
 
   get inputButtons(): number {
     return this.#input.buttons;
+  }
+
+  get inputControllers(): readonly number[] {
+    return this.#input.snapshot().controllers;
   }
 
   async loadCart(source: Uint8Array, displayName = "cartridge"): Promise<void> {

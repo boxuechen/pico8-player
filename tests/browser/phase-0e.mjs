@@ -33,7 +33,7 @@ function _draw() cls(2) pset(peek(0x150)-1,0,7) end`);
   document.body.dataset.progress = "60 manual Worker steps";
   let frame;
   for (let index = 0; index < 60; index += 1) {
-    frame = await client.step({ buttons: index === 59 ? 1 : 0 });
+    frame = await client.step({ controllers: [index === 59 ? 1 : 0, 0, 0, 0, 0, 0, 0, 0] });
     check(frame.type === "frame", `step ${index} did not produce a frame`);
   }
   check(frame.completedSlices === "62", "60 steps did not reach official slice 62");
@@ -45,7 +45,7 @@ function _draw() cls(2) pset(peek(0x150)-1,0,7) end`);
   check(watchdogReady.type === "ready", "watchdog fixture did not arm");
   let watchdogCode = "";
   try {
-    await client.step({ buttons: 0 });
+    await client.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
   } catch (error) {
     if (error instanceof RuntimeClientError) watchdogCode = error.record.code;
   }
@@ -55,7 +55,7 @@ function _draw() cls(2) pset(peek(0x150)-1,0,7) end`);
 
   const recovered = await client.loadCart(source, 100000);
   check(recovered.type === "ready", "recreated Worker did not accept a new cart");
-  const recoveredFrame = await client.step({ buttons: 0 });
+  const recoveredFrame = await client.step({ controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
   check(recoveredFrame.type === "frame", "recreated Worker did not step");
   await client.dispose();
   return {

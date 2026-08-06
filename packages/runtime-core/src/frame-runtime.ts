@@ -6,7 +6,7 @@ import {
   type RuntimePhase,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
-import { normalizeButtons } from "./input/l1-input.js";
+import { normalizeControllers, ZERO_PICO_INPUT } from "./input/l1-input.js";
 import type { CanonicalAudioSlice } from "./audio/sfx-synth.js";
 import {
   createPicoApiHost,
@@ -229,14 +229,14 @@ export class FrameSliceRuntime {
 
   boot(
     cart: Pick<ParsedCart, "rom" | "code">,
-    input: PicoInputSnapshot = { buttons: 0 },
+    input: PicoInputSnapshot = ZERO_PICO_INPUT,
   ): RuntimeResult<RuntimeBootResult> {
     if (this.#state !== "empty") {
       return { ok: false, error: invalidState("runtime session is not empty") };
     }
-    let buttons: number;
+    let controllers: readonly number[];
     try {
-      buttons = normalizeButtons(input);
+      controllers = normalizeControllers(input);
     } catch (error) {
       return {
         ok: false,
@@ -251,7 +251,8 @@ export class FrameSliceRuntime {
     this.#vm.writeCartRom(cart.rom);
     const compiled = this.#vm.compile(cart.code);
     if (compiled.kind === "fault") return this.#acceptFault(compiled.error);
-    this.#picoApiHost.beginTick({ buttons }, 30);
+    this.#picoApiHost.beginTick({ controllers }, 30);
+    const buttons = controllers[0]!;
     const outcome = this.#vm.boot(
       this.#instructionBudget,
       buttons,
@@ -265,13 +266,13 @@ export class FrameSliceRuntime {
     );
   }
 
-  step(input: PicoInputSnapshot = { buttons: 0 }): RuntimeResult<RuntimeStepResult> {
+  step(input: PicoInputSnapshot = ZERO_PICO_INPUT): RuntimeResult<RuntimeStepResult> {
     if (this.#state !== "ready" || this.#targetFps === 0) {
       return { ok: false, error: invalidState("runtime session is not ready to step") };
     }
-    let buttons: number;
+    let controllers: readonly number[];
     try {
-      buttons = normalizeButtons(input);
+      controllers = normalizeControllers(input);
     } catch (error) {
       return {
         ok: false,
@@ -279,7 +280,8 @@ export class FrameSliceRuntime {
       };
     }
     const timeRaw = logicalTimeRaw(this.#completedSlices + 1n, this.#targetFps);
-    this.#picoApiHost.beginTick({ buttons }, this.#targetFps);
+    this.#picoApiHost.beginTick({ controllers }, this.#targetFps);
+    const buttons = controllers[0]!;
     const outcome = this.#vm.step(this.#instructionBudget, buttons, timeRaw);
     return this.#acceptStepOutcome(
       outcome,

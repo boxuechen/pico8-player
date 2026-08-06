@@ -150,7 +150,7 @@ function runOnce(entry, cart) {
   for (let index = 0; index < entry.inputTrace.length; index += 1) {
     controller.handle(command("input", 0, 1, {
       sequence: index + 1,
-      input: { buttons: entry.inputTrace[index] },
+      input: { controllers: [entry.inputTrace[index], 0, 0, 0, 0, 0, 0, 0] },
     }));
     const frame = onlyFrame(controller.handle(command("vsync", requestId++, 1, {
       sequence: index + 2,
@@ -184,7 +184,7 @@ function runOnce(entry, cart) {
   }));
   controller.handle(command("input", 0, 2, {
     sequence: 1,
-    input: { buttons: 0 },
+    input: { controllers: [0, 0, 0, 0, 0, 0, 0, 0] },
   }));
   const resetFrameEvent = onlyFrame(controller.handle(command("vsync", requestId++, 2, {
     sequence: 2,

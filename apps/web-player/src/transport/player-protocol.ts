@@ -4,6 +4,10 @@ import type {
 } from "@pico8-web/contracts";
 
 export const PLAYER_PROTOCOL_VERSION = 1 as const;
+/** Runtime mirror of the package DTO constants for browser-native ESM modules. */
+export const PLAYER_CONTROLLER_COUNT = 8 as const;
+export const PLAYER_CONTROLLER_BUTTON_COUNT = 6 as const;
+export const PLAYER_CONTROLLER_BUTTON_MASK = 0x3f as const;
 
 interface PlayerCommandEnvelope {
   readonly v: typeof PLAYER_PROTOCOL_VERSION;

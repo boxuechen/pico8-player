@@ -727,9 +727,9 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
 - Phase 2 exit 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
   `tline` 与 visual P8SCII/custom font；Phase 3B 已关闭同步 P8SCII audio，timed controls、
   `tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
-- Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；persistence、
-  gamepad/touch/multiplayer、devkit input 和 resolver 仍 `unsupported`/Deferred，其中 controller
-  扩展已由 active 3C 授权。
+- Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；Phase 3C 已实现固定八玩家
+  controller、keyboard/Gamepad/multitouch production flow；persistence、devkit input 和 resolver
+  仍 `unsupported`/Deferred，其中 input-only devkit selectors 已由 active 3D 授权。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
@@ -796,6 +796,27 @@ deterministic noise/golden 是项目实现 oracle，不是官方 PICO-8 capture�
 Known Differences：music/P8SCII PCM 是项目 oracle，不是官方 capture；note-transition crossfade
 未建模；timed P8SCII controls 不 suspension；device output 使用 Phase 0F 已接受的 linear resampler。
 Phase 3B 开放 P0/P1 为 `0`。
+
+### 15.14 Phase 3C Controller Input 矩阵
+
+本表覆盖固定八玩家 controller snapshot 和 app-owned keyboard/Gamepad/multitouch adapters。
+项目 golden 位于 `tests/golden/phase-3c-input.json`；Gamepad 注入只用于 deterministic Chrome
+device simulation，不把 browser object 带入 Worker/RuntimeCore。
+
+| 行为 | Phase 3C 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| normalized snapshot | `controllers` 固定 length 8、每项 integer `0..63`；validator 拒绝 short/typed/overflow；main/Worker boundary copy | `implemented` | active 3D 只能追加独立 devkit batch，不得放宽 controller shape |
+| RuntimeCore/real-WASM | `btn/btnp` player `0..7`、P0/P1 no-arg bitfield、`0x5f4c..0x5f53`、invalid args 和 30/60Hz independent repeat passed | `compatible`（project profile） | devkit mouse button 6 overlay 属 3D |
+| Worker/replay | latest sequence、stale generation、3-slice catch-up latch、cold reset 和 input copy passed；48-tick replay fresh exact | gate passed | event-style devkit input 必须在 3D 证明 catch-up no-duplicate |
+| keyboard | 手册 P0 aliases 与 P1 SFED/Shift/Tab-W-Q-A；alias independent release；blur/visibility clear passed | `compatible` | remapping UI 不在 Phase 3 |
+| Gamepad | standard mapping only；browser index→player `0..7`；d-pad/O/X、axis `0.5/0.35` hysteresis 和 disconnect clear passed | `compatible`（project policy） | non-standard mapping/remap UI Deferred |
+| multitouch | exposed six-button P0 shell、multi-pointer、capture、up/cancel/lost capture、blur/visibility clear passed | `compatible`（player shell） | caller 可隐藏或增加 `data-pico-player` controls；内建 shell 不生成 P1..P7 controls |
+| Chrome production gate | Chrome `150.0.7871.189`；同一 real Worker/WASM cart 同时观察 keyboard P1、injected Gamepad P2 与 PointerEvent P0；cancel/disconnect/blur、rAF resume、generation `1→2` 和 Canvas reset passed；Worker errors `0` | gate passed | Chrome 是唯一 browser gate；3D 追加真实 mouse/wheel/pointer-lock flow |
+| golden | trace `5c2fe9bb…161d0`；registers `0b3703081f320d39`；fresh replay exact | gate passed | oracle 变化必须人工审阅 fixture/algorithm diff |
+
+Known Differences：deterministic input trace 是项目 oracle，不是官方 device capture；Gamepad slot
+直接映射 player，没有 remapping UI；内建 touch shell 只提供 P0 六键；devkit mouse、keyboard
+queue 与 pointer lock 属 active 3D。Phase 3C 开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

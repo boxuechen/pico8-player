@@ -9,9 +9,9 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A", "3B"],
-  "activeWorkUnit": "3C",
-  "nextWorkUnit": "3D",
+  "completedWorkUnits": ["3A", "3B", "3C"],
+  "activeWorkUnit": "3D",
+  "nextWorkUnit": "3E",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -164,10 +164,17 @@
     },
     "3C": {
       "name": "Controller Input",
-      "status": "active",
+      "status": "complete",
       "apis": ["btn", "btnp"],
       "players": 8,
       "buttonsPerPlayer": 6,
+      "snapshot": {
+        "property": "controllers",
+        "type": "readonly-number-array",
+        "length": 8,
+        "element": "integer-0-through-63",
+        "ownership": "copied-at-every-main-worker-boundary"
+      },
       "runtimeOwns": [
         "normalized-eight-player-snapshot",
         "per-slice-held-edge-and-repeat",
@@ -185,9 +192,95 @@
         "keyboard-gamepad-touch-production-frontends",
         "deterministic-node-and-chrome-input-gates",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "controllerRegisters": "0x5f4c..0x5f53",
+        "noArgumentBtn": "player-0-bits-0-through-5-plus-player-1-bits-8-through-13",
+        "repeat": "independent-per-player-button-logical-tick-latches",
+        "keyboardPlayers": [0, 1],
+        "gamepad": {
+          "mapping": "standard-only",
+          "slotPolicy": "browser-gamepad-index-is-player-0-through-7",
+          "axisPressThreshold": 0.5,
+          "axisReleaseThreshold": 0.35,
+          "disconnect": "clear-source"
+        },
+        "touch": {
+          "defaultPlayer": 0,
+          "buttons": 6,
+          "multiPointer": true,
+          "releaseEvents": ["pointerup", "pointercancel", "lostpointercapture"],
+          "visibility": "caller-may-hide-exposed-touchControls-element"
+        },
+        "golden": "tests/golden/phase-3c-input.json",
+        "traceSha256": "5c2fe9bb7da3602f477b196a34c6019f27d474a4a23aa6101f0d274f30c161d0",
+        "chromeGate": {
+          "browser": "Google Chrome 150.0.7871.189",
+          "productionWorker": true,
+          "sources": ["keyboard-player-1", "injected-standard-gamepad-player-2", "pointerevent-multitouch-player-0"],
+          "generationRecovery": "1-to-2",
+          "workerErrors": 0
+        },
+        "knownDifferences": [
+          "the deterministic input golden is a project oracle rather than an official device capture",
+          "Gamepad browser index maps directly to player instead of providing a remapping UI",
+          "the built-in touch shell exposes player 0 controls only; callers may build additional data-pico-player controls",
+          "devkit mouse keyboard queue and pointer lock remain owned by active work unit 3D"
+        ],
+        "verification": [
+          "pnpm run test:phase-3c",
+          "pnpm run test:phase-3c:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "3D": {
+      "name": "Devkit Input",
+      "status": "active",
+      "apis": ["stat"],
+      "devkitRegister": "0x5f2d",
+      "flags": {
+        "enable": 1,
+        "mouseButtonsToBtn4ThroughBtn6": 2,
+        "pointerLockRelativeMovement": 4
+      },
+      "statSelectors": {
+        "30": "keypress-available-boolean",
+        "31": "consume-next-p8scii-byte-string",
+        "32": "logical-mouse-x",
+        "33": "logical-mouse-y",
+        "34": "mouse-button-bitfield",
+        "36": "per-slice-wheel-delta",
+        "38": "per-slice-host-pixel-relative-x",
+        "39": "per-slice-host-pixel-relative-y"
+      },
+      "runtimeOwns": [
+        "bounded-keypress-fifo-and-stat-consumption",
+        "per-slice-pointer-wheel-and-relative-latch",
+        "devkit-flag-gating-and-mouse-btn-overlay",
+        "reset-fault-stop-dispose-state-clear"
+      ],
+      "browserOwns": [
+        "canvas-client-to-logical-pointer-transform",
+        "mouse-buttons-wheel-and-printable-key-normalization",
+        "pointer-lock-request-on-trusted-canvas-gesture",
+        "pointer-lock-focus-visibility-and-generation-lifecycle",
+        "bounded-event-batch-delivery-to-worker"
+      ],
+      "abi": {
+        "allocation": "append-only-operation-33-after-music",
+        "argument": "selector-as-signed-q16.16-raw-int32",
+        "result": "selector-tagged-existing-int32-call-frame-slot",
+        "stat31": "single-p8scii-byte-or-empty-string-pushed-by-bridge",
+        "otherStatSelectors": "out-of-profile-selectors-return-false"
+      },
+      "exit": [
+        "input-only-stat-binding-without-complete-stat-scope",
+        "browser-neutral-devkit-state-and-event-batch-contract",
+        "chrome-mouse-wheel-keyboard-and-pointer-lock-lifecycle-gate",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "3D": { "name": "Devkit Input", "status": "planned" },
     "3E": { "name": "Cartdata Core", "status": "planned" },
     "3F": { "name": "IndexedDB Persistence", "status": "planned" },
     "3G": { "name": "Current-cart reload and cstore", "status": "planned" },

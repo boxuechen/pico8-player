@@ -90,7 +90,7 @@ async function inspectFrame(frame) {
 
 async function advanceFourFrames(client, frames, entry, anchorMs) {
   const beforeAnchor = frames.length;
-  const anchor = await client.pulse(anchorMs, { buttons: 0 });
+  const anchor = await client.pulse(anchorMs, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
   check(anchor.type === "heartbeat" && anchor.tickCount === 0,
     `${entry.id} anchor advanced`);
   check(frames.length === beforeAnchor, `${entry.id} anchor published a frame`);
@@ -101,7 +101,7 @@ async function advanceFourFrames(client, frames, entry, anchorMs) {
     const before = frames.length;
     const heartbeat = await client.pulse(
       anchorMs + (index + 1) * tickMs,
-      { buttons: 0 },
+      { controllers: [0, 0, 0, 0, 0, 0, 0, 0] },
     );
     check(heartbeat.type === "heartbeat" && heartbeat.tickCount === 1,
       `${entry.id} frame ${index} did not execute exactly one tick`);
@@ -200,14 +200,14 @@ async function performanceProbe(entry, cart) {
   try {
     await client.loadCart(cart, 2_000_000);
     await client.start();
-    await client.pulse(0, { buttons: 0 });
+    await client.pulse(0, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
     const warmupTicks = 20;
     const measuredTicks = 120;
     const durations = [];
     const tickMs = 1_000 / entry.targetFps;
     for (let index = 1; index <= warmupTicks + measuredTicks; index += 1) {
       const started = performance.now();
-      const heartbeat = await client.pulse(index * tickMs, { buttons: 0 });
+      const heartbeat = await client.pulse(index * tickMs, { controllers: [0, 0, 0, 0, 0, 0, 0, 0] });
       const elapsed = performance.now() - started;
       check(heartbeat.type === "heartbeat" && heartbeat.tickCount === 1,
         `${entry.id} performance pulse ${index} drifted`);
