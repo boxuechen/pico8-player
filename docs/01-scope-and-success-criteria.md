@@ -84,6 +84,13 @@ Phase 1 已通过 **L1 bounded profile**：项目原创 30Hz callback、60Hz `.p
 覆盖 Phase 1 机器契约列出的基础 API，不等于完整 L1 API 面、官方 bit-exact 或第三方 cart
 兼容声明；具体边界见 [Phase 1 exit evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
 
+Phase 2/3 已分别关闭项目自有 graphics/memory/text 与 audio/input/persistence profile，证明
+核心 production path 可组合、可恢复且满足当前 Chrome 门禁；完成边界见
+[Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 和
+[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。这些结果
+仍不是 **L2 Playable** 发布声明：L2 必须由 Phase 4 的合法代表 corpus、coverage gap、CPU/resource
+校准和长稳 release gate 共同决定。
+
 首个对外 MVP 的目标是 L2。L3 是后续兼容阶段，不阻塞核心架构稳定。
 
 ## 6. MVP 成功标准

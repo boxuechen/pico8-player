@@ -13,13 +13,7 @@
 | 状态 | 对应范围 |
 | --- | --- |
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
-| **Implemented through Phase 3B** | browser-neutral four-channel SFX/music/P8SCII synth、live song/SFX decode、bindings `31/32`、dedicated Worker PCM 与 Chrome 44.1/48kHz AudioWorklet output |
-| **Implemented through Phase 3C** | fixed eight-player snapshot、independent `btn/btnp` latch、keyboard P0/P1、standard Gamepad、multitouch 和 production Chrome input lifecycle |
-| **Implemented through Phase 3D** | input-only `stat()`、`0x5f2d` devkit flags、bounded key FIFO、Worker event accumulator、mouse button overlay 与 app-owned trusted pointer-lock lifecycle |
-| **Implemented through Phase 3E** | synchronous `cartdata/dget/dset`、live `0x5e00..0x5eff` authority、prehydrated browser-neutral seeds 与 committed copy-owned dirty snapshots |
-| **Implemented through Phase 3F** | Worker-owned IndexedDB hydrate/commit、versioned bounded records、lifecycle flush、migration、recoverable persistence diagnostics 与 pagehide command |
-| **Implemented through Phase 3G** | synchronous current-cart `reload/cstore`、browser-neutral repository port、Worker-local identity-scoped bounded COW overlay 与 code/ref fail-closed policy |
-| **Evidence through Phase 3H** | project-owned Node/Chrome cross-oracles、120-tick p95、60 秒 AudioWorklet soak、fault/stale/persistence recovery 与 resource dispose gate；未新增 production API |
+| **Implemented through Phase 3 exit** | browser-neutral four-channel SFX/music/P8SCII synth；fixed eight-player + devkit input；synchronous cartdata + Worker-owned IndexedDB；current-cart `reload/cstore` COW repository；dedicated PCM、production Chrome cross-oracle、performance/soak/recovery/dispose gate |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
 | **Deferred** | include resolver、label presentation、advanced Graphics、deterministic conformance scheduler、guest `load`、external ref、完整 cart swap 与 multicart |
 
@@ -102,7 +96,7 @@ TypeScript 负责：
 | `P0-RT-02` | Accepted / Phase 0D passed（ADR-005） | `.p8.png` 不经 Canvas；项目自有 bounded TS PNG/zlib/DEFLATE/code decoder | raw/legacy/PXA ROM/source hash、malformed/limit、architecture、manifest 与许可证证据已通过 |
 | `P0-RT-03` | Accepted / Phase 0F passed（ADR-010） | Window 建立专用 `MessageChannel`，Worker 通过其端口直接向 AudioWorklet 发送 PCM；不实现 relay/SAB fallback | Chrome/Chromium transferable `MessagePort`、44.1/48 kHz 并发 10 分钟 bounded-queue soak 已通过 |
 | `P0-RT-04` | Accepted（ADR-014） | canonical test PCM 为 22050Hz mono signed PCM16LE；不宣称是官方硬件规格 | conformance/reference capture 的 sample/event 时序与设备重采样证据 |
-| `P0-RT-05` | L1 policy Implemented（Phase 1C）；完整兼容仍 Proposed | fresh VM graph；64 KiB clear + `0x5f54/0x5f55` defaults + Cart ROM `0..0x42ff` copy；input/frame clock reset | fake + real z8lua lifecycle/RAM tests 已通过；未来 `run/reload/cartdata` 仍需官方 golden |
+| `P0-RT-05` | Project policy Implemented；完整官方兼容仍 Proposed | fresh VM graph；64 KiB clear + hardware defaults + Cart ROM `0..0x42ff` copy；input/audio/frame reset；cartdata prehydrate；current-cart overlay reattach | Phase 1–3 lifecycle/RAM/reload/cartdata tests 已通过；official warm-run preservation 仍待代表 corpus/differential |
 | `P0-RT-06` | Accepted with constraints（ADR-017；Phase 0E） | root host-call 可恢复；nested guest coroutine 固定 unsupported，L3 外部数据只用预供给/同步 cache | root byte-string continuation 与 nested sentinel tests 已通过；一般 bubbling 需新 ADR |
 | `P0-RT-07` | Mechanism Accepted / thresholds Proposed（ADR-017） | Window command watchdog terminate/recreate + generation；各命令 deadline 后续校准 | fake stale-generation test 与 Chrome JS-stall recovery 已通过；250ms/2s/8ms 尚不作为最终 release threshold |
 | `P0-RT-08` | Accepted（ADR-013；Phase 0B/0C passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 与 real-WASM interop benchmark 已通过 |
@@ -437,7 +431,7 @@ Phase 2 exit 实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`�
 RAM，并复用 sprite raster；lower map 在 `0x1000..0x2fff` ring 中排列，upper map 使用
 `base<<8..0xffff`，GFX/screen upper conflict 仍由 C++ canonical mapper 裁决。
 `print/cursor` 使用原始 byte string，经 software parser/raster 读取内建字体或 RAM-backed custom
-font；cursor、scroll、camera/clip 与 palette 仍经过同一 RAM/pixel path。Phase 3B 使 P8SCII audio
+font；cursor、scroll、camera/clip 与 palette 仍经过同一 RAM/pixel path。P8SCII audio
 通过窄 sink 同步进入唯一 AudioSynth；timed controls 仍只消费、不产生 suspension。`RuntimeFrame`
 另外快照 `0x5f10..0x5f1f` 的 16-byte display
 palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当前兼容声明仅是 standard
@@ -459,8 +453,8 @@ palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当�
 
 ## 8. AudioSynth 与 AudioWorklet
 
-> 状态：Phase 3B complete。SFX/music/P8SCII AudioSynth 与 production Worker PCM 已
-> Implemented；Phase 0F transport/queue/device adapter 保持 ADR-010 边界。
+> 状态：Implemented。SFX/music/P8SCII AudioSynth 与 production Worker PCM 已由 Phase 3
+> exit gate 覆盖；Phase 0F transport/queue/device adapter 保持 ADR-010 边界。
 
 ### 8.1 责任边界
 
@@ -501,8 +495,8 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 ## 9. Input
 
-> 状态：Phase 3C controller 与 Phase 3D input-only devkit `stat()`、mouse/keyboard event batch、
-> pointer-lock lifecycle 均已 Implemented。
+> 状态：Implemented。controller 与 input-only devkit `stat()`、mouse/keyboard event batch、
+> pointer-lock lifecycle 均由 Phase 3 exit gate 覆盖。
 
 RuntimeCore 在每个 boot/step transaction 前锁存固定 `PicoInputSnapshot.controllers[8]`，写
 `0x5f4c..0x5f53` 并按 30/60Hz 与 `0x5f5c/0x5f5d` 计算独立 `btnp`。HostRequest completion
@@ -567,8 +561,9 @@ type StepResult = Readonly<{
 
 ## 11. Persistence
 
-> 状态：Phase 3F 已实现 browser-neutral 同步 guest mirror、Worker-owned IndexedDB
-> hydrate/commit transaction、migration、lifecycle flush 与 recoverable diagnostics。
+> 状态：Implemented。browser-neutral 同步 guest mirror、Worker-owned IndexedDB
+> hydrate/commit transaction、migration、lifecycle flush 与 recoverable diagnostics 已由
+> Phase 3 exit gate 覆盖。
 
 ### 11.1 同步 guest、异步浏览器
 
@@ -612,9 +607,10 @@ type RuntimeEvent =
   | { v: 1; type: "fault"; error: SerializedRuntimeError };
 ```
 
-> 状态：上方仍是包含 future `supplyCart` 的 Target 示例。Phase 1E 当前 wire shape 只以
-> `player-protocol.ts` 和 `spec/phase-1-l1-contract.json#workUnits.1E` 为准；已实现命令为
-> load/start/input/vsync/pause/resume/reset/stop/dispose，事件为 state/frame/heartbeat/
+> 状态：上方仍是包含 future `supplyCart`/`needsCart` 的 Target 示例。当前 wire shape 只以
+> [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 和阶段机器合同为准；
+> 已实现 control command 为 load/start/vsync/pause/resume/reset/stop/dispose，另有 versioned
+> input、persistence flush 与 audio attachment envelope；事件为 state/frame/heartbeat/
 > diagnostic/fault。
 
 - 这是 [02-system-architecture.md](./02-system-architecture.md) 中方向性协议的 Runtime 实施命名：`loadCart` 只完成 load transaction 并进入 `ready`，Window 随后用 `start` 进入 `running`；guest `load()` 因官方语义在事务成功后自动 start。禁止再引入 `boot`/`host-response` 等同义命令。

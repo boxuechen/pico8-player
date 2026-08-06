@@ -69,7 +69,7 @@ evidence，不在本表复制测试步骤。
 | R-02 | z8lua 与 PICO-8 0.2.7 语义差异 | pinned patches + conformance |
 | R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；artifact verifier |
 | R-04 | PNG low-bit corruption / decompression bomb | ADR-005 limits、property/malformed tests |
-| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + Chrome soak；AudioSynth/Phase 4 重跑 |
+| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + Phase 3 Chrome soak；Phase 4 stress/long-run 重跑 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
 | R-08 | hard budget 与官方 CPU 不一致 | safety/compatibility 分离；Phase 4 calibration |
@@ -77,7 +77,7 @@ evidence，不在本表复制测试步骤。
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | 默认禁止；独立授权和 resolver boundary |
 | R-12 | refresh/hidden policy 改变 simulation | logical scheduler；ADR-011 hidden/blur pause + re-anchor |
-| R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；0F-I integration 已通过 |
+| R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；Phase 0F–3 recovery gates 已通过 |
 | R-14 | API 广而不准、stub 堆积 | vertical slice + conformance gate |
 | R-15 | upper RAM/remap 语义回归 | ADR-013 canonical mapper tests |
 | R-16 | nested coroutine 吞掉 host suspension | ADR-017 explicit unsupported |

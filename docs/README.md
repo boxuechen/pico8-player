@@ -5,17 +5,21 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 ## 当前开发入口
 
-Phase 3A–3H 已完成并归档；当前没有 active phase。Phase 4 尚未激活，开始实现前必须先从
-当前源码与 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
-创建新的 phase 文档和机器合同。
+Phase 3A–3H 已完成并归档；当前没有 active phase，也没有已授权的 production work unit。
+下一项工作是 **Phase 4 activation**，不是直接补 API、引入 cart corpus 或调整 CPU budget。
 
-日常实现只读取以下入口，不通读已完成阶段的执行过程：
+激活 Phase 4 时只读取以下基线，不通读已完成阶段的执行过程：
 
-1. 本页。
-2. 若存在 active phase，读取 [`docs/phases/`](./phases/) 中的唯一入口。
-3. 该入口明确链接的 machine contract、owner 章节和 ADR。
+1. [roadmap 的 Phase 4 activation baseline](./05-delivery-plan.md#phase-4-activation-baseline)：
+   目标与 exit headline；它本身不授权实现。
+2. [Phase 3 exit evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)：
+   已通过的 production path、Known Differences 和待加固边界。
+3. [`phase-3-audio-input-persistence-contract.json`](../spec/phase-3-audio-input-persistence-contract.json)：
+   机器可读的完成状态、公开 cases 和 deferred 范围。
+4. [`docs/phases/README.md`](./phases/README.md)：创建 Phase 4 phase 文档、机器合同和首个
+   active work unit；再由该文档精确路由 owner contract。
 
-日常实现默认只读：本页 → active phase → 它明确链接的 contract
+active phase 建立后，日常实现默认只读：本页 → active phase → 它明确链接的 contract
 小节。不要把 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务

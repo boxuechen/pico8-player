@@ -101,8 +101,6 @@ Chrome production Worker/Canvas 路径得到相同的 frame、screen、palette�
 oracle；graphics/text p95 均约 `0.4ms`，资源故障、stale generation 拒绝和有效 cart 恢复通过。
 兼容声明严格限于 standard packed-4bpp project profile，开放 P0/P1 为 `0`。
 
-<a id="phase-3-activation-baseline"></a>
-
 ### Phase 3 — Audio、完整 Input 与 Persistence
 
 > 状态：Complete；3A–3H。以下只保存 roadmap headline；完成细节见
@@ -121,9 +119,19 @@ Worker 获得一致的 screen/palette oracle；canonical PCM、input/RAM、cartd
 AudioWorklet/Canvas/IndexedDB、120-tick p95、60 秒 soak、fault/stale/persistence recovery 和
 dispose 门禁通过。兼容声明严格限于 Phase 3 project profile，开放 P0/P1 为 `0`。
 
+<a id="phase-4-activation-baseline"></a>
+
 ### Phase 4 — L2 / MVP 兼容加固
 
+> 状态：Not started。以下是 activation baseline，不是 work-unit 拆解、cart corpus 授权或
+> production implementation 授权。
+
 目标：以获准的代表 cart corpus 驱动剩余 API、CPU budget、性能和长稳测试。
+
+主要范围：先建立合法 corpus/claim 口径与 coverage gap inventory，再按可观察失败补齐常用
+API/语义，校准 CPU/resource budget，并固化多 cart lifecycle、30-minute Chrome soak 和
+release/Known Differences 输出。这里的多 cart lifecycle 仅指 host-driven sequential load/reset/
+dispose 压力，不授权 guest `load`、external resolver 或 multicart。不得按 API inventory 顺序盲目填 stub。
 
 Exit headline：兼容矩阵和 Known Differences 可发布；Chrome release gate、资源上限、
 30-minute soak 与多 cart lifecycle 通过。

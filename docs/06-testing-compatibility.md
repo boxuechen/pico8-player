@@ -11,10 +11,11 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A/1C/1D/1E/1F、Phase 2A–2F、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0/1/2 evidence |
+| **Implemented gates** | 当前 `package.json` 中的 architecture、cart-codec、WASM、benchmark、Phase 0E/0F、Phase 1A–1F、Phase 2A–2F、Phase 3A–3H、`test:conformance` 和 aggregate verify scripts；已归档的 Phase 0–3 evidence |
 | **Implemented Phase 0F gates** | framebuffer/presenter exactness、DPR/resize/performance、bounded audio transport/queue、dual-rate 10-minute Chrome soak 和 lifecycle integration；见 [0F evidence](./evidence/phase-0/17-phase-0f-evidence.md) |
 | **Implemented Phase 1 exit** | project-owned 30/60/custom conformance carts、manifest/oracle、production Worker Chrome matrix、rAF/keyboard/fault/performance gate；见 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | **Implemented Phase 2 exit** | project-owned graphics-memory/text-remap carts、Node real-WASM RAM/screen/palette oracle、production Worker/Canvas Chrome matrix、resource recovery 与双场景 p95 gate；见 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
+| **Implemented Phase 3 exit** | project-owned audio/input/persistence flows、Node/Chrome cross-oracle、AudioWorklet/IndexedDB、performance/60-second soak、fault/stale/storage recovery 与 resource disposal；见 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
 | **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
@@ -713,25 +714,21 @@ logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与�
 
 | Cart / behavior | Phase 1F result | 功能/Cart 状态 | Claim boundary / 后续动作 |
 | --- | --- | --- | --- |
-| `l1/callback-30-input` | text `.p8`；30Hz callback；held + `btnp`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | standard graphics 已由 Phase 2 exit 关闭；完整 device input 仍属 Phase 3；无 official-exact 声明 |
+| `l1/callback-30-input` | text `.p8`；30Hz callback；held + `btnp`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | standard graphics 与 project-profile device input 已由 Phase 2/3 关闭；无 official-exact 声明 |
 | `l1/callback-60-p8png` | generated project `.p8.png`；60Hz `_update60`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | 压缩/codec 广度由 parser suite；代表游戏 corpus 属于 Phase 4 |
 | `l1/custom-flip-30` | text `.p8`；top-level `flip()`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | custom slow-frame/host suspension 未扩大 |
 | Chrome real-rAF pacing | callback/custom 30Hz median `33.40/33.20ms`；60Hz `16.00ms`；frame/slice continuous | `compatible`（Chrome desktop L1） | background/slow-frame policy保持 ADR-011；release soak deferred |
-| Chrome keyboard visible response | Player 0 position `8→11`；O `btnp` edge visible；无 browser repeat dependence | `compatible`（bounded six-button） | multiplayer/gamepad/touch/devkit input deferred |
+| Chrome keyboard visible response | Player 0 position `8→11`；O `btnp` edge visible；无 browser repeat dependence | `compatible`（bounded six-button） | multiplayer/gamepad/touch/devkit project profile 见 Phase 3 exit |
 | fault/reload | instruction budget fault structured；main responsive；generation `4→5`；valid cart reloaded | `compatible` host-safety path | CPU cost calibration Phase 4；hard Worker hang由 0F/1E gate继续覆盖 |
 | ordinary 60Hz performance | 120 measured Worker round-trips；p95 `0.1001ms`；`>16.67ms` `0/120` | gate passed | Phase 2 representative gate 已通过；Phase 4 stress corpus 另测 |
 
 三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
 corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
 
-- Phase 2 exit 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
-  `tline` 与 visual P8SCII/custom font；Phase 3B 已关闭同步 P8SCII audio，timed controls、
-  `tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
-- Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；Phase 3C/3D 已实现固定八玩家
-  controller、keyboard/Gamepad/multitouch、input-only devkit `stat()` 与 trusted pointer-lock production
-  flow；同步 cartdata core 与 IndexedDB persistence 已由 Phase 3E/3F 实现；current-cart
-  `reload/cstore` 已由 3G 完成，resolver 仍
-  `unsupported`/Deferred。
+- Phase 2/3 已关闭项目自有 standard graphics/text 与 audio/input/persistence/current-cart profile；
+  统一完成边界和 Known Differences 见 15.11–15.12。
+- timed P8SCII controls、`tline(bits)`、advanced screen/bitplane、完整 `stat()`、guest `load`、
+  external resolver 和 multicart 仍为 `partial`/`unsupported`/Deferred。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
@@ -751,169 +748,38 @@ memory/draw/sprite/map/text 组合在相同 production path 中可复现，不�
 | --- | --- | --- | --- |
 | corpus/provenance | `graphics-memory`、`text-remap` 和 resource fault 均为项目原创；source/cart hash 锁定；无 BBS、第三方或 `ref/` dependency | gate passed | Phase 4 代表 corpus 需要独立合法授权与口径 |
 | memory/draw/sprite/map | Base RAM widths/block、draw state/primitives、draw/display palette、sprite、map/flags/tline 和 remap 在一个 60Hz flow 中通过 | `compatible`（Phase 2 project profile） | `tline(bits)` 与 advanced video mode 保持 partial/deferred |
-| P8SCII/custom font | built-in/custom/one-off/outline/raw write、cursor/default attrs、GFX/SCREEN remap 与 extended display palette 在一个 60Hz flow 中通过 | `compatible`（同步 visual profile） | audio/timed controls 由后续已激活范围处理 |
+| P8SCII/custom font | built-in/custom/one-off/outline/raw write、cursor/default attrs、GFX/SCREEN remap 与 extended display palette 在一个 60Hz flow 中通过 | `compatible`（同步 visual profile） | synchronous audio 已由 Phase 3 关闭；timed controls 仍 Deferred |
 | Node determinism | 每 cart 两个 fresh real-WASM session；每个 session cold reset；4-frame trace、screen、palette、RGBA 和列出的 RAM region exact | gate passed | oracle 变更必须人工审阅 manifest diff |
 | Chrome production path | Worker initial/reset trace 与 Node hash 一致；Canvas RGBA `17614085…a0ae` / `0db0886d…45f6` exact；无 Worker error | gate passed（Chrome 150） | Chrome 版本升级时重跑 reviewed evidence |
 | performance | graphics/text 各 20 warm-up + 120 measured；p95 均 `0.4001ms` 以下；`>16.67ms` 均 `0/120` | gate passed（≤8ms） | 不是 Phase 4 stress 或长稳 soak 的替代品 |
 | fault/recovery | 65,537-byte print → structured `E_HOST_API`；main responsive；stale generation rejected；generation `3→4` 后有效 cart 出帧 | gate passed | hard hang/watchdog 继续由 Phase 0F/1E regression 覆盖 |
 
-Phase 2 exit 时开放 P0/P1 为 `0`。Known Differences：P8SCII audio/timed controls 不产生
-Phase 3 设备语义，`tline(bits)` precision overload 与 advanced screen/bitplane modes deferred；
+Phase 2 exit 时开放 P0/P1 为 `0`。Known Differences：timed P8SCII controls 不产生
+suspension，`tline(bits)` precision overload 与 advanced screen/bitplane modes deferred；
 未记录的 invalid/overflow edge 和未运行的官方/第三方 cart 保持 `unknown`。这些是显式范围边界，
 不升级为 official bit-exact 或第三方兼容声明。
 
-### 15.12 Phase 3A Deterministic SFX Core 矩阵
+### 15.12 Phase 3 Audio/Input/Persistence Exit 矩阵
 
-本表覆盖 browser-neutral SFX core，不声明 music、P8SCII audio、device output 或官方
-bit-exact waveform。项目 golden 位于 `tests/golden/phase-3a-sfx.json`。
+3A–3G 的逐 work-unit 数值与执行历史只由
+[`phase-3-audio-input-persistence-contract.json`](../spec/phase-3-audio-input-persistence-contract.json)、
+相关 tests 和不可变 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)
+保存，不在 living compatibility contract 中重复。本表汇总 Phase 3 project profile；它不表示
+official bit-exact、第三方 playable rate、完整 `stat()`、guest `load` 或 multicart 已完成。
 
-| 行为 | Phase 3A 结果 | 功能状态 | 后续动作 |
+| 行为 | Phase 3H 结果 | 功能状态 | Phase 4 边界 |
 | --- | --- | --- | --- |
-| production `sfx()` ABI | append-only binding `31`；real-WASM raw optional Q16.16 passed | `implemented` | `music()` 由 3B 追加，禁止改号 |
-| SFX RAM / channels | `0x3200..0x42ff` 全 64 slots、四声道 auto/explicit/steal/stop/release/offset/length/loop passed | `compatible`（project profile） | music reservation/arbitration 属 3B |
-| synthesis | built-in/custom waveform、8 effects、filter/hardware vectors、deterministic noise 与 recursion bound passed | `compatible`（project oracle） | official capture 前不声明 waveform bit-exact；note crossfade 未建模 |
-| canonical clock | 22050Hz mono PCM16LE；30Hz 735；60Hz startup 735 后 367/368；decimal sample index exact | `implemented` | 3B 将同一 slices 接入 dedicated transport |
-| lifecycle | live RAM mutation、fresh reset/replay、fault/dispose channel clear passed | `implemented` | generation queue isolation 与 device lifecycle 属 3B |
-| golden | PCM `aea8a76d…06ba`；channel trace `4beea604…8004` | gate passed | oracle 变化必须人工审阅 fixture/算法 diff |
+| corpus/provenance | 2 个原创组合 flow + 1 个原创 fault cart；无 BBS、第三方或 `ref/` dependency | gate passed | 代表 corpus 必须单独确认许可与 claim 口径 |
+| audio | four-channel SFX/music/P8SCII、22050Hz canonical PCM、dedicated Worker→AudioWorklet 与 48kHz device output 通过 | `compatible`（project oracle） | official waveform/cost edge 仍为 `unknown`；timed P8SCII controls 不 suspension |
+| input | fixed eight-player `btn/btnp`、keyboard/Gamepad/multitouch、input-only devkit `stat()`、mouse/wheel/pointer-lock lifecycle 通过 | `compatible`（project/device profile） | 完整 `stat()`、IME/clipboard/remap UI Deferred |
+| persistence/current cart | synchronous cartdata、256-byte IndexedDB record/lifecycle、current-cart `reload/cstore` COW overlay 与 same-identity reset 通过 | `compatible`（project storage profile） | overlay 不 durable；guest `load`、external ref/BBS/network/multicart Deferred |
+| deterministic/Chrome | Node real-WASM fresh/reset/replay 与 production Worker screen/palette cross-oracle exact；Chrome/Chromium only | gate passed | official/third-party exact 仍为 `unknown` |
+| performance/soak | 两个 120-tick 场景最大 p95 `0.4001ms`；60 秒计量窗口 underrun/overrun/drop/discontinuity/stale/error 为 0 | gate passed | 不替代 Phase 4 stress corpus、CPU calibration 或 30-minute soak |
+| recovery/lifecycle | structured host fault、audio reset、stale work/input rejection、persistence read/write failure、valid recovery、Workers `6/6` 与 AudioContext close 通过 | gate passed | hard budget/Worker hang 继续纳入 release regression |
 
-Known Differences：`sfx()` 在已激活 ABI 下返回 nil；note transition crossfade 未建模；
-deterministic noise/golden 是项目实现 oracle，不是官方 PICO-8 capture。Phase 3A 开放 P0/P1 为 `0`。
-
-### 15.13 Phase 3B Music 与 Browser Audio 矩阵
-
-本表覆盖 music/P8SCII 与 production device flow。项目 golden 位于
-`tests/golden/phase-3b-music.json`，Chrome case manifest 位于
-`tests/browser/phase-3b.cases.json`；它们不构成官方 bit-exact capture。
-
-| 行为 | Phase 3B 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| production `music()` ABI | append-only binding `32`；real-WASM optional raw Q16.16、invalid/stop/fade/mask passed | `implemented` | 现有 id 禁止重排 |
-| song sequencing | live `0x3100..0x31ff` 全 64 patterns、start/loop/stop、first non-loop duration 与 all-loop fallback passed | `compatible`（project profile） | 官方 edge capture 前不声明 bit-exact |
-| channel arbitration | mask reservation、explicit SFX interrupt、music resume 和 stop/fade state 与唯一四声道/sample clock 共用 | `compatible`（project oracle） | note-transition crossfade 仍未建模 |
-| P8SCII audio | control `0x07`、existing/ephemeral SFX `60..63`、speed/loop/note attributes 和 bounded input passed | `compatible`（synchronous audio profile） | timed frame-delay controls 仍不 suspension |
-| Worker transport | startup/catch-up PCM 只走 dedicated port；unattached 不阻塞；reset/fault/stop/dispose 与 stale attach isolation passed | `implemented` | control DTO 继续禁止 PCM |
-| Chrome device gate | Chrome `150.0.7871.189`；44.1/48kHz production Worker→Worklet；trusted resume；underrun/overrun/drop/discontinuity/stale 均为 `0` | gate passed | Chrome 是唯一 browser gate |
-| golden | PCM `13cd84ef…d9a9e`；fresh replay exact | gate passed | oracle 变化必须人工审阅 fixture/算法 diff |
-
-Known Differences：music/P8SCII PCM 是项目 oracle，不是官方 capture；note-transition crossfade
-未建模；timed P8SCII controls 不 suspension；device output 使用 Phase 0F 已接受的 linear resampler。
-Phase 3B 开放 P0/P1 为 `0`。
-
-### 15.14 Phase 3C Controller Input 矩阵
-
-本表覆盖固定八玩家 controller snapshot 和 app-owned keyboard/Gamepad/multitouch adapters。
-项目 golden 位于 `tests/golden/phase-3c-input.json`；Gamepad 注入只用于 deterministic Chrome
-device simulation，不把 browser object 带入 Worker/RuntimeCore。
-
-| 行为 | Phase 3C 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| normalized snapshot | `controllers` 固定 length 8、每项 integer `0..63`；validator 拒绝 short/typed/overflow；main/Worker boundary copy | `implemented` | 3D 已追加独立 devkit batch，controller shape 未放宽 |
-| RuntimeCore/real-WASM | `btn/btnp` player `0..7`、P0/P1 no-arg bitfield、`0x5f4c..0x5f53`、invalid args 和 30/60Hz independent repeat passed | `compatible`（project profile） | 3D 已增加 gated mouse button 6 overlay |
-| Worker/replay | latest sequence、stale generation、3-slice catch-up latch、cold reset 和 input copy passed；48-tick replay fresh exact | gate passed | 3D 已证明 event-style catch-up no-duplicate |
-| keyboard | 手册 P0 aliases 与 P1 SFED/Shift/Tab-W-Q-A；alias independent release；blur/visibility clear passed | `compatible` | remapping UI 不在 Phase 3 |
-| Gamepad | standard mapping only；browser index→player `0..7`；d-pad/O/X、axis `0.5/0.35` hysteresis 和 disconnect clear passed | `compatible`（project policy） | non-standard mapping/remap UI Deferred |
-| multitouch | exposed six-button P0 shell、multi-pointer、capture、up/cancel/lost capture、blur/visibility clear passed | `compatible`（player shell） | caller 可隐藏或增加 `data-pico-player` controls；内建 shell 不生成 P1..P7 controls |
-| Chrome production gate | Chrome `150.0.7871.189`；同一 real Worker/WASM cart 同时观察 keyboard P1、injected Gamepad P2 与 PointerEvent P0；cancel/disconnect/blur、rAF resume、generation `1→2` 和 Canvas reset passed；Worker errors `0` | gate passed | Chrome 是唯一 browser gate；3D 已追加真实 mouse/wheel/pointer-lock flow |
-| golden | trace `5c2fe9bb…161d0`；registers `0b3703081f320d39`；fresh replay exact | gate passed | oracle 变化必须人工审阅 fixture/algorithm diff |
-
-Known Differences：deterministic input trace 是项目 oracle，不是官方 device capture；Gamepad slot
-直接映射 player，没有 remapping UI；内建 touch shell 只提供 P0 六键。Phase 3C 开放 P0/P1 为 `0`。
-
-### 15.15 Phase 3D Devkit Input 矩阵
-
-本表覆盖官方 `0x5f2d` devkit input 子集。项目 golden 位于
-`tests/golden/phase-3d-devkit-input.json`；完整 `stat()`、IME、clipboard 和 extended Unicode 不在
-本 work unit。Chrome pointer-lock gate 使用 CDP focus emulation，使隔离的 headless document 保持
-fully active，同时仍由 trusted primary mouse event 触发 pointer lock。
-
-| 行为 | Phase 3D 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| ABI/real-WASM | append-only operation `33`；selectors `30/31/32/33/34/36/38/39` 的 boolean/string/Q16/integer mixed return passed；其他 selector 返回 false | `compatible`（input-only profile） | 完整 `stat()` Deferred |
-| RuntimeCore | `0x5f2d` enable/button/pointer-lock flags、64-byte FIFO、consume/empty/drop-newest、per-slice wheel/relative latch、P0 `btn(4)..btn(6)` overlay passed | `compatible`（project profile） | extended P8SCII/IME Deferred |
-| DTO/Worker | controller 8×6-bit shape 保持；fixed devkit batch validator、latest state、accept-once events、3-slice catch-up no-duplicate、stale sequence 和 generation clear passed | gate passed | 事件不使用 DOM timestamp |
-| main adapter | CSS client→logical `0..127`、3-button field、wheel direction、Latin-1/control keys、bounded queue、blur/visibility/pointer-lock cleanup passed | gate passed | clipboard/mobile touch-as-mouse Deferred |
-| Chrome production gate | Chrome `150.0.7871.189` headless + focus emulation；真实 mouse move/wheel/key/三键、trusted primary gesture、pointer-lock relative movement、pause exit、generation `1→2`、Worker errors `0` | gate passed | Chrome/Chromium only；focus emulation 只稳定自动化 document activation |
-| golden | trace `a80fa7fe…b1d51`；16-tick fresh replay exact | gate passed | oracle 变化必须人工审阅 DTO/latch diff |
-
-Known Differences：golden 是项目 device oracle，不是官方 capture；Latin-1/control-key mapping 不覆盖
-extended P8SCII、Unicode、IME 或 clipboard；Chrome 150 自动化 pointer lock 使用 CDP focus emulation；完整
-system/audio/memory/network `stat()` 仍 Deferred。Phase 3D 开放 P0/P1 为 `0`。
-
-### 15.16 Phase 3E Cartdata Core 矩阵
-
-本表覆盖同步 `cartdata/dget/dset` 与 browser-neutral persistence seam。项目 golden 位于
-`tests/golden/phase-3e-cartdata.json`；IndexedDB durable behavior 从本表明确排除，已由 3F 验证。
-
-| 行为 | Phase 3E 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| ABI/real-WASM | append-only operations `34..36`；cartdata boolean、signed/fractional Q16 raw、64 indices 与 little-endian bytes passed | `compatible`（project profile） | 3F 不改变 guest ABI |
-| id/index policy | id `1..64` lower-case ASCII/digit/underscore、one call/execution；repeat/invalid/preactivation/out-of-range 均为 `E_HOST_API` | `compatible`（strict project policy） | 官方未明确 fault shape，保持 Known Difference |
-| RAM authority | seed hit exact-copy、miss all-zero；`dget/dset`、`poke4` 和 direct byte poke 共用 live `0x5e00..0x5eff` | gate passed | IndexedDB 只能提供 seed/消费 commit，不得成为并行权威状态 |
-| transaction/commit | successful boot/frame full-256-byte dirty compare；no-change suppression、generation-local revision、fault/stopped no publish passed | gate passed | 3F durable write 只消费 committed snapshot |
-| ownership/lifecycle | seed input copy、frozen copy-owned commit、caller mutation isolation、reset rehydrate、multi-session isolation passed | gate passed | 3F 增加 namespace/storage copy boundary |
-| regressions | architecture、Phase 2F、3B AudioWorklet 与 3D Chrome pointer-lock flow passed | gate passed | Chrome/IndexedDB 首次进入 3F gate |
-| golden | file SHA-256 `8277cd8f…7746f`，boot/direct-write/no-change trace exact | gate passed | oracle 变化必须人工审阅 RAM/transaction diff |
-
-Known Differences：golden 是项目 oracle，不是官方 persistence capture；非法调用采用严格
-`E_HOST_API` policy；commit revision 在每个 fresh runtime generation 从 `1` 重新开始；3E 没有
-IndexedDB、durable write 或 browser gate。Phase 3E 开放 P0/P1 为 `0`。
-
-### 15.17 Phase 3F IndexedDB Persistence 矩阵
-
-本表覆盖 Worker-owned IndexedDB adapter 与 browser-neutral persistence port；同步 guest
-`cartdata/dget/dset` 语义仍由 15.16 拥有。production gate 只支持 Chrome/Chromium。
-
-| 行为 | Phase 3F 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| schema/key/bounds | database `pico8-web-player` v1、store `cartdata`、keyPath `[namespace,id]`；schema 1 exact 256 bytes；default namespace 最多 4096 records / 1 MiB | gate passed | profile selection UI Deferred；key 明确不含 cart hash |
-| hydrate/commit | load/reset preboot hydrate；successful boot/frame snapshot copy 后 latest-per-ID coalesce；steady simulation 不等待 IDB | gate passed | 3G overlay 不得复用 cartdata key space |
-| lifecycle/generation | load/reset 先 flush 旧 commit 再 hydrate；pause/stop/dispose/pagehide/fault best-effort flush；stale generation 不 hydrate | gate passed | failed write 保留 pending snapshot 到后续 flush |
-| migration/failure | project schema 0 lazy rewrite；future/corrupt skip + `E_PERSISTENCE_READ`；open/transaction failure `E_PERSISTENCE_WRITE`，valid game 保持运行 | `compatible`（project storage profile） | 不声明跨浏览器或通用 schema compatibility |
-| Chrome production gate | Chrome `150.0.7871.189`；fresh miss、256-byte round-trip、不同 cart hash 同 ID hit、pagehide/reset、migration、4096 bound、write failure 后 paused、Worker errors `0` | gate passed | Chrome/Chromium only |
-| regressions | Node fake-port ordering/retry/fault tests、3E real-WASM、3D Chrome、3B audio、Phase 2 与 architecture passed | gate passed | 3G 增加 current-cart ROM overlay 回归 |
-
-Known Differences：legacy schema 0 是项目自有迁移格式，不是官方浏览器格式；当前只有固定
-`default` runtime namespace，没有 profile UI；write retry 只在后续 flush boundary 重试且不声明已经保存；
-不支持 Firefox/WebKit。Phase 3F 开放 P0/P1 为 `0`。
-
-### 15.18 Phase 3G Current-cart `reload/cstore` 矩阵
-
-本表覆盖同步 current-cart-only profile；guest `load()`、filename/ref、resolver、BBS/network 与 multicart
-明确不在实现范围。production gate 只支持 Chrome/Chromium。
-
-| 行为 | Phase 3G 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| ABI/real-WASM | append-only operations `37..38`；optional Q16/presence ABI、default `0,0,0x4300`、void return、fractional integer conversion passed | `compatible`（current-cart-only profile） | guest `load` 与 ref overload Deferred |
-| data/code boundary | effective data ROM 仅 `0x0000..0x42ff`；zero-length edge accepted；negative/overflow/code access 在 mutation 前 `E_HOST_API` | gate passed | `0x4300..0x7fff` 永久不由 reload/cstore 暴露 |
-| synchronous copy | live logical Base RAM、stable cstore snapshot、same-stack cstore→reload、default/explicit ranges 与 remapped/high RAM address passed | gate passed | 不引入 HostRequest/waiting state |
-| repository/lifecycle | original/read/write 均 copy-owned；lazy COW 按 SHA-256 identity 隔离；reset/同 identity load 保留；different identity 隔离；dispose clear；每 Worker 最多 64 identities | gate passed | 达到上限 fail closed；overlay 不进入 IndexedDB |
-| unsupported refs | 非空与空 ref 均在 mutation 前 `E_FEATURE_UNSUPPORTED`，repository 保持原值 | `unsupported`（明确错误） | external cart/resolver/BBS/network/multicart Deferred |
-| Chrome production gate | Chrome `150.0.7871.189`；真实 Worker/WASM/Canvas/IndexedDB；overlay trace `21→22→23`、different identity `41`、cartdata `1→2→3→4`、Worker errors `0` | gate passed | Chrome/Chromium only |
-| regressions | 3F IndexedDB、3E cartdata、Phase 2 memory/graphics、audio/input 与 architecture 由 full verify 覆盖 | gate passed | 3H 增加跨子系统 exit corpus/soak |
-
-Known Differences：只实现 current-cart 同步子集；`cstore` 更新 Worker-local overlay，不覆写本地 cart 文件；
-overlay 不 durable，Worker dispose 后丢失；单 Worker 最多登记 64 个 cart identity；不支持 Firefox/WebKit。
-Phase 3G 开放 P0/P1 为 `0`。
-
-### 15.19 Phase 3H Audio/Input/Persistence Exit 矩阵
-
-本表关闭 Phase 3 project profile；完整数据和 raw Chrome result 见
-[Phase 3 exit evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
-
-| 行为 | Phase 3H 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| project corpus | 2 个原创组合 flow + 1 个原创 fault cart；无 BBS、第三方或 `ref/` dependency | gate passed | Phase 4 corpus 需单独激活 |
-| Node real-WASM | audio/input fresh/reset exact；canonical PCM `33508201…8c0b`；persistence/overlay `21→22→23`；fresh scenario 重复 exact | `compatible`（project oracle） | official exact 仍为 `unknown` |
-| Chrome cross-oracle | production Worker 的 audio/input final/reset 与 persistence generation 1/2/3 screen/palette 全部匹配 Node | gate passed | Chrome/Chromium only |
-| performance | audio/input 与 persistence/overlay 各 20 warm-up + 120 measured；最大 p95 `0.4001ms`，预算 `8ms` | gate passed | Phase 4 增加 stress corpus |
-| bounded soak | 60.0088 秒、3603 frames；计量窗口 startup/steady underrun 增量 `0/0`；steady underrun、overrun、drop、discontinuity、stale chunk 与 Worker error 均 `0` | gate passed | 启动期 counter 独立报告，不豁免稳态 |
-| recovery | structured `E_HOST_API`、Worklet queue reset、stale input/work 拒绝、fresh valid cart 恢复、persistence read/write failure 可见且非致命 | gate passed | hang/CPU calibration 仍属 Phase 4 |
-| lifecycle | Workers created/terminated `6/6`；AudioContext closed；IndexedDB schema 1 / 256-byte record | gate passed | current-cart overlay 仍为 Worker-local |
-
-Known Differences：canonical PCM/hash 是项目 oracle，不是官方 bit-exact 声明；正式 soak baseline
-之前记录的 startup underrun 单独保留，60 秒计量窗口增量为 0；guest `load`、external ref、
-BBS/network/multicart 与完整 `stat()` 不支持；current-cart overlay 不 durable；Firefox/WebKit 不在
-支持范围。Phase 3H 与 Phase 3 exit 开放 P0/P1 为 `0`。
+Phase 3 exit 开放 P0/P1 为 `0`。Known Differences：canonical PCM/hash 是项目 oracle，不是官方
+bit-exact 声明；startup underrun 与正式 soak 窗口分开计数；current-cart overlay 仅 Worker-local；
+未列出的 API/invalid edge 和未运行的合法代表 cart 保持 `unknown`，不得从项目 profile 外推 L2。
 
 ## 16. Definition of Done
 

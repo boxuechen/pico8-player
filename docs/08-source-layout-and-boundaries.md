@@ -8,19 +8,13 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Implemented** | 四个 package、app 的 main/transport/worker/worklet TypeScript project 边界、package exports、negative import tests 和 `ref/` quarantine |
-| **Implemented through Phase 0F** | Canvas2D presenter、audio DTO/validator、dedicated Worker transport、bounded PCM queue/AudioWorklet processor、browser composer 与 lifecycle tests |
-| **Implemented through Phase 1 exit** | RuntimeCore scheduler；stable player transport/client；CartSession Worker composition；keyboard/DOM controller；Canvas/audio lifecycle；esbuild Worker entry/bundle gate；project-owned conformance manifest/Chrome exit runner |
-| **Implemented through Phase 2 exit** | RuntimeCore internal `PicoRam`、canonical mapping/Base RAM API、RAM-backed standard-4bpp draw state/primitives、mapped sprite/map/tline raster、visual P8SCII/custom font、display-palette frame transport 与 project-owned production conformance gate |
-| **Implemented through Phase 3 exit** | browser-neutral audio/input/cartdata/current-cart core 与 ports；Worker-owned IndexedDB/current-cart COW adapters 和 lifecycle wiring；device/storage adapters 仍由 app 拥有；3H exit 未新增 production 边界 |
+| **Implemented through Phase 3 exit** | browser-neutral session/scheduler/RAM/graphics/text/audio/input/cartdata/current-cart core；stable main/Worker/Worklet transport；Canvas/AudioWorklet/IndexedDB/COW adapters 与 lifecycle；project-owned production conformance gates |
 | **Scaffold** | host cart resolver adapter 与其余未激活文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
-目录树是归属契约，不是“文件全部存在”的清单。Phase 0F 的完成边界与
-浏览器证据已归档到
-[`evidence/phase-0/17-phase-0f-evidence.md`](./evidence/phase-0/17-phase-0f-evidence.md)；Phase 1/2
-已完成，Phase 3A–3H 已独立关闭，当前没有 active phase。Phase 2/3 边界分别由
-[Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) 和
+目录树是归属契约，不是“文件全部存在”的清单。Phase 0–3 的完成边界只在对应
+[`evidence/`](./evidence/) 与机器合同中保存；当前没有 active phase。最新 production 边界由
 [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) 锁定。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
@@ -56,6 +50,7 @@
 │       │   │   ├── gamepad-input.ts
 │       │   │   ├── touch-input.ts
 │       │   │   ├── player-input.ts
+│       │   │   ├── devkit-input.ts
 │       │   │   ├── render/
 │       │   │   └── ui/
 │       │   ├── worker/
@@ -201,8 +196,8 @@ AudioWorklet 独占 device queue/resampling。固定八玩家/devkit latch 已�
 device mapping 已在 app。package-private `CartDataCore` 从 prehydrated seed 复制到 live
 `0x5e00..0x5eff`，并只在 committed boot/frame 输出 copy-owned dirty snapshot；browser-neutral
 `CartDataPersistencePort` 由 Worker-owned IndexedDB adapter 实现，RuntimeCore 不依赖 storage API。
-browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已在 3G
-完成；3H 只增加 conformance、performance、recovery 与 Phase exit evidence，没有扩大 production API。
+browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已完成；
+Phase 3 exit gate 只增加 conformance、performance、recovery 与 evidence，没有扩大 production API。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。
@@ -215,7 +210,7 @@ browser-neutral `CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on
 - inbound `PicoApiHost`：RuntimeCore 暴露给 VM adapter 的同步 PICO API surface。
 - outbound `CartDataPersistencePort`：hydrate/enqueue/flush/diagnostics/dispose。
 - outbound `CartResolverPort`：把 opaque ref 解析为 caller-authorized cart bytes/capability，不暴露任意 URL fetch。
-- outbound `CartRepositoryPort`：管理已解析 cart、受保护 data ROM 读取和 copy-on-write overlay；adapter 必须重复范围/capability 检查。
+- outbound `CurrentCartDataRepositoryPort`：管理当前 cart 的受保护 data ROM 读取和 copy-on-write overlay；adapter 必须重复范围/capability 检查。
 - outbound sinks：frame、diagnostic、heartbeat；设备 transport 不反向驱动 simulation。
 
 ### `@pico8-web/z8lua-bridge`
@@ -336,7 +331,7 @@ z8lua context 先提供 WASM memory，PicoApiHost 随后才可围绕该 memory �
 
 ### 跨执行域 ownership
 
-- input：main 只把 keyboard/gamepad/touch 转成 versioned normalized snapshot；held/edge/repeat、RAM registers 和逐 tick latch 由 RuntimeCore 拥有。`packages/contracts` 是 DTO 常量权威；browser-native ESM 的 app protocol 保留无 bare-specifier 的 runtime mirror，并由 3C contract test 锁定相等。
+- input：main 只把 keyboard/gamepad/touch 转成 versioned normalized snapshot；held/edge/repeat、RAM registers 和逐 tick latch 由 RuntimeCore 拥有。`packages/contracts` 是 DTO 常量权威；browser-native ESM 的 app protocol 保留无 bare-specifier 的 runtime mirror，并由 contract test 锁定相等。
 - render：RuntimeCore/Worker 产生 frame DTO；main presenter 只消费 RGBA/indexed output，不读取 Pico RAM、不回写 draw state。
 - persistence：RuntimeCore 拥有当前 256-byte cartdata window、dirty/lifecycle 语义；IndexedDB adapter 只执行 hydrate/commit/flush。
 - audio：RuntimeCore 拥有 SFX/music/sample timeline；Worklet 只拥有 bounded device queue、重采样和 underrun counters。

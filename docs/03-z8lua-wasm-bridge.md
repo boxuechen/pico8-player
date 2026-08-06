@@ -8,17 +8,17 @@
 - **MUST / MUST NOT / SHOULD**：本项目实现约束。
 - **Proposed**：Phase 0 的起始设计；只有通过测试并形成 ADR 后才能视为稳定公共契约。
 
-实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1A Host boundary、Phase 1D scalar API
-expansion、Phase 2A memory/call-frame、Phase 2B–2E typed graphics/text bindings 与 Phase 2
-exit conformance 已完成；Phase 0 历史证据见
-[Phase 0 evidence](./evidence/phase-0/README.md)。
+实施状态：Phase 0A/0B、Phase 0E frame ABI、Phase 1 Host boundary、Phase 2
+memory/graphics/text bindings 与 Phase 3 audio/input/persistence/current-cart bindings 已完成；
+当前生产边界和 Chrome 退出结果见
+[Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)。
 `p8w0a_*`/`p8w0b_*` 仍是 bounded spike ABI；production `p8w_*` 已实现 lifecycle、
 exactly-once host bind、frame stepping、host-request、budget 和 structured error。本文列出的完整 ABI
 只有机器契约、public adapter 与测试共同覆盖的部分才算 Implemented。
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented through Phase 2 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；Phase 2A 80-byte call frame/Base RAM API；Phase 2B–2E append-only graphics/sprite/map/text bindings、boolean scalar lowering、fixed-point result、同步 byte-string view 与 2F real-WASM/Chrome conformance |
+| **Implemented through Phase 3 exit** | Phase 0A/0B 基线；Phase 0E frame slice；module-local router；80-byte call frame/Base RAM API；append-only operation `1..38` 覆盖 Phase 2 graphics/text 与 Phase 3 audio/input/cartdata/current-cart bindings；boolean/presence/Q16/string lowering、structured host faults 与 real-WASM/Chrome conformance |
 | **Accepted target** | raw integer ABI、同步 import、不可重入、同一 Pico RAM、instruction budget 和 structured errors |
 | **Proposed** | multi-return/result vectors、完整函数/值 binding、capability surface 与剩余 host API 扩展 |
 | **Deferred** | general nested coroutine suspension、动态 callback mutation、完整 API inventory 与最终性能阈值 |
@@ -390,6 +390,12 @@ Phase 2C–2D append operation id `19..28`，最多 10 个 scalar；sprite/map/f
 均只使用既有 presence、boolean 与 Q16 lowering。Phase 2E append `print/cursor` id `29..30`；
 `print` 是 production byte-string slot 的首个语义 consumer，C wrapper 以 pointer + explicit length
 同步借出 guest bytes。map/text hardware semantics、texture sampling 与 glyph raster 均不进入 bridge。
+
+Phase 3 在不改变 80-byte frame、ABI minor 或 lowering 规则的前提下 append operation `31..38`：
+`sfx/music/stat/cartdata/dget/dset/reload/cstore`。bridge 只处理 Lua stack、optional/presence、
+boolean/Q16/string result 与同步错误边界；synthesis、input latch、RAM authority、IndexedDB 和
+current-cart repository 语义均由 RuntimeCore/app adapter 拥有。operation id、签名和生成物 hash
+以 [`pico-host-api-v1.json`](../spec/abi/pico-host-api-v1.json) 及 generated manifest 为准。
 
 `scalar_slots[12]` 不是 PICO-8 vararg/multi-return 上限。Phase 2A 的 `peek(addr,n)` 和
 `poke(addr,val...)` 使用 dedicated C wrapper，因此不会穿过 host frame：

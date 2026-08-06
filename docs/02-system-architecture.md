@@ -1,23 +1,22 @@
 # 系统架构
 
 > 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码和
-> [Phase 1 完成证据](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)为准。
+> [Phase 3 完成证据](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md)为准。
 
 ## 状态路由
 
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented through Phase 1 exit** | Phase 0F browser boundary；text/PNG decode、CartSession/L1 graphics/input；versioned player protocol、双 generation/watchdog、bounded wall-clock scheduler、keyboard/DOM shell、Worker bundle 与 30/60/custom L1 Chrome conformance |
-| **Target** | 完整 boot/frame transaction、cart resolver 与完整 Graphics/AudioSynth/Input/Persistence |
-| **Deferred** | persistence、完整 cart swap、BBS resolver 和完整 L3 host integration |
+| **Implemented through Phase 3 exit** | Phase 0F browser boundary；cart decode/session/scheduler；standard graphics/text；deterministic audio；controller/devkit input；cartdata/IndexedDB；current-cart `reload/cstore`；versioned Worker/Worklet lifecycle 与 Chrome exit gates |
+| **Target** | slow-frame/CPU compatibility policy、guest `load`、external cart transaction、representative corpus hardening 与 release qualification |
+| **Deferred** | nested async HostRequest、完整 cart swap/multicart、BBS resolver 和完整 L3 host integration |
 
 第 4–11 节描述的是目标系统约束，不代表其中每个 command、event 或 adapter 已存在。
 当前 production player 协议由
-[`phase-1-l1-contract.json`](../spec/phase-1-l1-contract.json) 和
-[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；Phase 0E
-`worker-protocol.ts` 只保留为兼容 probe。已实现的
-browser boundary 由
+[`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；阶段能力与完成状态由
+[`phase-3-audio-input-persistence-contract.json`](../spec/phase-3-audio-input-persistence-contract.json)
+及其前置合同锁定。Phase 0E `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
 定义。
 
@@ -141,7 +140,8 @@ player UI
 
 ## 4. Session 状态机
 
-> 状态：Target。
+> 状态：Mixed。host-driven load/reset 与 `idle/loading/ready/running/paused/faulted/stopped`
+> 主路径已实现；`waiting_cart`、guest `load` 和 external cart transaction 仍是 Target。
 
 ```mermaid
 stateDiagram-v2
@@ -175,7 +175,9 @@ stateDiagram-v2
 
 ## 5. Worker 协议
 
-> 状态：Target；Phase 0E 仅实现 bounded subset。
+> 状态：Mixed。当前 source 已实现 load/start/input/vsync/pause/resume/reset/stop/dispose、
+> state/frame/heartbeat/diagnostic/fault 和独立 audio/persistence lifecycle；下方
+> `supplyCart`/`needsCart` 仍是 Target 示例。
 
 协议必须带版本，并使用可判别 union。下面是 v1 的跨线程基线；更具体字段以 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准，不能再引入 `boot`、`host-response` 等同义消息。
 
@@ -212,7 +214,8 @@ export type RuntimeToHost =
 
 ## 6. Boot transaction
 
-> 状态：Phase 0E 实现 bounded subset；完整 transaction 是 Target。
+> 状态：host-driven load/reset transaction 已实现并通过 Phase 1–3 recovery gate；guest `load`
+> 与 external resolver staging 仍是 Target。
 
 一次 cart load 按以下顺序执行：
 
@@ -230,7 +233,8 @@ export type RuntimeToHost =
 
 ## 7. Frame transaction
 
-> 状态：Target full transaction。
+> 状态：Phase 3 project profile 已实现 input → VM → audio/frame → persistence 的 committed
+> transaction；slow-frame update/draw policy、完整 CPU accounting 与 external HostRequest 仍是 Target。
 
 每个 logical frame 的权威顺序为：
 
@@ -280,9 +284,10 @@ export type RuntimeToHost =
 - `printh` 等宿主输出必须进入受限 diagnostic sink，而非任意文件路径。
 - persistence key 必须按 API 分域：`cartdata(id)` 使用校验后的显式 ID，允许官方定义的跨 cart/version 共享；`cstore` overlay 才绑定规范化 cart identity。两者不得共用 key space。
 
-## 11. 初始性能预算
+## 11. 性能预算基线
 
-以下是 Phase 0 要验证的工程预算，不是未经测试的兼容承诺：
+以下是已用于项目 profile 的工程预算；Phase 4 必须用代表 corpus 和长稳测试重新校准，不能把
+既有 microbench/短场景结果外推为 release 承诺：
 
 - 60 Hz logical frame 总预算为 16.67 ms。
 - desktop 基准环境中，VM + TS Runtime 的 p95 SHOULD 不超过 8 ms/frame。
