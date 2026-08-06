@@ -206,7 +206,7 @@ v1 Window → Worker 包含 `loadCart`（可携带 caller-authorized local bundl
 5. 将 Cart ROM 规定区域复制到 Base RAM。
 6. 注册受控 PICO-8 globals 和 Lua glue。
 7. 编译 cart code；失败则回滚整个 transaction。
-8. 以官方差分锁定的 `1/30s` clock 启动 root coroutine：若 top-level 返回，进入 callback mode 并执行 `_init()`；若先到达受控 `flip()` boundary，进入 custom-loop mode，把该 boundary 作为成功 startup，禁止再额外调用 `_init()` 或启动 callback driver。commit 时把 startup epoch 换算为 target-rate slices（30 Hz 为 1、60 Hz 为 2），但不发布 host frame event。
+8. 以官方差分锁定的 `1/30s` clock 启动 root coroutine：若 top-level 返回，进入 callback mode 并执行 `_init()`；若先到达 root `flip()` 或 [ADR-022](./adr/022-cpu-slicing-decision.md) 的 implicit boundary，进入 30 Hz custom-loop mode并把它作为成功 startup。有限 top-level 若在后续 frame 最终返回，才至多执行一次 `_init()` 并切换 callback driver。commit 时把 startup epoch 换算为 target-rate slices（30 Hz 为 1、60 Hz 为 2），但不发布 host frame event。
 9. 只有全部成功后，Window `loadCart` 才把 session 提交为 `ready`；显式 `start` 后进入
    `running`。guest `run(param)` 使用 retained current cart 创建 fresh runtime graph，并在同一
    player session 中继续 `running`。guest `load()` 则解析 caller-authorized ref、boot 独立 staged
@@ -225,7 +225,8 @@ containment，不恢复已被 `load()` 放弃的执行路径。
 
 1. scheduler 决定本次 simulation slice、callback 次数与是否 draw。
 2. Runtime latch 最新 `InputSnapshot`，计算 pressed/repeat 并更新 hardware/input memory state。
-3. 按 callback 模式或 custom `flip()` loop 模式推进 z8lua，直至受控 boundary。
+3. 按 callback 模式或 custom main-loop 模式推进 z8lua，直至 callback frame-end、root `flip()` 或
+   root-safe implicit-frame boundary。
 4. 累计 deterministic z8lua instruction cost，处理 VM error、safety hard cap、host request 和
    queued cart change；普通 CPU 超预算 transaction 继续原子完成，并在公开 frame 上标记
    `slowFrame`，不会冒充 VM fault。
@@ -243,7 +244,7 @@ containment，不恢复已被 `load()` 放弃的执行路径。
 - Runtime 维护自己的 accumulator 和 logical simulation clock。
 - `_update()` 模式逻辑速率为 30 Hz；`_update60()` 模式为 60 Hz。
 - display refresh 只决定何时请求/显示最新 frame，不直接决定 update 数。
-- `time()` / `t()` 必须由 logical simulation clock 推导，不等同于 callback 调用计数。官方 Web Player 差分锁定 startup 为 `1/30s`；custom main loop 的首次 `flip()` commit 这个 startup epoch，之后从 continuation 到每个受控 `flip()` 再 commit 一个 30 Hz slice。callback 60 Hz 用 2 个 target-rate slices 表示同一 startup epoch。
+- `time()` / `t()` 必须由 logical simulation clock 推导，不等同于 callback 调用计数。官方 Web Player 差分锁定 startup 为 `1/30s`；custom main loop 的首次 explicit `flip()` 或 implicit-frame boundary commit 这个 startup epoch，之后每个受控 custom boundary 再 commit 一个 30 Hz slice。callback 60 Hz 用 2 个 target-rate slices 表示同一 startup epoch。
 - scheduler 最多追赶 5 ticks/vsync；超出后丢弃 backlog 并发出
   `E_TIME_DISCONTINUITY`，避免 spiral of death。
 - [ADR-011](./adr/011-hidden-tab-pause.md) 已锁定默认 hidden/blur pause：清输入并重建

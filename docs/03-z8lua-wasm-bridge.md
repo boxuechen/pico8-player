@@ -125,7 +125,8 @@ EMPTY -> COMPILED -> BOOTING -> CALLBACK_LOOP | CUSTOM_LOOP
 - `COMPILED`：源码已按 byte length 编译，尚未执行 top-level。
 - `BOOTING`：正在执行 cart top-level；若 top-level 返回，再执行 `_init()`。
 - `CALLBACK_LOOP`：默认 `_update60/_update` + `_draw` 驱动。
-- `CUSTOM_LOOP`：top-level 尚未返回，但通过 `flip()` 主动产生 frame boundary。
+- `CUSTOM_LOOP`：top-level 尚未返回，通过 root `flip()` 或 30 Hz implicit quantum 产生 frame
+  boundary；有限 top-level 最终返回时可在该 frame 内切换到 callback mode。
 - `FAULTED`：runtime、OOM、budget、host 或 internal error；只有 reset/destroy 合法。
 
 所有状态转换 **MUST** 可查询并有 invalid-state 测试。
@@ -147,7 +148,7 @@ Bridge **MUST NOT** 把 cart source 与 glue 字符串拼接后重新编号；�
 
 `p8w_target_fps()` 在 callback mode 返回 60 或 30，供 TS scheduler 使用。动态替换 callback 时，模式 **SHOULD** 在 frame boundary 重算。
 
-### 4.3 手写 `flip()` loop
+### 4.3 Custom main loop：explicit `flip()` 与 implicit frame
 
 以下控制流必须被当成一等模式，而不是无限循环：
 
@@ -166,6 +167,20 @@ end
 - top-level 的首次 `P8W_YIELD_FLIP` 建立 custom startup boundary。官方 Web Player capture 已锁定：boot transaction 内 `time()` 为 `1/30s`，该 boundary 成功后 Runtime commit 1 个 30 Hz startup slice；从 continuation resume 到下一个 `P8W_YIELD_FLIP` 再 commit 1 slice。VM bridge 只保存 host 传入的 `time_raw`，clock counter 与 commit policy 仍归 RuntimeCore。
 
 当前 custom loop profile 固定为 30 Hz；未来若支持其他 rate，必须由独立 conformance 固定，不得把 display refresh 直接当作 guest frame rate。
+
+PICO-8 v0.2.7 还规定：如果一帧时间内没有调用 `flip()`、且 `_draw()` callback 不在执行，当前
+back buffer 会自动复制到 screen。[官方 `flip()` 语义](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#FLIP)
+因此 [ADR-022](./adr/022-cpu-slicing-decision.md) 接受一个与 hard cap 分离的 implicit boundary：
+
+- 只在 `ActiveKind::TopLevel` 中按 `4M inst/s / 30 Hz` 的 floor，即 `133,333` instructions
+  触发 `P8W_YIELD_FRAME_END`；callback 和 `_init()` 不被拆分。
+- counter 统计 top-level root 及其 nested coroutine 的 instruction，但只有 Runtime-owned root thread
+  可以实际 hook-yield。nested 内到期时延迟到 root safe point；不返回的 nested loop 仍由 hard cap
+  fail closed。
+- root HostRequest continuation 保留同一 implicit quantum；新的 boot/step 才重置。一次调用仍最多提交
+  一个 frame，explicit `flip()` 若先到达则维持既有 continuation 路径。
+- 有限 top-level 跨帧后最终返回时，bridge 完成一次 `_init()`/callback mode transition，并把当前
+  step 作为一个 frame 结束；不能返回无 boundary 的成功 step。
 
 ### 4.4 Nested coroutine 陷阱
 
@@ -382,11 +397,16 @@ table、function、userdata 和 coroutine handle **MUST NOT** 直接跨 JS/WASM�
 
 `flip()` 与可恢复 host API 使用 `lua_yieldk()` continuation；普通 C wrapper 在返回前必须恢复 Lua stack invariant。不是所有 host request 都天然可恢复，尤其 nested coroutine 情况按 4.4 节降级。
 
-### 9.2 Instruction budget：抛错，不分帧续跑
+### 9.2 Hard safety budget 与 implicit-frame quantum
 
-count hook 的安全策略已经锁定：budget exhaustion **MUST** poison context 并抛出分类 sentinel error，**MUST NOT** 通过普通 yield 把无限循环拆到后续 frame 继续执行。
+count hook 同时维护两个不得混同的计数器：
 
-建议实现：
+- **hard safety budget**：host 为一个 transaction 提供的不可恢复上限；exhaustion **MUST** poison
+  context 并抛出分类 sentinel error，不能变成 frame。
+- **implicit-frame quantum**：仅 top-level custom execution 的官方 frame 兼容边界；达到 30 Hz
+  floor quantum 时在 Runtime-owned root thread 产生可恢复 `FRAME_END`。它不取消 hard cap。
+
+hard-cap 实现：
 
 1. `p8w_boot()` / `p8w_step()` / `p8w_complete_host_request()` 开始 execution segment 时设置 `remaining` 和 `budgetPoisoned=false`。
 2. `lua_sethook(..., LUA_MASKCOUNT, quantum)` 每 `quantum` VM instructions 进入 C hook。
@@ -394,7 +414,12 @@ count hook 的安全策略已经锁定：budget exhaustion **MUST** poison conte
 4. protected outer resume 无论 guest 是否尝试捕获 sentinel，都在返回路径优先检查 poison，并报告 `P8W_STATUS_INSTRUCTION_BUDGET`。
 5. 所有新 coroutine 必须继承 hook；上游 `lua_newthread()` 当前会复制 hook fields，但仍需回归测试。[上游 thread 初始化](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lstate.c#L237-L250)
 
-`quantum`/safety cap 与 compatibility CPU cost 不是一回事。Phase 4F 已锁定每条 count hook
+implicit-frame yield 使用 z8lua `traceexec()` 的 `CIST_HOOKYIELD` resume path 保存 PC/stack；在
+guest-created coroutine 内只递减 counter，不直接 yield，直到 root safe point。它的完整 continuation、
+transaction 与 control matrix 由 [ADR-022](./adr/022-cpu-slicing-decision.md) 和 Phase 6F regression
+锁定。
+
+implicit quantum、safety cap 与 compatibility CPU cost 是三个不同概念。Phase 4F 已锁定每条 count hook
 instruction 作为 deterministic accounting unit，由 Runtime 以 4M/s 和 logical target FPS 换算
 Q16.16；默认 1M instruction cap 仍只负责安全。`p8w_consumed_instructions()` 返回当前 resume
 segment，bridge 内的 `stat(1)` 另行累计同一 transaction 的先前 HostRequest segments。

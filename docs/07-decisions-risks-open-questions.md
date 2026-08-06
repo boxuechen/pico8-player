@@ -27,11 +27,12 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-014 | Accepted | canonical test PCM 为 22050 Hz mono signed PCM16LE |
 | ADR-015 | Accepted | 四 package DAG + main/worker/worklet execution domains |
 | ADR-016 | Accepted | pnpm workspace 和精确 tool versions |
-| ADR-017 | [Accepted](./adr/017-coroutine-frame-slice-and-fault-containment.md) | host-driven frame slice、budget/watchdog、nested suspension 降级 |
+| ADR-017 | Partially superseded by ADR-022 | hard budget/watchdog 与 nested suspension 降级继续有效；blanket hook-yield rejection 已替换 |
 | ADR-018 | [Accepted](./adr/018-caller-authorized-cart-resolution.md) | caller-authorized local bundle resolver；BBS 自动访问保持 Deferred |
 | ADR-019 | [Accepted](./adr/019-phase-5-coroutine-compatibility.md) | L3 host suspension 保持 root-only；nested surface 统一 structured fault |
 | ADR-020 | [Deferred](./adr/020-phase-5-bbs-adapter.md) | 不新增自动 BBS adapter、endpoint 或 production network capability |
 | ADR-021 | [Accepted](./adr/021-menuitem-registration-boundary.md) | `menuitem()` 五槽注册表和 callback 保持 VM-local；pause-menu UI/invocation 为 Published Known Difference |
+| ADR-022 | [Accepted](./adr/022-cpu-slicing-decision.md) | top-level custom loop 使用 root-safe 30 Hz implicit frame；hard cap 继续 poison |
 
 ## 2. 当前未决问题
 
@@ -77,7 +78,7 @@ evidence，不在本表复制测试步骤。
 | R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue；Phase 4G 双速率 1800 秒 steady counters 全零 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
-| R-08 | hard budget 与官方 CPU 不一致 | Phase 4F 已拆分 4M/s soft classification 与 1M instruction safety cap；4G/4H 回归通过 |
+| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | Phase 4F/ADR-022 分离 4M/s cost、133333 top-level frame quantum 与 1M safety cap；Node/Chrome controls 锁定 |
 | R-09 | multi-cart 同步 API 需要 async host data | caller-authorized local repository + root HostRequest + atomic swap；Phase 5 100-swap/soak gate |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | ADR-020 Deferred；无 production adapter、endpoint、network access 或 corpus bytes |

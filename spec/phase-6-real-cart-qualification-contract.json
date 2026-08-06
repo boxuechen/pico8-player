@@ -76,9 +76,9 @@
       "durationOrTrace"
     ]
   },
-  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E"],
-  "activeWorkUnit": "6F",
-  "nextWorkUnit": "6G",
+  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E", "6F"],
+  "activeWorkUnit": "6G",
+  "nextWorkUnit": "6H",
   "workUnits": {
     "6A": {
       "name": "Activation / Corpus Policy",
@@ -319,7 +319,7 @@
     },
     "6F": {
       "name": "CPU Slicing Spike / Decision",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/p8w_frame_runtime.cpp",
         "wasm/bridge/p8w_frame_runtime.h",
@@ -335,6 +335,7 @@
         "tools/compat/",
         "tests/architecture/",
         "docs/adr/022-cpu-slicing-decision.md",
+        "docs/02-system-architecture.md",
         "docs/03-z8lua-wasm-bridge.md",
         "docs/04-typescript-runtime.md",
         "docs/06-testing-compatibility.md",
@@ -353,11 +354,66 @@
         "project Node and Chrome regressions lock the chosen behavior while existing callback, explicit-flip, budget poison and recovery cases remain unchanged",
         "the affected local external case is rerun and classified according to the decision without a cart-specific source rewrite",
         "pnpm run verify passes and 6G becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "decision": "accepted-root-safe-implicit-frame",
+        "adr": "docs/adr/022-cpu-slicing-decision.md",
+        "implicitFrameInstructions": 133333,
+        "hardSafetyInstructionLimit": 1000000,
+        "yieldReason": "P8W_YIELD_FRAME_END",
+        "nestedCoroutineBoundary": "counted globally; frame yield deferred to Runtime-owned root safe point",
+        "hostRequestTransactionPreserved": true,
+        "oneFramePerStep": true,
+        "projectNodeCases": 6,
+        "projectChromeCases": 12,
+        "framesPerChromeCase": 120,
+        "localAffectedCaseRecovered": true,
+        "localAggregateAfterFix": {
+          "cases": 12,
+          "bootsCU": 9,
+          "failsC0": 3,
+          "publicDenominatorContribution": 0
+        },
+        "knownDifference": "P6-KD-02",
+        "runtimeWasmSha256": "4e2bd6f80f7e94d23e5e82dbc6133536028db8e40991e6b0ece82e80acbc24b3",
+        "verification": [
+          "pnpm run test:phase-6f",
+          "pnpm run test:phase-6f:chrome",
+          "local-only 12-cart Chrome rerun",
+          "pnpm run verify"
+        ]
+      }
     },
     "6G": {
       "name": "Chrome Playability Pass",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "wasm/bridge/p8w_pico8_compat.cpp",
+        "wasm/bridge/p8w_pico8_compat.h",
+        "wasm/runtime-v1.manifest.lock.json",
+        "spec/pico-api-inventory.yaml",
+        "spec/compat/",
+        "tests/runtime/phase-6g-language-compat.test.mjs",
+        "tests/compat/",
+        "tests/conformance/local-observations.example.json",
+        "tools/compat/",
+        "tests/architecture/",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/6-real-cart-qualification.md",
+        "spec/phase-6-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "the two remaining in-profile language clusters are resolved generically as global unpack compatibility and official P8SCII source constants without cart-specific rewrites",
+        "future-version rejection remains an explicit v0.2.7 scope disposition and is not weakened to improve the local aggregate",
+        "project-authored real-WASM and Chrome regressions lock unpack return ranges, raw-byte global names and Q16.16 constant values",
+        "all in-profile local cases complete the Chrome smoke trace and the full local aggregate is rerun with no open P0 or P1 issue",
+        "at least three representative local cases satisfy the C2 manual gate through fifteen minutes of play or a completed critical flow, with input, audiovisual, persistence and environment/hash observations retained only in ignored local evidence",
+        "pnpm run verify passes and 6H becomes the only active work unit"
+      ]
     },
     "6H": {
       "name": "Qualification Exit / Report",

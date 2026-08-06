@@ -1,6 +1,6 @@
 # Phase 6 — Real-cart Qualification
 
-> 状态：Active；6A–6E complete，6F active
+> 状态：Active；6A–6F complete，6G active
 > 机器合同：[`spec/phase-6-real-cart-qualification-contract.json`](../../spec/phase-6-real-cart-qualification-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 5 L3 local/multicart exit](../evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)
@@ -14,7 +14,7 @@ Phase 6 建立可重复的本地真实卡带 qualification 流程，用至少 12
 
 本阶段不自动访问 BBS、不跟踪或发布第三方 cart bytes、截图、音频和公开成功率，不把本地
 external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、公共 cart 镜像或针对单个 cart
-的 runtime hack。CPU slicing 在 6F 完成 spike 和 replacement ADR 决定前继续遵守 ADR-017。
+的 runtime hack。CPU slicing 的已接受边界由 ADR-022 与 `P6-KD-02` 锁定，6G 不再扩张它。
 
 ## Stable inputs
 
@@ -23,8 +23,8 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 - [测试数据版权与 BBS 限制](../06-testing-compatibility.md#13-测试数据版权与-bbs-访问限制)
 - [Reference source quarantine](../08-source-layout-and-boundaries.md#72-reference-source-quarantine)
 - [兼容 bug 工作流](../09-codex-task-protocol.md#7-兼容-bug-工作流)
-- [Instruction budget 边界](../03-z8lua-wasm-bridge.md#92-instruction-budget抛错不分帧续跑)
-- [ADR-017 coroutine frame slice](../adr/017-coroutine-frame-slice-and-fault-containment.md)
+- [Hard budget 与 implicit quantum](../03-z8lua-wasm-bridge.md#92-hard-safety-budget-与-implicit-frame-quantum)
+- [ADR-022 CPU slicing](../adr/022-cpu-slicing-decision.md)
 - [Official PICO-8 v0.2.7 `stat()` reference](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#STAT)
 - [Official PICO-8 v0.2.7 `menuitem()` reference](https://www.lexaloffle.com/dl/docs/pico-8_manual.html#MENUITEM)
 
@@ -37,8 +37,8 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 | 6C Twelve-cart Baseline | Complete | 12/12 complete；6 boots/CU、6 fails/C0；local-only screenshots |
 | 6D `stat(20)` Compatibility | Complete | affected case 恢复；local baseline 变为 7 boots/CU、5 fails/C0 |
 | 6E `menuitem()` Boundary | Complete | VM-local 五槽 registration；UI/invocation 为 `P6-KD-01` |
-| 6F CPU Slicing Spike / Decision | **Active** | 下节；必须尊重/替换 ADR-017 |
-| 6G Chrome Playability Pass | Pending | 6F exit 后展开 |
+| 6F CPU Slicing Spike / Decision | Complete | root-safe implicit frame；ADR-022；affected case 恢复 |
+| 6G Chrome Playability Pass | **Active** | residual language compatibility + 至少 3 个 C2 manual gate |
 | 6H Qualification Exit / Report | Pending | aggregate exit |
 
 ## 6A closure
@@ -87,45 +87,54 @@ fails/C0；pause-menu UI/callback invocation 作为 `P6-KD-01`，不能由启动
 WASM SHA-256 为 `50e5c6019622342a4e7e099af8f2194c431f9740c5438ce1f31561debd8294e6`。
 验证入口是 `pnpm run test:phase-6e`、`pnpm run test:phase-6e:chrome` 与 `pnpm run verify`。
 
-## Active work unit：6F CPU Slicing Spike / Decision
+## 6F closure
+
+6F 由 [ADR-022](../adr/022-cpu-slicing-decision.md) 接受 root-safe implicit frame slicing：
+top-level custom loop 每 `133333` 条 guest instruction 产生一个 30Hz `FRAME_END`，同时保留
+`1000000` 条 hard safety cap、fault poison、fresh-generation recovery、一次 `step()` 至多一帧和
+HostRequest transaction。nested coroutine 的工作计入同一 quantum，但只在控制返回 Runtime-owned
+root 时提交帧；该差异记录为 `P6-KD-02`。Node real-WASM 6 个 continuation/control case 与 Chrome
+12×120 帧项目烟测通过；affected local case 恢复，ignored aggregate 变为 9 boots/CU、3 fails/C0。
+production WASM SHA-256 为
+`4e2bd6f80f7e94d23e5e82dbc6133536028db8e40991e6b0ece82e80acbc24b3`。验证入口是
+`pnpm run test:phase-6f`、`pnpm run test:phase-6f:chrome` 与 `pnpm run verify`。
+
+## Active work unit：6G Chrome Playability Pass
 
 ### Observable behavior
 
-1. 用原创最小 cart 在 real WASM 中隔离 implicit infinite/top-level loop；callback loop 与显式
-   `flip()` custom loop 是 control，不得把普通 hard-budget fault 错认成同一 surface。
-2. spike 必须验证 z8lua count hook 的 continuation 安全性、任意 instruction-point resume、Lua stack/GC、
-   `pcall`/nested coroutine 与 host transaction；不能仅让 hook 返回 `LUA_YIELD` 就宣称可恢复。
-3. [ADR-017](../adr/017-coroutine-frame-slice-and-fault-containment.md) 当前拒绝 resumable count-hook。
-   ADR-022 必须依据 spike 选择：以可证明的 bounded design 替换它，或维持 fail-closed 并发布精确
-   Known Difference。不可用源码字符串重写、无限 quantum、busy-wait 或 cart-specific workaround。
-4. 若实现 slicing，一次 Runtime `step()` 仍至多提交一个 frame；logical time、input/audio/cartdata
-   transaction、soft CPU accounting、hard safety cap、fault poison 和 fresh-generation recovery 必须保持。
-5. 原创 Node/Chrome regression 与 affected local case 锁定最终决定；existing callback/explicit-flip、
-   Phase 4F CPU model 和 ADR-019 nested suspension 不得回归。
+1. 只处理 6C/6F rerun 后仍属于 v0.2.7 target 的两个通用 language cluster：Lua global
+   `unpack(table[, i[, j]])` 与官方 P8SCII source constants。不得根据 cart ID、hash 或源码片段分支。
+2. P8SCII 全局名按 raw byte 注册，值保持 PICO-8 Q16.16 bit pattern；不能经过 UTF-8 名称转换。
+   `unpack` 必须覆盖默认范围、显式 `i/j`、空范围、nil hole 和多返回值。
+3. future-version cart 继续按 v0.2.7 scope fail closed；不可放宽版本检查来改善本地 aggregate。
+4. 完整本地 corpus 在 production Chrome path 重跑；所有 in-profile case 必须通过 fixed smoke trace，
+   开放 P0/P1 为 0。第三方 bytes、截图、路径和逐-cart 结果仍只存在于 gitignored local evidence。
+5. 至少选择 3 个代表 case 完成 C2 manual gate：每个满足“15 分钟 play”或“完整关键流程”之一，
+   并记录输入、画面、音频、存档观察以及 player/runtime/cart/Chrome identity；boots 不能冒充 C2。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.6F.allowedPaths` 控制。只允许现有 WASM frame runtime、bridge
-adapter、RuntimeCore frame transaction、ABI/manifest、ADR 与原创 regression；不得修改 parser/cart
-bytes、用 source rewrite 绕过问题，或增加 Worker/Main/DOM capability。external bytes 和 `ref/` 仍不
-进入测试或构建。
+精确允许路径由机器合同 `workUnits.6G.allowedPaths` 控制。通用 VM compatibility 只进入现有
+`p8w_pico8_compat` boundary；qualification schema/tool 只管理脱敏 observation。不得修改 cart bytes、
+parser version gate，或增加 network/Worker/Main/DOM capability。external bytes 和 `ref/` 仍不进入
+测试或构建。
 
 ### Tests
 
-- Proposed：`pnpm run test:phase-6f`
-- Proposed：`pnpm run test:phase-6f:chrome`
-- `pnpm run test:phase-0e`
-- `pnpm run test:phase-4f`
+- Proposed：`pnpm run test:phase-6g`
+- Proposed：`pnpm run test:phase-6g:chrome`
+- local-only：完整 12-cart smoke rerun + 至少 3 个 C2 manual observations
 - `pnpm run test:architecture`
 - 最终必须运行 `pnpm run verify`
 
 ### Exit gate
 
-- ADR-022 依据可执行 spike 明确替换或维持 ADR-017，不能保留模糊的“可能 slicing”。
-- Node/Chrome 锁定 implicit loop 与 callback/explicit-flip controls、budget/recovery 和 transaction 边界。
-- affected local case 按决定重跑；不做 cart-specific rewrite，也不把 watchdog 当正常 frame scheduler。
-- ABI/bridge/RuntimeCore/compatibility 文档与实际决定一致。
-- `pnpm run verify` 通过；6F 结果折叠入机器合同，6G 成为唯一 active work unit，并独立提交。
+- `unpack` 与 P8SCII constants 有原创 real-WASM/Chrome regression，且实现不读取 `ref/`。
+- 完整 local rerun 中所有 in-profile case 启动；future-version case 保持明确 scope disposition。
+- 至少 3 个 case 有满足 C2 定义的本地手工证据，且开放 P0/P1 为 0。
+- repository 仍不跟踪第三方 cart/screenshot，不发布逐-cart 结果或兼容率。
+- `pnpm run verify` 通过；6G 结果折叠入机器合同，6H 成为唯一 active work unit，并独立提交。
 
 ## Phase exit gate
 

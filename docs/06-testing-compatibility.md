@@ -135,12 +135,15 @@ Golden 和差分测试必须运行在 deterministic host 中：
 
 统一帧定义如下：
 
-1. `boot` 检查点：callback cart 位于 cart 解码、RAM 初始化和 `_init()` 返回后、第一次 update 前；custom-loop cart 位于 top-level 的第一个受控 `flip()` boundary，且不得额外调用 `_init()`。
+1. `boot` 检查点：callback cart 位于 cart 解码、RAM 初始化和 `_init()` 返回后、第一次 update 前；
+   custom-loop cart 位于 top-level 的第一个 root `flip()` 或 root-safe implicit boundary。有限
+   top-level 只有在后续最终返回时才调用一次 `_init()` 并切换 callback mode。
 2. host `frame 0` 的输入先写入 runtime，再执行 `_update60()`；若不存在则按 30 Hz 计划执行 `_update()`，随后执行 `_draw()` 并 yield。其 logical slice ordinal 在 30 Hz 为 2、60 Hz 为 3，因为 startup epoch 已 commit。
 3. 帧检查点在 draw/yield 返回后、下一帧输入写入前采集。
 4. 该帧产生的音频样本归属于同一帧区间。
 
-custom-loop manifest 必须显式声明 lifecycle；其 host `frame 0` 在锁存输入后从 startup `flip()` continuation resume 到下一个 `flip()`，不伪造 `_update/_draw` callback。
+custom-loop manifest 必须显式声明 lifecycle；其 host `frame 0` 在锁存输入后从 startup
+explicit/implicit continuation resume 到下一个受控 boundary，不伪造 `_update/_draw` callback。
 
 官方 Web Player capture 已对比 custom 首八次 `flip()`、callback 30/60 Hz 的 top-level、`_init` 和 update clock：startup 固定为 `1/30s`，首次 startup `flip()` commit 1 个 30 Hz slice。结构化证据见 [`phase-0e-official-clock.json`](./evidence/phase-0e-official-clock.json)；golden 必须同时断言 guest clock、`completedSlices` 与独立 `frameId`，禁止只偏移截图编号。
 
@@ -640,6 +643,7 @@ bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
 | `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
 | `P6-KD-01` | `menuitem()` pause-menu UI / callback invocation | VM-local add/replace/remove 已支持，但 player 没有暂停菜单，玩家不能选择条目或触发 callback | 只依赖注册的 cart 可启动；依赖菜单交互的 cart 尚未达到可玩兼容；见 [ADR-021](./adr/021-menuitem-registration-boundary.md) |
+| `P6-KD-02` | top-level custom loop 在 guest-created coroutine 内耗尽 implicit quantum | nested work 会计入 CPU，但画面提交延迟到控制返回 Runtime-owned root；永不返回则命中 hard cap | 将长循环留在 root 或从 root 调用 `flip()`；见 [ADR-022](./adr/022-cpu-slicing-decision.md) |
 
 ### 15.6 Coverage limitation 与范围排除
 

@@ -26,6 +26,8 @@ constexpr uint32_t kMaxMessageLength = 1023;
 constexpr uint32_t kMaxTraceLength = 2047;
 constexpr uint32_t kMaxHostBytes = 4096;
 constexpr uint32_t kPicoVmInstructionsPerSecond = 4000000;
+constexpr uint32_t kImplicitFrameInstructions =
+    kPicoVmInstructionsPerSecond / 30;
 constexpr int32_t kMaxMemoryVector = 8192;
 constexpr int32_t kMaxMemoryBlock = static_cast<int32_t>(p8w::kPicoRamSize);
 constexpr char kContextRegistryKey[] = "__p8w_runtime_context";
@@ -74,6 +76,7 @@ struct Context {
 
   uint32_t budget_start = 0;
   uint32_t remaining_budget = 0;
+  uint32_t remaining_implicit_frame_budget = 0;
   uint32_t transaction_consumed = 0;
   bool budget_poisoned = false;
   bool nested_suspend_attempt = false;
@@ -863,6 +866,22 @@ void instruction_hook(lua_State *state, lua_Debug *) {
     return;
   }
   --context->remaining_budget;
+  if (context->active_kind == ActiveKind::TopLevel) {
+    if (context->remaining_implicit_frame_budget <= 1) {
+      context->remaining_implicit_frame_budget = 0;
+      // A hook yield belongs to the directly resumed Lua thread. Defer a
+      // boundary reached inside a guest coroutine until control returns to
+      // the Runtime-owned root thread, where it cannot be swallowed by
+      // coresume(). The hard budget still bounds a coroutine that never
+      // returns to this safe point.
+      if (state == context->active) {
+        context->yield_reason = P8W_YIELD_FRAME_END;
+        lua_yield(state, 0);
+      }
+      return;
+    }
+    --context->remaining_implicit_frame_budget;
+  }
 }
 
 bool begin_budget(Context *context, uint32_t budget, bool continuation) {
@@ -876,6 +895,7 @@ bool begin_budget(Context *context, uint32_t budget, bool continuation) {
             : context->transaction_consumed + consumed;
   } else {
     context->transaction_consumed = 0;
+    context->remaining_implicit_frame_budget = kImplicitFrameInstructions;
   }
   context->budget_start = budget;
   context->remaining_budget = budget;
@@ -988,6 +1008,14 @@ P8wStatus resume_active(Context *context) {
       context->state = P8W_STATE_CUSTOM_LOOP;
       return P8W_STATUS_YIELDED;
     }
+    if (context->yield_reason == P8W_YIELD_FRAME_END &&
+        completed_kind == ActiveKind::TopLevel) {
+      context->mode = P8W_MODE_CUSTOM;
+      context->target_fps = 30;
+      context->phase = P8W_PHASE_CUSTOM_LOOP;
+      context->state = P8W_STATE_CUSTOM_LOOP;
+      return P8W_STATUS_YIELDED;
+    }
     if (context->yield_reason == P8W_YIELD_STOP ||
         context->yield_reason == P8W_YIELD_RUN) {
       const bool restart = context->yield_reason == P8W_YIELD_RUN;
@@ -1029,6 +1057,20 @@ P8wStatus finish_callback_sequence(Context *context) {
   }
 }
 
+P8wStatus finish_top_level(Context *context, bool completes_frame) {
+  detect_callback_target_fps(context);
+  P8wStatus status = P8W_STATUS_OK;
+  if (start_global(context, "_init", ActiveKind::Init, P8W_PHASE_INIT)) {
+    status = finish_callback_sequence(context);
+  } else {
+    select_callback_mode(context);
+  }
+  if (status == P8W_STATUS_OK && completes_frame) {
+    context->yield_reason = P8W_YIELD_FRAME_END;
+  }
+  return status;
+}
+
 P8wStatus run_callback_step(Context *context) {
   const bool has_update60 = global_is_function(context, "_update60");
   context->target_fps = has_update60 ? 60 : 30;
@@ -1049,20 +1091,18 @@ P8wStatus run_callback_step(Context *context) {
 }
 
 P8wStatus continue_after_host_response(Context *context) {
+  const bool completes_frame =
+      context->waiting_return_state == P8W_STATE_CUSTOM_LOOP;
   context->state = context->waiting_return_state;
   const ActiveKind active_kind = context->active_kind;
   const P8wStatus status = resume_active(context);
   if (status != P8W_STATUS_OK) return status;
   if (active_kind == ActiveKind::TopLevel) {
-    if (context->mode == P8W_MODE_CUSTOM) return P8W_STATUS_OK;
-    if (start_global(context, "_init", ActiveKind::Init, P8W_PHASE_INIT)) {
-      return finish_callback_sequence(context);
-    }
-    select_callback_mode(context);
-    return P8W_STATUS_OK;
+    return finish_top_level(context, completes_frame);
   }
   if (active_kind == ActiveKind::Init) {
     select_callback_mode(context);
+    if (completes_frame) context->yield_reason = P8W_YIELD_FRAME_END;
     return P8W_STATUS_OK;
   }
   if (active_kind == ActiveKind::Update ||
@@ -1223,12 +1263,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_boot(uint32_t handle,
   context->phase = P8W_PHASE_BOOT;
   P8wStatus status = resume_active(context);
   if (status != P8W_STATUS_OK) return status;
-  detect_callback_target_fps(context);
-  if (start_global(context, "_init", ActiveKind::Init, P8W_PHASE_INIT)) {
-    return finish_callback_sequence(context);
-  }
-  select_callback_mode(context);
-  return P8W_STATUS_OK;
+  return finish_top_level(context, false);
 }
 
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_step(uint32_t handle,
@@ -1248,7 +1283,12 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_step(uint32_t handle,
   if (context->state == P8W_STATE_CALLBACK_LOOP)
     return run_callback_step(context);
   context->phase = P8W_PHASE_CUSTOM_LOOP;
-  return resume_active(context);
+  const ActiveKind active_kind = context->active_kind;
+  const P8wStatus status = resume_active(context);
+  if (status != P8W_STATUS_OK) return status;
+  return active_kind == ActiveKind::TopLevel
+             ? finish_top_level(context, true)
+             : P8W_STATUS_OK;
 }
 
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_complete_host_request(

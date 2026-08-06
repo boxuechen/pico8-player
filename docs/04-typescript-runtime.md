@@ -524,10 +524,10 @@ type StepResult = Readonly<{
 
 ### 10.2 帧语义
 
-- 有 `_update60` 时逻辑频率为 60Hz；否则 `_update`/`_draw` 正常为 30Hz。callback cart 的 `_init` 在 startup transaction 内至多调用一次，并在返回后才允许 commit；top-level 先到达受控 `flip()` 的 custom-loop cart 不由 Runtime 自动调用 `_init`。
-- `time()/t()` 来自 Runtime 的 logical simulation clock，不直接等同于 callback 调用计数。官方 Web Player capture 锁定 startup transaction 为 `1/30s`：30 Hz callback/custom boot commit 1 slice，60 Hz callback boot commit 2 slices。每次 `step()` 以 `completedSlices+1` 计算即将执行的 clock，只有到达 callback frame-end 或 custom `flip()` boundary 才 commit；fault/stop 不 commit。`updateCount` 另行记录；慢帧下多个 update/一次 draw仍由后续 conformance 固定。禁止返回浏览器时间，同一 transaction 内多次读取必须一致。
-- `flip()` 是 VM 到 Runtime 的 frame boundary yield。自定义 main loop 必须能通过它交还控制权。
-- 每个 logical frame transaction 的固定次序为：scheduler 先决定本次 simulation slice、callback 次数与是否 draw → 在 slice 开始锁存输入并更新 hardware state（常规慢帧模式下每次实际 update 前重新锁存规则由 conformance 固定）→ resume VM → 同步 API/RAM 写即时生效 → 接收 yield/trap → 按 logical clock 生成音频 →（若本次 visible draw/flip）发布画面 → 持久化 dirty check → heartbeat。只收到、但未形成 simulation slice 的 rAF pulse 不得消耗 `btnp` edge、推进 `time()` 或生成音频；custom-loop 在 startup 之后到达的每个 `flip()` boundary 可以结束并推进 slice，即使没有 `_update/_update60` callback。
+- 有 `_update60` 时逻辑频率为 60Hz；否则 `_update`/`_draw` 正常为 30Hz。callback cart 的 `_init` 至多调用一次：top-level 在 startup 内返回时立即执行；若有限 top-level 先跨过 custom boundary，最终返回的那个 frame 再执行并切换 callback mode。
+- `time()/t()` 来自 Runtime 的 logical simulation clock，不直接等同于 callback 调用计数。官方 Web Player capture 锁定 startup transaction 为 `1/30s`：30 Hz callback/custom boot commit 1 slice，60 Hz callback boot commit 2 slices。每次 `step()` 以 `completedSlices+1` 计算即将执行的 clock，只有到达 callback frame-end、root `flip()` 或 [ADR-022](./adr/022-cpu-slicing-decision.md) 的 root-safe implicit boundary 才 commit；fault/stop 不 commit。`updateCount` 另行记录；慢帧下多个 update/一次 draw仍由后续 conformance 固定。禁止返回浏览器时间，同一 transaction 内多次读取必须一致。
+- `flip()` 是显式 VM→Runtime frame yield；不调用它的 top-level custom loop 还可在固定 30 Hz implicit quantum 交还控制权。两者都只能从 Runtime-owned root 提交 frame。
+- 每个 logical frame transaction 的固定次序为：scheduler 先决定本次 simulation slice、callback 次数与是否 draw → 在 slice 开始锁存输入并更新 hardware state（常规慢帧模式下每次实际 update 前重新锁存规则由 conformance 固定）→ resume VM → 同步 API/RAM 写即时生效 → 接收 yield/trap → 按 logical clock 生成音频 →（若本次 visible draw/flip/implicit copy）发布画面 → 持久化 dirty check → heartbeat。只收到、但未形成 simulation slice 的 rAF pulse 不得消耗 `btnp` edge、推进 `time()` 或生成音频；custom-loop 在 startup 之后到达的每个 explicit/implicit boundary 都结束并推进一个 slice，即使没有 `_update/_update60` callback。
 - catch-up 必须有上限（建议最多 5 ticks/vsync）。超过上限时丢弃墙钟 backlog、发出 `E_TIME_DISCONTINUITY` warning；不得一次执行数百 tick 冻结页面。
 - 页面从后台恢复时先重置 accumulator anchor，不“补跑”后台经过的全部时间。
 - 第一版不根据宿主机器性能自动从 60 降 30 或从 30 降 15；这会让相同输入产生机器相关结果。官方的慢帧策略作为单独 conformance 功能实现。
@@ -542,6 +542,9 @@ type StepResult = Readonly<{
   `floor(cpuInstructions * accountingFps * 65536 / 4,000,000)`，上限为 `INT32_MAX`；普通 frame
   的 `accountingFps` 是 logical target FPS，固定 `1/30s` startup 始终使用 30。Node/Chrome 容差
   都是 0 instruction。
+- 30 Hz implicit-frame quantum 固定使用 `floor(4,000,000 / 30) = 133,333`，只负责让 top-level
+  custom loop 形成官方 back-buffer copy boundary；它与普通 frame 的 soft `slowFrame` 分类、默认
+  `1,000,000` hard safety cap 分别计数。floor quantum 的 Q16.16 fraction 是 `0xffff`。
 - raw `0x00010000` 仍属预算内；只有量化结果大于它才标记 `slowFrame=true`。ordinary slow frame
   不降频、不跳 draw，也不拆成部分提交，而是完成一个原子 logical frame。默认
   `1,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
