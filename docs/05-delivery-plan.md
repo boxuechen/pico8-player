@@ -29,7 +29,7 @@
 | 1 L1 最小可玩闭环 | **Complete；1A–1F** | [Evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
 | 2 Graphics、Memory、Text | **Complete；2A–2F** | [Evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | 3 Audio、完整 Input、Persistence | **Complete；3A–3H** | [Evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| 4 L2 / MVP 兼容加固 | **Active；4A–4C complete，4D active** | [Phase document](./phases/4-l2-mvp-hardening.md) / [Machine contract](../spec/phase-4-l2-mvp-contract.json) |
+| 4 L2 / MVP 兼容加固 | **Active；4A–4D complete，4E active** | [Phase document](./phases/4-l2-mvp-hardening.md) / [Machine contract](../spec/phase-4-l2-mvp-contract.json) |
 | 5 L3 与可选 BBS 集成 | Deferred | 需要独立授权和产品决定 |
 
 ## 3. Phase 0 — 架构验证
@@ -123,7 +123,7 @@ dispose 门禁通过。兼容声明严格限于 Phase 3 project profile，开放
 
 ### Phase 4 — L2 / MVP 兼容加固
 
-> 状态：Active；4A–4C complete，4D active。具体授权只在
+> 状态：Active；4A–4D complete，4E active。具体授权只在
 > [active phase document](./phases/4-l2-mvp-hardening.md)，以下继续只保存 roadmap headline。
 
 目标：以获准的代表 cart corpus 驱动剩余 API、CPU budget、性能和长稳测试。

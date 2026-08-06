@@ -99,12 +99,12 @@ export interface PicoApiHost {
     layersRaw?: number,
   ): void;
   tline(
-    x0Raw: number,
-    y0Raw: number,
-    x1Raw: number,
-    y1Raw: number,
-    mxRaw: number,
-    myRaw: number,
+    x0Raw?: number,
+    y0Raw?: number,
+    x1Raw?: number,
+    y1Raw?: number,
+    mxRaw?: number,
+    myRaw?: number,
     mdxRaw?: number,
     mdyRaw?: number,
     layersRaw?: number,
@@ -126,6 +126,22 @@ export interface PicoApiHost {
   ): void;
   rect(x0Raw: number, y0Raw: number, x1Raw: number, y1Raw: number, colorRaw?: number): void;
   rectfill(x0Raw: number, y0Raw: number, x1Raw: number, y1Raw: number, colorRaw?: number): void;
+  rrect(
+    xRaw: number,
+    yRaw: number,
+    widthRaw: number,
+    heightRaw: number,
+    radiusRaw?: number,
+    colorRaw?: number,
+  ): void;
+  rrectfill(
+    xRaw: number,
+    yRaw: number,
+    widthRaw: number,
+    heightRaw: number,
+    radiusRaw?: number,
+    colorRaw?: number,
+  ): void;
   circ(xRaw: number, yRaw: number, radiusRaw?: number, colorRaw?: number): void;
   circfill(xRaw: number, yRaw: number, radiusRaw?: number, colorRaw?: number): void;
   oval(x0Raw: number, y0Raw: number, x1Raw: number, y1Raw: number, colorRaw?: number): void;
@@ -360,12 +376,12 @@ class RuntimePicoApiHost implements PicoApiHost {
   }
 
   tline(
-    x0Raw: number,
-    y0Raw: number,
-    x1Raw: number,
-    y1Raw: number,
-    mxRaw: number,
-    myRaw: number,
+    x0Raw?: number,
+    y0Raw?: number,
+    x1Raw?: number,
+    y1Raw?: number,
+    mxRaw?: number,
+    myRaw?: number,
     mdxRaw?: number,
     mdyRaw?: number,
     layersRaw?: number,
@@ -422,6 +438,28 @@ class RuntimePicoApiHost implements PicoApiHost {
     colorRaw?: number,
   ): void {
     this.#graphics.rectfill(x0Raw, y0Raw, x1Raw, y1Raw, colorRaw);
+  }
+
+  rrect(
+    xRaw: number,
+    yRaw: number,
+    widthRaw: number,
+    heightRaw: number,
+    radiusRaw?: number,
+    colorRaw?: number,
+  ): void {
+    this.#graphics.rrect(xRaw, yRaw, widthRaw, heightRaw, radiusRaw, colorRaw);
+  }
+
+  rrectfill(
+    xRaw: number,
+    yRaw: number,
+    widthRaw: number,
+    heightRaw: number,
+    radiusRaw?: number,
+    colorRaw?: number,
+  ): void {
+    this.#graphics.rrectfill(xRaw, yRaw, widthRaw, heightRaw, radiusRaw, colorRaw);
   }
 
   circ(xRaw: number, yRaw: number, radiusRaw?: number, colorRaw?: number): void {

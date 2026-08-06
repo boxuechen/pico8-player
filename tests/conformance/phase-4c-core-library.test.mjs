@@ -107,16 +107,19 @@ test("Phase 4C closes its inventory and stays a pure VM change with host ABI unc
     readFile(new URL("spec/phase-4-l2-mvp-contract.json", projectRoot), "utf8").then(JSON.parse),
     readFile(new URL("spec/pico-api-inventory.yaml", projectRoot), "utf8").then(JSON.parse),
   ]);
-  assert.equal(abi.bindings.length, 38);
+  assert.ok(abi.bindings.length >= 38);
+  assert.deepEqual(
+    abi.bindings.slice(0, 38).map(({ id }) => id),
+    Array.from({ length: 38 }, (_, index) => index + 1),
+  );
   assert.equal(generated.files.length, 2);
   assert.equal(runtimeManifest.abiVersion, 0x0001_0002);
   assert.equal(runtimeManifest.compiledBridgeSources.includes(
     "wasm/bridge/p8w_pico8_compat.cpp",
   ), true);
   assert.equal(phase.workUnits["4C"].status, "complete");
-  assert.equal(phase.activeWorkUnit, "4D");
-  assert.equal(phase.nextWorkUnit, "4E");
-  assert.deepEqual(phase.completedWorkUnits, ["4A", "4B", "4C"]);
+  assert.equal(phase.workUnits["4C"].result.hostAbiBindings, 38);
+  assert.ok(phase.completedWorkUnits.includes("4C"));
   const byName = new Map(inventory.apis.map((api) => [api.name, api]));
   for (const name of manifest.requiredApis) {
     assert.equal(byName.get(name)?.implementationStatus, "implemented", name);

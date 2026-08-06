@@ -66,7 +66,7 @@ test("operations 37..38 are append-only optional void bindings", async () => {
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.slice(-2), [
+  assert.deepEqual(contract.bindings.slice(36, 38), [
     {
       id: 37,
       guestName: "reload",

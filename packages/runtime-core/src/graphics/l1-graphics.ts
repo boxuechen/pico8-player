@@ -56,6 +56,7 @@ export class L1Graphics {
   readonly #text: P8sciiText;
   readonly #shapeMask = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT);
   #maskingShape = false;
+  #tlineFractionalBits = 13;
 
   constructor(memory: PicoRam, audio?: P8sciiAudioPort) {
     this.#memory = memory;
@@ -84,6 +85,7 @@ export class L1Graphics {
   }
 
   reset(): void {
+    this.#tlineFractionalBits = 13;
     this.#resetPalette(0);
     this.#resetPalette(1);
     this.#resetPalette(2);
@@ -414,22 +416,41 @@ export class L1Graphics {
   }
 
   tline(
-    x0Raw: number,
-    y0Raw: number,
-    x1Raw: number,
-    y1Raw: number,
-    mxRaw: number,
-    myRaw: number,
+    x0Raw?: number,
+    y0Raw?: number,
+    x1Raw?: number,
+    y1Raw?: number,
+    mxRaw?: number,
+    myRaw?: number,
     mdxRaw?: number,
     mdyRaw?: number,
     layersRaw?: number,
   ): void {
+    if (
+      x0Raw !== undefined && y0Raw === undefined && x1Raw === undefined &&
+      y1Raw === undefined && mxRaw === undefined && myRaw === undefined &&
+      mdxRaw === undefined && mdyRaw === undefined && layersRaw === undefined
+    ) {
+      this.#tlineFractionalBits = clamp(q16Integer(x0Raw), 0, 16);
+      return;
+    }
+    if (
+      x0Raw === undefined || y0Raw === undefined || x1Raw === undefined ||
+      y1Raw === undefined || mxRaw === undefined || myRaw === undefined
+    ) {
+      return;
+    }
     const x0 = toInt16(q16Integer(x0Raw)) - this.#cameraX();
     const y0 = toInt16(q16Integer(y0Raw)) - this.#cameraY();
     const x1 = toInt16(q16Integer(x1Raw)) - this.#cameraX();
     const y1 = toInt16(q16Integer(y1Raw)) - this.#cameraY();
-    const deltaX = (mdxRaw ?? 0x0000_2000) | 0;
-    const deltaY = (mdyRaw ?? 0) | 0;
+    const mapStartX = scaleTlineCoordinate(mxRaw, this.#tlineFractionalBits);
+    const mapStartY = scaleTlineCoordinate(myRaw, this.#tlineFractionalBits);
+    const deltaX = scaleTlineCoordinate(
+      mdxRaw ?? 0x0000_2000,
+      this.#tlineFractionalBits,
+    );
+    const deltaY = scaleTlineCoordinate(mdyRaw ?? 0, this.#tlineFractionalBits);
     const layers = layersRaw === undefined ? 0 : q16Integer(layersRaw) & 0xff;
     const maskX = tlineMask(this.#ram[TLINE_MASK_X]!);
     const maskY = tlineMask(this.#ram[TLINE_MASK_Y]!);
@@ -442,8 +463,8 @@ export class L1Graphics {
     let major = clamp(major0, -1, SCREEN_WIDTH);
     const majorEnd = clamp(major1, -1, SCREEN_WIDTH);
     const skipped = Math.abs(major - major0);
-    let mapX = advanceTlineQ16(mxRaw, deltaX, skipped, maskX);
-    let mapY = advanceTlineQ16(myRaw, deltaY, skipped, maskY);
+    let mapX = advanceTlineQ16(mapStartX, deltaX, skipped, maskX);
+    let mapY = advanceTlineQ16(mapStartY, deltaY, skipped, maskY);
 
     for (;;) {
       const minor = major0 === major1
@@ -568,6 +589,83 @@ export class L1Graphics {
     );
     this.#drawFilled(color, color.inverted, () => {
       for (let y = top; y <= bottom; y += 1) this.#horizontal(left, right, y, color);
+    });
+  }
+
+  rrect(
+    xRaw: number,
+    yRaw: number,
+    widthRaw: number,
+    heightRaw: number,
+    radiusRaw?: number,
+    colorRaw?: number,
+  ): void {
+    const color = this.#resolveColor(colorRaw);
+    const bounds = roundedRectBounds(
+      xRaw,
+      yRaw,
+      widthRaw,
+      heightRaw,
+      radiusRaw,
+      this.#cameraX(),
+      this.#cameraY(),
+    );
+    if (bounds === undefined) return;
+    const [left, top, right, bottom, radius] = bounds;
+    const firstX = Math.max(0, left);
+    const finalX = Math.min(SCREEN_WIDTH - 1, right);
+    const firstY = Math.max(0, top);
+    const finalY = Math.min(SCREEN_HEIGHT - 1, bottom);
+    for (let y = firstY; y <= finalY; y += 1) {
+      for (let x = firstX; x <= finalX; x += 1) {
+        if (
+          insideRoundedRect(x, y, left, top, right, bottom, radius) &&
+          (
+            !insideRoundedRect(x - 1, y, left, top, right, bottom, radius) ||
+            !insideRoundedRect(x + 1, y, left, top, right, bottom, radius) ||
+            !insideRoundedRect(x, y - 1, left, top, right, bottom, radius) ||
+            !insideRoundedRect(x, y + 1, left, top, right, bottom, radius)
+          )
+        ) {
+          this.#plot(x, y, color);
+        }
+      }
+    }
+  }
+
+  rrectfill(
+    xRaw: number,
+    yRaw: number,
+    widthRaw: number,
+    heightRaw: number,
+    radiusRaw?: number,
+    colorRaw?: number,
+  ): void {
+    const color = this.#resolveColor(colorRaw);
+    const bounds = roundedRectBounds(
+      xRaw,
+      yRaw,
+      widthRaw,
+      heightRaw,
+      radiusRaw,
+      this.#cameraX(),
+      this.#cameraY(),
+    );
+    if (bounds === undefined) return;
+    const [left, top, right, bottom, radius] = bounds;
+    if (
+      !color.inverted &&
+      (right < 0 || left >= SCREEN_WIDTH || bottom < 0 || top >= SCREEN_HEIGHT)
+    ) {
+      return;
+    }
+    this.#drawFilled(color, color.inverted, () => {
+      const firstY = Math.max(0, top);
+      const finalY = Math.min(SCREEN_HEIGHT - 1, bottom);
+      for (let y = firstY; y <= finalY; y += 1) {
+        const inset = roundedRectInset(y, top, bottom, radius);
+        this.#horizontal(left + inset, right - inset, y, color);
+      }
     });
   }
 
@@ -1083,6 +1181,66 @@ function advanceTlineQ16(
 function tlineMask(register: number): number {
   const tiles = register === 0 ? 256 : register;
   return (tiles * 65_536 - 1) >>> 0;
+}
+
+function scaleTlineCoordinate(raw: number, fractionalBits: number): number {
+  const shift = fractionalBits - 13;
+  return shift >= 0 ? (raw | 0) >> shift : ((raw | 0) << -shift) | 0;
+}
+
+function roundedRectBounds(
+  xRaw: number,
+  yRaw: number,
+  widthRaw: number,
+  heightRaw: number,
+  radiusRaw: number | undefined,
+  cameraX: number,
+  cameraY: number,
+): readonly [number, number, number, number, number] | undefined {
+  const width = toInt16(q16Integer(widthRaw));
+  const height = toInt16(q16Integer(heightRaw));
+  if (width <= 0 || height <= 0) return undefined;
+  const left = toInt16(q16Integer(xRaw)) - cameraX;
+  const top = toInt16(q16Integer(yRaw)) - cameraY;
+  const right = left + width - 1;
+  const bottom = top + height - 1;
+  const requestedRadius = radiusRaw === undefined ? 0 : toInt16(q16Integer(radiusRaw));
+  const radius = clamp(requestedRadius, 0, Math.floor(Math.min(width, height) / 2));
+  return [left, top, right, bottom, radius];
+}
+
+function roundedRectInset(y: number, top: number, bottom: number, radius: number): number {
+  if (radius === 0) return 0;
+  const cornerY = Math.min(y - top, bottom - y);
+  if (cornerY >= radius) return 0;
+  const dy = radius - cornerY;
+  return Math.ceil(radius - Math.sqrt(radius * radius - dy * dy));
+}
+
+function insideRoundedRect(
+  x: number,
+  y: number,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+  radius: number,
+): boolean {
+  if (x < left || x > right || y < top || y > bottom) return false;
+  if (radius === 0) return true;
+  const cornerX = x < left + radius
+    ? left + radius
+    : x > right - radius
+      ? right - radius
+      : x;
+  const cornerY = y < top + radius
+    ? top + radius
+    : y > bottom - radius
+      ? bottom - radius
+      : y;
+  const dx = x - cornerX;
+  const dy = y - cornerY;
+  return dx * dx + dy * dy <= radius * radius;
 }
 
 function toInt16(value: number): number {

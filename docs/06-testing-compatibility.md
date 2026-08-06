@@ -728,8 +728,9 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
 
 - Phase 2/3 已关闭项目自有 standard graphics/text 与 audio/input/persistence/current-cart profile；
   统一完成边界和 Known Differences 见 15.11–15.12。
-- timed P8SCII controls、`tline(bits)`、advanced screen/bitplane、完整 `stat()`、guest `load`、
-  external resolver 和 multicart 仍为 `partial`/`unsupported`/Deferred。
+- Phase 4D 已关闭 `tline(bits)` 的 13/16-bit bounded profile；timed P8SCII controls 是 accepted
+  partial Known Difference，advanced screen/bitplane 是 MVP 外 `unsupported`。完整 `stat()`、guest
+  `load`、external resolver 和 multicart 仍待后续 unit 决策或保持排除。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
@@ -748,15 +749,16 @@ memory/draw/sprite/map/text 组合在相同 production path 中可复现，不�
 | 行为 | Phase 2F 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
 | corpus/provenance | `graphics-memory`、`text-remap` 和 resource fault 均为项目原创；source/cart hash 锁定；无 BBS、第三方或 `ref/` dependency | gate passed | Phase 4 代表 corpus 需要独立合法授权与口径 |
-| memory/draw/sprite/map | Base RAM widths/block、draw state/primitives、draw/display palette、sprite、map/flags/tline 和 remap 在一个 60Hz flow 中通过 | `compatible`（Phase 2 project profile） | `tline(bits)` 与 advanced video mode 保持 partial/deferred |
-| P8SCII/custom font | built-in/custom/one-off/outline/raw write、cursor/default attrs、GFX/SCREEN remap 与 extended display palette 在一个 60Hz flow 中通过 | `compatible`（同步 visual profile） | synchronous audio 已由 Phase 3 关闭；timed controls 仍 Deferred |
+| memory/draw/sprite/map | Base RAM widths/block、draw state/primitives、draw/display palette、sprite、map/flags/tline 和 remap 在一个 60Hz flow 中通过 | `compatible`（Phase 2 project profile） | `tline(bits)` 已由 4D 关闭；advanced video mode 保持 MVP 外 unsupported |
+| P8SCII/custom font | built-in/custom/one-off/outline/raw write、cursor/default attrs、GFX/SCREEN remap 与 extended display palette 在一个 60Hz flow 中通过 | `compatible`（同步 visual profile） | synchronous audio 已由 Phase 3 关闭；timed controls 由 4D 接受为 partial Known Difference |
 | Node determinism | 每 cart 两个 fresh real-WASM session；每个 session cold reset；4-frame trace、screen、palette、RGBA 和列出的 RAM region exact | gate passed | oracle 变更必须人工审阅 manifest diff |
 | Chrome production path | Worker initial/reset trace 与 Node hash 一致；Canvas RGBA `17614085…a0ae` / `0db0886d…45f6` exact；无 Worker error | gate passed（Chrome 150） | Chrome 版本升级时重跑 reviewed evidence |
 | performance | graphics/text 各 20 warm-up + 120 measured；p95 均 `0.4001ms` 以下；`>16.67ms` 均 `0/120` | gate passed（≤8ms） | 不是 Phase 4 stress 或长稳 soak 的替代品 |
 | fault/recovery | 65,537-byte print → structured `E_HOST_API`；main responsive；stale generation rejected；generation `3→4` 后有效 cart 出帧 | gate passed | hard hang/watchdog 继续由 Phase 0F/1E regression 覆盖 |
 
-Phase 2 exit 时开放 P0/P1 为 `0`。Known Differences：timed P8SCII controls 不产生
-suspension，`tline(bits)` precision overload 与 advanced screen/bitplane modes deferred；
+Phase 2 exit 时开放 P0/P1 为 `0`。后续状态：timed P8SCII controls 不产生 suspension，并由 4D
+接受为 partial Known Difference；`tline(bits)` precision overload 已由 4D 关闭，advanced
+screen/bitplane modes 明确为 MVP 外 unsupported；
 未记录的 invalid/overflow edge 和未运行的官方/第三方 cart 保持 `unknown`。这些是显式范围边界，
 不升级为 official bit-exact 或第三方兼容声明。
 
@@ -815,6 +817,26 @@ host ABI 保持 38 entries。
 
 13 项 API 从 `unimplemented/unknown` 更新为 `implemented/compatible`；inventory 当前为
 implementation `89/7/8/8`、conformance `54/7/43/8`（按各自状态顺序）。4C 无开放 P0/P1。
+
+### 15.15 Phase 4D Graphics/Memory/Text Hardening 矩阵
+
+4D 以项目原创 `graphics-memory-text` cart 锁定新增 graphics 与 VM-local string surface；字符串
+值不跨 host ABI，rounded rectangle 与 `tline` hardware 语义仍由 browser-neutral RuntimeCore
+拥有。ABI 只 append `rrect/rrectfill` 为 `39..40`，既有 `1..38` 不变。
+
+| 行为 | Phase 4D 结果 | 兼容口径 | 后续边界 |
+| --- | --- | --- | --- |
+| rounded rectangles | width/height、radius clamp、outline/fill、camera/clip/palette/fillp/inversion 组合通过 | `compatible`（PICO-8 0.2.7 bounded profile） | 未记录的 invalid/fractional edge 不外推 official exact |
+| `tline(bits)` | 默认 13-bit 与 one-argument 16-bit source-coordinate 输出一致 | `compatible`（13/16-bit profile） | 不扩展 advanced video/bitplane |
+| strings | `tostr/tonum/chr/ord/split/type` 的 fixed-point flags、nil/default、embedded NUL、byte length、multi-return 与 split modes 通过 | `compatible`（manual/project vectors） | pure VM；无 string host binding |
+| memory/graphics interaction | 64 KiB wrap、overlap copy、screen remap、draw state 与 sprite/map source 组合可复现 | regression passed | canonical mapper 与 presenter ownership 不变 |
+| Node/Chrome/recovery | real-WASM 与 production Worker/Canvas 的 386-byte RAM/screen oracle、reset、budget fault/recovery exact | gate passed；Chrome 150 desktop | 项目 oracle 不等于完整官方 differential |
+
+9 项 required API 获得 `implemented/compatible`；inventory 更新为 implementation
+`92/6/6/8`、conformance `63/6/35/8`（按各自状态顺序）。timed P8SCII controls 为 accepted
+partial Known Difference，因为当前 VM/scheduler contract 没有 guest timed suspension boundary；
+advanced screen/bitplane modes 为 MVP 外 unsupported，若未来引入必须先修改 RuntimeFrame/presenter
+schema 与 ADR。4D 无开放 P0/P1。
 
 ## 16. Definition of Done
 

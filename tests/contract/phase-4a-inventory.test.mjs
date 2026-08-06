@@ -58,25 +58,34 @@ test("Phase 4 API inventory has orthogonal status dimensions and unique names", 
       inventory.apis.filter((api) => api.conformanceStatus === status).length,
     ]),
   );
-  const expectedCounts = phase.completedWorkUnits.includes("4C")
-    ? phase.workUnits["4C"].result.inventoryCounts
-    : phase.workUnits["4A"].result;
+  const latestInventoryUnit = [...phase.completedWorkUnits]
+    .reverse()
+    .find((workUnit) => phase.workUnits[workUnit].result?.inventoryCounts !== undefined);
+  const expectedCounts = latestInventoryUnit === undefined
+    ? phase.workUnits["4A"].result
+    : phase.workUnits[latestInventoryUnit].result.inventoryCounts;
   assert.deepEqual(implementationCounts, expectedCounts.implementationCounts);
   assert.deepEqual(conformanceCounts, expectedCounts.conformanceCounts);
 });
 
-test("all 38 append-only host bindings reconcile with the inventory", () => {
+test("all current append-only host bindings reconcile with the inventory", () => {
   const inventory = readJson("spec/pico-api-inventory.yaml");
   const abi = readJson("spec/abi/pico-host-api-v1.json");
+  const phase = readJson("spec/phase-4-l2-mvp-contract.json");
   const byBindingId = new Map(
     inventory.apis
       .filter(({ hostBindingId }) => hostBindingId !== undefined)
       .map((api) => [api.hostBindingId, api]),
   );
 
-  assert.equal(abi.bindings.length, 38);
+  const expectedBindings = phase.workUnits[phase.completedWorkUnits.at(-1)].result.hostAbiBindings ??
+    phase.workUnits["4A"].result.abiBindings;
+  assert.equal(abi.bindings.length, expectedBindings);
   assert.equal(byBindingId.size, abi.bindings.length);
-  assert.deepEqual(abi.bindings.map(({ id }) => id), Array.from({ length: 38 }, (_, i) => i + 1));
+  assert.deepEqual(
+    abi.bindings.map(({ id }) => id),
+    Array.from({ length: expectedBindings }, (_, i) => i + 1),
+  );
 
   for (const binding of abi.bindings) {
     const api = byBindingId.get(binding.id);

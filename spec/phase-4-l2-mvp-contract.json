@@ -9,9 +9,9 @@
     "phase3Evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md",
     "baselineCommit": "73dc57e"
   },
-  "completedWorkUnits": ["4A", "4B", "4C"],
-  "activeWorkUnit": "4D",
-  "nextWorkUnit": "4E",
+  "completedWorkUnits": ["4A", "4B", "4C", "4D"],
+  "activeWorkUnit": "4E",
+  "nextWorkUnit": "4F",
   "workUnits": {
     "4A": {
       "name": "Capability Inventory and Corpus Contract",
@@ -104,16 +104,61 @@
     },
     "4D": {
       "name": "Graphics, Memory and Text Hardening",
+      "status": "complete",
+      "result": {
+        "requiredApis": [
+          "rrect", "rrectfill", "tline", "tostr", "tonum", "chr", "ord", "split", "type"
+        ],
+        "conformanceManifest": "tests/conformance/manifests/phase-4d-graphics-memory-text.json",
+        "projectCarts": 1,
+        "observationBytes": 386,
+        "screenSha256": "9779cff8e771a60068d44fc156eb4aa85b741e268effa097af6413297e9c8592",
+        "structuredFault": "E_VM_INSTRUCTION_BUDGET",
+        "chrome": "Google Chrome 150.0.7871.189",
+        "hostAbiBindings": 40,
+        "preservedHostBindingPrefix": "1..38",
+        "runtimeWasmSha256": "1b625c2db8d02d6753476f24c38bede5cab73fb1aa63c3897823b3de1f635337",
+        "scopeDecisions": {
+          "timedP8sciiControls": "accepted-partial-known-difference",
+          "advancedScreenAndBitplaneModes": "unsupported-outside-mvp"
+        },
+        "inventoryCounts": {
+          "implementationCounts": {
+            "implemented": 92,
+            "partial": 6,
+            "unimplemented": 6,
+            "unsupported": 8
+          },
+          "conformanceCounts": {
+            "compatible": 63,
+            "partial": 6,
+            "unknown": 35,
+            "unsupported": 8
+          }
+        },
+        "verification": [
+          "pnpm run test:phase-4d",
+          "pnpm run test:phase-4d:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "4E": {
+      "name": "System, Audio, Input, Persistence and Player Integration",
       "status": "active",
-      "requiredApis": [
-        "rrect", "rrectfill", "tline", "tostr", "tonum", "chr", "ord", "split", "type"
+      "requiredApis": ["run", "stop", "assert", "reset", "flip", "time", "stat"],
+      "integrationProfiles": [
+        "audio-input-persistence-cross-flow",
+        "guest-runtime-control-and-recovery",
+        "player-lifecycle-and-resource-ownership"
       ],
       "scopeDecisions": [
-        "timed-p8scii-controls",
-        "advanced-screen-and-bitplane-modes"
+        "external-reload-cstore",
+        "nested-flip-suspension",
+        "unsupported-stat-selectors",
+        "conditional-printh-and-extcmd"
       ]
     },
-    "4E": { "name": "System, Audio, Input, Persistence and Player Integration", "status": "planned" },
     "4F": { "name": "CPU Cost, Slow-frame and Scheduler Calibration", "status": "planned" },
     "4G": { "name": "Resource Sizing and Chrome Long-run", "status": "planned" },
     "4H": { "name": "Phase 4 / L2 Exit", "status": "planned" }

@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 
 #include "lauxlib.h"
 #include "lua.h"
+#include "lobject.h"
 
 namespace p8w {
 namespace {
@@ -258,6 +260,93 @@ int pico8_sub(lua_State *state) {
   return 1;
 }
 
+uint8_t hex_digit_or_zero(unsigned char value) {
+  if (value >= '0' && value <= '9') return value - '0';
+  if (value >= 'a' && value <= 'f') return value - 'a' + 10u;
+  if (value >= 'A' && value <= 'F') return value - 'A' + 10u;
+  return 0;
+}
+
+int pico8_tonum(lua_State *state) {
+  lua_Number result;
+  switch (lua_type(state, 1)) {
+    case LUA_TSTRING: {
+      size_t length = 0;
+      const char *value = lua_tolstring(state, 1, &length);
+      const uint16_t flags = lua_isnumber(state, 2)
+                                 ? static_cast<uint16_t>(lua_tointeger(state, 2))
+                                 : 0u;
+      if ((flags & 0x1u) != 0u) {
+        uint32_t bits = 0;
+        for (size_t index = 0; index < length; ++index) {
+          bits = (bits << 4u) |
+                 hex_digit_or_zero(static_cast<unsigned char>(value[index]));
+        }
+        result = (flags & 0x2u) != 0u
+                     ? lua_Number::frombits(static_cast<int32_t>(bits))
+                     : lua_Number(static_cast<int32_t>(bits));
+      } else if ((flags & 0x2u) != 0u) {
+        const int32_t integer = static_cast<int32_t>(std::strtoll(value, nullptr, 10));
+        result = lua_Number(integer >> 16);
+      } else if (!luaO_str2d(value, length, &result)) {
+        if ((flags & 0x4u) == 0u) return 0;
+        result = lua_Number(0);
+      }
+      break;
+    }
+    case LUA_TNUMBER:
+      result = lua_tonumber(state, 1);
+      break;
+    case LUA_TBOOLEAN:
+      result = lua_Number(lua_toboolean(state, 1) ? 1 : 0);
+      break;
+    default: {
+      const uint16_t flags = lua_isnumber(state, 2)
+                                 ? static_cast<uint16_t>(lua_tointeger(state, 2))
+                                 : 0u;
+      if ((flags & 0x4u) == 0u) return 0;
+      result = lua_Number(0);
+      break;
+    }
+  }
+  lua_pushnumber(state, result);
+  return 1;
+}
+
+int pico8_ord(lua_State *state) {
+  if (lua_type(state, 1) != LUA_TSTRING) {
+    lua_pushnil(state);
+    return 1;
+  }
+  size_t length = 0;
+  const char *value = lua_tolstring(state, 1, &length);
+  if ((!lua_isnoneornil(state, 2) && !lua_isnumber(state, 2)) ||
+      (!lua_isnoneornil(state, 3) && !lua_isnumber(state, 3))) {
+    lua_pushnil(state);
+    return 1;
+  }
+  const int index = lua_isnoneornil(state, 2)
+                        ? 0
+                        : static_cast<int>(lua_tonumber(state, 2)) - 1;
+  int count = lua_isnoneornil(state, 3)
+                  ? 1
+                  : static_cast<int>(lua_tonumber(state, 3));
+  if (index < 0 || static_cast<size_t>(index) >= length || count < 1) {
+    lua_pushnil(state);
+    return 1;
+  }
+  count = std::min(count, static_cast<int>(length) - index);
+  if (!lua_checkstack(state, count)) {
+    return luaL_error(state, "ord result count exceeds the Lua stack");
+  }
+  for (int offset = 0; offset < count; ++offset) {
+    lua_pushnumber(
+        state,
+        lua_Number(static_cast<uint8_t>(value[index + offset])));
+  }
+  return count;
+}
+
 void register_function(lua_State *state, const char *name,
                        lua_CFunction function) {
   lua_pushcfunction(state, function);
@@ -281,6 +370,8 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_function(state, "all", pico8_all);
   register_function(state, "foreach", pico8_foreach);
   register_function(state, "sub", pico8_sub);
+  register_function(state, "tonum", pico8_tonum);
+  register_function(state, "ord", pico8_ord);
   register_prng_function(state, "rnd", pico8_rnd, pico_ram);
   register_prng_function(state, "srand", pico8_srand, pico_ram);
   seed_prng(pico_ram, 0);
