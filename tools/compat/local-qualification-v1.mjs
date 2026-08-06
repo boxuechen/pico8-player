@@ -109,6 +109,13 @@ export function assertSafeLocalOutputPath(outputPath, projectRoot) {
   return absoluteOutput;
 }
 
+export function assertSafeLocalObservationsPath(observationsPath, projectRoot) {
+  const absoluteRoot = resolve(projectRoot);
+  const absolutePath = resolve(observationsPath);
+  assertLocalInputPath(absoluteRoot, absolutePath, "observations", "observations");
+  return absolutePath;
+}
+
 function validateTrace(trace, label) {
   exactKeys(trace, ["mode", "ticks", "stepMilliseconds", "inputs"], label);
   if (trace.mode !== "fixed-ticks") fail("E_SCHEMA", `${label}.mode must be fixed-ticks`);
@@ -294,7 +301,21 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
   const entries = new Map();
   for (const [index, entry] of value.entries.entries()) {
     const label = `observations.entries[${index}]`;
-    exactKeys(entry, ["id", "completed", "smokeOutcome", "classification", "failureCluster", "completedTicks", "faultCode"], label);
+    exactKeys(entry, [
+      "id",
+      "completed",
+      "smokeOutcome",
+      "classification",
+      "failureCluster",
+      "completedTicks",
+      "faultCode",
+      "faultMessage",
+      "frameCount",
+      "screenSha256",
+      "nonBlackPixels",
+      "distinctColors",
+      "screenshotCaptured",
+    ], label);
     if (!ID_PATTERN.test(entry.id ?? "")) fail("E_SCHEMA", `${label}.id is invalid`);
     if (seen.has(entry.id)) fail("E_DUPLICATE_ID", `${entry.id} appears more than once in observations`);
     seen.add(entry.id);
@@ -332,6 +353,25 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       fail("E_FAILURE_CLUSTER", `${label} must not attach a failure cluster to C2/C3/CU`);
     }
     if (entry.faultCode !== undefined) requiredString(entry.faultCode, `${label}.faultCode`, 128);
+    if (entry.faultMessage !== undefined) requiredString(entry.faultMessage, `${label}.faultMessage`, 512);
+    for (const [field, maximum] of [
+      ["frameCount", 36_000],
+      ["nonBlackPixels", 16_384],
+      ["distinctColors", 256],
+    ]) {
+      if (entry[field] !== undefined
+        && (!Number.isInteger(entry[field]) || entry[field] < 0 || entry[field] > maximum)) {
+        fail("E_OBSERVATION", `${label}.${field} must be an integer from 0 to ${maximum}`);
+      }
+    }
+    if (entry.screenSha256 !== undefined
+      && entry.screenSha256 !== null
+      && !SHA256_PATTERN.test(entry.screenSha256)) {
+      fail("E_OBSERVATION", `${label}.screenSha256 is invalid`);
+    }
+    if (entry.screenshotCaptured !== undefined && typeof entry.screenshotCaptured !== "boolean") {
+      fail("E_OBSERVATION", `${label}.screenshotCaptured must be boolean`);
+    }
     entries.set(entry.id, {
       id: entry.id,
       completed: entry.completed,
@@ -340,6 +380,13 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       failureCluster: entry.failureCluster,
       completedTicks: entry.completedTicks,
       ...(entry.faultCode === undefined ? {} : { faultCode: entry.faultCode }),
+      ...(entry.frameCount === undefined ? {} : { frameCount: entry.frameCount }),
+      ...(entry.screenSha256 === undefined ? {} : { screenSha256: entry.screenSha256 }),
+      ...(entry.nonBlackPixels === undefined ? {} : { nonBlackPixels: entry.nonBlackPixels }),
+      ...(entry.distinctColors === undefined ? {} : { distinctColors: entry.distinctColors }),
+      ...(entry.screenshotCaptured === undefined ? {} : {
+        screenshotCaptured: entry.screenshotCaptured,
+      }),
     });
   }
   return { environment, entries };
@@ -392,6 +439,19 @@ export async function buildLocalQualificationReport({
       classification: observation.classification,
       failureCluster: observation.failureCluster,
       ...(observation.faultCode === undefined ? {} : { faultCode: observation.faultCode }),
+      ...(observation.frameCount === undefined ? {} : { frameCount: observation.frameCount }),
+      ...(observation.screenSha256 === undefined ? {} : {
+        screenSha256: observation.screenSha256,
+      }),
+      ...(observation.nonBlackPixels === undefined ? {} : {
+        nonBlackPixels: observation.nonBlackPixels,
+      }),
+      ...(observation.distinctColors === undefined ? {} : {
+        distinctColors: observation.distinctColors,
+      }),
+      ...(observation.screenshotCaptured === undefined ? {} : {
+        screenshotCaptured: observation.screenshotCaptured,
+      }),
     };
   });
   const completedCaseCount = entries.filter(({ completed }) => completed).length;

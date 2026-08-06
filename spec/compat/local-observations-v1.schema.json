@@ -63,7 +63,16 @@
           ]
         },
         "completedTicks": { "type": "integer", "minimum": 0, "maximum": 36000 },
-        "faultCode": { "type": "string", "minLength": 1, "maxLength": 128 }
+        "faultCode": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "faultMessage": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "frameCount": { "type": "integer", "minimum": 0, "maximum": 36000 },
+        "screenSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "nonBlackPixels": { "type": "integer", "minimum": 0, "maximum": 16384 },
+        "distinctColors": { "type": "integer", "minimum": 0, "maximum": 256 },
+        "screenshotCaptured": { "type": "boolean" }
       }
     }
   }

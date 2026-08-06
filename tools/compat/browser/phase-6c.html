@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phase 6C local real-cart baseline</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #111827; }
+      #shell { display: grid; gap: 8px; padding: 16px; background: #030712; }
+      canvas { width: 512px; height: 512px; image-rendering: pixelated; }
+      output, pre { margin: 0; max-width: 512px; font: 14px/1.4 monospace; }
+    </style>
+  </head>
+  <body data-status="loading">
+    <main id="shell" aria-label="PICO-8 qualification player"></main>
+    <script type="module" src="./phase-6c.mjs"></script>
+  </body>
+</html>

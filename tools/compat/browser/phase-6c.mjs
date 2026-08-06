@@ -1,0 +1,173 @@
+import {
+  PlayerComposition,
+  PlayerController,
+} from "/apps/web-player/dist/main/main.js";
+import { failureClusterForFault } from "../failure-clusters-v1.mjs";
+
+const shell = document.querySelector("#shell");
+let mounted;
+
+function decodeBase64(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+const KEY_CODES = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyZ", "KeyX"];
+
+function applyInput(event) {
+  if (event.player !== 0) throw new Error("Phase 6C Chrome baseline supports player 0 traces only");
+  window.dispatchEvent(new KeyboardEvent(event.pressed ? "keydown" : "keyup", {
+    code: KEY_CODES[event.button],
+    bubbles: true,
+    cancelable: true,
+  }));
+}
+
+class ManualAnimationFrames {
+  #callback;
+  #handle = 0;
+
+  request(callback) {
+    if (this.#callback !== undefined) throw new Error("animation callback already pending");
+    const handle = ++this.#handle;
+    this.#callback = { handle, callback };
+    return handle;
+  }
+
+  cancel(handle) {
+    if (this.#callback?.handle === handle) this.#callback = undefined;
+  }
+
+  async fire(timestamp, state) {
+    const pending = this.#callback;
+    if (pending === undefined) throw new Error("animation callback is not scheduled");
+    this.#callback = undefined;
+    pending.callback(timestamp);
+    const deadline = performance.now() + 15_000;
+    while (this.#callback === undefined && state() === "running") {
+      if (performance.now() > deadline) throw new Error("animation callback did not settle");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+}
+
+function elements() {
+  const canvas = document.createElement("canvas");
+  canvas.setAttribute("aria-label", "PICO-8 playfield");
+  const status = document.createElement("output");
+  const diagnostic = document.createElement("pre");
+  shell.replaceChildren(status, diagnostic, canvas);
+  return { root: shell, canvas, status, diagnostic };
+}
+
+async function screenTelemetry(canvas, hasFrame) {
+  if (!hasFrame) {
+    return { screenSha256: null, nonBlackPixels: 0, distinctColors: 0 };
+  }
+  const pixels = canvas.getContext("2d").getImageData(0, 0, 128, 128).data;
+  const digest = await crypto.subtle.digest("SHA-256", pixels);
+  const screenSha256 = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0")).join("");
+  const colors = new Set();
+  let nonBlackPixels = 0;
+  for (let offset = 0; offset < pixels.length; offset += 4) {
+    const color = `${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`;
+    colors.add(color);
+    if (pixels[offset] !== 0 || pixels[offset + 1] !== 0 || pixels[offset + 2] !== 0) {
+      nonBlackPixels += 1;
+    }
+  }
+  return { screenSha256, nonBlackPixels, distinctColors: colors.size };
+}
+
+function faultCode(diagnostic, fallback) {
+  return /^E_[A-Z0-9_]+/u.exec(diagnostic)?.[0] ?? fallback;
+}
+
+async function dispose() {
+  if (mounted === undefined) return;
+  await mounted.controller.dispose();
+  mounted.removeRuntimeListener();
+  mounted = undefined;
+}
+
+async function runCase(payloadBase64, trace) {
+  await dispose();
+  const animationFrames = new ManualAnimationFrames();
+  const playerElements = elements();
+  const composition = await PlayerComposition.create({
+    canvas: playerElements.canvas,
+    runtimeWorkerFactory: () => new Worker(
+      "/apps/web-player/dist/browser/player-worker.mjs",
+      { type: "module" },
+    ),
+    commandTimeoutMs: 15_000,
+  });
+  const controller = new PlayerController(composition, playerElements, {
+    animationFrames,
+    window,
+    document,
+  });
+  let completedTicks = 0;
+  let frameCount = 0;
+  let firstFault;
+  const removeRuntimeListener = composition.runtime.onEvent((event) => {
+    if (event.type === "heartbeat") completedTicks += event.tickCount;
+    if (event.type === "frame") frameCount += 1;
+    if (event.type === "fault" && firstFault === undefined) firstFault = event.error;
+  });
+  mounted = { controller, removeRuntimeListener };
+
+  try {
+    await controller.loadCart(decodeBase64(payloadBase64), "local qualification cart");
+  } catch (error) {
+    if (controller.state !== "faulted") throw error;
+  }
+  if (controller.state === "ready") await controller.start();
+
+  let timestamp = performance.now();
+  let nextInputIndex = 0;
+  let pulseCount = 0;
+  const maximumPulses = trace.ticks * 4 + 10;
+  while (controller.state === "running"
+    && completedTicks < trace.ticks
+    && pulseCount < maximumPulses) {
+    while (trace.inputs[nextInputIndex]?.tick <= completedTicks) {
+      applyInput(trace.inputs[nextInputIndex]);
+      nextInputIndex += 1;
+    }
+    timestamp += trace.stepMilliseconds;
+    await animationFrames.fire(timestamp, () => controller.state);
+    pulseCount += 1;
+  }
+  if (controller.state === "running" && completedTicks < trace.ticks) {
+    throw new Error("Chrome trace driver did not reach the requested logical tick count");
+  }
+  if (controller.state === "running") await controller.pause();
+
+  const diagnostic = playerElements.diagnostic.textContent ?? "";
+  let code = firstFault?.code ?? faultCode(diagnostic, "E_FRAME_MISSING");
+  const boots = completedTicks >= trace.ticks && frameCount > 0
+    && (controller.state === "paused" || controller.state === "running");
+  if (!boots && code === "E_FRAME_MISSING" && controller.state === "stopped") {
+    code = "E_CART_STOPPED";
+  }
+  const telemetry = await screenTelemetry(playerElements.canvas, frameCount > 0);
+  return {
+    completed: true,
+    smokeOutcome: boots ? "boots" : "fails",
+    classification: boots ? "CU" : "C0",
+    failureCluster: boots ? null : failureClusterForFault(code),
+    completedTicks: Math.min(completedTicks, trace.ticks),
+    ...(boots ? {} : { faultCode: code, faultMessage: diagnostic.slice(0, 512) || code }),
+    frameCount,
+    ...telemetry,
+    screenshotCaptured: false,
+  };
+}
+
+globalThis.__phase6cRunCase = runCase;
+globalThis.__phase6cDispose = dispose;
+document.body.dataset.status = "ready";

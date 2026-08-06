@@ -76,9 +76,9 @@
       "durationOrTrace"
     ]
   },
-  "completedWorkUnits": ["6A", "6B"],
-  "activeWorkUnit": "6C",
-  "nextWorkUnit": "6D",
+  "completedWorkUnits": ["6A", "6B", "6C"],
+  "activeWorkUnit": "6D",
+  "nextWorkUnit": "6E",
   "workUnits": {
     "6A": {
       "name": "Activation / Corpus Policy",
@@ -138,7 +138,7 @@
     },
     "6C": {
       "name": "Twelve-cart Baseline",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tools/compat/",
         "tests/compat/",
@@ -158,11 +158,68 @@
         "the local path-redacted report remains ignored and only a non-public aggregate is folded into the phase contract",
         "no production compatibility fix is made in 6C",
         "6C result is folded into the machine contract and 6D becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "localCases": 12,
+        "completedObservations": 12,
+        "smokeOutcomes": { "boots": 6, "fails": 6 },
+        "classifications": { "C0": 6, "C1": 0, "C2": 0, "C3": 0, "CU": 6 },
+        "failureClusters": { "parse": 1, "language": 4, "timing": 1 },
+        "environment": {
+          "playerCommit": "816b96add6e168aa07c3d8fa720bd7652265b8d9",
+          "runtimeWasmSha256": "85f180146cd16577b8a0a0c57143f74a8befddbfa5b1676146b78a9cf2070283",
+          "chromeVersion": "Google Chrome 150.0.7871.189",
+          "fixedTicksPerCase": 120
+        },
+        "triageSurfaces": [
+          "future-cart-version-outside-v0.2.7-target",
+          "legacy-stat-20-note-query",
+          "lua-unpack-global",
+          "menuitem-registration",
+          "implicit-cpu-slicing",
+          "p8scii-source-token"
+        ],
+        "localScreenshotsCaptured": 12,
+        "representativeVisualCasesReviewed": 5,
+        "thirdPartyBytesTracked": false,
+        "thirdPartyScreenshotsTracked": false,
+        "publicDenominatorContribution": 0,
+        "compatibilityRateClaimed": false,
+        "verification": [
+          "pnpm run test:phase-6c",
+          "pnpm run test:phase-6c:chrome",
+          "local-only: qualification:phase-6c:local + qualification:local"
+        ]
+      }
     },
     "6D": {
       "name": "stat(20) Compatibility",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "packages/runtime-core/src/audio/sfx-synth.ts",
+        "packages/runtime-core/src/pico-api/pico-api-host.ts",
+        "wasm/bridge/p8w_frame_runtime.cpp",
+        "wasm/runtime-v1.manifest.lock.json",
+        "spec/pico-api-inventory.yaml",
+        "tests/runtime/phase-6d-stat20.test.mjs",
+        "tests/compat/",
+        "tools/compat/",
+        "tests/architecture/",
+        "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/6-real-cart-qualification.md",
+        "spec/phase-6-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "stat(20) returns the legacy channel-0 current note number as a P8 number and returns -1 while the channel is inactive",
+        "the value is derived from authoritative deterministic AudioSynth state without reading AudioContext, device mixer or host wall clock",
+        "a project-authored real-WASM regression covers idle, active note progression, stop and reset while all existing stat selectors remain unchanged",
+        "the project Chrome gate and the affected local external case complete their fixed traces without a boolean arithmetic fault",
+        "the API inventory and published selector-subset known difference are narrowed without claiming all legacy audio selectors",
+        "pnpm run verify passes and 6E becomes the only active work unit"
+      ]
     },
     "6E": {
       "name": "menuitem Boundary",
