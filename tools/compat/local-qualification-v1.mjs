@@ -25,6 +25,7 @@ const ID_PATTERN = /^[a-z0-9][a-z0-9._/-]{0,127}$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const PLAYER_COMMIT_PATTERN = /^[a-f0-9]{7,40}$/u;
 const CHROME_VERSION_PATTERN = /^(Google Chrome|Chromium) [0-9]/u;
+const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u;
 const MAXIMUM_CART_BYTES = 1024 * 1024;
 const MAXIMUM_CASES = 64;
 
@@ -279,6 +280,88 @@ function validateEnvironment(environment) {
   };
 }
 
+function validatePlayability(playability, label) {
+  exactKeys(playability, [
+    "gate",
+    "durationSeconds",
+    "criticalFlow",
+    "criticalFlowCompleted",
+    "mainVerbs",
+    "input",
+    "visual",
+    "audio",
+    "persistence",
+    "crashFree",
+    "softLockFree",
+    "reviewedAt",
+    "reviewer",
+    "evidenceSha256",
+  ], label);
+  if (!["duration", "critical-flow"].includes(playability.gate)) {
+    fail("E_PLAYABILITY", `${label}.gate is invalid`);
+  }
+  if (!Number.isInteger(playability.durationSeconds)
+    || playability.durationSeconds < 0
+    || playability.durationSeconds > 36_000) {
+    fail("E_PLAYABILITY", `${label}.durationSeconds must be 0..36000`);
+  }
+  requiredString(playability.criticalFlow, `${label}.criticalFlow`, 512);
+  if (typeof playability.criticalFlowCompleted !== "boolean") {
+    fail("E_PLAYABILITY", `${label}.criticalFlowCompleted must be boolean`);
+  }
+  if (!Array.isArray(playability.mainVerbs)
+    || playability.mainVerbs.length < 1
+    || playability.mainVerbs.length > 16) {
+    fail("E_PLAYABILITY", `${label}.mainVerbs must contain 1..16 items`);
+  }
+  const mainVerbs = playability.mainVerbs.map((verb, index) =>
+    requiredString(verb, `${label}.mainVerbs[${index}]`, 128));
+  if (!["pass", "not-applicable"].includes(playability.input)) {
+    fail("E_PLAYABILITY", `${label}.input is invalid`);
+  }
+  if (!["pass", "known-minor-difference"].includes(playability.visual)) {
+    fail("E_PLAYABILITY", `${label}.visual is invalid`);
+  }
+  if (!["pass", "known-minor-difference", "not-applicable"].includes(playability.audio)) {
+    fail("E_PLAYABILITY", `${label}.audio is invalid`);
+  }
+  if (!["pass", "not-applicable"].includes(playability.persistence)) {
+    fail("E_PLAYABILITY", `${label}.persistence is invalid`);
+  }
+  if (playability.crashFree !== true || playability.softLockFree !== true) {
+    fail("E_PLAYABILITY", `${label} must be crash-free and soft-lock-free`);
+  }
+  if (!REVIEWED_AT_PATTERN.test(playability.reviewedAt ?? "")) {
+    fail("E_PLAYABILITY", `${label}.reviewedAt must be an ISO UTC timestamp`);
+  }
+  requiredString(playability.reviewer, `${label}.reviewer`, 128);
+  if (!SHA256_PATTERN.test(playability.evidenceSha256 ?? "")) {
+    fail("E_PLAYABILITY", `${label}.evidenceSha256 is invalid`);
+  }
+  if (playability.gate === "duration" && playability.durationSeconds < 900) {
+    fail("E_PLAYABILITY", `${label} duration gate requires at least 900 seconds`);
+  }
+  if (playability.gate === "critical-flow" && !playability.criticalFlowCompleted) {
+    fail("E_PLAYABILITY", `${label} critical-flow gate must be complete`);
+  }
+  return {
+    gate: playability.gate,
+    durationSeconds: playability.durationSeconds,
+    criticalFlow: playability.criticalFlow,
+    criticalFlowCompleted: playability.criticalFlowCompleted,
+    mainVerbs,
+    input: playability.input,
+    visual: playability.visual,
+    audio: playability.audio,
+    persistence: playability.persistence,
+    crashFree: true,
+    softLockFree: true,
+    reviewedAt: playability.reviewedAt,
+    reviewer: playability.reviewer,
+    evidenceSha256: playability.evidenceSha256,
+  };
+}
+
 export async function loadLocalObservations({ observationsPath, projectRoot }) {
   const absoluteRoot = resolve(projectRoot);
   const unresolved = resolve(observationsPath);
@@ -315,6 +398,7 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       "nonBlackPixels",
       "distinctColors",
       "screenshotCaptured",
+      "playability",
     ], label);
     if (!ID_PATTERN.test(entry.id ?? "")) fail("E_SCHEMA", `${label}.id is invalid`);
     if (seen.has(entry.id)) fail("E_DUPLICATE_ID", `${entry.id} appears more than once in observations`);
@@ -372,6 +456,15 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
     if (entry.screenshotCaptured !== undefined && typeof entry.screenshotCaptured !== "boolean") {
       fail("E_OBSERVATION", `${label}.screenshotCaptured must be boolean`);
     }
+    const playability = entry.playability === undefined
+      ? undefined
+      : validatePlayability(entry.playability, `${label}.playability`);
+    if (entry.classification === "C2" && playability === undefined) {
+      fail("E_PLAYABILITY", `${label} C2 requires reviewed playability evidence`);
+    }
+    if (entry.classification !== "C2" && playability !== undefined) {
+      fail("E_PLAYABILITY", `${label} playability evidence is reserved for C2`);
+    }
     entries.set(entry.id, {
       id: entry.id,
       completed: entry.completed,
@@ -387,6 +480,7 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       ...(entry.screenshotCaptured === undefined ? {} : {
         screenshotCaptured: entry.screenshotCaptured,
       }),
+      ...(playability === undefined ? {} : { playability }),
     });
   }
   return { environment, entries };
@@ -451,6 +545,9 @@ export async function buildLocalQualificationReport({
       }),
       ...(observation.screenshotCaptured === undefined ? {} : {
         screenshotCaptured: observation.screenshotCaptured,
+      }),
+      ...(observation.playability === undefined ? {} : {
+        playability: observation.playability,
       }),
     };
   });

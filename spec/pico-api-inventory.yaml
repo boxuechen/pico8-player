@@ -66,6 +66,7 @@
     { "name": "count", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
     { "name": "all", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
     { "name": "foreach", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/conformance/manifests/phase-4c-core-library.json" },
+    { "name": "unpack", "category": "table", "surface": "vm-builtin", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/runtime/phase-6g-language-compat.test.mjs", "note": "global alias of VM-local table.unpack with default/ranged/empty/nil-hole multi-return coverage" },
     { "name": "pairs", "category": "table", "surface": "lua-global", "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "unknown" },
 
     { "name": "btn", "category": "input", "surface": "host-binding", "hostBindingId": 3, "mvpDisposition": "required", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "docs/evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md" },

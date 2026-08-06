@@ -76,9 +76,9 @@
       "durationOrTrace"
     ]
   },
-  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E", "6F"],
-  "activeWorkUnit": "6G",
-  "nextWorkUnit": "6H",
+  "completedWorkUnits": ["6A", "6B", "6C", "6D", "6E", "6F", "6G"],
+  "activeWorkUnit": "6H",
+  "nextWorkUnit": null,
   "workUnits": {
     "6A": {
       "name": "Activation / Corpus Policy",
@@ -386,7 +386,7 @@
     },
     "6G": {
       "name": "Chrome Playability Pass",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/p8w_pico8_compat.cpp",
         "wasm/bridge/p8w_pico8_compat.h",
@@ -396,6 +396,7 @@
         "tests/runtime/phase-6g-language-compat.test.mjs",
         "tests/compat/",
         "tests/conformance/local-observations.example.json",
+        "tests/contract/phase-4a-inventory.test.mjs",
         "tools/compat/",
         "tests/architecture/",
         "docs/03-z8lua-wasm-bridge.md",
@@ -413,11 +414,85 @@
         "all in-profile local cases complete the Chrome smoke trace and the full local aggregate is rerun with no open P0 or P1 issue",
         "at least three representative local cases satisfy the C2 manual gate through fifteen minutes of play or a completed critical flow, with input, audiovisual, persistence and environment/hash observations retained only in ignored local evidence",
         "pnpm run verify passes and 6H becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "languageCompatibility": {
+          "globalUnpack": true,
+          "unpackSemantics": "default/ranged/empty/nil-hole/multi-return",
+          "p8sciiSourceGlobals": 26,
+          "p8sciiNames": "single raw bytes 0x80..0x99",
+          "p8sciiValues": "official PICO-8 Q16.16 raw bit patterns"
+        },
+        "runtimeWasmSha256": "747bb6ae2d4fbe9bfff14ec90e5193826f181ff0068c2d00c34859f89bd341b9",
+        "projectNodeCases": 4,
+        "projectChromeCases": 12,
+        "framesPerProjectChromeCase": 120,
+        "localSmokeRerun": {
+          "cases": 12,
+          "inProfileCases": 11,
+          "inProfileBoots": 11,
+          "outOfProfileCases": 1,
+          "outOfProfileDisposition": "future cart version rejected by the v0.2.7 parser gate"
+        },
+        "manualPlayability": {
+          "C2Cases": 3,
+          "criticalFlowCases": 2,
+          "durationGateCases": 1,
+          "durationGateSeconds": 900,
+          "maximumLogicalFrames": 27000,
+          "persistenceCases": 1,
+          "localEvidenceSha256": "55f5f8cbf6a53516f3f4c5e810b0cda2c1102812a3fa49565c10a5499a31da1"
+        },
+        "finalLocalClassifications": {
+          "C0": 1,
+          "C1": 0,
+          "C2": 3,
+          "C3": 0,
+          "CU": 8
+        },
+        "openP0": 0,
+        "openP1": 0,
+        "environment": {
+          "playerBaseCommit": "46d3c318ebcc59a400f9e704769466c68ce379d4",
+          "runtimeWasmSha256": "747bb6ae2d4fbe9bfff14ec90e5193826f181ff0068c2d00c34859f89bd341b9",
+          "chromeVersion": "Google Chrome 150.0.7871.189"
+        },
+        "thirdPartyBytesTracked": false,
+        "thirdPartyScreenshotsTracked": false,
+        "publicDenominatorContribution": 0,
+        "compatibilityRateClaimed": false,
+        "verification": [
+          "pnpm run test:phase-6g",
+          "pnpm run test:phase-6g:chrome",
+          "local-only 12-cart Chrome rerun and 3-case manual review",
+          "pnpm run verify"
+        ]
+      }
     },
     "6H": {
       "name": "Qualification Exit / Report",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "tests/conformance/manifests/phase-6h-exit.json",
+        "tests/conformance/phase-6h-exit.test.mjs",
+        "tests/contract/phase-6a-activation.test.mjs",
+        "tests/architecture/",
+        "docs/evidence/phase-6/",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/6-real-cart-qualification.md",
+        "spec/phase-6-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "a project-owned exit manifest records only aggregate qualification claims and hash-locked project artifacts, never third-party cart identity, path, bytes, screenshots or per-cart results",
+        "the exit test proves all twelve local cases have a C-star disposition, at least three are C2, the sole future-version case remains explicitly out of profile and open P0/P1 counts are zero",
+        "the final report distinguishes fixed-trace boot coverage from manual playability and publishes no third-party compatibility percentage",
+        "the Phase 6 machine contract and roadmap are closed, immutable evidence is archived, and the completed phase document is removed from the active documentation route",
+        "pnpm run verify passes, the Phase 6 exit is committed independently, and the repository is clean"
+      ]
     }
   },
   "phaseExitGate": {

@@ -72,7 +72,56 @@
         },
         "nonBlackPixels": { "type": "integer", "minimum": 0, "maximum": 16384 },
         "distinctColors": { "type": "integer", "minimum": 0, "maximum": 256 },
-        "screenshotCaptured": { "type": "boolean" }
+        "screenshotCaptured": { "type": "boolean" },
+        "playability": { "$ref": "#/$defs/playability" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "classification": { "const": "C2" } } },
+          "then": { "required": ["playability"] },
+          "else": { "not": { "required": ["playability"] } }
+        }
+      ]
+    },
+    "playability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gate",
+        "durationSeconds",
+        "criticalFlow",
+        "criticalFlowCompleted",
+        "mainVerbs",
+        "input",
+        "visual",
+        "audio",
+        "persistence",
+        "crashFree",
+        "softLockFree",
+        "reviewedAt",
+        "reviewer",
+        "evidenceSha256"
+      ],
+      "properties": {
+        "gate": { "enum": ["duration", "critical-flow"] },
+        "durationSeconds": { "type": "integer", "minimum": 0, "maximum": 36000 },
+        "criticalFlow": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "criticalFlowCompleted": { "type": "boolean" },
+        "mainVerbs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+        },
+        "input": { "enum": ["pass", "not-applicable"] },
+        "visual": { "enum": ["pass", "known-minor-difference"] },
+        "audio": { "enum": ["pass", "known-minor-difference", "not-applicable"] },
+        "persistence": { "enum": ["pass", "not-applicable"] },
+        "crashFree": { "const": true },
+        "softLockFree": { "const": true },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "reviewer": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "evidenceSha256": { "$ref": "#/$defs/sha256" }
       }
     }
   }

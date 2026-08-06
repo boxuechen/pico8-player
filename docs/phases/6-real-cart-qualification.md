@@ -1,6 +1,6 @@
 # Phase 6 — Real-cart Qualification
 
-> 状态：Active；6A–6F complete，6G active
+> 状态：Active；6A–6G complete，6H active
 > 机器合同：[`spec/phase-6-real-cart-qualification-contract.json`](../../spec/phase-6-real-cart-qualification-contract.json)
 > 浏览器门禁：Google Chrome / Chromium desktop only
 > 前置证据：[Phase 5 L3 local/multicart exit](../evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)
@@ -38,8 +38,8 @@ external corpus 变成 CI 依赖；不扩大到 Firefox/WebKit、任意 URL、�
 | 6D `stat(20)` Compatibility | Complete | affected case 恢复；local baseline 变为 7 boots/CU、5 fails/C0 |
 | 6E `menuitem()` Boundary | Complete | VM-local 五槽 registration；UI/invocation 为 `P6-KD-01` |
 | 6F CPU Slicing Spike / Decision | Complete | root-safe implicit frame；ADR-022；affected case 恢复 |
-| 6G Chrome Playability Pass | **Active** | residual language compatibility + 至少 3 个 C2 manual gate |
-| 6H Qualification Exit / Report | Pending | aggregate exit |
+| 6G Chrome Playability Pass | Complete | `unpack`、26 个 raw P8SCII globals、11/11 in-profile boots、3 个 C2 |
+| 6H Qualification Exit / Report | **Active** | aggregate-only exit、evidence 与文档关闭 |
 
 ## 6A closure
 
@@ -99,42 +99,48 @@ production WASM SHA-256 为
 `4e2bd6f80f7e94d23e5e82dbc6133536028db8e40991e6b0ece82e80acbc24b3`。验证入口是
 `pnpm run test:phase-6f`、`pnpm run test:phase-6f:chrome` 与 `pnpm run verify`。
 
-## Active work unit：6G Chrome Playability Pass
+## 6G closure
+
+6G 在 VM compatibility boundary 注册全局 `unpack` 和 26 个单字节 P8SCII source globals；值按
+官方 Q16.16 raw bit pattern 写入，不经 UTF-8。原创 Node 4-case 与 Chrome 12×120 帧回归通过，
+production WASM SHA-256 为
+`747bb6ae2d4fbe9bfff14ec90e5193826f181ff0068c2d00c34859f89bd341b9`。完整 ignored corpus 中
+11/11 个 v0.2.7 in-profile case 启动，唯一 future-version case 保持 C0 scope disposition；两条完整
+关键流程和一条 900 秒/27000 帧 duration gate 形成 3 个 C2，本地 evidence SHA-256 为
+`55f5f8cbf6a53516f3f4c5e810b0cda2c1102812a3fa49565c10a5499a31da1`。最终本地分类为
+`C0=1, C2=3, CU=8`，开放 P0/P1 为 0；第三方 bytes、截图和逐-cart 结果未跟踪，公开分母仍为 0。
+验证入口是 `pnpm run test:phase-6g`、`pnpm run test:phase-6g:chrome` 与 `pnpm run verify`。
+
+## Active work unit：6H Qualification Exit / Report
 
 ### Observable behavior
 
-1. 只处理 6C/6F rerun 后仍属于 v0.2.7 target 的两个通用 language cluster：Lua global
-   `unpack(table[, i[, j]])` 与官方 P8SCII source constants。不得根据 cart ID、hash 或源码片段分支。
-2. P8SCII 全局名按 raw byte 注册，值保持 PICO-8 Q16.16 bit pattern；不能经过 UTF-8 名称转换。
-   `unpack` 必须覆盖默认范围、显式 `i/j`、空范围、nil hole 和多返回值。
-3. future-version cart 继续按 v0.2.7 scope fail closed；不可放宽版本检查来改善本地 aggregate。
-4. 完整本地 corpus 在 production Chrome path 重跑；所有 in-profile case 必须通过 fixed smoke trace，
-   开放 P0/P1 为 0。第三方 bytes、截图、路径和逐-cart 结果仍只存在于 gitignored local evidence。
-5. 至少选择 3 个代表 case 完成 C2 manual gate：每个满足“15 分钟 play”或“完整关键流程”之一，
-   并记录输入、画面、音频、存档观察以及 player/runtime/cart/Chrome identity；boots 不能冒充 C2。
+1. 建立 project-owned exit manifest，只写 aggregate qualification、project artifact hash 与本地 evidence
+   hash；不得写入第三方 cart ID、hash、路径、截图、逐-cart 结果或成功率。
+2. 自动化证明 12 个 case 均有 C* disposition、至少 3 个 C2、唯一 future-version case 明确 out-of-profile，
+   且开放 P0/P1 为 0；fixed smoke coverage 与 manual playability 必须分开表达。
+3. 归档 Phase 6 不可变 evidence，关闭机器合同与 roadmap；完成后删除本 phase 执行文档并从默认
+   开工入口移除，不擅自激活下一 phase。
 
 ### Allowed files
 
-精确允许路径由机器合同 `workUnits.6G.allowedPaths` 控制。通用 VM compatibility 只进入现有
-`p8w_pico8_compat` boundary；qualification schema/tool 只管理脱敏 observation。不得修改 cart bytes、
-parser version gate，或增加 network/Worker/Main/DOM capability。external bytes 和 `ref/` 仍不进入
-测试或构建。
+精确允许路径由机器合同 `workUnits.6H.allowedPaths` 控制。本单元只允许 exit contract、测试、
+evidence 与 living documentation，不再修改 production runtime。external bytes、逐-cart observation
+和 `ref/` 仍不进入测试、构建或 tracked evidence。
 
 ### Tests
 
-- Proposed：`pnpm run test:phase-6g`
-- Proposed：`pnpm run test:phase-6g:chrome`
-- local-only：完整 12-cart smoke rerun + 至少 3 个 C2 manual observations
+- Proposed：`pnpm run test:phase-6h`
+- `pnpm run test:phase-6a`
 - `pnpm run test:architecture`
 - 最终必须运行 `pnpm run verify`
 
 ### Exit gate
 
-- `unpack` 与 P8SCII constants 有原创 real-WASM/Chrome regression，且实现不读取 `ref/`。
-- 完整 local rerun 中所有 in-profile case 启动；future-version case 保持明确 scope disposition。
-- 至少 3 个 case 有满足 C2 定义的本地手工证据，且开放 P0/P1 为 0。
-- repository 仍不跟踪第三方 cart/screenshot，不发布逐-cart 结果或兼容率。
-- `pnpm run verify` 通过；6G 结果折叠入机器合同，6H 成为唯一 active work unit，并独立提交。
+- exit manifest/test 锁定 aggregate、project hashes、C2 数量、scope disposition 与零 P0/P1。
+- repository 不跟踪第三方 cart/screenshot/逐-cart 结果，也不发布第三方兼容率。
+- evidence、机器合同、roadmap 和默认文档路由一致关闭；没有 active phase 被隐式创建。
+- `pnpm run verify` 通过；Phase 6H 独立提交且 repository clean。
 
 ## Phase exit gate
 

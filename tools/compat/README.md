@@ -27,5 +27,11 @@ The CLI writes a new file only; it does not overwrite an existing report. Exit c
 manifest case has a complete observation, `2` means the report was written but has an incomplete case, and `1`
 means the input or output policy failed. Reports omit cart paths, source URLs and permission free text.
 
+A `C2` entry is not accepted from the smoke result alone. Add the `playability` object only after a
+structured Chrome pass has satisfied either the 900-second duration gate or a complete critical flow.
+The object records bounded input/visual/audio/persistence conclusions and the SHA-256 of ignored local
+evidence; the runner rejects missing evidence, failed gates, crash/soft-lock claims, and evidence attached
+to a non-C2 entry.
+
 The versioned input/output contracts live in `spec/compat/`. The Phase 6 contract, not the example
 files, owns the current minimum case count and browser gate.

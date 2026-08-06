@@ -25,7 +25,10 @@ test("Phase 4 API inventory has orthogonal status dimensions and unique names", 
 
   assert.equal(inventory.schemaVersion, 2);
   assert.equal(inventory.target, "pico-8-v0.2.7-player");
-  assert.equal(inventory.apis.length, phase.workUnits["4A"].result.apiCount);
+  assert.ok(
+    inventory.apis.length >= phase.workUnits["4A"].result.apiCount,
+    "living API inventory cannot drop entries from the closed Phase 4 baseline",
+  );
   assert.equal(new Set(names).size, names.length, "API names must be unique");
 
   for (const api of inventory.apis) {

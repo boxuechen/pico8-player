@@ -377,12 +377,16 @@ Lua string 是带显式长度的 byte sequence，允许内嵌 `\0`：
 - TS → Lua 通过 bridge-owned result buffer copy，且必须有长度/容量检查。超限返回结构化 host error，禁止截断。
 - Runtime 语义层保持 `Uint8Array`；只有 diagnostic/UI boundary 可以用 replacement decoding 转为 Unicode。
 - cart source 也以原始 bytes + length 进入 `p8w_compile()`，禁止先 JS decode 再 `TextEncoder` round-trip。
+- P8SCII `0x80..0x99` 的六个 button-name globals 与二十个 fill-pattern globals 在 `_G` 中以
+  单个 raw-byte key 注册；值直接使用已锁定的 signed Q16.16 bit pattern，禁止把名称先转为
+  UTF-8/Unicode。完整 26 项由 Phase 6G real-WASM test 固定。
 
 ### 8.3 Table、function 与 multi-return
 
 table、function、userdata 和 coroutine handle **MUST NOT** 直接跨 JS/WASM：
 
-- `rnd(table)`、`add/del/deli/all/foreach`、coroutine aliases 等 Lua-semantic API 留在 z8lua/C/Lua glue。
+- `rnd(table)`、`add/del/deli/all/foreach`、global `unpack`、coroutine aliases 等 Lua-semantic API
+  留在 z8lua/C/Lua glue。`unpack` 是 VM-local `table.unpack` 的同一函数，不跨 host ABI。
 - Host-facing API 先在 wrapper 中降为 fixed、bool、byte string 和 RAM operation。
 - multiple return 由 frame result slots + count 表达，再由 C wrapper push 回 Lua stack。
 - 每个 generated wrapper 必须有成功、nil/default、类型错误、host error、multi-return 和 stack-balance test。

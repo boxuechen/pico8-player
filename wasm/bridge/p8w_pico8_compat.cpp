@@ -20,6 +20,30 @@ constexpr int kMenuitemMinimumSlot = 1;
 constexpr int kMenuitemMaximumSlot = 5;
 constexpr size_t kMenuitemMaximumLabelBytes = 16;
 
+struct P8sciiGlobal {
+  uint8_t name;
+  uint32_t raw_value;
+};
+
+// PICO-8 exposes the first 26 extended charset glyphs as source-level
+// numeric globals: six button names and twenty built-in fill patterns. Keep
+// both names and values byte/raw-bit exact; neither side is Unicode text.
+constexpr P8sciiGlobal kP8sciiGlobals[] = {
+    {0x80u, 0x00000000u}, {0x81u, 0x5a5a8000u},
+    {0x82u, 0x511f8000u}, {0x83u, 0x00030000u},
+    {0x84u, 0x7d7d8000u}, {0x85u, 0xb81d8000u},
+    {0x86u, 0xf99f8000u}, {0x87u, 0x51bf8000u},
+    {0x88u, 0xb5bf8000u}, {0x89u, 0x999f8000u},
+    {0x8au, 0xb11f8000u}, {0x8bu, 0x00000000u},
+    {0x8cu, 0xa0e08000u}, {0x8du, 0x9b3f8000u},
+    {0x8eu, 0x00040000u}, {0x8fu, 0xb1bf8000u},
+    {0x90u, 0xf5ff8000u}, {0x91u, 0x00010000u},
+    {0x92u, 0xb15f8000u}, {0x93u, 0x1b1f8000u},
+    {0x94u, 0x00020000u}, {0x95u, 0xf5bf8000u},
+    {0x96u, 0x7adf8000u}, {0x97u, 0x00050000u},
+    {0x98u, 0x0f0f8000u}, {0x99u, 0x55558000u},
+};
+
 uint32_t read_u32(const uint8_t *ram, uint32_t address) {
   return static_cast<uint32_t>(ram[address]) |
          (static_cast<uint32_t>(ram[address + 1u]) << 8u) |
@@ -422,6 +446,26 @@ void register_prng_function(lua_State *state, const char *name,
   lua_setglobal(state, name);
 }
 
+void register_table_alias(lua_State *state, const char *name) {
+  lua_getglobal(state, "table");
+  lua_getfield(state, -1, name);
+  lua_remove(state, -2);
+  lua_setglobal(state, name);
+}
+
+void register_p8scii_globals(lua_State *state) {
+  lua_pushglobaltable(state);
+  for (const P8sciiGlobal &entry : kP8sciiGlobals) {
+    const char name = static_cast<char>(entry.name);
+    lua_pushlstring(state, &name, 1);
+    lua_pushnumber(
+        state,
+        lua_Number::frombits(static_cast<int32_t>(entry.raw_value)));
+    lua_rawset(state, -3);
+  }
+  lua_pop(state, 1);
+}
+
 }  // namespace
 
 void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
@@ -437,6 +481,8 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_function(state, "tonum", pico8_tonum);
   register_function(state, "ord", pico8_ord);
   register_function(state, "menuitem", pico8_menuitem);
+  register_table_alias(state, "unpack");
+  register_p8scii_globals(state);
   register_prng_function(state, "rnd", pico8_rnd, pico_ram);
   register_prng_function(state, "srand", pico8_srand, pico_ram);
   seed_prng(pico_ram, 0);

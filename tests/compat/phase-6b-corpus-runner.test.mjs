@@ -67,6 +67,22 @@ async function temporaryCorpus({ cases = 12, mutateManifest, mutateObservations 
       classification: "C2",
       failureCluster: null,
       completedTicks: 120,
+      playability: {
+        gate: "critical-flow",
+        durationSeconds: 30,
+        criticalFlow: "complete project-authored fixture flow",
+        criticalFlowCompleted: true,
+        mainVerbs: ["advance"],
+        input: "pass",
+        visual: "pass",
+        audio: "not-applicable",
+        persistence: "not-applicable",
+        crashFree: true,
+        softLockFree: true,
+        reviewedAt: "2026-08-07T00:00:00Z",
+        reviewer: "project-test",
+        evidenceSha256: "2".repeat(64),
+      },
     })),
   };
   mutateObservations?.(observations);
@@ -143,10 +159,12 @@ test("6B keeps incomplete cases CU and rejects contradictory classifications", a
         failureCluster: "timing",
         faultCode: "E_VM_INSTRUCTION_BUDGET",
       };
+      delete observations.entries[0].playability;
       observations.entries[1] = {
         ...observations.entries[1],
         classification: "CU",
       };
+      delete observations.entries[1].playability;
     },
   }, async ({ manifestPath, observationsPath }) => {
     const report = await buildLocalQualificationReport({ manifestPath, observationsPath, projectRoot });
@@ -165,6 +183,30 @@ test("6B keeps incomplete cases CU and rejects contradictory classifications", a
     await assert.rejects(
       buildLocalQualificationReport({ manifestPath, observationsPath, projectRoot }),
       (error) => error.code === "E_INCOMPLETE",
+    );
+  });
+  await withCorpus({
+    mutateObservations(observations) {
+      delete observations.entries[0].playability;
+    },
+  }, async ({ manifestPath, observationsPath }) => {
+    await assert.rejects(
+      buildLocalQualificationReport({ manifestPath, observationsPath, projectRoot }),
+      (error) => error.code === "E_PLAYABILITY",
+    );
+  });
+  await withCorpus({
+    mutateObservations(observations) {
+      observations.entries[0].playability = {
+        ...observations.entries[0].playability,
+        gate: "duration",
+        durationSeconds: 899,
+      };
+    },
+  }, async ({ manifestPath, observationsPath }) => {
+    await assert.rejects(
+      buildLocalQualificationReport({ manifestPath, observationsPath, projectRoot }),
+      (error) => error.code === "E_PLAYABILITY",
     );
   });
 });

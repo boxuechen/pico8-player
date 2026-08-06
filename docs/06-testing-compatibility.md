@@ -592,6 +592,11 @@ network surface 保持不变。
 
 等级必须绑定 player build、cart SHA-256、测试时长/trace 和浏览器；不能把一个版本的结果永久继承到新 revision。
 
+本地 external corpus 的 `C2` observation 还必须携带 machine-validated `playability` attestation：
+选择 `duration >= 900s` 或 `critical-flow completed` gate，列出 main verbs，并分别记录 input、visual、
+audio、persistence、crash/soft-lock 结论。attestation 只引用 gitignored local evidence 的 SHA-256，
+不得写入 cart/screenshot 路径；缺失或把 attestation 附到非 C2 项时 runner fail closed。
+
 兼容率只在明确、合法的 corpus 内计算：
 
 ```text
