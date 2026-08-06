@@ -11,10 +11,10 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance 与 Chrome scripts；Phase 4 L2/MVP project-profile exit 已关闭 |
-| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、项目原创 7-case corpus；精确 Known Differences/coverage limitation 见第 15 节 |
-| **Historical results** | Phase 0–4 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
-| **Target** | 第 3 节其余完整测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与 release matrix |
+| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance 与 Chrome scripts；Phase 5 L3 local/multicart project-profile exit 已关闭 |
+| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、项目原创 6-case local L3 corpus；精确 Known Differences/coverage limitation 见第 15 节 |
+| **Historical results** | Phase 0–5 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
+| **Target** | 第 3 节其余测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与未来 activation contract |
 | **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
 
 执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本。第 15 节维护当前
@@ -617,39 +617,32 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 
 ### 15.4 当前发布 profile
 
-当前可发布口径严格为 **PICO-8 v0.2.7 L2/MVP project profile on Chrome/Chromium
-desktop**。它绑定项目原创 corpus、受审 build 和 Chrome production path，不是 official
+当前可发布口径严格为 **PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop**。
+它绑定项目原创 local corpus、受审 build 和 Chrome production path，不是 official
 bit-exact、第三方/BBS cart 成功率或正式 release qualification。
 
 | 指标 | 当前结论 | 权威来源 |
 | --- | --- | --- |
-| Project corpus | `C3=7/7`，playable `100%`，开放 P0/P1/P2=`0/0/0` | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
-| API inventory | 112 项；implementation `96/5/1/10`；conformance `68/5/29/10` | [`pico-api-inventory.yaml`](../spec/pico-api-inventory.yaml) |
-| Runtime boundary | host bindings `1..41`；runtime ABI `0x00010003` | [`spec/abi/`](../spec/abi/) / runtime manifest |
-| Resource gate | fixed 16 MiB WASM、1 MiB default Lua heap、1800 秒 Chrome long-run、20 loads | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
-| Aggregate claim | profile、inputs、scope 与 hash machine-checked | [`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) |
+| Project L3 corpus | `C3=6/6`，playable `100%`，开放 P0/P1=`0/0`，Node/Chrome cross-oracle 一致 | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
+| Local multicart | caller-authorized bundle、root `load()`、atomic swap、external local `reload/cstore` | [ADR-018](./adr/018-caller-authorized-cart-resolution.md) / Phase 5 evidence |
+| Replacement gate | `100/100` swaps，generation `1→101`，stale commit `0` | Phase 5 evidence |
+| Resource gate | fixed 16 MiB WASM、1 MiB default Lua heap、`1800.0644s` Chrome mixed soak | Phase 5 evidence |
+| Aggregate claim | profile、inputs、scope 与 artifact hash machine-checked | [`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) |
 
 ### 15.5 Published Known Differences
 
 | ID | API / 模式 | 用户可见影响 | Workaround / scope |
 | --- | --- | --- | --- |
-| `P4-KD-01` | nested coroutine `flip()` | nested suspension structured unsupported | 只从 root custom loop 调用 |
 | `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | 使用 `1,6,7,30,31,32,33,34,36,38,39` |
 | `P4-KD-03` | timed P8SCII | delay control 不暂停 guest | 用 logical frame 驱动文字时间 |
-| `P4-KD-04` | `reload/cstore` external ref | 只访问 current-cart ROM/COW overlay | 不传 external filename/ref |
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
+| `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
 
 ### 15.6 Coverage limitation 与范围排除
 
-Phase 5 active profile 在 Phase 4 历史表之上增加一个已接受差异：
-
-| ID | API / 模式 | 用户可见影响 | Workaround / scope |
-| --- | --- | --- | --- |
-| `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
-
-`P4-KD-01` 是已发布 L2 profile 的历史条目；`P5-KD-01` 将相同 ownership 边界扩展并验证到
-全部 L3 suspension surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profile；Phase 5E
+`P5-KD-01` 取代历史 L2 `P4-KD-01`，把相同 ownership 边界扩展并验证到全部 L3 suspension
+surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profile；Phase 5E
 已在 caller-authorized local bundle 中实现 root external `reload/cstore`，但不包含 URL、filesystem
 或 BBS fallback。
 
@@ -658,7 +651,8 @@ Phase 5 active profile 在 Phase 4 历史表之上增加一个已接受差异：
 [`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 维护，不在 living 文档复制。
 
 - Conditional：`printh`、`extcmd`、`menuitem`。
-- Excluded platform API：`load`、`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`。
+- Excluded platform API：`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；guest root
+  `load` 已进入当前 local L3 profile。
 - External/local corpus、BBS bytes 和第三方结果对公开分母贡献为 `0`。
 - caller-authorized local guest `load`、external resolver 和 multicart 已进入 Phase 5 profile；BBS access
   仍按 ADR-020 Deferred，nested async suspension 按 ADR-019 保持 root-only。两者不能从 local 成功率
@@ -675,6 +669,7 @@ Phase 5 active profile 在 Phase 4 历史表之上增加一个已接受差异：
 | Phase 2 graphics/memory/text | [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | Phase 3 audio/input/persistence | [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
 | Phase 4 L2/MVP hardening | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
+| Phase 5 L3 local/multicart | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 
 新回归只更新当前 compatibility entry、机器 inventory/issue registry 和新 phase evidence；不得把
 旧 work-unit 表重新复制回本文件。

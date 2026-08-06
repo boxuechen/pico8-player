@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runner": { "id": "phase5-l3-exit-runner", "version": 1 },
+  "ownership": "Project-authored local carts and local Chrome measurements only; no BBS, network or third-party content",
+  "requiredCorpusCases": 6,
+  "requiredClassification": "C3",
+  "requiredSequentialGuestSwaps": 100,
+  "chrome": {
+    "smokeSeconds": 10,
+    "evidenceSeconds": 1800,
+    "warmupSeconds": 5,
+    "cycleDelayMs": 750,
+    "maximumRetainedHeapGrowthBytes": 1048576,
+    "maximumWorkerErrors": 0,
+    "maximumStaleCommits": 0
+  },
+  "resources": {
+    "fixedWasmBytes": 16777216,
+    "defaultLuaHeapBytes": 1048576,
+    "maximumCartInputBytes": 1048576,
+    "maximumLocalBundleEntries": 64
+  },
+  "releaseClaim": {
+    "target": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
+    "projectCorpusOnly": true,
+    "thirdPartyOrBbsCompatibilityClaimed": false,
+    "officialBitExactClaimed": false
+  }
+}

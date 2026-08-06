@@ -20,28 +20,27 @@
 | 2 Graphics / Memory / Text（2A–2F） | Complete | [Phase 2 exit](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
 | 3 Audio / Input / Persistence（3A–3H） | Complete | [Phase 3 exit](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
 | 4 L2 / MVP Compatibility（4A–4H） | Complete | [Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [contract](../spec/phase-4-l2-mvp-contract.json) |
-| 5 L3 local/multicart / optional BBS | **Active；5A complete，5B active** | [phase](./phases/5-l3-local-multicart.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
+| 5 L3 local/multicart / optional BBS | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
 
-Phase 4 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 corpus。
-Known Differences、coverage limitation 与范围排除以 Phase 4 evidence 和
-[`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 为准，不在 roadmap 重复。
+Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
+corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
+[`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) 为准，不在 roadmap 重复。
 
-## 3. Phase 5 激活边界
+## 3. 下一阶段激活边界
 
-Phase 5 的候选方向是 L3、guest cart switching 与可选 BBS integration，但默认全部 Deferred。
-激活前必须显式决定并机器化以下边界：
+当前没有 active phase，后续方向默认全部 Deferred。激活前必须显式决定并机器化以下边界：
 
-1. 目标 capability profile 和合法 corpus；不得用“支持 BBS cart”作为无分母承诺。
-2. caller-provided/local bytes、guest `load`、external resolver、BBS access、缓存和分享各自的授权范围。
-3. current-cart、host-driven sequential load、guest cart swap 和 multicart 的 transaction/rollback 语义。
-4. root HostRequest 与 nested coroutine suspension 的支持级别；若改变 ADR-017，先提交替代 ADR。
+1. 相对关闭 L3 profile 的明确 capability delta、合法 corpus 和可计算发布分母。
+2. 新资源来源、缓存、分享或网络 surface 的 caller authority 与 fail-closed 边界。
+3. 新生命周期行为的 transaction、rollback、generation、cancellation 和 stale-output 语义。
+4. 是否改变 ADR-019 root-only coroutine policy；如改变，先提交 replacement ADR 和独立 spike。
 5. 网络、持久化、版权、Terms、隐私和资源上限；默认不得自动访问 BBS 或跟踪第三方 cart bytes。
 
 激活产物至少包括：Accepted/Rejected 决策、版本化 `spec/` 机器合同、一个 active phase 文档、
-唯一 active work unit、精确 Chrome gate 和前置 Phase 4 evidence hash。条件未满足时只允许调研、
+唯一 active work unit、精确 Chrome gate 和前置 Phase 5 evidence hash。条件未满足时只允许调研、
 只读审计或独立 spike，不允许把 Target 代码路径接入 production。
 
-## 4. Phase 5 之外
+## 4. 当前声明之外
 
 编辑器、命令行、SPLORE 替代、公共 cart 镜像、任意 URL/文件系统访问、非 Chrome 浏览器和
-未经授权的第三方内容分发不因 Phase 5 名称自动进入范围；如需评估，必须另立产品决策与 phase。
+未经授权的第三方内容分发不属于当前声明；如需评估，必须另立产品决策与 phase。

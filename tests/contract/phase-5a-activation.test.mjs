@@ -24,21 +24,21 @@ async function sha256(relativePath) {
 const contract = await readJson("spec/phase-5-l3-multicart-contract.json");
 const corpus = await readJson("tests/conformance/manifests/phase-5-l3-corpus.json");
 
-test("Phase 5A activates one bounded work unit from the closed Phase 4 baseline", async () => {
+test("Phase 5A remains anchored to the closed Phase 4 baseline after Phase 5 exit", async () => {
   assert.equal(contract.phase, "5");
-  assert.equal(contract.status, "active");
+  assert.equal(contract.status, "complete");
   assert.equal(
     contract.target,
     "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
   );
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
   assert.ok(contract.completedWorkUnits.includes("5A"));
-  assert.match(contract.activeWorkUnit, /^5[B-H]$/u);
   assert.equal(contract.workUnits["5A"].status, "complete");
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.nextWorkUnit, null);
   assert.equal(
     Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
-    1,
+    0,
   );
 
   for (const [pathKey, hashKey] of [
@@ -111,11 +111,14 @@ test("Phase 5A capability and service policy fail closed", () => {
   assert.equal(contract.phaseExitGate.bbsCompatibilityClaimed, false);
 });
 
-test("Phase 5A routes Codex to the active phase and publishes the accepted decision", async () => {
+test("Phase 5A activation history routes to closed Phase 5 evidence", async () => {
   const docsReadme = await readFile(new URL("docs/README.md", projectRoot), "utf8");
   const phaseIndex = await readFile(new URL("docs/phases/README.md", projectRoot), "utf8");
-  const phase = await readFile(
-    new URL("docs/phases/5-l3-local-multicart.md", projectRoot),
+  const evidence = await readFile(
+    new URL(
+      "docs/evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md",
+      projectRoot,
+    ),
     "utf8",
   );
   const decisions = await readFile(
@@ -124,10 +127,11 @@ test("Phase 5A routes Codex to the active phase and publishes the accepted decis
   );
   const packageJson = await readJson("package.json");
 
-  assert.match(docsReadme, /Active work unit \| 5[B-H]/u);
-  assert.ok(phaseIndex.includes("5-l3-local-multicart.md"));
-  assert.ok(phase.includes("5A"));
-  assert.ok(phase.includes("BBS 自动访问明确 Deferred"));
+  assert.match(docsReadme, /最近完成 \| Phase 5/u);
+  assert.doesNotMatch(docsReadme, /Active work unit/u);
+  assert.doesNotMatch(phaseIndex, /5-l3-local-multicart\.md/u);
+  assert.ok(evidence.includes("5A–5H"));
+  assert.ok(evidence.includes("BBS"));
   assert.ok(decisions.includes("ADR-018"));
   assert.equal(
     packageJson.scripts["test:phase-5a"],
@@ -135,4 +139,8 @@ test("Phase 5A routes Codex to the active phase and publishes the accepted decis
   );
   assert.ok(packageJson.scripts.test.includes("test:phase-5a"));
   assert.ok(packageJson.scripts.verify.includes("test:phase-5a"));
+  await assert.rejects(
+    readFile(new URL("docs/phases/5-l3-local-multicart.md", projectRoot)),
+    { code: "ENOENT" },
+  );
 });

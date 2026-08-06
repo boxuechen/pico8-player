@@ -8,6 +8,7 @@
 - [`phase-2/`](./phase-2/)：Phase 2A–2F Graphics/Memory/Text project-profile 完成记录。
 - [`phase-3/`](./phase-3/)：Phase 3A–3H Audio/Input/Persistence project-profile 完成记录。
 - [`phase-4/`](./phase-4/)：Phase 4A–4H L2/MVP project-profile 完成记录与 Known Differences。
+- [`phase-5/`](./phase-5/)：Phase 5A–5H L3 local/multicart project-profile 完成记录、100-swap 与 Chrome long-run gate。
 - [`phase-0e-official-clock.json`](./phase-0e-official-clock.json)：官方 Web Player
   startup-clock capture 的结构化记录。
 - `phase-0e-*.png`：对应 capture 的人工审阅 framebuffer。

@@ -47,7 +47,8 @@
       "license": "project-owned-test-fixture",
       "capabilityLanes": ["root-load-callback"],
       "observables": ["generation", "parameter", "breadcrumb", "screen", "stale-output"],
-      "activationClassification": "CU"
+      "activationClassification": "CU",
+      "phase5hClassification": "C3"
     },
     {
       "id": "l3/root-load-custom",
@@ -58,7 +59,8 @@
       "license": "project-owned-test-fixture",
       "capabilityLanes": ["root-load-custom"],
       "observables": ["custom-flip", "generation", "parameter", "screen", "stale-output"],
-      "activationClassification": "CU"
+      "activationClassification": "CU",
+      "phase5hClassification": "C3"
     },
     {
       "id": "l3/external-reload-local",
@@ -69,7 +71,8 @@
       "license": "project-owned-test-fixture",
       "capabilityLanes": ["external-reload-local"],
       "observables": ["host-request", "ram", "screen", "logical-time"],
-      "activationClassification": "CU"
+      "activationClassification": "CU",
+      "phase5hClassification": "C3"
     },
     {
       "id": "l3/external-cstore-local-overlay",
@@ -80,7 +83,8 @@
       "license": "project-owned-test-fixture",
       "capabilityLanes": ["external-cstore-local-overlay"],
       "observables": ["host-request", "overlay", "ram", "screen", "target-cap"],
-      "activationClassification": "CU"
+      "activationClassification": "CU",
+      "phase5hClassification": "C3"
     },
     {
       "id": "l3/resolver-failure-cancel-race",
@@ -91,7 +95,8 @@
       "license": "project-owned-test-fixture",
       "capabilityLanes": ["resolver-failure-cancel-race"],
       "observables": ["request-id", "generation", "cancel", "timeout", "fault"],
-      "activationClassification": "CU"
+      "activationClassification": "CU",
+      "phase5hClassification": "C3"
     },
     {
       "id": "l3/nested-suspension-policy",
@@ -104,6 +109,7 @@
       "observables": ["structured-error", "side-effect-count", "coroutine-state"],
       "activationClassification": "CU",
       "phase5fClassification": "C3",
+      "phase5hClassification": "C3",
       "phase5fExpectedFault": {
         "code": "E_FEATURE_UNSUPPORTED",
         "reason": "nested-host-suspend",

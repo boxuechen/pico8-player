@@ -7,16 +7,17 @@
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | 四个 package；main/transport/worker/worklet execution-domain 边界；package exports；browser-neutral RuntimeCore；WASM/Canvas/Audio/IndexedDB adapters；architecture negative tests；`ref/` quarantine |
-| **Scaffold** | host cart resolver adapter 与其余未激活文件位；文件存在不代表功能完成 |
+| **Implemented** | 四个 package；main/transport/worker/worklet execution-domain 边界；package exports；browser-neutral RuntimeCore；WASM/Canvas/Audio/IndexedDB adapters；CartLoader/local resolver/repository；architecture negative tests；`ref/` quarantine |
+| **Scaffold** | 其余未激活 adapter 文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
 目录树是归属契约，不是“文件全部存在”的清单。当前 source truth 是实际文件、package exports、
 TypeScript project references 和 architecture tests；阶段完成历史只在
-[`evidence/`](./evidence/) 与机器合同中保存。Phase 5 激活前，不得因为 scaffold 或 Target 路径存在
-就接入 guest `load`、external resolver、multicart 或 BBS。AudioContext、IndexedDB、Canvas 和
-browser input 始终属于 app adapters，RuntimeCore 保持 browser-neutral。
+[`evidence/`](./evidence/) 与机器合同中保存。Phase 5 已关闭 guest root `load`、caller-authorized
+local resolver 和 multicart；不得因为 scaffold 或 Target 路径存在就接入任意 URL、文件系统、BBS
+或新的 host authority。AudioContext、IndexedDB、Canvas 和 browser input 始终属于 app adapters，
+RuntimeCore 保持 browser-neutral。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 

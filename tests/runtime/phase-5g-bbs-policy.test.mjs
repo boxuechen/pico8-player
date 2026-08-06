@@ -84,22 +84,25 @@ test("tracked Phase 5 corpus remains project-authored and offline", () => {
   assert.ok(corpus.repository.every((entry) => !entry.ref.includes("://")));
 });
 
-test("5G closes independently and activates exactly one bounded 5H unit", async () => {
+test("5G deferred policy remains closed after the independent 5H exit", async () => {
   assert.ok(contract.completedWorkUnits.includes("5G"));
-  assert.equal(contract.activeWorkUnit, "5H");
+  assert.equal(contract.activeWorkUnit, null);
   assert.equal(contract.nextWorkUnit, null);
-  assert.equal(contract.workUnits["5H"].status, "active");
+  assert.equal(contract.workUnits["5H"].status, "complete");
   assert.equal(
     Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
-    1,
+    0,
   );
 
   const docsReadme = await read("docs/README.md");
-  const phase = await read("docs/phases/5-l3-local-multicart.md");
+  const evidence = await read(
+    "docs/evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md",
+  );
   const packageJson = await readJson("package.json");
-  assert.match(docsReadme, /Active work unit \| 5H L3 Exit \/ Resource Gate/u);
-  assert.match(phase, /5G closure/u);
-  assert.match(phase, /Active work unit：5H/u);
+  assert.match(docsReadme, /最近完成 \| Phase 5/u);
+  assert.match(evidence, /ADR-020/u);
+  assert.match(evidence, /Deferred/u);
+  assert.equal(await exists("docs/phases/5-l3-local-multicart.md"), false);
   assert.equal(
     packageJson.scripts["test:phase-5g"],
     "pnpm run build && node --test tests/runtime/phase-5g-bbs-policy.test.mjs",

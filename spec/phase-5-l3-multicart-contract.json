@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "phase": "5",
   "name": "L3 Local / Multicart",
-  "status": "active",
+  "status": "complete",
   "target": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
@@ -45,16 +45,17 @@
   },
   "corpus": {
     "manifest": "tests/conformance/manifests/phase-5-l3-corpus.json",
-    "manifestSha256": "76e4e21a3a1caa73021dfe7e186c71b7afcf01baa126bb0deab5e4024fb6a170",
+    "manifestSha256": "a9169678bbb29a103f36485c3e8694a5003cc6c4400900775f1a17d935a2cba8",
     "cases": 6,
     "repositoryEntries": 2,
     "ownership": "project-authored",
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E", "5F", "5G"],
-  "activeWorkUnit": "5H",
+  "completedWorkUnits": ["5A", "5B", "5C", "5D", "5E", "5F", "5G", "5H"],
+  "activeWorkUnit": null,
   "nextWorkUnit": null,
+  "nextPhase": "deferred",
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -344,12 +345,14 @@
     },
     "5H": {
       "name": "L3 Exit / Resource Gate",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tests/conformance/phase-5/",
         "tests/conformance/phase-5h-exit.test.mjs",
         "tests/conformance/manifests/phase-5-l3-corpus.json",
         "tests/conformance/manifests/phase-5h-exit.json",
+        "tests/contract/phase-5a-activation.test.mjs",
+        "tests/runtime/phase-5g-bbs-policy.test.mjs",
         "tests/browser/phase-5h.html",
         "tests/browser/phase-5h.mjs",
         "tests/browser/phase-5h-worker.mjs",
@@ -357,9 +360,12 @@
         "tools/browser/run-phase-5h.mjs",
         "benchmarks/phase-5/results/",
         "docs/evidence/phase-5/",
+        "docs/evidence/README.md",
+        "docs/01-scope-and-success-criteria.md",
         "docs/05-delivery-plan.md",
         "docs/06-testing-compatibility.md",
         "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
         "docs/README.md",
         "docs/phases/README.md",
         "docs/phases/5-l3-local-multicart.md",
@@ -374,7 +380,34 @@
         "publish a hash-locked aggregate exit manifest and immutable Phase 5 evidence with zero open P0 or P1",
         "keep BBS and third-party compatibility outside the corpus, denominator and release claim",
         "pass the complete repository verification gate and leave Phase 5 closed with no active work unit"
-      ]
+      ],
+      "result": {
+        "releaseClaim": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
+        "projectCorpusCases": 6,
+        "nodeChromeAgreement": true,
+        "playableRate": 1,
+        "sequentialCartSwaps": 100,
+        "exactGenerationSequence": true,
+        "chromeMixedSoakSeconds": 1800.0644,
+        "chromeMeasuredCycles": 2332,
+        "retainedHeapDeltaBytes": 100076,
+        "staleCommitCount": 0,
+        "openP0": 0,
+        "openP1": 0,
+        "publishedKnownDifferences": 5,
+        "acceptedRequiredCoverageLimitations": 28,
+        "nodeResultSha256": "565e49e3e6c270a330304c5d2ae67ae6dcc083c6b6dbcb631d2454e65fa85740",
+        "chromeResultSha256": "2c9feba41e75f32933ee5cd8a8cfd64e22938d1ef7f88e0963948b46edf8093b",
+        "exitManifestSha256": "a66aec36c1ea2a9a488a2aa6a8b0053f4e50ee852c6aa8e764ff0bb83b0ccd08",
+        "evidence": "docs/evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md",
+        "bbsCompatibilityClaimed": false,
+        "verification": [
+          "pnpm run test:phase-5h",
+          "pnpm run test:phase-5h:chrome",
+          "pnpm run test:architecture",
+          "pnpm run verify"
+        ]
+      }
     }
   },
   "phaseExitGate": {

@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "phase": "5H",
+  "target": "chrome-production",
+  "releaseClaim": {
+    "target": "PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop",
+    "projectCorpusOnly": true,
+    "thirdPartyOrBbsCompatibilityClaimed": false,
+    "officialBitExactClaimed": false
+  },
+  "runner": {
+    "id": "phase5-l3-exit-runner",
+    "version": 1
+  },
+  "summary": {
+    "counts": {
+      "C0": 0,
+      "C1": 0,
+      "C2": 0,
+      "C3": 6,
+      "CU": 0
+    },
+    "denominator": 6,
+    "playable": 6,
+    "playableRate": 1,
+    "openP0": 0,
+    "openP1": 0
+  },
+  "cases": [
+    {
+      "id": "l3/root-load-callback",
+      "classification": "C3",
+      "oracle": {
+        "mode": "callback",
+        "previousGeneration": 1,
+        "targetGeneration": 2,
+        "cartRef": "chapter-b.p8",
+        "breadcrumb": "back to launcher",
+        "parameterAccepted": true,
+        "targetState": "ready",
+        "handshakeFirst": true
+      },
+      "crossOracleSha256": "4114329470a4f2f8057be0cdb53d88eec5fee0cc2ee88a15a0f178d9c384df26"
+    },
+    {
+      "id": "l3/root-load-custom",
+      "classification": "C3",
+      "oracle": {
+        "mode": "custom",
+        "previousGeneration": 1,
+        "targetGeneration": 2,
+        "cartRef": "chapter-b.p8",
+        "breadcrumb": "back from custom",
+        "parameterAccepted": true,
+        "targetState": "running",
+        "handshakeFirst": true
+      },
+      "crossOracleSha256": "e2840e988c2dd74f130dbff4172e0ab179855cd5eac4ebc99fa9f887a7beecd9"
+    },
+    {
+      "id": "l3/external-reload-local",
+      "classification": "C3",
+      "oracle": {
+        "operation": "reload",
+        "generationChanged": false,
+        "replacementHandshakes": 0,
+        "oracleBytes": 16,
+        "color": 7,
+        "completedSlices": "2"
+      },
+      "crossOracleSha256": "453f4f528282ed6794998167157685062ac9f3ba2058e898d798e2a3af0d001f"
+    },
+    {
+      "id": "l3/external-cstore-local-overlay",
+      "classification": "C3",
+      "oracle": {
+        "operation": "cstore",
+        "generationChanged": false,
+        "replacementHandshakes": 0,
+        "oracleBytes": 16,
+        "color": 10,
+        "completedSlices": "2"
+      },
+      "crossOracleSha256": "c482d3a3a72eea1ab2d5fe77b7bee7a29d13de9196d364ea01bf01571cc2a738"
+    },
+    {
+      "id": "l3/resolver-failure-cancel-race",
+      "classification": "C3",
+      "oracle": {
+        "faultCode": "E_HOST_REQUEST",
+        "replacementHandshakes": 0,
+        "cancelledLateEvents": 0,
+        "freshRecovery": true
+      },
+      "crossOracleSha256": "050a96a4d86b76d794427f16c5e989aa9504276e74b7c3b289e2eb1b78561878"
+    },
+    {
+      "id": "l3/nested-suspension-policy",
+      "classification": "C3",
+      "oracle": {
+        "faultCode": "E_FEATURE_UNSUPPORTED",
+        "reason": "nested-host-suspend",
+        "externalSideEffects": 0
+      },
+      "crossOracleSha256": "45e0889ed49c056a0818051d44bc4790edc1f3ff069fbbdf0f15e7bc51c28a0e"
+    }
+  ],
+  "cartSwaps": {
+    "required": 100,
+    "completed": 100,
+    "initialGeneration": 1,
+    "finalGeneration": 101,
+    "exactGenerationSequence": true,
+    "replacementHandshakes": 100,
+    "staleFrameCommits": 0,
+    "staleAudioCommits": 0,
+    "staleInputCommits": 0,
+    "staleRequestCommits": 0,
+    "stalePersistenceCommits": 0,
+    "liveContextsBeforeDispose": 1,
+    "wasmBytes": 16777216
+  },
+  "faultRecovery": {
+    "stagedFaultCode": "E_VM_RUNTIME",
+    "replacementHandshakes": 0,
+    "recovered": true
+  },
+  "soak": {
+    "requestedSeconds": 1800,
+    "actualDurationMs": 1800064.4000000954,
+    "measuredCycles": 2332,
+    "totals": {
+      "cycles": 2339,
+      "guestLoads": 2339,
+      "customLoads": 2339,
+      "externalReloads": 2339,
+      "externalCstores": 2339,
+      "resolverFaults": 2339,
+      "freshRecoveries": 2339,
+      "callbackFrames": 2339
+    },
+    "retainedHeap": {
+      "status": "measured",
+      "before": {
+        "usedBytes": 788212,
+        "totalBytes": 1835008,
+        "embedderUsedBytes": 626184,
+        "backingStorageBytes": 68037
+      },
+      "after": {
+        "usedBytes": 888288,
+        "totalBytes": 1572864,
+        "embedderUsedBytes": 649344,
+        "backingStorageBytes": 68011
+      },
+      "deltaBytes": 100076
+    }
+  },
+  "staleCommits": {
+    "frameOrRuntime": 0,
+    "audio": 0,
+    "input": 0,
+    "request": 0,
+    "persistence": 0,
+    "total": 0
+  },
+  "resources": {
+    "liveContextsBeforeDispose": 1,
+    "wasmBytes": 16777216,
+    "workersCreated": 1,
+    "workersTerminated": 1,
+    "pendingRequests": 0,
+    "audioMessages": 32968,
+    "audioPortReleased": true
+  },
+  "workerErrors": [],
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/150.0.0.0 Safari/537.36",
+  "configuration": {
+    "evidence": true,
+    "soakSeconds": 1800
+  },
+  "browser": "Google Chrome 150.0.7871.189",
+  "machine": {
+    "machineId": "fe2d5602ee3db315",
+    "os": "darwin 25.5.0",
+    "architecture": "arm64",
+    "cpuModel": "Apple M4 Pro",
+    "logicalCpuCount": 14,
+    "totalMemoryBytes": 51539607552
+  },
+  "sourceRevision": "8ffa0faf4de427f712a9dae47f1ac34347dabfdb-dirty",
+  "sourceSha256": {
+    "apps/web-player/src/main/player-runtime-client.ts": "e8f01f079012b230bde512460c84df56518130ee52876e43cd9a4fe03614a0d6",
+    "apps/web-player/src/worker/audio-transport.ts": "5286ad215fa6053f60792e14aa6264fe5c0f88802bf7db6a2ff5cb09a8d33424",
+    "apps/web-player/src/worker/compose-runtime.ts": "e554a0c6cec95a56c161c615108c00c30b8f2d43243538055f7e6eaf8557b7e1",
+    "apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts": "85f19dc78fb0fb086b62f2c2f03fd506a8d39c986dd47079048d6e77c0b6fde3",
+    "apps/web-player/src/worker/adapters/indexeddb-persistence-adapter.ts": "66a40d94bd3badbfe8310e880cdc4acea1fa9be214917944d0ce8797b62db59f",
+    "packages/runtime-core/src/cart/cart-loader.ts": "1f9f9da14b836bc7da24a4e779d8eab419bcda63bcf2c64624f8fadba3ecca90",
+    "packages/runtime-core/src/frame-runtime.ts": "11b72546ecf8316cbf22ac8a71718dc3f123ef7f884963a1c1289a29d899aa1d",
+    "packages/z8lua-bridge/src/public.ts": "c6ae518a8ae0ab35f47597bd02f1f59fc58de688073ffd23a49c3abf2ef21f85",
+    "wasm/bridge/p8w_frame_runtime.cpp": "eb7fef67c2048affe41a09b7bf45795b92abd88bfe7fd5cbf21e26631c9d3e6a",
+    "wasm/runtime-v1.manifest.lock.json": "1d1dffbc214ac92c3d7c97609d31ef3a94a5e55bfa497a2d5788b3cb59461519",
+    "tests/conformance/manifests/phase-5-l3-corpus.json": "a9169678bbb29a103f36485c3e8694a5003cc6c4400900775f1a17d935a2cba8",
+    "tests/conformance/phase-5/exit-config.json": "9c0c788e34ce5056aba8c448a26fb98a83f9fe935b98762e1b3c79ac9ea8692a",
+    "tests/browser/phase-5h.html": "cc9f051a2af994a4e470dcbab08ba70e664b55e59f0ade4a120c38756fcd67e0",
+    "tests/browser/phase-5h.mjs": "eb2c65f13d6043c8cea531c346cfc7c5ed2a3b6ff93554d7a7876f96991ee45a",
+    "tests/browser/phase-5h-worker.mjs": "11bce69f2522f24288ca7ee1fecee3314ed313015f462e0756951fbefc7e2f52",
+    "tools/browser/build-phase-5h-worker.mjs": "6b771d9f96e603d768a46ce0df4cbcc1ca0c1024d534f84934c12b9494d03d38",
+    "tools/browser/run-phase-5h.mjs": "98d7c6b4cfd3a887f185147ed6e607c46ab1e00604ad5c2636bd449f013fcabf"
+  },
+  "runtimeArtifact": {
+    "outputDirectory": "wasm/dist",
+    "tracked": false,
+    "files": [
+      {
+        "path": "z8lua-runtime-v1.mjs",
+        "bytes": 8567,
+        "sha256": "45cd2ad68398c0337785451fae57f229f4c059c9d8ce1a2007039618b3f85761"
+      },
+      {
+        "path": "z8lua-runtime-v1.wasm",
+        "bytes": 191488,
+        "sha256": "85f180146cd16577b8a0a0c57143f74a8befddbfa5b1676146b78a9cf2070283"
+      }
+    ]
+  },
+  "externalCorpus": {
+    "networkAccess": false,
+    "thirdPartyOrBbsContent": false,
+    "publishedDenominatorContribution": 0
+  }
+}

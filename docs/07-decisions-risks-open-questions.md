@@ -29,20 +29,22 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-016 | Accepted | pnpm workspace 和精确 tool versions |
 | ADR-017 | [Accepted](./adr/017-coroutine-frame-slice-and-fault-containment.md) | host-driven frame slice、budget/watchdog、nested suspension 降级 |
 | ADR-018 | [Accepted](./adr/018-caller-authorized-cart-resolution.md) | caller-authorized local bundle resolver；BBS 自动访问保持 Deferred |
+| ADR-019 | [Accepted](./adr/019-phase-5-coroutine-compatibility.md) | L3 host suspension 保持 root-only；nested surface 统一 structured fault |
+| ADR-020 | [Deferred](./adr/020-phase-5-bbs-adapter.md) | 不新增自动 BBS adapter、endpoint 或 production network capability |
 
 ## 2. 当前未决问题
 
 ### Active blockers
 
 当前没有已登记 blocker。最后关闭阶段的发布边界、Known Differences 与未验证覆盖面见
-[MVP exit evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)；候选下一阶段尚未激活的
+[L3 exit evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)；候选下一阶段尚未激活的
 设计问题不登记为 blocker。
 
 ### Deferred open questions
 
 | ID | 问题 | 何时回答 |
 | --- | --- | --- |
-| Q-10 | HostRequest 能否跨任意 guest coroutine 层恢复？ | L3；当前 nested 固定 unsupported，只允许预供给/同步 cache |
+当前没有已经分配给 active phase 的 deferred question；新增问题必须同时写明触发条件和 owner。
 
 ### Closed questions
 
@@ -58,6 +60,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
 | Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，hard cap 独立负责安全 | [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) / `pnpm run test:phase-4f:chrome` |
 | Q-02 | production 固定为 16 MiB WASM / 1 MiB Lua heap；32 KiB diagnostic profile 验证 structured OOM/recovery，不开启 memory growth 或 adaptive sizing | [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json) / `pnpm run evidence:phase-4g` |
+| Q-10 | plain guest yield 只返回直接 `coresume()`；L3 接受 root-only，nested host suspension 统一不可捕获 structured fault | [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) / [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 
 ## 3. Risk register
 
@@ -74,14 +77,14 @@ evidence，不在本表复制测试步骤。
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
 | R-08 | hard budget 与官方 CPU 不一致 | Phase 4F 已拆分 4M/s soft classification 与 1M instruction safety cap；4G/4H 回归通过 |
-| R-09 | multi-cart 同步 API 需要 async host data | 预供给/同步 repository；L3 重评 |
+| R-09 | multi-cart 同步 API 需要 async host data | caller-authorized local repository + root HostRequest + atomic swap；Phase 5 100-swap/soak gate |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
-| R-11 | BBS 自动访问侵犯条款/作者权利 | 默认禁止；独立授权和 resolver boundary |
+| R-11 | BBS 自动访问侵犯条款/作者权利 | ADR-020 Deferred；无 production adapter、endpoint、network access 或 corpus bytes |
 | R-12 | refresh/hidden policy 改变 simulation | logical scheduler；ADR-011 hidden/blur pause + re-anchor |
 | R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；Phase 0F–3 recovery gates 已通过 |
 | R-14 | API 广而不准、stub 堆积 | vertical slice + conformance gate |
 | R-15 | upper RAM/remap 语义回归 | ADR-013 canonical mapper tests |
-| R-16 | nested coroutine 吞掉 host suspension | ADR-017 explicit unsupported |
+| R-16 | nested coroutine 吞掉 host suspension | ADR-019 root-only + uncatchable structured fault；Phase 5 28-case Node/Chrome matrix |
 | R-17 | package/execution-domain 边界退化 | ADR-015 + architecture negative fixtures |
 
 ## 4. Fallback ladder

@@ -1,9 +1,8 @@
 # Phase documents
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
-phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前 active phase 是
-[`5-l3-local-multicart.md`](./5-l3-local-multicart.md)，机器合同是
-[`spec/phase-5-l3-multicart-contract.json`](../../spec/phase-5-l3-multicart-contract.json)。
+phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。Phase 5 已关闭，当前
+没有 active phase；下一阶段必须先完成 activation contract，不能从 roadmap 或历史 evidence 开工。
 
 ## Activation contract
 

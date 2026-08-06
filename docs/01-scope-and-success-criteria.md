@@ -79,22 +79,25 @@
 | L2 Playable | 主流单 cart 游戏可完整游玩 | audio、gamepad/touch、persistence、常用 draw/audio state、pause/reset |
 | L3 Extended | 复杂和多 cart 内容可运行 | `load/reload/cstore`、cart swap、custom font、advanced registers、兼容数据库 |
 
-当前已关闭 **L2/MVP project profile**：范围严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop、
-项目原创 7-case corpus 和已发布 Known Differences。它不表示 official bit-exact、第三方/BBS cart
-成功率或完整 L3。精确分母、未验证 API 与资源结果只由
+当前已关闭 **L3 local/multicart project profile**：范围严格限于 PICO-8 v0.2.7、
+Chrome/Chromium desktop、caller-authorized local bundle、项目原创 6-case corpus 和已发布 Known
+Differences。它不表示 official bit-exact、第三方/BBS cart 成功率、自动网络访问、任意 URL/宿主
+文件系统或 nested guest-coroutine host suspension。精确分母、未验证 API 与资源结果只由
 [兼容性当前口径](./06-testing-compatibility.md#154-当前发布-profile)和
-[MVP exit evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md)维护。
+[L3 exit evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)维护。
 
-L3 是后续候选阶段；在 active phase 与机器合同明确扩展范围前，不改变当前产品承诺。
+当前没有 active phase；在新 phase 与机器合同明确扩展范围前，不改变当前产品承诺。
 
 ## 6. 当前成功标准
 
-当前 L2/MVP profile 必须持续满足：
+当前 L3 local/multicart profile 必须持续满足：
 
 1. cart code 只在可终止 Worker 内运行，fault/watchdog 后可创建 fresh session。
-2. `.p8` / `.p8.png`、30/60/custom-loop、RAM/graphics/audio/input/persistence 的项目 profile 回归通过。
-3. Chrome/Chromium desktop 的 production path、fixed resources、long-run 与 lifecycle release gate 通过。
-4. 当前公开分母中无开放 P0/P1/P2，所有差异和未验证覆盖面都在兼容性文档中可见。
+2. `.p8` / `.p8.png`、30/60/custom-loop、RAM/graphics/audio/input/persistence 与 caller-authorized
+   local `load/reload/cstore` 的项目 profile 回归通过。
+3. Chrome/Chromium desktop 的 production path、atomic swap、fixed resources、long-run 与 lifecycle
+   release gate 通过。
+4. 当前公开分母中无开放 P0/P1，所有差异和未验证覆盖面都在兼容性文档中可见。
 5. corpus 不包含未经授权取得或再分发的 BBS cart fixture。
 
 精确分母、性能、浏览器命令和 release 门禁只由
