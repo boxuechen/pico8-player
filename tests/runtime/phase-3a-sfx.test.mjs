@@ -152,7 +152,7 @@ test("Phase 3A appends sfx binding 31 and preserves raw optional Q16 arguments t
     new URL("../../spec/abi/pico-host-api-v1.json", import.meta.url),
     "utf8",
   ));
-  assert.deepEqual(contract.bindings.at(-1), {
+  assert.deepEqual(contract.bindings.find(({ id }) => id === 31), {
     id: 31,
     guestName: "sfx",
     hostMethod: "sfx",

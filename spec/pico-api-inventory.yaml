@@ -202,7 +202,7 @@ apis:
     status: partial
     owner: packages/runtime-core
     phase: 2E
-    note: byte-oriented built-in/custom font raster and synchronous visual P8SCII controls; audio and timed frame delays are intentionally deferred
+    note: byte-oriented built-in/custom font raster plus Phase 3B synchronous P8SCII audio side effects; timed frame delays remain intentionally deferred
   - name: cursor
     status: implemented
     owner: packages/runtime-core
@@ -214,10 +214,10 @@ apis:
     phase: 3A
     note: deterministic four-channel live-RAM SFX core, typed binding 31, exact 22050Hz PCM slice clock and project golden; official bit-exact waveform parity remains unclaimed
   - name: music
-    status: unimplemented
+    status: implemented
     owner: packages/runtime-core
     phase: 3B
-    note: active work unit; music sequencer, P8SCII audio controls and production dedicated-port output required
+    note: typed binding 32, live 64-pattern sequencer, channel arbitration/fade, P8SCII audio and production dedicated-port AudioWorklet output; project oracle is not official bit-exact audio
   - name: stat
     status: unimplemented
     owner: packages/runtime-core

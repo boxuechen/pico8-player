@@ -1,0 +1,52 @@
+{
+  "slices": [
+    { "firstSample": "0", "frameCount": 2940 },
+    { "firstSample": "2940", "frameCount": 2205 },
+    { "firstSample": "5145", "frameCount": 1470 },
+    { "firstSample": "6615", "frameCount": 5145 }
+  ],
+  "pcmSha256": "13cd84ef02c56038e6b498e8f96c58df503cce84cfe137943a69da9dbf7d9a9e",
+  "finalMusic": {
+    "playing": false,
+    "pattern": -1,
+    "patternsPlayed": -1,
+    "tick": -1,
+    "channelMask": 0,
+    "fadeVolume": 0,
+    "musicChannels": [false, false, false, false]
+  },
+  "finalChannels": [
+    {
+      "channel": 0,
+      "active": false,
+      "sfx": -1,
+      "note": -1,
+      "offset": 1.0587431693988902,
+      "looping": false
+    },
+    {
+      "channel": 1,
+      "active": false,
+      "sfx": -1,
+      "note": -1,
+      "offset": 0.8469945355191377,
+      "looping": false
+    },
+    {
+      "channel": 2,
+      "active": false,
+      "sfx": -1,
+      "note": -1,
+      "offset": 0.7058287795992678,
+      "looping": false
+    },
+    {
+      "channel": 3,
+      "active": false,
+      "sfx": -1,
+      "note": -1,
+      "offset": 0.604996096799376,
+      "looping": false
+    }
+  ]
+}

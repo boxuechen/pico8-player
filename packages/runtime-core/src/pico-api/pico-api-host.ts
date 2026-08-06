@@ -6,6 +6,7 @@ import {
 import {
   PicoSfxSynth,
   type AudioChannelSnapshot,
+  type AudioMusicSnapshot,
   type CanonicalAudioSlice,
 } from "../audio/sfx-synth.js";
 import { L1Graphics } from "../graphics/l1-graphics.js";
@@ -24,6 +25,7 @@ export interface PicoApiHost {
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void;
   renderAudioSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice;
   snapshotAudioChannels(): readonly AudioChannelSnapshot[];
+  snapshotAudioMusic(): AudioMusicSnapshot;
   cls(colorRaw?: number): void;
   color(colorRaw?: number): number;
   camera(xRaw?: number, yRaw?: number): void;
@@ -123,6 +125,7 @@ export interface PicoApiHost {
     offsetRaw?: number,
     lengthRaw?: number,
   ): void;
+  music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void;
 }
 
 class RuntimePicoApiHost implements PicoApiHost {
@@ -143,9 +146,11 @@ class RuntimePicoApiHost implements PicoApiHost {
     this.memoryLeaseId = memory.leaseId;
     const picoRam = new PicoRam(memory, logicalMemory);
     const ram = picoRam.physicalBytes;
-    this.#graphics = new L1Graphics(picoRam);
-    this.#input = new L1Input(ram);
     this.#audio = new PicoSfxSynth(ram);
+    this.#graphics = new L1Graphics(picoRam, {
+      play: (bytes) => this.#audio.playP8sciiAudio(bytes),
+    });
+    this.#input = new L1Input(ram);
   }
 
   reset(): void {
@@ -168,6 +173,10 @@ class RuntimePicoApiHost implements PicoApiHost {
 
   snapshotAudioChannels(): readonly AudioChannelSnapshot[] {
     return this.#audio.snapshotChannels();
+  }
+
+  snapshotAudioMusic(): AudioMusicSnapshot {
+    return this.#audio.snapshotMusic();
   }
 
   cls(colorRaw?: number): void {
@@ -392,6 +401,10 @@ class RuntimePicoApiHost implements PicoApiHost {
     lengthRaw?: number,
   ): void {
     this.#audio.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw);
+  }
+
+  music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void {
+    this.#audio.music(patternRaw, fadeLengthRaw, channelMaskRaw);
   }
 }
 

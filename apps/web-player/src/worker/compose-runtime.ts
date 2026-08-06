@@ -2,6 +2,7 @@ import { CartCodecError, decodeCart, decodeP8Png } from "@pico8-web/cart-codec";
 import type { SerializedRuntimeError } from "@pico8-web/contracts";
 import {
   CartSession,
+  type CanonicalAudioSlice,
   FrameScheduler,
   FrameSliceRuntime,
   type CartSessionBootResult,
@@ -20,6 +21,7 @@ import type {
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
 } from "../transport/public.js";
+import type { WorkerPcmTransport } from "./audio-transport.js";
 import type {
   PlayerHostToRuntime,
   PlayerRuntimeControlCommand,
@@ -175,6 +177,10 @@ export interface PlayerWorkerController {
   dispose(): void;
 }
 
+export interface PlayerWorkerControllerOptions {
+  readonly audioTransport?: WorkerPcmTransport;
+}
+
 type PlayerWorkerLifecycle =
   | "empty"
   | "ready"
@@ -208,7 +214,11 @@ function playerLifecycleError(
 /** Stable Phase 1E composition: decode -> CartSession -> scheduler -> events. */
 export function createPlayerWorkerController(
   module: FrameRuntimeModule,
+  options: PlayerWorkerControllerOptions = {},
 ): PlayerWorkerController {
+  const audioTransport = options.audioTransport;
+  let audioSequence = 0;
+  let nextAudioSample = 0n;
   let instructionBudget: number | undefined;
   const scheduler = new FrameScheduler({ maximumCatchUpTicks: 5 });
   const session = new CartSession({
@@ -233,6 +243,38 @@ export function createPlayerWorkerController(
   let mode: "none" | "callback" | "custom" = "none";
   let targetFps: 0 | 30 | 60 = 0;
 
+  function beginAudioGeneration(generation: number): void {
+    audioSequence = 0;
+    nextAudioSample = 0n;
+    audioTransport?.beginGeneration(generation, audioSequence, nextAudioSample);
+  }
+
+  function resetAudioQueue(generation: number): void {
+    if (audioTransport === undefined) return;
+    if (audioTransport.sessionGeneration !== generation) {
+      beginAudioGeneration(generation);
+    } else {
+      audioTransport.reset(audioSequence, nextAudioSample);
+    }
+  }
+
+  function sendAudio(slice: CanonicalAudioSlice): void {
+    const firstSample = BigInt(slice.firstSample);
+    if (firstSample !== nextAudioSample) {
+      audioTransport?.reset(audioSequence, firstSample);
+      nextAudioSample = firstSample;
+    }
+    const pcm16le = slice.pcm16le.slice().buffer;
+    audioTransport?.send({
+      sequence: audioSequence,
+      firstSample,
+      frameCount: slice.frameCount,
+      pcm16le,
+    });
+    audioSequence = (audioSequence + 1) >>> 0;
+    nextAudioSample = firstSample + BigInt(slice.frameCount);
+  }
+
   function fault(
     command: PlayerHostToRuntime,
     error: SerializedRuntimeError,
@@ -240,6 +282,7 @@ export function createPlayerWorkerController(
     lifecycle = "faulted";
     scheduler.pause();
     inputButtons = 0;
+    resetAudioQueue(command.sessionGeneration);
     return { ...playerBase(command), type: "fault", error };
   }
 
@@ -276,6 +319,8 @@ export function createPlayerWorkerController(
     if (result.value.kind === "host-request") {
       return unsupportedHostRequest(command);
     }
+    beginAudioGeneration(command.sessionGeneration);
+    sendAudio(result.value.audio);
     mode = result.value.mode;
     targetFps = result.value.targetFps;
     scheduler.configure(targetFps);
@@ -298,6 +343,7 @@ export function createPlayerWorkerController(
     command: PlayerRuntimeControlCommand,
     result: Extract<CartSessionStepResult, { readonly kind: "frame" }>,
   ): PlayerRuntimeToHost {
+    sendAudio(result.frame.audio);
     const packedScreen = result.frame.screen.slice().buffer;
     const displayPalette = result.frame.displayPalette.slice().buffer;
     return {
@@ -426,6 +472,7 @@ export function createPlayerWorkerController(
         lifecycle = "disposed";
         mode = "none";
         targetFps = 0;
+        resetAudioQueue(command.sessionGeneration);
         return result.ok ? [state(command, "disposed")] : [fault(command, result.error)];
       }
       if (command.type === "reset") {
@@ -472,6 +519,7 @@ export function createPlayerWorkerController(
       inputButtons = 0;
       if (!stopped.ok) return [fault(command, stopped.error)];
       lifecycle = "stopped";
+      resetAudioQueue(command.sessionGeneration);
       return [state(command, "stopped")];
     },
     dispose() {
@@ -479,6 +527,7 @@ export function createPlayerWorkerController(
       inputButtons = 0;
       session.dispose();
       lifecycle = "disposed";
+      if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
     },
   };
 }

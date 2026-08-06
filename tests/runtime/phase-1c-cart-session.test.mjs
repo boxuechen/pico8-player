@@ -36,7 +36,23 @@ function makeCart(source, options = {}) {
 }
 
 function ready(mode = "callback", targetFps = 30) {
-  return { ok: true, value: { kind: "ready", mode, targetFps } };
+  return {
+    ok: true,
+    value: {
+      kind: "ready",
+      mode,
+      targetFps,
+      audio: silentAudio(targetFps === 60 ? 735 : 735),
+    },
+  };
+}
+
+function silentAudio(frameCount = 735, firstSample = "0") {
+  return {
+    firstSample,
+    frameCount,
+    pcm16le: new Uint8Array(frameCount * 2),
+  };
 }
 
 function frame(frameId = 0) {
@@ -51,6 +67,7 @@ function frame(frameId = 0) {
         targetFps: 30,
         screen: new Uint8Array(0x2000),
         displayPalette: Uint8Array.from({ length: 16 }, (_, index) => index),
+        audio: silentAudio(735, String(frameId * 735)),
       },
     },
   };
@@ -142,6 +159,7 @@ test("load/reset own cart bytes, use zero input, and replace the full runtime gr
     generation: 1,
     mode: "callback",
     targetFps: 30,
+    audio: silentAudio(),
   });
   assert.equal(session.state, "ready");
   assert.equal(Object.isFrozen(session.cart), true);
@@ -398,6 +416,7 @@ function _draw() end`);
     generation: 1,
     mode: "callback",
     targetFps: 30,
+    audio: silentAudio(),
   });
   assert.equal(assertOk(session.copyRam(0x5010, 1))[0], 4);
   assertOk(session.dispose());

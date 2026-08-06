@@ -69,6 +69,10 @@ export class Pico8AudioProcessor extends AudioWorkletProcessor {
     if (isAudioPortAttachmentEnvelope(value)) {
       const port = (value as { readonly port?: unknown }).port;
       if (!isPort(port)) return;
+      if (value.sessionGeneration < this.#queue.sessionGeneration) {
+        port.close();
+        return;
+      }
       this.#audioPort?.close();
       this.#audioPort = port;
       port.onmessage = (event) => this.#handleAudio(event.data);

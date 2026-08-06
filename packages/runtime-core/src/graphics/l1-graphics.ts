@@ -1,6 +1,9 @@
 import type { PicoRam } from "../memory/pico-ram.js";
 import { PicoMapMemory } from "./map-memory.js";
-import { P8sciiText } from "./p8scii-text.js";
+import {
+  P8sciiText,
+  type P8sciiAudioPort,
+} from "./p8scii-text.js";
 
 const SCREEN_WIDTH = 128;
 const SCREEN_HEIGHT = 128;
@@ -54,7 +57,7 @@ export class L1Graphics {
   readonly #shapeMask = new Uint8Array(SCREEN_WIDTH * SCREEN_HEIGHT);
   #maskingShape = false;
 
-  constructor(memory: PicoRam) {
+  constructor(memory: PicoRam, audio?: P8sciiAudioPort) {
     this.#memory = memory;
     this.#mapMemory = new PicoMapMemory(memory);
     this.#ram = memory.physicalBytes;
@@ -63,17 +66,21 @@ export class L1Graphics {
       this.#ram.byteOffset,
       this.#ram.byteLength,
     );
-    this.#text = new P8sciiText(memory, {
-      plot: (worldX, worldY, sourceColor) => {
-        this.#plotTextPixel(worldX, worldY, sourceColor);
+    this.#text = new P8sciiText(
+      memory,
+      {
+        plot: (worldX, worldY, sourceColor) => {
+          this.#plotTextPixel(worldX, worldY, sourceColor);
+        },
+        clear: (sourceColor) => {
+          this.cls((sourceColor & 0x0f) << 16);
+        },
+        scroll: (rows) => {
+          this.#scrollScreen(rows);
+        },
       },
-      clear: (sourceColor) => {
-        this.cls((sourceColor & 0x0f) << 16);
-      },
-      scroll: (rows) => {
-        this.#scrollScreen(rows);
-      },
-    });
+      audio,
+    );
   }
 
   reset(): void {

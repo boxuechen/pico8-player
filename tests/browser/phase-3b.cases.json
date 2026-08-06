@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "durationMs": 2500,
+  "prebufferSourceFrames": 11025,
+  "requestedSampleRates": [44100, 48000]
+}

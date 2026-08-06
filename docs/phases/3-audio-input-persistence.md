@@ -1,6 +1,6 @@
 # Phase 3 — Audio、Input 与 Persistence
 
-> 状态：Active；当前 work unit：3B
+> 状态：Active；当前 work unit：3C
 > 机器合同：[`spec/phase-3-audio-input-persistence-contract.json`](../../spec/phase-3-audio-input-persistence-contract.json)
 > 前置证据：[`Phase 2 Graphics/Memory/Text exit`](../evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)
 > 浏览器门禁：Google Chrome / Chromium desktop only
@@ -33,8 +33,8 @@ Non-goals：
 | Unit | 名称 | 状态 | 主要可观察结果 |
 | --- | --- | --- | --- |
 | 3A | Deterministic SFX Core | Complete | `sfx()` 驱动 4-channel browser-neutral synth，产生 deterministic 22050Hz PCM |
-| 3B | Music 与 Browser Audio | **Active** | `music()`/P8SCII audio、logical PCM chunks 和真实 AudioWorklet output 闭环 |
-| 3C | Controller Input | Planned | player 0..7、keyboard/gamepad/touch 的 deterministic controller snapshots |
+| 3B | Music 与 Browser Audio | Complete | `music()`/P8SCII audio、logical PCM chunks 和真实 AudioWorklet output 闭环 |
+| 3C | Controller Input | **Active** | player 0..7、keyboard/gamepad/touch 的 deterministic controller snapshots |
 | 3D | Devkit Input | Planned | input-only `stat()`、mouse/keyboard queue 和 pointer-lock lifecycle |
 | 3E | Cartdata Core | Planned | 同步 `cartdata/dget/dset` 与 256-byte browser-neutral mirror |
 | 3F | IndexedDB Persistence | Planned | preboot hydrate、durable commit、migration 与 failure-visible fallback |
@@ -49,75 +49,87 @@ PCM 和 lifecycle reset 已完成。机器结果、golden hash 与 known differe
 的 `workUnits.3A.result` 保存；可执行回归为 `pnpm run test:phase-3a`，兼容矩阵见
 [15.12](../06-testing-compatibility.md#1512-phase-3a-deterministic-sfx-core-矩阵)。
 
-## Active work unit：3B
+## Completed work unit：3B
+
+binding `32`、64-pattern live music sequencer、SFX arbitration、fade 与 P8SCII audio 已进入
+唯一 `PicoSfxSynth`；startup/frame PCM 只经 dedicated port 到 production Worklet。Node golden
+与 Chrome 44.1/48kHz 结果由机器合同的 `workUnits.3B.result` 保存；可执行回归为
+`pnpm run test:phase-3b`，兼容矩阵见
+[15.13](../06-testing-compatibility.md#1513-phase-3b-music-与-browser-audio-矩阵)。
+
+## Active work unit：3C
 
 ### Observable behavior
 
-1. Production VM 追加 binding `32`：`music(n, [fade_len], [channel_mask])`。实现 start/stop、
-   millisecond fade、channel mask、pattern start/loop/stop flags 与 live `0x3100..0x31ff` reads。
-2. music sequencer 与 3A SFX 共用唯一四声道和 sample clock；明确 SFX interrupt、music
-   reservation/resume、pattern duration 和 stop/fade 后状态，不在 bridge/browser 复制规则。
-3. P8SCII control `0x07` 的同步 audio side effect 通过窄的 browser-neutral sink 进入同一
-   AudioSynth；visual text renderer 不拥有 channel/music state，timed frame-delay controls 仍 deferred。
-4. Runtime Worker 将 startup 和每个 committed frame 的 canonical PCM 转成 versioned
-   `audioReset/audioChunk`，只走 ADR-010 dedicated `MessagePort`；一般 player protocol 不携带 PCM。
-5. load/reset/fault/stop/dispose 与 stale generation 必须 reset/隔离 Worklet queue；audio port
-   未 attach、AudioContext suspended 或 queue backpressure 不得改变 simulation clock。
-6. production Chrome 在 44.1/48kHz AudioContext 中能听到项目 cart，linear resampler、bounded
-   queue 和 stats 保持既有 Phase 0F 契约；不增加 relay、SAB、Firefox/WebKit 或 wall-clock synth。
+1. 把 `PicoInputSnapshot` 从 player-0 单 mask 扩展为固定 8-player、每人 6-bit 的 normalized
+   snapshot。Worker 在每个 simulation slice 开始锁存一次；同一 slice、HostRequest resume 和
+   deterministic replay 都复用该 snapshot，不把 DOM timestamp 或 device object 传入 RuntimeCore。
+2. `btn(b, [pl])` 与 `btnp(b, [pl])` 支持 player `0..7`；缺省 player 为 0。`btn()` 无参数返回
+   player 0/1 的组合 bitfield（P0 bits `0..5`、P1 bits `8..13`），invalid button/player 保持既有
+   no-op/false profile。`0x5f4c..0x5f53` 是八名玩家 held mask 的 RAM 权威值。
+3. 每名玩家独立维护 held、edge、duration 与 `0x5f5c/0x5f5d` repeat；30/60Hz 换算沿用
+   Phase 1D 规则。load/reset/stop/fault/dispose 和 stale generation 清除所有玩家状态。
+4. main thread 的 input hub 以来源为单位维护 keyboard、Gamepad 与 touch mask，再按 player
+   做 bitwise OR；释放一个 alias/source 不得清除其他仍 held 的同一按钮。Worker 只接收合并后的
+   normalized snapshot，device connect/disconnect 不改变 simulation clock。
+5. keyboard 保留 player 0 aliases，并实现手册的 player 1 默认映射；Gamepad 在 rAF pulse 前
+   poll `navigator.getGamepads()`，使用稳定 browser slot `0..7`、standard mapping、d-pad/axes
+   hysteresis 和 O/X button mapping；disconnect 立即清除该 source。
+6. player shell 提供可隐藏的六键 multitouch controls。Pointer capture、multi-pointer、
+   `pointerup/cancel/lostpointercapture`、blur 与 visibility 必须成对清理；touch UI 只产生 controller
+   masks，不写 RAM、不实现 devkit mouse/pointer-lock，也不改变 Canvas renderer。
 
 ### 允许修改的范围
 
-- `spec/phase-3-audio-input-persistence-contract.json`、`spec/pico-api-inventory.yaml`、`spec/abi/**`
-- `packages/runtime-core/src/{audio,graphics,frame-runtime.ts,pico-api,public.ts}`
-- `packages/z8lua-bridge/src/**`、生成 binding/header
-- `apps/web-player/src/{transport,worker,main,worklet}/**` 中现有 audio production path
-- `tests/{runtime,phase-0f,browser,architecture,golden}/**`、`tools/browser/**`、`package.json`
+- `spec/phase-3-audio-input-persistence-contract.json`、`spec/pico-api-inventory.yaml` 与 input DTO owner
+- `packages/contracts/src/**` 的 normalized input contract
+- `packages/runtime-core/src/{input,frame-runtime.ts,pico-api,session,public.ts}`
+- `apps/web-player/src/{transport,worker,main}/**` 的 input protocol、hub 与 shell controls
+- `tests/{runtime,browser,architecture,conformance,golden}/**`、`tools/browser/**`、`package.json`
 - 本 work unit 直接拥有的文档状态和 compatibility matrix
 
-不得修改 `docs/evidence/**`；不得加入 relay/SAB 或 browser audio state 到 RuntimeCore；不得把
-`stat/cartdata/reload/cstore` stub 加入 production binding。Phase 0F protocol version/queue 水位若无需
-改变必须保持；确需改变时先更新其 owner spec 并提供完整 Chrome 回归。
+不得修改 `docs/evidence/**`；不得把 KeyboardEvent、Gamepad、PointerEvent、DOM 或 clock source
+带入 RuntimeCore；不得实现 3D/4D 的 `stat()`、devkit mouse/keyboard queue、pointer lock，或把
+controller state 写入 audio/graphics adapter。Phase 0F audio protocol 与 queue 水位必须保持。
 
 ### Routed contracts
 
-- [WASM import 与 host-call frame](../03-z8lua-wasm-bridge.md#7-wasm-import-与-host-call-frame)
-- [AudioSynth/AudioWorklet 与 dedicated port](../04-typescript-runtime.md#8-audiosynth-与-audioworklet)
-- [P8SCII 状态边界](../04-typescript-runtime.md#7-graphics)
-- [Audio golden](../06-testing-compatibility.md#74-audio) 与 [Chrome device gate](../06-testing-compatibility.md#112-chrome--chromium-集成测试)
+- [Input ownership 与逐 slice latch](../04-typescript-runtime.md#9-input)
+- [Chrome integration gate](../06-testing-compatibility.md#112-chrome--chromium-集成测试)
 - [RuntimeCore/app execution ownership](../08-source-layout-and-boundaries.md#2-package-职责)
-- [ADR-008](../adr/008-schema-generated-host-bindings.md)、[ADR-010](../adr/010-dedicated-messageport-audio-transport.md)、
-  [ADR registry（ADR-014）](../07-decisions-risks-open-questions.md#1-adr-registry)
+- [官方 BTN/BTNP 与默认 keyboard mapping](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
 
 ### Verification
 
-3B 必须新增 `pnpm run test:phase-3b` 与 `test:phase-3b:chrome`，覆盖：
+3C 必须新增 `pnpm run test:phase-3c` 与 `test:phase-3c:chrome`，覆盖：
 
-- real-WASM `music()` optional raw ABI、invalid/stop/fade/mask 和 live 64-pattern RAM decode。
-- start/loop/stop flags、pattern length、SFX interrupt/resume、四声道 reservation 与 deterministic replay。
-- P8SCII audio controls 的 command/PCM golden；timed control 仍无 device side effect。
-- Worker audio sequence/sample continuity、startup chunk、catch-up multi-chunk、reset/fault/stop/dispose、
-  unattached port 和 stale generation。
-- Chrome production cart 在 44.1/48kHz 的 received chunks、prebuffer/play、steady underrun/overrun/
-  discontinuity/stale 全部满足 case manifest；Canvas/input regression 同时通过。
-- `pnpm run test:phase-3a`、Phase 0F audio transport、Phase 1/2 和 architecture regression。
+- real-WASM `btn/btnp` 的 player 0..7、no-arg P0/P1 bitfield、RAM registers、independent
+  edge/repeat、30/60Hz 与 invalid arguments。
+- fixed snapshot validator、Worker latest-sequence/stale-generation、catch-up slice latch、cold reset、
+  fault/stop/dispose clear 与 deterministic eight-player replay golden。
+- keyboard aliases/player 1、simultaneous multi-source merge、Gamepad axis hysteresis/button/disconnect、
+  touch multi-pointer/cancel/capture 和 focus/visibility clear 的 unit tests。
+- Chrome production cart 同时观察 keyboard、injected deterministic Gamepad source 与真实 PointerEvent
+  touch controls；Canvas、audio、rAF responsiveness 与 generation recovery 不回归。
+- `pnpm run test:phase-3b`、Phase 1D/1E input/scheduler、Phase 2/architecture regression。
 
 最终门禁：
 
 ```text
-pnpm run test:phase-3b
-pnpm run test:phase-3b:chrome
+pnpm run test:phase-3c
+pnpm run test:phase-3c:chrome
 pnpm run verify
 git status --short
 ```
 
-### 3B exit gate
+### 3C exit gate
 
-- `music()`、P8SCII audio 和 SFX interaction 有 production source、real-WASM cart 与 project golden。
-- canonical PCM 仅通过 dedicated port 到 Worklet；control protocol 无 PCM，RuntimeCore 无 Web API import。
-- Node 与 Chrome 44.1/48kHz gates 通过，queue/generation/lifecycle counters 无未解释异常。
-- machine contract 保存 binding、music/audio golden、Chrome environment、known differences 和命令。
-- 3B 独立提交后 worktree 干净；随后才折叠本节并激活 3C。
+- RuntimeCore 只接收固定、browser-neutral 的八玩家 snapshot，所有 device policy 留在 app。
+- `btn/btnp`、RAM 和 repeat state 对八名玩家可独立验证，reset/fault/stale generation 不泄漏输入。
+- keyboard、standard Gamepad 与 multitouch production adapters 在 Chrome gate 中驱动同一 cart，
+  disconnect/cancel/blur 后没有 stuck buttons。
+- machine contract 保存 snapshot shape、mapping policy、golden、Chrome environment、known differences 和命令。
+- 3C 独立提交后 worktree 干净；随后才折叠本节并激活 3D。
 
 ## Phase exit gate
 

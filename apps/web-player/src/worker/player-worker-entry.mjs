@@ -5,6 +5,7 @@ import {
 import { WorkerPcmTransport } from "./audio-transport.ts";
 import { installPlayerRuntimeWorker } from "./runtime-worker.ts";
 
+const audioTransport = new WorkerPcmTransport();
 const controller = (async () => {
   const wasmUrl = new URL(
     "../../../../wasm/dist/z8lua-runtime-v1.wasm",
@@ -16,7 +17,7 @@ const controller = (async () => {
   }
   const wasmBinary = await wasmResponse.arrayBuffer();
   const module = await createZ8LuaModule({ wasmBinary });
-  return createPlayerWorkerController(module);
+  return createPlayerWorkerController(module, { audioTransport });
 })();
 
-installPlayerRuntimeWorker(self, controller, new WorkerPcmTransport());
+installPlayerRuntimeWorker(self, controller, audioTransport);

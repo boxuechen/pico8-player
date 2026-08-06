@@ -4,6 +4,9 @@ export const PICO_AUDIO_CHANNELS = 4 as const;
 const SFX_BASE = 0x3200;
 const SFX_COUNT = 64;
 const SFX_BYTES = 68;
+const MUSIC_BASE = 0x3100;
+const MUSIC_COUNT = 64;
+const MUSIC_CHANNELS = 4;
 const NOTES_PER_SFX = 32;
 const NOTE_BYTES = 2;
 const NOTE_SAMPLES_PER_SPEED = 183;
@@ -31,6 +34,16 @@ export interface AudioChannelSnapshot {
   readonly looping: boolean;
 }
 
+export interface AudioMusicSnapshot {
+  readonly playing: boolean;
+  readonly pattern: number;
+  readonly patternsPlayed: number;
+  readonly tick: number;
+  readonly channelMask: number;
+  readonly fadeVolume: number;
+  readonly musicChannels: readonly boolean[];
+}
+
 export interface AudioSynth {
   reset(): void;
   sfx(
@@ -39,8 +52,11 @@ export interface AudioSynth {
     offsetRaw?: number,
     lengthRaw?: number,
   ): void;
+  music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void;
+  playP8sciiAudio(bytes: Uint8Array): void;
   renderSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice;
   snapshotChannels(): readonly AudioChannelSnapshot[];
+  snapshotMusic(): AudioMusicSnapshot;
 }
 
 interface VoiceState {
@@ -73,6 +89,8 @@ interface ChannelState {
   readonly custom: VoiceState;
   length: number;
   canLoop: boolean;
+  isMusic: boolean;
+  parkedMusicSfx: number;
   lastMainNote: number;
   lastMainKey: number;
   lastMainVolume: number;
@@ -82,6 +100,16 @@ interface ChannelState {
   reverbIndex: number;
   readonly damp1: BiquadFilter;
   readonly damp2: BiquadFilter;
+}
+
+interface MusicState {
+  pattern: number;
+  patternsPlayed: number;
+  channelMask: number;
+  tick: number;
+  lengthTicks: number;
+  fadeVolume: number;
+  fadeStepPerSample: number;
 }
 
 function clamp(value: number, minimum: number, maximum: number): number {
@@ -94,6 +122,26 @@ function q16Integer(raw: number): number {
 
 function keyToFrequency(key: number): number {
   return 440 * 2 ** ((key - 33) / 12);
+}
+
+function p8sciiParameter(byte: number): number {
+  if (byte >= 0x30 && byte <= 0x39) return byte - 0x30;
+  if (byte >= 0x61 && byte <= 0x7a) return byte - 0x57;
+  if (byte >= 0x41 && byte <= 0x5a) return byte - 0x37;
+  return 0;
+}
+
+function noteSemitone(byte: number): number {
+  switch (byte) {
+    case 0x63: return 0;
+    case 0x64: return 2;
+    case 0x65: return 4;
+    case 0x66: return 5;
+    case 0x67: return 7;
+    case 0x61: return 9;
+    case 0x62: return 11;
+    default: return -1;
+  }
 }
 
 function mixSeed(channel: number, custom: boolean): number {
@@ -172,6 +220,8 @@ function createChannel(channel: number): ChannelState {
     custom: createVoice(channel, true),
     length: 0,
     canLoop: true,
+    isMusic: false,
+    parkedMusicSfx: -1,
     lastMainNote: -1,
     lastMainKey: -1,
     lastMainVolume: 0,
@@ -188,6 +238,15 @@ function createChannel(channel: number): ChannelState {
 export class PicoSfxSynth implements AudioSynth {
   readonly #ram: Uint8Array;
   readonly #channels: ChannelState[];
+  readonly #music: MusicState = {
+    pattern: -1,
+    patternsPlayed: -1,
+    channelMask: 0,
+    tick: -1,
+    lengthTicks: 0,
+    fadeVolume: 0,
+    fadeStepPerSample: 0,
+  };
   #sampleIndex = 0n;
   #sampleRemainder = 0;
   #targetFps: 0 | 30 | 60 = 0;
@@ -210,6 +269,15 @@ export class PicoSfxSynth implements AudioSynth {
     for (let index = 0; index < this.#channels.length; index += 1) {
       this.#resetChannel(this.#channels[index]!, index);
     }
+    Object.assign(this.#music, {
+      pattern: -1,
+      patternsPlayed: -1,
+      channelMask: 0,
+      tick: -1,
+      lengthTicks: 0,
+      fadeVolume: 0,
+      fadeStepPerSample: 0,
+    });
   }
 
   sfx(
@@ -228,15 +296,15 @@ export class PicoSfxSynth implements AudioSynth {
     if (channel === -2) {
       if (sfx < 0) return;
       for (const state of this.#channels) {
-        if (state.main.sfx === sfx) this.#stopChannel(state);
+        if (state.main.sfx === sfx) this.#silenceChannel(state);
       }
       return;
     }
     if (sfx === -1) {
       if (channel === -1) {
-        for (const state of this.#channels) this.#stopChannel(state);
+        for (const state of this.#channels) this.#stopManualSfx(state);
       } else {
-        this.#stopChannel(this.#channels[channel]!);
+        this.#stopManualSfx(this.#channels[channel]!);
       }
       return;
     }
@@ -253,9 +321,47 @@ export class PicoSfxSynth implements AudioSynth {
       if (channel < 0) return;
     }
     for (const state of this.#channels) {
-      if (state.main.sfx === sfx) this.#stopChannel(state);
+      if (state.main.sfx === sfx) this.#silenceChannel(state);
     }
-    this.#launch(this.#channels[channel]!, channel, sfx, Math.max(0, offset), Math.max(0, length));
+    const state = this.#channels[channel]!;
+    if (state.main.sfx >= 0 && state.isMusic) state.parkedMusicSfx = state.main.sfx;
+    this.#launch(
+      state,
+      channel,
+      sfx,
+      Math.max(0, offset),
+      Math.max(0, length),
+      false,
+    );
+  }
+
+  music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void {
+    const pattern = q16Integer(patternRaw);
+    const fadeLengthMs = Math.max(0, fadeLengthRaw === undefined ? 0 : q16Integer(fadeLengthRaw));
+    const channelMask = channelMaskRaw === undefined ? 0 : q16Integer(channelMaskRaw) & 0x0f;
+    if (pattern < -1 || pattern >= MUSIC_COUNT) return;
+    if (pattern === -1) {
+      if (this.#music.pattern < 0) return;
+      if (fadeLengthMs === 0) {
+        this.#setMusicPattern(-1);
+      } else {
+        this.#music.fadeStepPerSample = -this.#music.fadeVolume /
+          (fadeLengthMs * PICO_AUDIO_SAMPLE_RATE / 1000);
+      }
+      return;
+    }
+    this.#music.patternsPlayed = 0;
+    this.#music.channelMask = channelMask;
+    this.#music.fadeVolume = fadeLengthMs === 0 ? 1 : 0;
+    this.#music.fadeStepPerSample = fadeLengthMs === 0
+      ? 0
+      : 1 / (fadeLengthMs * PICO_AUDIO_SAMPLE_RATE / 1000);
+    this.#setMusicPattern(pattern);
+  }
+
+  playP8sciiAudio(bytes: Uint8Array): void {
+    if (!(bytes instanceof Uint8Array) || bytes.byteLength > 256) return;
+    this.#playP8sciiAudio(bytes);
   }
 
   renderSlices(sliceCount: number, targetFps: 30 | 60): CanonicalAudioSlice {
@@ -293,11 +399,25 @@ export class PicoSfxSynth implements AudioSynth {
     }));
   }
 
+  snapshotMusic(): AudioMusicSnapshot {
+    return {
+      playing: this.#music.pattern >= 0,
+      pattern: this.#music.pattern,
+      patternsPlayed: this.#music.patternsPlayed,
+      tick: this.#music.pattern < 0 ? -1 : Math.floor(this.#music.tick),
+      channelMask: this.#music.channelMask,
+      fadeVolume: this.#music.fadeVolume,
+      musicChannels: this.#channels.map((state) => state.isMusic),
+    };
+  }
+
   #resetChannel(state: ChannelState, channel: number): void {
     Object.assign(state.main, createVoice(channel, false));
     Object.assign(state.custom, createVoice(channel, true));
     state.length = 0;
     state.canLoop = true;
+    state.isMusic = false;
+    state.parkedMusicSfx = -1;
     state.lastMainNote = -1;
     state.lastMainKey = -1;
     state.lastMainVolume = 0;
@@ -309,14 +429,20 @@ export class PicoSfxSynth implements AudioSynth {
     state.damp2.reset();
   }
 
-  #stopChannel(state: ChannelState): void {
+  #silenceChannel(state: ChannelState): void {
     state.main.sfx = -1;
     state.custom.sfx = -1;
     state.length = 0;
     state.canLoop = true;
+    state.isMusic = false;
     state.lastMainNote = -1;
     state.lastMainKey = -1;
     state.lastMainVolume = 0;
+  }
+
+  #stopManualSfx(state: ChannelState): void {
+    if (state.main.sfx < 0 || state.isMusic) return;
+    this.#silenceChannel(state);
   }
 
   #launch(
@@ -325,6 +451,7 @@ export class PicoSfxSynth implements AudioSynth {
     sfx: number,
     offset: number,
     length: number,
+    isMusic: boolean,
   ): void {
     const phase = state.main.phase;
     const noiseState = state.main.noiseState;
@@ -337,6 +464,7 @@ export class PicoSfxSynth implements AudioSynth {
     state.custom.sfx = -1;
     state.length = length;
     state.canLoop = true;
+    state.isMusic = isMusic;
     state.lastMainNote = -1;
     state.lastMainKey = -1;
     state.lastMainVolume = 0;
@@ -353,14 +481,254 @@ export class PicoSfxSynth implements AudioSynth {
     });
   }
 
+  #advanceMusic(): void {
+    if (this.#music.pattern < 0) return;
+    if (this.#music.fadeStepPerSample !== 0) {
+      this.#music.fadeVolume = clamp(
+        this.#music.fadeVolume + this.#music.fadeStepPerSample,
+        0,
+        1,
+      );
+      if (this.#music.fadeStepPerSample < 0 && this.#music.fadeVolume === 0) {
+        this.#setMusicPattern(-1);
+        return;
+      }
+      if (this.#music.fadeStepPerSample > 0 && this.#music.fadeVolume === 1) {
+        this.#music.fadeStepPerSample = 0;
+      }
+    }
+    const rateScale = (this.#ram[AUDIO_HALF_RATE]! & 1) !== 0 ? 0.5 : 1;
+    this.#music.tick += rateScale / NOTE_SAMPLES_PER_SPEED;
+    if (this.#music.tick < this.#music.lengthTicks) return;
+
+    const pattern = this.#music.pattern;
+    const address = MUSIC_BASE + pattern * MUSIC_CHANNELS;
+    let nextPattern = pattern + 1;
+    if ((this.#ram[address + 2]! & 0x80) !== 0) {
+      nextPattern = -1;
+    } else if ((this.#ram[address + 1]! & 0x80) !== 0) {
+      nextPattern = pattern + 1;
+      do {
+        nextPattern -= 1;
+      } while (
+        nextPattern > 0 &&
+        (this.#ram[MUSIC_BASE + nextPattern * MUSIC_CHANNELS]! & 0x80) === 0
+      );
+    }
+    this.#music.patternsPlayed += 1;
+    this.#setMusicPattern(nextPattern);
+  }
+
+  #setMusicPattern(pattern: number): void {
+    for (const state of this.#channels) {
+      if (state.isMusic) this.#silenceChannel(state);
+      state.parkedMusicSfx = -1;
+    }
+    if (pattern < 0 || pattern >= MUSIC_COUNT) {
+      Object.assign(this.#music, {
+        pattern: -1,
+        patternsPlayed: -1,
+        channelMask: 0,
+        tick: -1,
+        lengthTicks: 0,
+        fadeVolume: 0,
+        fadeStepPerSample: 0,
+      });
+      return;
+    }
+
+    const songAddress = MUSIC_BASE + pattern * MUSIC_CHANNELS;
+    const songChannels = Array.from(
+      { length: MUSIC_CHANNELS },
+      (_, channel) => this.#ram[songAddress + channel]! & 0x7f,
+    );
+    let loopingDuration = -1;
+    let nonLoopingDuration = -1;
+    for (const encoded of songChannels) {
+      if ((encoded & 0x40) !== 0) continue;
+      const sfx = encoded & 0x3f;
+      const base = this.#sfxAddress(sfx);
+      const speed = Math.max(1, this.#ram[base + 65]!);
+      const loopStart = this.#ram[base + 66]!;
+      const loopEnd = this.#ram[base + 67]!;
+      if (loopEnd > loopStart) {
+        loopingDuration = Math.max(loopingDuration, NOTES_PER_SFX * speed);
+      } else {
+        const end = loopEnd === 0 && loopStart > 0
+          ? Math.min(NOTES_PER_SFX, loopStart)
+          : NOTES_PER_SFX;
+        nonLoopingDuration = end * speed;
+        break;
+      }
+    }
+    const duration = nonLoopingDuration > 0 ? nonLoopingDuration : loopingDuration;
+    this.#music.pattern = pattern;
+    this.#music.tick = 0;
+    this.#music.lengthTicks = duration > 0 ? duration : NOTES_PER_SFX;
+
+    for (let channel = 0; channel < MUSIC_CHANNELS; channel += 1) {
+      const encoded = songChannels[channel]!;
+      if ((encoded & 0x40) !== 0) continue;
+      const sfx = encoded & 0x3f;
+      const state = this.#channels[channel]!;
+      if (state.main.sfx < 0) {
+        this.#launch(state, channel, sfx, 0, 0, true);
+      } else {
+        state.parkedMusicSfx = sfx;
+      }
+    }
+  }
+
+  #resumeParkedMusic(state: ChannelState, channel: number): void {
+    if (state.main.sfx >= 0 || state.parkedMusicSfx < 0 || this.#music.pattern < 0) return;
+    const sfx = state.parkedMusicSfx;
+    const base = this.#sfxAddress(sfx);
+    const speed = Math.max(1, this.#ram[base + 65]!);
+    let offset = this.#music.tick / speed;
+    const loopStart = this.#ram[base + 66]!;
+    const loopEnd = this.#ram[base + 67]!;
+    if (loopEnd > loopStart && offset > loopStart) {
+      offset = ((offset - loopStart) % (loopEnd - loopStart)) + loopStart;
+    }
+    state.parkedMusicSfx = -1;
+    if (offset > NOTES_PER_SFX) return;
+    this.#launch(state, channel, sfx, offset, 0, true);
+  }
+
+  #playP8sciiAudio(bytes: Uint8Array): void {
+    let cursor = 0;
+    let selected = -1;
+    if (bytes[cursor] !== undefined && bytes[cursor]! >= 0x30 && bytes[cursor]! <= 0x39) {
+      selected = 0;
+      for (let digits = 0; digits < 2; digits += 1) {
+        const byte = bytes[cursor];
+        if (byte === undefined || byte < 0x30 || byte > 0x39) break;
+        selected = selected * 10 + byte - 0x30;
+        cursor += 1;
+      }
+      if (selected >= SFX_COUNT) return;
+      if (cursor === bytes.byteLength) {
+        this.sfx(selected << 16);
+        return;
+      }
+    } else {
+      selected = this.#selectEphemeralSfx();
+      if (selected < 0) return;
+    }
+
+    const base = this.#sfxAddress(selected);
+    this.#ram.fill(0, base, base + SFX_BYTES);
+    let speed = 16;
+    let loopStart = 0;
+    let loopEnd = 0;
+    let instrument = 5;
+    let volume = 5;
+    let effect = 0;
+    let octave = 3;
+    let note = 0;
+    while (cursor < bytes.byteLength && note < NOTES_PER_SFX) {
+      const byte = bytes[cursor++]!;
+      const lower = byte >= 0x41 && byte <= 0x5a ? byte + 0x20 : byte;
+      if (lower === 0x73 && note === 0) {
+        const value = bytes[cursor++];
+        if (value !== undefined) speed = clamp(p8sciiParameter(value), 1, 255);
+        continue;
+      }
+      if (lower === 0x6c && note === 0) {
+        const start = bytes[cursor++];
+        const end = bytes[cursor++];
+        if (start !== undefined) loopStart = clamp(p8sciiParameter(start), 0, 31);
+        if (end !== undefined) loopEnd = clamp(p8sciiParameter(end), 0, 32);
+        continue;
+      }
+      if (lower === 0x69 || lower === 0x76 || lower === 0x78) {
+        const value = bytes[cursor++];
+        if (value === undefined) continue;
+        const parsed = p8sciiParameter(value);
+        if (lower === 0x69) instrument = clamp(parsed, 0, 7);
+        else if (lower === 0x76) volume = clamp(parsed, 0, 7);
+        else effect = clamp(parsed, 0, 7);
+        continue;
+      }
+      if (lower === 0x3c) {
+        volume = Math.max(0, volume - 1);
+        continue;
+      }
+      if (lower === 0x3e) {
+        volume = Math.min(7, volume + 1);
+        continue;
+      }
+      if (lower === 0x2e) {
+        this.#writeP8sciiNote(base, note++, 0, instrument, 0, effect);
+        continue;
+      }
+      const semitone = noteSemitone(lower);
+      if (semitone < 0) continue;
+      let adjusted = semitone;
+      if (bytes[cursor] === 0x23) {
+        adjusted += 1;
+        cursor += 1;
+      } else if (bytes[cursor] === 0x2d) {
+        adjusted -= 1;
+        cursor += 1;
+      }
+      const octaveByte = bytes[cursor];
+      if (octaveByte !== undefined && octaveByte >= 0x30 && octaveByte <= 0x35) {
+        octave = octaveByte - 0x30;
+        cursor += 1;
+      }
+      this.#writeP8sciiNote(
+        base,
+        note++,
+        clamp(octave * 12 + adjusted, 0, 63),
+        instrument,
+        volume,
+        effect,
+      );
+    }
+    if (note === 0) this.#writeP8sciiNote(base, 0, octave * 12, instrument, volume, effect);
+    this.#ram[base + 65] = speed;
+    this.#ram[base + 66] = loopStart;
+    this.#ram[base + 67] = loopEnd;
+    this.sfx(selected << 16);
+  }
+
+  #selectEphemeralSfx(): number {
+    for (let sfx = 60; sfx < 64; sfx += 1) {
+      if (this.#channels.every((state) => state.main.sfx !== sfx)) return sfx;
+    }
+    return -1;
+  }
+
+  #writeP8sciiNote(
+    base: number,
+    note: number,
+    key: number,
+    instrument: number,
+    volume: number,
+    effect: number,
+  ): void {
+    const address = base + note * NOTE_BYTES;
+    this.#ram[address] = (key & 0x3f) | ((instrument & 3) << 6);
+    this.#ram[address + 1] = ((instrument >>> 2) & 1) |
+      ((volume & 7) << 1) |
+      ((effect & 7) << 4);
+  }
+
   #selectChannel(sfx: number): number {
     for (let channel = 0; channel < this.#channels.length; channel += 1) {
+      if ((this.#music.channelMask & (1 << channel)) !== 0) continue;
       const playing = this.#channels[channel]!.main.sfx;
       if (playing === -1 || playing === sfx) return channel;
+    }
+    for (let channel = 0; channel < this.#channels.length; channel += 1) {
+      if ((this.#music.channelMask & (1 << channel)) !== 0) continue;
+      if (this.#channels[channel]!.isMusic) return channel;
     }
     let selected = -1;
     let fastest = 256;
     for (let channel = 0; channel < this.#channels.length; channel += 1) {
+      if ((this.#music.channelMask & (1 << channel)) !== 0) continue;
       const playing = this.#channels[channel]!.main.sfx;
       if (playing < 0) continue;
       const speed = this.#ram[this.#sfxAddress(playing) + 65]!;
@@ -374,6 +742,7 @@ export class PicoSfxSynth implements AudioSynth {
 
   #renderSample(): number {
     if (this.#ram[SOUND_PAUSE] === 1) return 0;
+    this.#advanceMusic();
     let mixed = 0;
     for (let channel = 0; channel < this.#channels.length; channel += 1) {
       mixed += this.#renderChannel(this.#channels[channel]!, channel);
@@ -382,6 +751,7 @@ export class PicoSfxSynth implements AudioSynth {
   }
 
   #renderChannel(state: ChannelState, channel: number): number {
+    this.#resumeParkedMusic(state, channel);
     const main = this.#prepareVoice(state.main, channel, 1, state.length, state.canLoop, false);
     let value = 0;
     let filters = 0;
@@ -411,7 +781,7 @@ export class PicoSfxSynth implements AudioSynth {
             filters = custom.filters;
             value = this.#sampleWaveform(custom, state.custom) * custom.volume * main.volume;
           }
-          this.#advanceVoice(state.custom, channel, 0, true);
+          this.#advanceVoice(state.custom, channel, 0, true, false);
         } else {
           state.custom.sfx = -1;
           value = this.#sampleWaveform(main, state.main) * main.volume;
@@ -421,10 +791,13 @@ export class PicoSfxSynth implements AudioSynth {
       state.lastMainKey = main.key;
       state.lastMainVolume = main.volume;
       state.lastMainLoopEpoch = state.main.loopEpoch;
-      this.#advanceVoice(state.main, channel, state.length, state.canLoop);
+      this.#advanceVoice(state.main, channel, state.length, state.canLoop, state.isMusic);
     }
 
-    value = clamp(value * MASTER_SFX_GAIN, -1, 1);
+    const gain = state.isMusic
+      ? MASTER_SFX_GAIN * this.#music.fadeVolume
+      : MASTER_SFX_GAIN;
+    value = clamp(value * gain, -1, 1);
     const reverbMode = Math.floor(filters / 24) % 3;
     const dampenMode = Math.floor(filters / 72) % 3;
     const hardwareReverb = this.#ram[AUDIO_REVERB]!;
@@ -526,7 +899,13 @@ export class PicoSfxSynth implements AudioSynth {
     };
   }
 
-  #advanceVoice(voice: VoiceState, channel: number, length: number, canLoop: boolean): void {
+  #advanceVoice(
+    voice: VoiceState,
+    channel: number,
+    length: number,
+    canLoop: boolean,
+    isMusic: boolean,
+  ): void {
     if (voice.sfx < 0) return;
     const base = this.#sfxAddress(voice.sfx);
     const speed = Math.max(1, this.#ram[base + 65]!);
@@ -550,8 +929,10 @@ export class PicoSfxSynth implements AudioSynth {
     voice.offset = nextOffset;
     let end = NOTES_PER_SFX;
     if (length > 0) end = Math.min(end, length);
-    if (loopEnd === 0 && loopStart > 0) end = Math.min(end, loopStart);
-    if (!(canLoop && loopEnd > loopStart)) end = Math.min(end, this.#lastAudibleNote(voice.sfx));
+    if (!isMusic && loopEnd === 0 && loopStart > 0) end = Math.min(end, loopStart);
+    if (!isMusic && !(canLoop && loopEnd > loopStart)) {
+      end = Math.min(end, this.#lastAudibleNote(voice.sfx));
+    }
     if (voice.time >= end || voice.offset >= NOTES_PER_SFX) voice.sfx = -1;
   }
 

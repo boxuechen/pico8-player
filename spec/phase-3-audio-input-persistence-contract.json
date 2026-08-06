@@ -9,9 +9,9 @@
     "phase2Evidence": "docs/evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md",
     "baselineCommit": "e130db0"
   },
-  "completedWorkUnits": ["3A"],
-  "activeWorkUnit": "3B",
-  "nextWorkUnit": "3C",
+  "completedWorkUnits": ["3A", "3B"],
+  "activeWorkUnit": "3C",
+  "nextWorkUnit": "3D",
   "workUnits": {
     "3A": {
       "name": "Deterministic SFX Core",
@@ -82,7 +82,7 @@
     },
     "3B": {
       "name": "Music and Browser Audio",
-      "status": "active",
+      "status": "complete",
       "apis": ["music"],
       "hostBinding": {
         "allocation": "operation-32-after-sfx",
@@ -125,9 +125,68 @@
         "production-worker-to-audioworklet-pcm-flow",
         "node-real-wasm-and-chrome-gates-pass",
         "independent-commit-and-clean-worktree"
+      ],
+      "result": {
+        "hostBindingId": 32,
+        "runtimeSynth": "PicoSfxSynth",
+        "musicGolden": "tests/golden/phase-3b-music.json",
+        "pcmSha256": "13cd84ef02c56038e6b498e8f96c58df503cce84cfe137943a69da9dbf7d9a9e",
+        "workerTransport": {
+          "path": "dedicated-messageport-only",
+          "startupAndCommittedFrameChunks": true,
+          "unattachedPortBlocksSimulation": false,
+          "staleAttachPolicy": "reject-older-generation"
+        },
+        "chromeGate": {
+          "browser": "Google Chrome 150.0.7871.189",
+          "requestedSampleRates": [44100, 48000],
+          "productionWorkerAndWorklet": true,
+          "trustedUserActivation": true,
+          "startupUnderruns": 0,
+          "steadyUnderruns": 0,
+          "overruns": 0,
+          "droppedSourceFrames": 0,
+          "discontinuities": 0,
+          "staleChunks": 0
+        },
+        "knownDifferences": [
+          "music-and-p8scii PCM golden is a project oracle rather than an official bit-exact capture",
+          "note-transition crossfade remains unmodeled",
+          "timed P8SCII frame-delay controls remain synchronously consumed without suspension",
+          "device-rate output uses the accepted Phase 0F linear resampler"
+        ],
+        "verification": [
+          "pnpm run test:phase-3b",
+          "pnpm run test:phase-3b:chrome",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "3C": {
+      "name": "Controller Input",
+      "status": "active",
+      "apis": ["btn", "btnp"],
+      "players": 8,
+      "buttonsPerPlayer": 6,
+      "runtimeOwns": [
+        "normalized-eight-player-snapshot",
+        "per-slice-held-edge-and-repeat",
+        "btn-and-btnp-player-selection",
+        "0x5f4c-through-0x5f53-controller-registers"
+      ],
+      "browserOwns": [
+        "keyboard-source",
+        "standard-gamepad-polling-and-slot-policy",
+        "multitouch-virtual-controls",
+        "source-merge-and-focus-lifecycle"
+      ],
+      "exit": [
+        "eight-player-runtime-input-contract",
+        "keyboard-gamepad-touch-production-frontends",
+        "deterministic-node-and-chrome-input-gates",
+        "independent-commit-and-clean-worktree"
       ]
     },
-    "3C": { "name": "Controller Input", "status": "planned" },
     "3D": { "name": "Devkit Input", "status": "planned" },
     "3E": { "name": "Cartdata Core", "status": "planned" },
     "3F": { "name": "IndexedDB Persistence", "status": "planned" },

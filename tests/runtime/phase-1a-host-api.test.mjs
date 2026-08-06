@@ -46,6 +46,7 @@ function wrapHost(memory, logicalMemory, overrides = {}) {
     renderAudioSlices: (sliceCount, targetFps) =>
       base.renderAudioSlices(sliceCount, targetFps),
     snapshotAudioChannels: () => base.snapshotAudioChannels(),
+    snapshotAudioMusic: () => base.snapshotAudioMusic(),
     cls: (colorRaw) => base.cls(colorRaw),
     pset: (xRaw, yRaw, colorRaw) => base.pset(xRaw, yRaw, colorRaw),
     line: (x0Raw, y0Raw, x1OrColorRaw, y1Raw, colorRaw) =>
@@ -62,6 +63,8 @@ function wrapHost(memory, logicalMemory, overrides = {}) {
     btnp: (buttonRaw, playerRaw) => base.btnp(buttonRaw, playerRaw),
     sfx: (sfxRaw, channelRaw, offsetRaw, lengthRaw) =>
       base.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw),
+    music: (patternRaw, fadeLengthRaw, channelMaskRaw) =>
+      base.music(patternRaw, fadeLengthRaw, channelMaskRaw),
     ...overrides,
   };
 }

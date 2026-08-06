@@ -144,6 +144,7 @@ test("Worker PCM adapter transfers canonical chunks and closes replaced/disposed
   }
   const first = port("first");
   const second = port("second");
+  const stale = port("stale");
   const transport = new WorkerPcmTransport();
   transport.attach(first, 7);
   assert.equal(first.started, 1);
@@ -155,6 +156,10 @@ test("Worker PCM adapter transfers canonical chunks and closes replaced/disposed
 
   transport.attach(second, 8);
   assert.equal(first.closed, 1);
+  assert.equal(transport.sessionGeneration, 8);
+  transport.attach(stale, 7);
+  assert.equal(stale.closed, 1);
+  assert.equal(second.closed, 0);
   assert.equal(transport.sessionGeneration, 8);
   transport.dispose();
   transport.dispose();

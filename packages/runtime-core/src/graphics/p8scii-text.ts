@@ -23,6 +23,10 @@ export interface P8sciiRasterPort {
   scroll(rows: number): void;
 }
 
+export interface P8sciiAudioPort {
+  play(bytes: Uint8Array): void;
+}
+
 interface PrintStyle {
   padding: boolean;
   wide: boolean;
@@ -92,6 +96,16 @@ class ByteCursor {
   remaining(): number {
     return this.bytes.byteLength - this.index;
   }
+
+  readUntil(terminator: number): Uint8Array {
+    const start = this.index;
+    while (this.index < this.bytes.byteLength && this.bytes[this.index] !== terminator) {
+      this.index += 1;
+    }
+    const result = this.bytes.slice(start, this.index);
+    if (this.bytes[this.index] === terminator) this.index += 1;
+    return result;
+  }
 }
 
 /** Browser-neutral, byte-preserving P8SCII parser and software glyph renderer. */
@@ -99,14 +113,20 @@ export class P8sciiText {
   readonly #memory: PicoRam;
   readonly #ram: Uint8Array;
   readonly #raster: P8sciiRasterPort;
+  readonly #audio: P8sciiAudioPort;
   #glyphCount = 0;
   #pixelWrites = 0;
   #nestedControlDepth = 0;
 
-  constructor(memory: PicoRam, raster: P8sciiRasterPort) {
+  constructor(
+    memory: PicoRam,
+    raster: P8sciiRasterPort,
+    audio: P8sciiAudioPort = { play() {} },
+  ) {
     this.#memory = memory;
     this.#ram = memory.physicalBytes;
     this.#raster = raster;
+    this.#audio = audio;
   }
 
   cursor(xRaw: number, yRaw: number, colorRaw?: number): void {
@@ -251,7 +271,7 @@ export class P8sciiText {
         this.#special(input, cursor, style);
         return;
       case 7:
-        this.#consumeDeferredAudio(input);
+        this.#audio.play(input.readUntil(0x20));
         return;
       case 8:
         this.#moveX(cursor, -cursor.lastAdvance);
@@ -774,12 +794,6 @@ export class P8sciiText {
     cursor.y -= overflow;
     cursor.homeY -= overflow;
     cursor.lastGlyphY -= overflow;
-  }
-
-  #consumeDeferredAudio(input: ByteCursor): void {
-    while (input.remaining() > 0) {
-      if (input.read() === 0x20) return;
-    }
   }
 
   #moveX(cursor: PrintCursor, delta: number): void {

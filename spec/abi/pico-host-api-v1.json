@@ -378,6 +378,17 @@
         { "name": "lengthRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
       "result": "void"
+    },
+    {
+      "id": 32,
+      "guestName": "music",
+      "hostMethod": "music",
+      "parameters": [
+        { "name": "patternRaw", "type": "q16.16-raw-i32" },
+        { "name": "fadeLengthRaw", "type": "q16.16-raw-i32", "optional": true },
+        { "name": "channelMaskRaw", "type": "q16.16-raw-i32", "optional": true }
+      ],
+      "result": "void"
     }
   ]
 }

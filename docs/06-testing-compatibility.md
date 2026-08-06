@@ -725,9 +725,11 @@ logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与�
 corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
 
 - Phase 2 exit 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
-  `tline` 与 visual P8SCII/custom font；P8SCII audio/timed controls、`tline(bits)` precision
-  overload 与 advanced screen/bitplane mode 仍 `partial`。
-- Phase 3A 已实现 project-profile SFX AudioSynth；music/device audio、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
+  `tline` 与 visual P8SCII/custom font；Phase 3B 已关闭同步 P8SCII audio，timed controls、
+  `tline(bits)` precision overload 与 advanced screen/bitplane mode 仍 `partial`。
+- Phase 3B 已实现 project-profile SFX/music 与 Chrome device audio；persistence、
+  gamepad/touch/multiplayer、devkit input 和 resolver 仍 `unsupported`/Deferred，其中 controller
+  扩展已由 active 3C 授权。
 - 未做合法本地官方 executable 的全量 edge differential；project oracle exact 不等于
   official bit-exact，相关 P8 Lua/graphics edge behavior 继续 `unknown`。
 
@@ -774,6 +776,26 @@ bit-exact waveform。项目 golden 位于 `tests/golden/phase-3a-sfx.json`。
 
 Known Differences：`sfx()` 在已激活 ABI 下返回 nil；note transition crossfade 未建模；
 deterministic noise/golden 是项目实现 oracle，不是官方 PICO-8 capture。Phase 3A 开放 P0/P1 为 `0`。
+
+### 15.13 Phase 3B Music 与 Browser Audio 矩阵
+
+本表覆盖 music/P8SCII 与 production device flow。项目 golden 位于
+`tests/golden/phase-3b-music.json`，Chrome case manifest 位于
+`tests/browser/phase-3b.cases.json`；它们不构成官方 bit-exact capture。
+
+| 行为 | Phase 3B 结果 | 功能状态 | 后续动作 |
+| --- | --- | --- | --- |
+| production `music()` ABI | append-only binding `32`；real-WASM optional raw Q16.16、invalid/stop/fade/mask passed | `implemented` | 现有 id 禁止重排 |
+| song sequencing | live `0x3100..0x31ff` 全 64 patterns、start/loop/stop、first non-loop duration 与 all-loop fallback passed | `compatible`（project profile） | 官方 edge capture 前不声明 bit-exact |
+| channel arbitration | mask reservation、explicit SFX interrupt、music resume 和 stop/fade state 与唯一四声道/sample clock 共用 | `compatible`（project oracle） | note-transition crossfade 仍未建模 |
+| P8SCII audio | control `0x07`、existing/ephemeral SFX `60..63`、speed/loop/note attributes 和 bounded input passed | `compatible`（synchronous audio profile） | timed frame-delay controls 仍不 suspension |
+| Worker transport | startup/catch-up PCM 只走 dedicated port；unattached 不阻塞；reset/fault/stop/dispose 与 stale attach isolation passed | `implemented` | control DTO 继续禁止 PCM |
+| Chrome device gate | Chrome `150.0.7871.189`；44.1/48kHz production Worker→Worklet；trusted resume；underrun/overrun/drop/discontinuity/stale 均为 `0` | gate passed | Chrome 是唯一 browser gate |
+| golden | PCM `13cd84ef…d9a9e`；fresh replay exact | gate passed | oracle 变化必须人工审阅 fixture/算法 diff |
+
+Known Differences：music/P8SCII PCM 是项目 oracle，不是官方 capture；note-transition crossfade
+未建模；timed P8SCII controls 不 suspension；device output 使用 Phase 0F 已接受的 linear resampler。
+Phase 3B 开放 P0/P1 为 `0`。
 
 ## 16. Definition of Done
 

@@ -77,6 +77,7 @@ function delegateHost(memory, logicalMemory, calls) {
     renderAudioSlices: (sliceCount, targetFps) =>
       base.renderAudioSlices(sliceCount, targetFps),
     snapshotAudioChannels: () => base.snapshotAudioChannels(),
+    snapshotAudioMusic: () => base.snapshotAudioMusic(),
     cls: (colorRaw) => base.cls(colorRaw),
     pset: (xRaw, yRaw, colorRaw) => base.pset(xRaw, yRaw, colorRaw),
     line(...args) {
@@ -106,6 +107,8 @@ function delegateHost(memory, logicalMemory, calls) {
     },
     sfx: (sfxRaw, channelRaw, offsetRaw, lengthRaw) =>
       base.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw),
+    music: (patternRaw, fadeLengthRaw, channelMaskRaw) =>
+      base.music(patternRaw, fadeLengthRaw, channelMaskRaw),
   };
 }
 

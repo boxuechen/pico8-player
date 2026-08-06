@@ -27,18 +27,33 @@ function assertUint32(value: number, name: string): void {
 export class WorkerPcmTransport {
   #port: WorkerAudioMessagePort | undefined;
   #generation = -1;
+  #nextSequence = 0;
+  #nextFirstSample = 0n;
   #disposed = false;
 
   get sessionGeneration(): number {
     return this.#generation;
   }
 
+  get attached(): boolean {
+    return this.#port !== undefined;
+  }
+
   attach(port: WorkerAudioMessagePort, sessionGeneration: number): void {
     this.#assertActive();
+    assertUint32(sessionGeneration, "sessionGeneration");
+    if (sessionGeneration < this.#generation) {
+      port.close();
+      return;
+    }
     this.#port?.close();
     this.#port = port;
     port.start?.();
-    this.beginGeneration(sessionGeneration);
+    if (sessionGeneration === this.#generation) {
+      this.reset(this.#nextSequence, this.#nextFirstSample);
+    } else {
+      this.beginGeneration(sessionGeneration);
+    }
   }
 
   beginGeneration(
@@ -46,17 +61,19 @@ export class WorkerPcmTransport {
     nextSequence = 0,
     firstSample = 0n,
   ): void {
-    this.#assertAttached();
+    this.#assertActive();
     assertUint32(sessionGeneration, "sessionGeneration");
     this.#generation = sessionGeneration;
     this.reset(nextSequence, firstSample);
   }
 
   reset(nextSequence: number, firstSample: bigint): void {
-    this.#assertAttached();
+    this.#assertActive();
     assertUint32(nextSequence, "nextSequence");
     if (firstSample < 0n) throw new RangeError("firstSample must be non-negative");
-    this.#port!.postMessage({
+    this.#nextSequence = nextSequence;
+    this.#nextFirstSample = firstSample;
+    this.#port?.postMessage({
       v: AUDIO_PROTOCOL_VERSION,
       type: "audioReset",
       sessionGeneration: this.#generation,
@@ -66,7 +83,7 @@ export class WorkerPcmTransport {
   }
 
   send(chunk: CanonicalPcmChunk): void {
-    this.#assertAttached();
+    this.#assertActive();
     assertUint32(chunk.sequence, "sequence");
     if (chunk.firstSample < 0n) throw new RangeError("firstSample must be non-negative");
     if (
@@ -87,7 +104,9 @@ export class WorkerPcmTransport {
       frameCount: chunk.frameCount,
       pcm16le: chunk.pcm16le,
     };
-    this.#port!.postMessage(message, [chunk.pcm16le]);
+    this.#nextSequence = (chunk.sequence + 1) >>> 0;
+    this.#nextFirstSample = chunk.firstSample + BigInt(chunk.frameCount);
+    this.#port?.postMessage(message, [chunk.pcm16le]);
   }
 
   dispose(): void {
@@ -102,8 +121,4 @@ export class WorkerPcmTransport {
     if (this.#disposed) throw new Error("WorkerPcmTransport is disposed");
   }
 
-  #assertAttached(): void {
-    this.#assertActive();
-    if (this.#port === undefined) throw new Error("audio MessagePort is not attached");
-  }
 }

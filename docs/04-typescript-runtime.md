@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：Living boundary contract（Implemented through Phase 3A；Target 内容不授权实现）
+> 状态：Living boundary contract（Implemented through Phase 3B；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -13,9 +13,9 @@
 | 状态 | 对应范围 |
 | --- | --- |
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
-| **Implemented through Phase 3A** | browser-neutral four-channel SFX synth、live `0x3200..0x42ff` decode、deterministic 22050Hz PCM slices 与 binding `31` |
+| **Implemented through Phase 3B** | browser-neutral four-channel SFX/music/P8SCII synth、live song/SFX decode、bindings `31/32`、dedicated Worker PCM 与 Chrome 44.1/48kHz AudioWorklet output |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、advanced Graphics、music/device audio、gamepad/touch/multiplayer/devkit Input、deterministic conformance scheduler、Persistence、完整 cart swap 与 multicart |
+| **Deferred** | include resolver、label presentation、advanced Graphics、devkit Input、deterministic conformance scheduler、Persistence、完整 cart swap 与 multicart；controller gamepad/touch/multiplayer 由 active 3C 授权 |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -431,8 +431,9 @@ Phase 2 exit 实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`�
 RAM，并复用 sprite raster；lower map 在 `0x1000..0x2fff` ring 中排列，upper map 使用
 `base<<8..0xffff`，GFX/screen upper conflict 仍由 C++ canonical mapper 裁决。
 `print/cursor` 使用原始 byte string，经 software parser/raster 读取内建字体或 RAM-backed custom
-font；cursor、scroll、camera/clip 与 palette 仍经过同一 RAM/pixel path。P8SCII audio/timed controls
-只同步消费、不产生音频或 suspension。`RuntimeFrame` 另外快照 `0x5f10..0x5f1f` 的 16-byte display
+font；cursor、scroll、camera/clip 与 palette 仍经过同一 RAM/pixel path。Phase 3B 使 P8SCII audio
+通过窄 sink 同步进入唯一 AudioSynth；timed controls 仍只消费、不产生 suspension。`RuntimeFrame`
+另外快照 `0x5f10..0x5f1f` 的 16-byte display
 palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当前兼容声明仅是 standard
 128×128 packed 4bpp；bitplane、advanced screen mode 与 `tline(bits)` precision overload 延后。
 
@@ -452,8 +453,8 @@ palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当�
 
 ## 8. AudioSynth 与 AudioWorklet
 
-> 状态：Phase 3A SFX AudioSynth 已 Implemented；Phase 0F transport/queue/device adapter
-> 已 Implemented（ADR-010）；music、P8SCII audio 和 production PCM 接线由 active 3B 授权。
+> 状态：Phase 3B complete。SFX/music/P8SCII AudioSynth 与 production Worker PCM 已
+> Implemented；Phase 0F transport/queue/device adapter 保持 ADR-010 边界。
 
 ### 8.1 责任边界
 
@@ -462,13 +463,13 @@ decimal sample index、frame count、stats 与 control fields 由
 [`audio-protocol.ts`](../apps/web-player/src/transport/audio-protocol.ts) 和
 [`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json) 拥有。
 
-Phase 3A 的 `PicoSfxSynth` 在 RuntimeCore 内从 `0x3200..0x42ff` 和音频硬件寄存器
-live-read SFX；`FrameSliceRuntime` 为 startup transaction 与每个 committed frame 发布
+`PicoSfxSynth` 在 RuntimeCore 内从 `0x3100..0x42ff` 和音频硬件寄存器 live-read song/SFX，
+并统一处理 `sfx()`、`music()` 与同步 P8SCII audio；`FrameSliceRuntime` 为 startup transaction 与每个 committed frame 发布
 `CanonicalAudioSlice`。`firstSample` 使用 decimal uint string，PCM 固定为 `22050Hz`、mono、
 signed PCM16LE；30Hz 为 735 samples，60Hz 用整数 remainder 生成 367/368。它不 import
-Worker、MessagePort、AudioContext 或 Worklet。`0x3100..0x31ff` music sequencing 和
-production transport 接线属于 3B。官方 capture 是时序/频谱校准源，fake-08 只能作为带
-provenance 的辅助对照。AudioWorklet 负责：
+Worker、MessagePort、AudioContext 或 Worklet。production Worker 将这些 slices 只发送到
+dedicated port；一般 control DTO 不携带 PCM。官方 capture 是时序/频谱校准源，fake-08 只能
+作为带 provenance 的辅助对照。AudioWorklet 负责：
 
 - 将 22050Hz PCM 重采样到实际 `AudioContext.sampleRate`；
 - 维护小型 ring buffer；
@@ -494,16 +495,16 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 ## 9. Input
 
-> 状态：RuntimeCore player 0 六键 held/edge/repeat 与 app keyboard/blur/visibility lifecycle
-> 已 Implemented；gamepad、touch、multiplayer 和 devkit input 尚未实现。Phase 3 激活时必须
-> 在机器合同中确定扩展 snapshot，不复用本文旧的 speculative interface。
+> 状态：player 0 六键 baseline 已 Implemented；active 3C 授权固定八玩家 snapshot、
+> keyboard player 1、Gamepad 与 touch。devkit input 仍属于 3D，禁止混入本 work unit。
 
-Phase 1D 的 RuntimeCore input 只消费 `PicoInputSnapshot.buttons`，在每个 boot/step transaction
+Phase 1D baseline 的 RuntimeCore input 只消费 `PicoInputSnapshot.buttons`，在每个 boot/step transaction
 前锁存一次，写 `0x5f4c` 并按 30/60Hz 与 `0x5f5c/0x5f5d` 计算 `btnp`。HostRequest completion
 复用当前 latch；CartSession generation reset 清除 held/edge/duration。主线程
-`KeyboardInputFrontend` 已实现 keyboard alias、focus、blur/visibility 清理；gamepad/touch polling、
-多玩家 snapshot 和 devkit registers/API 仍由后续 work unit 实现。设备 frontend 只负责采样与
-映射，held/edge/repeat 和逐 slice latch 继续由 Worker/RuntimeCore 拥有。
+`KeyboardInputFrontend` 已实现 keyboard alias、focus、blur/visibility 清理。active 3C 用机器合同
+中的固定八玩家 snapshot 替换这条单 mask baseline，并增加 app-owned keyboard player 1、Gamepad
+polling 与 multitouch；devkit registers/API 保持 3D。设备 frontend 只负责采样与映射，
+held/edge/repeat 和逐 slice latch 继续由 Worker/RuntimeCore 拥有。
 
 - **MUST** 在每个 simulation slice 开始锁存输入；常规 callback 模式在 `_update`/`_update60` 前可见，自定义 loop 则在 resume 后直至下一 `flip()` boundary 保持稳定。同一 slice 内多次 `btn()` 结果相同；慢帧多 update 的重锁存细节由 conformance 固定。
 - `btnp()` edge/repeat 由 Worker 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效。
