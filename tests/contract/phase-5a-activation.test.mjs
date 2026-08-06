@@ -45,10 +45,14 @@ test("Phase 5A activates one bounded work unit from the closed Phase 4 baseline"
     ["phase4Contract", "phase4ContractSha256"],
     ["phase4Evidence", "phase4EvidenceSha256"],
     ["phase4ExitManifest", "phase4ExitManifestSha256"],
-    ["runtimeManifest", "runtimeManifestSha256"],
   ]) {
     assert.equal(await sha256(contract.baseline[pathKey]), contract.baseline[hashKey]);
   }
+  const phase4Exit = await readJson(contract.baseline.phase4ExitManifest);
+  assert.equal(
+    phase4Exit.inputs[contract.baseline.runtimeManifest],
+    contract.baseline.runtimeManifestSha256,
+  );
   assert.equal(
     await sha256(contract.activationPolicy.decision),
     contract.activationPolicy.decisionSha256,

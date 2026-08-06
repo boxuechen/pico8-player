@@ -594,6 +594,76 @@ int host_request_continuation(lua_State *state) {
   return 1;
 }
 
+int load_continuation(lua_State *state) {
+  return luaL_error(state, "replaced load execution resumed");
+}
+
+int p8_load(lua_State *state) {
+  constexpr uint8_t kMagic[4] = {'P', '8', 'W', 'L'};
+  constexpr size_t kHeaderBytes = 16;
+  constexpr size_t kMaxRefBytes = 256;
+  Context *context = context_from_lua(state);
+  size_t ref_length = 0;
+  size_t breadcrumb_length = 0;
+  size_t parameter_length = 0;
+  const char *ref = luaL_checklstring(state, 1, &ref_length);
+  const bool has_breadcrumb = !lua_isnoneornil(state, 2);
+  const bool has_parameter = !lua_isnoneornil(state, 3);
+  const char *breadcrumb = has_breadcrumb
+                               ? luaL_checklstring(state, 2, &breadcrumb_length)
+                               : nullptr;
+  const char *parameter = has_parameter
+                              ? luaL_checklstring(state, 3, &parameter_length)
+                              : nullptr;
+  if (ref_length == 0 || ref_length > kMaxRefBytes ||
+      kHeaderBytes + ref_length + breadcrumb_length + parameter_length >
+          kMaxHostBytes ||
+      breadcrumb_length > UINT16_MAX || parameter_length > UINT16_MAX) {
+    return luaL_error(state, "load request exceeds local multicart limits");
+  }
+  if (state != context->active) {
+    context->nested_suspend_attempt = true;
+    return lua_yieldk(state, 0, 0, load_continuation);
+  }
+  if (context->pending_request) {
+    return luaL_error(state, "host request already pending");
+  }
+  context->next_request_id += 1u;
+  if (context->next_request_id == 0) context->next_request_id = 1;
+  context->request_id = context->next_request_id;
+  uint8_t *output = context->request_bytes;
+  std::memcpy(output, kMagic, sizeof(kMagic));
+  output[4] = 1;
+  output[5] = 1;
+  output[6] = static_cast<uint8_t>((has_breadcrumb ? 1u : 0u) |
+                                   (has_parameter ? 2u : 0u));
+  output[7] = 0;
+  const auto write_u16 = [output](size_t offset, size_t value) {
+    output[offset] = static_cast<uint8_t>(value & 0xffu);
+    output[offset + 1] = static_cast<uint8_t>((value >> 8u) & 0xffu);
+  };
+  write_u16(8, ref_length);
+  write_u16(10, breadcrumb_length);
+  write_u16(12, parameter_length);
+  write_u16(14, 0);
+  size_t cursor = kHeaderBytes;
+  std::memcpy(output + cursor, ref, ref_length);
+  cursor += ref_length;
+  if (breadcrumb_length != 0) {
+    std::memcpy(output + cursor, breadcrumb, breadcrumb_length);
+    cursor += breadcrumb_length;
+  }
+  if (parameter_length != 0) {
+    std::memcpy(output + cursor, parameter, parameter_length);
+    cursor += parameter_length;
+  }
+  context->request_length = static_cast<uint32_t>(cursor);
+  context->pending_request = true;
+  context->yield_reason = P8W_YIELD_HOST_REQUEST;
+  return lua_yieldk(state, 0, static_cast<int>(context->request_id),
+                    load_continuation);
+}
+
 int p8_probe_host_request(lua_State *state) {
   Context *context = context_from_lua(state);
   size_t length = 0;
@@ -678,6 +748,7 @@ void open_guest_environment(lua_State *state) {
   register_function(state, "t", p8_time);
   register_function(state, "run", p8_run);
   register_function(state, "stop", p8_stop);
+  register_function(state, "load", p8_load);
   register_function(state, "flip", p8_flip);
   p8w::open_pico8_compat(state, context_from_lua(state)->ram);
   // Phase 0E-only control-flow probe. It is deliberately not a PICO-8 API.

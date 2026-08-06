@@ -16,7 +16,7 @@
     "excluded APIs fail closed and do not enter the Phase 4 MVP denominator"
   ],
   "apis": [
-    { "name": "load", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported", "note": "guest cart switching, external resolver, BBS and multicart are Phase 5 scope" },
+    { "name": "load", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "implemented", "conformanceStatus": "compatible", "evidence": "tests/runtime/phase-5d-guest-load.test.mjs", "note": "Phase 5D caller-authorized local bundle only; root callback/custom swap, copied breadcrumb/parameter and atomic session replacement; arbitrary URL, filesystem, BBS and nested suspension remain unavailable" },
     { "name": "save", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported", "note": "player does not expose a writable virtual cart filesystem" },
     { "name": "folder", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported" },
     { "name": "ls", "category": "system", "surface": "platform", "mvpDisposition": "excluded", "implementationStatus": "unsupported", "conformanceStatus": "unsupported" },

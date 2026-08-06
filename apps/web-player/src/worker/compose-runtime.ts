@@ -11,7 +11,11 @@ import {
 } from "@pico8-web/contracts";
 import {
   CartCancellationSource,
+  CartLoader,
+  CartResolutionError,
   CartSession,
+  decodeGuestCartLoadRequest,
+  isGuestCartRequestPayload,
   type CartDataPersistencePort,
   type CanonicalAudioSlice,
   FrameScheduler,
@@ -36,6 +40,7 @@ import type {
   Phase0ERuntimeToHost,
 } from "../transport/public.js";
 import { CartRepositoryAdapter } from "./adapters/cart-repository-adapter.js";
+import { LocalCartBundleResolver } from "./adapters/host-cart-resolver-adapter.js";
 import type { WorkerPcmTransport } from "./audio-transport.js";
 import type {
   PlayerHostToRuntime,
@@ -237,6 +242,14 @@ interface PendingRootHostRequest {
   ) => readonly PlayerRuntimeToHost[];
 }
 
+interface PendingGuestLoad {
+  readonly workerGeneration: number;
+  readonly sessionGeneration: number;
+  readonly requestId: number;
+  readonly cancellation: CartCancellationSource;
+  readonly continueRunning: boolean;
+}
+
 const ZERO_DEVKIT_INPUT: PicoDevkitInputBatch = Object.freeze({
   mouseXRaw: 0,
   mouseYRaw: 0,
@@ -261,6 +274,13 @@ function playerBase(command: PlayerHostToRuntime) {
   };
 }
 
+function playerBaseForGeneration(
+  command: PlayerHostToRuntime,
+  generation: number,
+) {
+  return { ...playerBase(command), sessionGeneration: generation };
+}
+
 function playerLifecycleError(
   message: string,
   recoverable = false,
@@ -273,6 +293,14 @@ function playerLifecycleError(
   };
 }
 
+function isSerializedRuntimeError(value: unknown): value is SerializedRuntimeError {
+  return value !== null && typeof value === "object" &&
+    "code" in value && typeof value.code === "string" &&
+    "message" in value && typeof value.message === "string" &&
+    "phase" in value && typeof value.phase === "string" &&
+    "recoverable" in value && typeof value.recoverable === "boolean";
+}
+
 /** Stable Phase 1E composition: decode -> CartSession -> scheduler -> events. */
 export function createPlayerWorkerController(
   module: FrameRuntimeModule,
@@ -283,14 +311,16 @@ export function createPlayerWorkerController(
   const hostRequestHandler = options.hostRequestHandler;
   const luaHeapLimit = options.luaHeapLimit;
   const cartRepository = new CartRepositoryAdapter();
+  let localCartResolver = new LocalCartBundleResolver([]);
+  let cartLoader = new CartLoader(localCartResolver, cartRepository);
   const localPersistenceDiagnostics: SerializedRuntimeError[] = [];
   let cartDataSeeds: readonly PicoCartDataSeed[] = [];
   let audioSequence = 0;
   let nextAudioSample = 0n;
   let instructionBudget: number | undefined;
   const scheduler = new FrameScheduler({ maximumCatchUpTicks: 5 });
-  const session = new CartSession({
-    createRuntime(context) {
+  function createSession(): CartSession {
+    return new CartSession({ createRuntime(context) {
       const router = createPicoApiHostRouter(module);
       const vm = new Z8LuaFrameVm(module, router, {
         ...(luaHeapLimit === undefined ? {} : { luaHeapLimit }),
@@ -309,8 +339,9 @@ export function createPlayerWorkerController(
         vm.destroy();
         throw error;
       }
-    },
-  });
+    } });
+  }
+  let session = createSession();
   let lifecycle: PlayerWorkerLifecycle = "empty";
   let workerGeneration = 0;
   let sessionGeneration = 0;
@@ -328,6 +359,8 @@ export function createPlayerWorkerController(
   let devkitFlags = 0;
   let eventSink: PlayerWorkerEventSink | undefined;
   let pendingHostRequest: PendingRootHostRequest | undefined;
+  let pendingGuestLoad: PendingGuestLoad | undefined;
+  const breadcrumbStack: Uint8Array[] = [];
 
   function clearPendingDevkitEvents(): void {
     pendingWheelRaw = 0;
@@ -490,6 +523,7 @@ export function createPlayerWorkerController(
     error: SerializedRuntimeError,
   ): PlayerRuntimeToHost {
     cancelPendingHostRequest();
+    cancelPendingGuestLoad();
     lifecycle = "faulted";
     scheduler.pause();
     clearInputState();
@@ -504,6 +538,21 @@ export function createPlayerWorkerController(
   ): PlayerRuntimeToHost {
     return {
       ...playerBase(command),
+      type: "state",
+      state: next,
+      mode,
+      targetFps,
+      devkitFlags,
+    };
+  }
+
+  function stateForGeneration(
+    command: PlayerHostToRuntime,
+    generation: number,
+    next: PlayerRuntimeState,
+  ): PlayerRuntimeToHost {
+    return {
+      ...playerBaseForGeneration(command, generation),
       type: "state",
       state: next,
       mode,
@@ -537,6 +586,179 @@ export function createPlayerWorkerController(
     pending.cancellation.cancel();
   }
 
+  function cancelPendingGuestLoad(): void {
+    const pending = pendingGuestLoad;
+    if (pending === undefined) return;
+    pendingGuestLoad = undefined;
+    pending.cancellation.cancel();
+  }
+
+  function guestLoadFault(
+    command: PlayerRuntimeControlCommand,
+    pending: PendingGuestLoad,
+    error: unknown,
+  ): void {
+    if (pendingGuestLoad !== pending) return;
+    pendingGuestLoad = undefined;
+    session.stop();
+    const serialized: SerializedRuntimeError = error instanceof CartCodecError
+      ? {
+          code: "E_CART_PARSE",
+          message: `${error.code}: ${error.message}`,
+          phase: "host-call",
+          recoverable: false,
+          details: {
+            cartCodecCode: error.code,
+            ...(error.offset === undefined ? {} : { byteOffset: error.offset }),
+          },
+        }
+      : error instanceof CartResolutionError
+        ? {
+            code: "E_HOST_REQUEST",
+            message: error.message,
+            phase: "host-call",
+            recoverable: false,
+            details: { cartResolutionCode: error.code },
+          }
+        : isSerializedRuntimeError(error)
+          ? error
+          : {
+              code: "E_HOST_REQUEST",
+              message: error instanceof Error ? error.message : String(error),
+              phase: "host-call",
+              recoverable: false,
+            };
+    emitBackground([fault(command, serialized)]);
+  }
+
+  async function completeGuestLoad(
+    command: PlayerRuntimeControlCommand,
+    pending: PendingGuestLoad,
+    request: ReturnType<typeof decodeGuestCartLoadRequest>,
+  ): Promise<void> {
+    try {
+      await flushPersistence();
+      const current = session.cart?.identity;
+      const loaded = await cartLoader.load(
+        request.ref,
+        { ...(current === undefined ? {} : { current }), purpose: "load" },
+        pending.cancellation.token,
+      );
+      if (
+        pendingGuestLoad !== pending || pending.cancellation.token.cancelled ||
+        pending.workerGeneration !== workerGeneration ||
+        pending.sessionGeneration !== sessionGeneration
+      ) return;
+
+      const staged = createSession();
+      const boot = staged.load(loaded.cart, request.parameter ?? new Uint8Array());
+      if (!boot.ok) {
+        staged.dispose();
+        guestLoadFault(command, pending, boot.error);
+        return;
+      }
+      if (boot.value.kind !== "ready") {
+        staged.dispose();
+        guestLoadFault(command, pending, {
+          code: "E_FEATURE_UNSUPPORTED",
+          message: "a Phase 5D load target must boot directly into callback or custom mode",
+          phase: "host-call",
+          recoverable: false,
+        } satisfies SerializedRuntimeError);
+        return;
+      }
+      if (sessionGeneration >= 0xffff_ffff) {
+        staged.dispose();
+        guestLoadFault(command, pending, invariant("session generation space is exhausted"));
+        return;
+      }
+
+      const previousSessionGeneration = sessionGeneration;
+      const nextSessionGeneration = previousSessionGeneration + 1;
+      const oldSession = session;
+      const oldDisposed = oldSession.dispose();
+      if (!oldDisposed.ok) {
+        staged.dispose();
+        guestLoadFault(command, pending, oldDisposed.error);
+        return;
+      }
+      pendingGuestLoad = undefined;
+      session = staged;
+      sessionGeneration = nextSessionGeneration;
+      if (request.breadcrumb !== undefined) breadcrumbStack.push(request.breadcrumb.slice());
+      inputSequence = -1;
+      clearInputState();
+      mode = boot.value.mode;
+      targetFps = boot.value.targetFps;
+      devkitFlags = boot.value.devkitFlags;
+      scheduler.reset();
+      scheduler.configure(targetFps);
+      lifecycle = pending.continueRunning ? "running" : "ready";
+      if (pending.continueRunning) scheduler.start();
+
+      const breadcrumb = request.breadcrumb?.slice() ?? new Uint8Array();
+      emitBackground([{
+        ...playerBaseForGeneration(command, nextSessionGeneration),
+        type: "session-replaced",
+        previousSessionGeneration,
+        nextSessionGeneration,
+        cartRef: loaded.ref,
+        breadcrumb: breadcrumb.buffer,
+        breadcrumbDepth: breadcrumbStack.length,
+      }]);
+      beginAudioGeneration(nextSessionGeneration);
+      sendAudio(boot.value.audio);
+      emitBackground([
+        stateForGeneration(
+          command,
+          nextSessionGeneration,
+          pending.continueRunning ? "running" : "ready",
+        ),
+      ]);
+    } catch (error) {
+      guestLoadFault(command, pending, error);
+    }
+  }
+
+  function suspendGuestLoad(
+    command: PlayerRuntimeControlCommand,
+    request: CartSessionHostRequest,
+    continueRunning: boolean,
+  ): readonly PlayerRuntimeToHost[] {
+    if (pendingHostRequest !== undefined || pendingGuestLoad !== undefined) {
+      return [fault(command, {
+        code: "E_HOST_REQUEST",
+        message: "root HostRequest violates the bounded single-pending contract",
+        phase: "host-call",
+        recoverable: false,
+      })];
+    }
+    let decoded: ReturnType<typeof decodeGuestCartLoadRequest>;
+    try {
+      decoded = decodeGuestCartLoadRequest(request.bytes);
+    } catch (error) {
+      return [fault(command, {
+        code: "E_HOST_REQUEST",
+        message: error instanceof Error ? error.message : String(error),
+        phase: "host-call",
+        recoverable: false,
+        details: { guestRequestKind: "load", malformed: true },
+      })];
+    }
+    scheduler.pause();
+    lifecycle = "waiting-host";
+    const pending: PendingGuestLoad = {
+      workerGeneration,
+      sessionGeneration,
+      requestId: request.id,
+      cancellation: new CartCancellationSource(),
+      continueRunning,
+    };
+    pendingGuestLoad = pending;
+    void completeGuestLoad(command, pending, decoded);
+    return [state(command, "waiting-host")];
+  }
+
   function completePendingHostRequest(
     pending: PendingRootHostRequest,
     completion: RootHostRequestCompletion | undefined,
@@ -564,12 +786,15 @@ export function createPlayerWorkerController(
     request: CartSessionHostRequest,
     resume: PendingRootHostRequest["resume"],
   ): readonly PlayerRuntimeToHost[] {
+    if (isGuestCartRequestPayload(request.bytes)) {
+      return suspendGuestLoad(command, request, lifecycle === "running");
+    }
     if (hostRequestHandler === undefined) {
       return [unsupportedHostRequest(command)];
     }
     if (
       request.bytes.byteLength > PICO_HOST_REQUEST_MAX_BYTES ||
-      pendingHostRequest !== undefined
+      pendingHostRequest !== undefined || pendingGuestLoad !== undefined
     ) {
       return [fault(command, {
         code: "E_HOST_REQUEST",
@@ -922,6 +1147,7 @@ export function createPlayerWorkerController(
         return generationFault(command, "loadCart requires a new session generation");
       }
       cancelPendingHostRequest();
+      cancelPendingGuestLoad();
       sessionGeneration = command.sessionGeneration;
       instructionBudget = command.instructionBudget;
       scheduler.reset();
@@ -930,6 +1156,17 @@ export function createPlayerWorkerController(
       devkitFlags = 0;
       try {
         const cart = decodeCart(new Uint8Array(command.cartBytes));
+        const nextResolver = new LocalCartBundleResolver(
+          (command.localCartBundle ?? []).map((entry) => ({
+            ref: entry.ref,
+            bytes: new Uint8Array(entry.cartBytes),
+            access: entry.access,
+          })),
+        );
+        localCartResolver.dispose();
+        localCartResolver = nextResolver;
+        cartLoader = new CartLoader(localCartResolver, cartRepository);
+        breadcrumbStack.length = 0;
         cartRepository.registerCart(cart);
         return acceptBoot(command, session.load(cart));
       } catch (error) {
@@ -953,9 +1190,11 @@ export function createPlayerWorkerController(
     }
     if (command.type === "dispose") {
       cancelPendingHostRequest();
+      cancelPendingGuestLoad();
       scheduler.reset();
       clearInputState();
       const result = session.dispose();
+      localCartResolver.dispose();
       cartRepository.dispose();
       lifecycle = "disposed";
       mode = "none";
@@ -969,6 +1208,7 @@ export function createPlayerWorkerController(
         return generationFault(command, "reset requires a new session generation");
       }
       cancelPendingHostRequest();
+      cancelPendingGuestLoad();
       sessionGeneration = command.sessionGeneration;
       scheduler.reset();
       inputSequence = -1;
@@ -1006,6 +1246,7 @@ export function createPlayerWorkerController(
       return [state(command, "running")];
     }
     cancelPendingHostRequest();
+    cancelPendingGuestLoad();
     const stopped = session.stop();
     scheduler.reset();
     clearInputState();
@@ -1018,10 +1259,12 @@ export function createPlayerWorkerController(
 
   function disposeSync(): void {
     cancelPendingHostRequest();
+    cancelPendingGuestLoad();
     scheduler.reset();
     clearInputState();
     devkitFlags = 0;
     session.dispose();
+    localCartResolver.dispose();
     cartRepository.dispose();
     lifecycle = "disposed";
     if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);

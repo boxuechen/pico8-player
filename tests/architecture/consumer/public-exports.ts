@@ -35,7 +35,10 @@ import {
   CartLoader,
   CartSession,
   createPicoApiHost,
+  decodeGuestCartLoadRequest,
   FrameSliceRuntime,
+  GUEST_CART_REQUEST_VERSION,
+  isGuestCartRequestPayload,
   logicalTimeRaw,
   type CartDataPersistencePort,
   type CartRepositoryPort,
@@ -127,6 +130,10 @@ const cartAccess: CartAccess = {
   include: false,
 };
 const oneSecondRaw = logicalTimeRaw(60n, 60);
+declare const guestCartRequestBytes: Uint8Array;
+const guestCartRequest = decodeGuestCartLoadRequest(guestCartRequestBytes);
+const guestCartRequestVersion: 1 = GUEST_CART_REQUEST_VERSION;
+const isGuestCartRequest: boolean = isGuestCartRequestPayload(guestCartRequestBytes);
 
 void lease;
 void exactSize;
@@ -161,5 +168,8 @@ void cancellation;
 void cartLoader;
 void cartAccess;
 void oneSecondRaw;
+void guestCartRequest;
+void guestCartRequestVersion;
+void isGuestCartRequest;
 
 export {};

@@ -1,4 +1,5 @@
 import type {
+  CartAccess,
   PicoInputSnapshot,
   SerializedRuntimeError,
 } from "@pico8-web/contracts";
@@ -9,6 +10,9 @@ export const PLAYER_CONTROLLER_COUNT = 8 as const;
 export const PLAYER_CONTROLLER_BUTTON_COUNT = 6 as const;
 export const PLAYER_CONTROLLER_BUTTON_MASK = 0x3f as const;
 export const PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT = 64 as const;
+export const PLAYER_CART_INPUT_MAX_BYTES = 1_048_576 as const;
+export const PLAYER_CART_REF_MAX_BYTES = 256 as const;
+export const PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES = 64 as const;
 
 interface PlayerCommandEnvelope {
   readonly v: typeof PLAYER_PROTOCOL_VERSION;
@@ -17,10 +21,18 @@ interface PlayerCommandEnvelope {
   readonly sessionGeneration: number;
 }
 
+export interface PlayerLocalCartBundleEntry {
+  readonly ref: string;
+  readonly cartBytes: ArrayBuffer;
+  readonly access: CartAccess;
+}
+
 export type PlayerRuntimeControlCommand =
   | (PlayerCommandEnvelope & {
       readonly type: "loadCart";
       readonly cartBytes: ArrayBuffer;
+      /** Caller-authorized local-only targets. The Worker performs no discovery. */
+      readonly localCartBundle?: readonly PlayerLocalCartBundleEntry[];
       readonly instructionBudget?: number;
     })
   | (PlayerCommandEnvelope & { readonly type: "start" })
@@ -70,6 +82,15 @@ export type PlayerRuntimeState =
   | "disposed";
 
 export type PlayerRuntimeToHost =
+  | (PlayerEventEnvelope & {
+      /** Must be the first event published for an atomic guest load() commit. */
+      readonly type: "session-replaced";
+      readonly previousSessionGeneration: number;
+      readonly nextSessionGeneration: number;
+      readonly cartRef: string;
+      readonly breadcrumb: ArrayBuffer;
+      readonly breadcrumbDepth: number;
+    })
   | (PlayerEventEnvelope & {
       readonly type: "state";
       readonly state: PlayerRuntimeState;

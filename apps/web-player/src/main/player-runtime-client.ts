@@ -1,13 +1,17 @@
 import type {
+  CartAccess,
   PicoInputSnapshot,
   SerializedRuntimeError,
 } from "@pico8-web/contracts";
 
 import {
   isPlayerRuntimeToHost,
+  PLAYER_CART_INPUT_MAX_BYTES,
+  PLAYER_CART_REF_MAX_BYTES,
   PLAYER_CONTROLLER_BUTTON_MASK,
   PLAYER_CONTROLLER_COUNT,
   PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES,
   type AudioPortAttachmentEnvelope,
   type PlayerHostToRuntime,
   type PlayerRuntimeControlCommand,
@@ -37,9 +41,15 @@ export interface PlayerRuntimeClientOptions {
   readonly commandTimeoutMs?: number;
 }
 
+export interface PlayerLocalCartSource {
+  readonly ref: string;
+  readonly bytes: Uint8Array;
+  readonly access: CartAccess;
+}
+
 interface PendingPlayerCommand {
   readonly workerGeneration: number;
-  readonly sessionGeneration: number;
+  sessionGeneration: number;
   readonly terminalType: "state" | "heartbeat";
   readonly timer: number;
   readonly resolve: (event: PlayerRuntimeToHost) => void;
@@ -79,6 +89,7 @@ export class PlayerRuntimeClient {
   #inputSequence = 0;
   #vsyncSequence = 0;
   #lastCartBytes: Uint8Array | undefined;
+  #lastLocalCartBundle: readonly PlayerLocalCartSource[] = [];
   #hasWorkerSession = false;
   #disposed = false;
 
@@ -122,22 +133,29 @@ export class PlayerRuntimeClient {
   async loadCart(
     source: Uint8Array,
     instructionBudget?: number,
+    localCartBundle: readonly PlayerLocalCartSource[] = [],
   ): Promise<PlayerRuntimeToHost> {
     this.#assertActive();
     if (!(source instanceof Uint8Array)) {
       throw new TypeError("cart source must be a Uint8Array");
     }
+    if (source.byteLength === 0 || source.byteLength > PLAYER_CART_INPUT_MAX_BYTES) {
+      throw new RangeError("cart source must contain at most 1 MiB");
+    }
     this.#lastCartBytes = source.slice();
+    this.#lastLocalCartBundle = this.#copyLocalCartBundle(localCartBundle);
     this.#advanceSession();
     const cartBytes = this.#lastCartBytes.slice().buffer;
+    const bundle = this.#bundleForTransfer();
     const event = await this.#send(
       {
         type: "loadCart",
         cartBytes,
+        localCartBundle: bundle.entries,
         ...(instructionBudget === undefined ? {} : { instructionBudget }),
       },
       "state",
-      [cartBytes],
+      [cartBytes, ...bundle.transfers],
     );
     this.#hasWorkerSession = event.type === "state" && event.state === "ready";
     return event;
@@ -152,10 +170,11 @@ export class PlayerRuntimeClient {
     this.#advanceSession();
     if (!this.#hasWorkerSession) {
       const cartBytes = retained.slice().buffer;
+      const bundle = this.#bundleForTransfer();
       const event = await this.#send(
-        { type: "loadCart", cartBytes },
+        { type: "loadCart", cartBytes, localCartBundle: bundle.entries },
         "state",
-        [cartBytes],
+        [cartBytes, ...bundle.transfers],
       );
       this.#hasWorkerSession = event.type === "state" && event.state === "ready";
       return event;
@@ -249,6 +268,7 @@ export class PlayerRuntimeClient {
       this.#eventListeners.clear();
       this.#sessionListeners.clear();
       this.#lastCartBytes = undefined;
+      this.#lastLocalCartBundle = [];
     }
   }
 
@@ -334,6 +354,14 @@ export class PlayerRuntimeClient {
   #receive(value: unknown, sourceWorkerGeneration: number): void {
     if (!isPlayerRuntimeToHost(value)) return;
     if (
+      sourceWorkerGeneration === this.#workerGeneration &&
+      value.workerGeneration === this.#workerGeneration &&
+      value.type === "session-replaced"
+    ) {
+      this.#acceptSessionReplacement(value);
+      return;
+    }
+    if (
       sourceWorkerGeneration !== this.#workerGeneration ||
       value.workerGeneration !== this.#workerGeneration ||
       value.sessionGeneration !== this.#sessionGeneration
@@ -357,6 +385,105 @@ export class PlayerRuntimeClient {
     globalThis.clearTimeout(pending.timer);
     this.#pending.delete(value.requestId);
     pending.resolve(value);
+  }
+
+  #acceptSessionReplacement(
+    event: Extract<PlayerRuntimeToHost, { readonly type: "session-replaced" }>,
+  ): void {
+    const previous = this.#sessionGeneration;
+    if (
+      event.previousSessionGeneration !== previous ||
+      event.nextSessionGeneration !== previous + 1 ||
+      event.sessionGeneration !== event.nextSessionGeneration
+    ) return;
+    const target = this.#lastLocalCartBundle.find((entry) => entry.ref === event.cartRef);
+    if (target === undefined) return;
+
+    const preserved = this.#pending.get(event.requestId);
+    this.#sessionGeneration = event.nextSessionGeneration;
+    this.#inputSequence = 0;
+    this.#vsyncSequence = 0;
+    this.#lastCartBytes = target.bytes.slice();
+    this.#hasWorkerSession = true;
+    const superseded = clientError(
+      "E_INVALID_STATE",
+      "runtime command was superseded by guest load()",
+      true,
+      { previousSessionGeneration: previous, nextSessionGeneration: this.#sessionGeneration },
+    );
+    for (const [requestId, pending] of this.#pending) {
+      if (pending.sessionGeneration !== previous) continue;
+      if (pending === preserved && pending.terminalType === "state") {
+        pending.sessionGeneration = this.#sessionGeneration;
+        continue;
+      }
+      globalThis.clearTimeout(pending.timer);
+      this.#pending.delete(requestId);
+      pending.reject(superseded);
+    }
+    for (const listener of this.#sessionListeners) listener(this.#sessionGeneration);
+    for (const listener of this.#eventListeners) listener(event);
+  }
+
+  #copyLocalCartBundle(entries: readonly PlayerLocalCartSource[]): readonly PlayerLocalCartSource[] {
+    if (!Array.isArray(entries)) throw new TypeError("local cart bundle must be an array");
+    if (entries.length > PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES) {
+      throw new RangeError("local cart bundle exceeds 64 entries");
+    }
+    const refs = new Set<string>();
+    return entries.map((entry) => {
+      if (typeof entry?.ref !== "string" || !(entry.bytes instanceof Uint8Array)) {
+        throw new TypeError("local cart bundle entries require ref and Uint8Array bytes");
+      }
+      let refBytes = 0;
+      for (let index = 0; index < entry.ref.length; index += 1) {
+        const unit = entry.ref.charCodeAt(index);
+        if (unit <= 0x7f) refBytes += 1;
+        else if (unit <= 0x7ff) refBytes += 2;
+        else if (unit >= 0xd800 && unit <= 0xdbff && index + 1 < entry.ref.length &&
+          entry.ref.charCodeAt(index + 1) >= 0xdc00 &&
+          entry.ref.charCodeAt(index + 1) <= 0xdfff) {
+          refBytes += 4;
+          index += 1;
+        } else refBytes += 3;
+      }
+      if (entry.ref.length === 0 || entry.ref.includes("\0") ||
+        refBytes > PLAYER_CART_REF_MAX_BYTES || entry.ref.startsWith("/") ||
+        entry.ref.startsWith("#") || entry.ref.includes("://") ||
+        entry.ref.includes("\\") || entry.ref.split("/").some((part: string) =>
+          part === "" || part === "." || part === "..") || refs.has(entry.ref)) {
+        throw new RangeError("local cart bundle ref is not canonical or is duplicated");
+      }
+      if (entry.bytes.byteLength === 0 ||
+        entry.bytes.byteLength > PLAYER_CART_INPUT_MAX_BYTES) {
+        throw new RangeError("local cart bundle bytes must contain at most 1 MiB");
+      }
+      refs.add(entry.ref);
+      const access = entry.access;
+      if (access === null || typeof access !== "object" ||
+        typeof access.load !== "boolean" || typeof access.reloadData !== "boolean" ||
+        typeof access.cstoreData !== "boolean" || typeof access.include !== "boolean") {
+        throw new TypeError("local cart bundle entries require explicit access capabilities");
+      }
+      return Object.freeze({
+        ref: entry.ref,
+        bytes: entry.bytes.slice(),
+        access: Object.freeze({ ...access }),
+      });
+    });
+  }
+
+  #bundleForTransfer(): {
+    readonly entries: readonly import("../transport/public.js").PlayerLocalCartBundleEntry[];
+    readonly transfers: readonly ArrayBuffer[];
+  } {
+    const transfers: ArrayBuffer[] = [];
+    const entries = this.#lastLocalCartBundle.map((entry) => {
+      const cartBytes = entry.bytes.slice().buffer;
+      transfers.push(cartBytes);
+      return { ref: entry.ref, cartBytes, access: { ...entry.access } };
+    });
+    return { entries, transfers };
   }
 
   #send(

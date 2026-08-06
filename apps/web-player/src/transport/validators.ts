@@ -3,9 +3,12 @@ import type {
   Phase0ERuntimeToHost,
 } from "./worker-protocol.js";
 import {
+  PLAYER_CART_INPUT_MAX_BYTES,
+  PLAYER_CART_REF_MAX_BYTES,
   PLAYER_CONTROLLER_BUTTON_MASK,
   PLAYER_CONTROLLER_COUNT,
   PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES,
   type PlayerHostToRuntime,
   type PlayerRuntimeToHost,
 } from "./player-protocol.js";
@@ -117,6 +120,43 @@ function isPlayerError(value: unknown): boolean {
   );
 }
 
+function isCartAccess(value: unknown): boolean {
+  return isRecord(value) && typeof value.load === "boolean" &&
+    typeof value.reloadData === "boolean" && typeof value.cstoreData === "boolean" &&
+    typeof value.include === "boolean";
+}
+
+function utf8ByteLength(value: string): number {
+  let length = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit <= 0x7f) length += 1;
+    else if (unit <= 0x7ff) length += 2;
+    else if (unit >= 0xd800 && unit <= 0xdbff &&
+      index + 1 < value.length && value.charCodeAt(index + 1) >= 0xdc00 &&
+      value.charCodeAt(index + 1) <= 0xdfff) {
+      length += 4;
+      index += 1;
+    } else length += 3;
+  }
+  return length;
+}
+
+function isLocalCartBundle(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value) || value.length > PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES) return false;
+  const refs = new Set<string>();
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.ref !== "string" || entry.ref.length === 0 ||
+      utf8ByteLength(entry.ref) > PLAYER_CART_REF_MAX_BYTES ||
+      entry.cartBytes instanceof ArrayBuffer === false || entry.cartBytes.byteLength === 0 ||
+      entry.cartBytes.byteLength > PLAYER_CART_INPUT_MAX_BYTES || !isCartAccess(entry.access) ||
+      refs.has(entry.ref)) return false;
+    refs.add(entry.ref);
+  }
+  return true;
+}
+
 export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
   if (!isPlayerEnvelope(value)) return false;
   if (value.type === "flushPersistence") {
@@ -135,6 +175,9 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
     return (
       isPositiveUint(value.sessionGeneration) &&
       value.cartBytes instanceof ArrayBuffer &&
+      value.cartBytes.byteLength > 0 &&
+      value.cartBytes.byteLength <= PLAYER_CART_INPUT_MAX_BYTES &&
+      isLocalCartBundle(value.localCartBundle) &&
       (value.instructionBudget === undefined ||
         (isPositiveUint(value.instructionBudget)))
     );
@@ -162,6 +205,15 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
   if (!isPositiveUint(value.requestId) && !(
     value.requestId === 0 && value.type === "diagnostic"
   )) return false;
+  if (value.type === "session-replaced") {
+    return isPositiveUint(value.previousSessionGeneration) &&
+      isPositiveUint(value.nextSessionGeneration) &&
+      Number(value.nextSessionGeneration) === Number(value.previousSessionGeneration) + 1 &&
+      value.sessionGeneration === value.nextSessionGeneration &&
+      typeof value.cartRef === "string" && value.cartRef.length > 0 &&
+      value.breadcrumb instanceof ArrayBuffer &&
+      value.breadcrumb.byteLength <= 4096 && isUint(value.breadcrumbDepth);
+  }
   if (value.type === "state") {
     if (!isUint(value.devkitFlags) || Number(value.devkitFlags) > 0x07) return false;
     if (value.state === "disposed") {

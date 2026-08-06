@@ -17,6 +17,7 @@ import {
 } from "./runtime-client.js";
 import {
   PlayerRuntimeClient,
+  type PlayerLocalCartSource,
   type PlayerRuntimeClientOptions,
   type PlayerRuntimeWorkerFactory,
 } from "./player-runtime-client.js";
@@ -215,9 +216,13 @@ export class PlayerComposition {
     this.presenter.resize(widthCssPixels, heightCssPixels);
   }
 
-  loadCart(source: Uint8Array, instructionBudget?: number) {
+  loadCart(
+    source: Uint8Array,
+    instructionBudget?: number,
+    localCartBundle: readonly PlayerLocalCartSource[] = [],
+  ) {
     this.#assertActive();
-    return this.runtime.loadCart(source, instructionBudget);
+    return this.runtime.loadCart(source, instructionBudget, localCartBundle);
   }
 
   start() {

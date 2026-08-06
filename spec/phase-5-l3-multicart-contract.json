@@ -52,9 +52,9 @@
     "networkAccess": false,
     "thirdPartyOrBbsContent": false
   },
-  "completedWorkUnits": ["5A", "5B", "5C"],
-  "activeWorkUnit": "5D",
-  "nextWorkUnit": "5E",
+  "completedWorkUnits": ["5A", "5B", "5C", "5D"],
+  "activeWorkUnit": "5E",
+  "nextWorkUnit": "5F",
   "workUnits": {
     "5A": {
       "name": "Activation / Capability / Corpus",
@@ -113,51 +113,69 @@
     },
     "5D": {
       "name": "Guest load / Atomic Cart Swap",
+      "status": "complete",
+      "result": {
+        "guestRequest": "P8WL version 1 copied payload, 4096-byte root-only bound",
+        "swap": "isolated staged CartSession with exact old-to-next Player generation handshake",
+        "mainOwnershipReset": ["presenter", "audio", "input", "pending-request"],
+        "committedMetadata": ["cartRef", "breadcrumb", "breadcrumbDepth", "stat(6)-parameter"],
+        "targets": ["callback", "custom-loop"],
+        "networkAccess": false,
+        "historicalGatePolicy": "Phase 4 disposition stays historical while the live implementation and conformance dimensions may advance in Phase 5",
+        "historicalGateFiles": [
+          "tests/contract/phase-4a-inventory.test.mjs",
+          "tests/contract/phase-5a-activation.test.mjs"
+        ],
+        "verification": [
+          "pnpm run test:phase-5d",
+          "pnpm run test:phase-5d:chrome",
+          "pnpm run test:architecture",
+          "pnpm run test:phase-5a",
+          "pnpm run test:phase-4h",
+          "pnpm run verify"
+        ]
+      }
+    },
+    "5E": {
+      "name": "External reload / cstore",
       "status": "active",
       "allowedPaths": [
-        "packages/contracts/src/public.ts",
         "packages/runtime-core/src/cart/",
-        "packages/runtime-core/src/public.ts",
         "packages/runtime-core/src/frame-runtime.ts",
+        "packages/runtime-core/src/public.ts",
+        "packages/runtime-core/src/ports/",
+        "packages/runtime-core/src/persistence/current-cart-data-core.ts",
         "packages/runtime-core/src/session/cart-session.ts",
+        "packages/z8lua-bridge/src/frame-vm.ts",
         "packages/z8lua-bridge/src/public.ts",
         "wasm/bridge/p8w_frame_runtime.cpp",
         "wasm/bridge/p8w_frame_runtime.h",
         "wasm/runtime-v1.manifest.lock.json",
-        "spec/abi/p8w-v1.json",
         "spec/pico-api-inventory.yaml",
         "apps/web-player/src/worker/compose-runtime.ts",
-        "apps/web-player/src/worker/runtime-worker.ts",
-        "apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts",
-        "apps/web-player/src/transport/player-protocol.ts",
-        "apps/web-player/src/transport/public.ts",
-        "apps/web-player/src/transport/validators.ts",
-        "apps/web-player/src/main/player-runtime-client.ts",
-        "apps/web-player/src/main/compose-player.ts",
-        "tests/runtime/phase-5d-guest-load.test.mjs",
-        "tests/browser/phase-5d.html",
-        "tests/browser/phase-5d.mjs",
-        "tests/browser/phase-5d-worker.mjs",
-        "tools/browser/build-phase-5d-worker.mjs",
-        "tools/browser/run-phase-5d.mjs",
-        "tests/wasm/",
+        "apps/web-player/src/worker/adapters/cart-repository-adapter.ts",
+        "tests/runtime/phase-5e-external-cart-data.test.mjs",
+        "tests/browser/phase-5e.html",
+        "tests/browser/phase-5e.mjs",
+        "tests/browser/phase-5e-worker.mjs",
+        "tools/browser/build-phase-5e-worker.mjs",
+        "tools/browser/run-phase-5e.mjs",
         "tests/architecture/",
-        "tests/contract/phase-5a-activation.test.mjs",
         "docs/README.md",
         "docs/phases/5-l3-local-multicart.md",
         "spec/phase-5-l3-multicart-contract.json",
         "package.json"
       ],
       "exit": [
-        "guest load request has a versioned bounded root-only payload and never returns to old code",
-        "CartLoader capability resolution feeds an isolated staged session",
-        "successful swap advances Player session generation and resets stale frame/audio/input ownership",
-        "parameter and breadcrumb commit only with the target cart",
-        "callback and custom-loop target carts auto-run in Node real-WASM and Chrome",
-        "failure and cancellation paths publish no mixed-generation state"
+        "external reload and cstore use one versioned bounded root HostRequest without changing Player session generation",
+        "CartLoader enforces reloadData or cstoreData before target ROM or overlay access",
+        "reload applies target overlay bytes to suspended VM RAM before guest continuation resumes",
+        "cstore snapshots source RAM at the call boundary and writes only an identity-scoped in-memory overlay",
+        "current-cart reload and cstore remain synchronous and regression-compatible",
+        "range, capability, resolver, cancellation and late completion paths fail closed with no partial write",
+        "Node real-WASM and Chrome pass the project external-reload and external-cstore corpus lanes"
       ]
     },
-    "5E": { "name": "External reload / cstore", "status": "pending" },
     "5F": { "name": "Coroutine / L3 Compatibility", "status": "pending" },
     "5G": { "name": "Optional BBS Adapter", "status": "pending" },
     "5H": { "name": "L3 Exit / Resource Gate", "status": "pending" }

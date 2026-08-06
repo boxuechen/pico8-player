@@ -257,7 +257,10 @@ export class CartSession {
     return this.#lastError;
   }
 
-  load(cart: ParsedCart): RuntimeResult<CartSessionBootResult> {
+  load(
+    cart: ParsedCart,
+    parameter: Uint8Array = new Uint8Array(),
+  ): RuntimeResult<CartSessionBootResult> {
     if (this.#state === "disposed") {
       return invalid("cart session is disposed");
     }
@@ -270,7 +273,13 @@ export class CartSession {
     } catch (error) {
       return invalid(errorMessage(error));
     }
-    return this.#start(snapshot, new Uint8Array());
+    let runParameter: Uint8Array;
+    try {
+      runParameter = copyRunParameter(parameter);
+    } catch (error) {
+      return invalid(errorMessage(error));
+    }
+    return this.#start(snapshot, runParameter);
   }
 
   reset(): RuntimeResult<CartSessionBootResult> {

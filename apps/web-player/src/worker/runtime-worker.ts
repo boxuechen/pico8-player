@@ -33,6 +33,8 @@ function postPlayerResponse(
     ? [response.packedScreen, response.displayPalette]
     : response.type === "runtime-control"
       ? [response.payload]
+      : response.type === "session-replaced"
+        ? [response.breadcrumb]
       : [];
   scope.postMessage(response, transfer);
 }
