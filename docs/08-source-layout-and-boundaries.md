@@ -190,7 +190,8 @@ frame/time/HostRequest transaction、canonical logical RAM access 与 standard-4
 runtime factory port 拥有 cart snapshot、generation、cold reset、stale response 和
 fault/stop/dispose lifecycle；`FrameScheduler` 拥有 wall-clock accumulator/catch-up policy，但
 不拥有 clock source 或 simulation。visual P8SCII/custom font 已落在 browser-neutral RuntimeCore；
-P8SCII audio/timed side effects、完整 device input、AudioSynth/deterministic scheduler/persistence 仍未落地。
+P8SCII audio/timed side effects、gamepad/touch/multiplayer/devkit input、AudioSynth、
+deterministic scheduler 和 persistence 仍未落地。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。

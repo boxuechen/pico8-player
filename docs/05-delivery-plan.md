@@ -84,8 +84,6 @@ trace 与 packed-screen/reset hash 一致；real-rAF、keyboard、fault reload �
 门禁通过。兼容声明严格限于 L1 bounded profile，详见
 [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。
 
-<a id="phase-2-activation-baseline"></a>
-
 ### Phase 2 — Graphics、Memory 与 Text
 
 > 状态：Complete；2A–2F。以下只保存 roadmap headline；完成细节见
@@ -103,12 +101,17 @@ Chrome production Worker/Canvas 路径得到相同的 frame、screen、palette�
 oracle；graphics/text p95 均约 `0.4ms`，资源故障、stale generation 拒绝和有效 cart 恢复通过。
 兼容声明严格限于 standard packed-4bpp project profile，开放 P0/P1 为 `0`。
 
+<a id="phase-3-activation-baseline"></a>
+
 ### Phase 3 — Audio、完整 Input 与 Persistence
+
+> 状态：Not started。以下是 activation baseline，不是 work-unit 拆解或 production
+> implementation 授权。
 
 目标：完成可听、可控制、可保存的 player runtime。
 
-主要范围：SFX/music synth、keyboard/gamepad/touch、repeat、cartdata、IndexedDB 和
-reload/cstore 的已授权同步-cache 路径。
+主要范围：SFX/music synth、现有 keyboard/`btnp` 回归、gamepad/touch 与
+multiplayer/devkit input、cartdata、IndexedDB 和 reload/cstore 的已授权同步-cache 路径。
 
 Exit headline：canonical audio golden、device output、input traces、persistence
 transaction/error/recovery 全部通过。

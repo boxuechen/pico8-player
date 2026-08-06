@@ -1,6 +1,6 @@
 # 04 — Web-native TypeScript Runtime 架构
 
-> 状态：TypeScript Runtime 实施契约（v1；Phase 0 暂定项见 2.3）
+> 状态：Living boundary contract（Implemented through Phase 2 exit；Target 内容不授权实现）
 > 目标运行环境：现代 Chrome 或 Chromium；主线程 + Dedicated Worker + AudioWorklet
 > 兼容目标：PICO-8 v0.2.7 Player；以官方手册为规范，以 fake-08 为可读参考实现
 > 本文范围：除 P8 Lua VM 本体外的 Web Runtime。z8lua/WASM 的 ABI 与构建细节由独立文档定义。
@@ -14,7 +14,7 @@
 | --- | --- |
 | **Implemented through Phase 2 exit** | Phase 1 Runtime baseline；Phase 2A canonical memory/Base RAM；Phase 2B draw state/primitives；Phase 2C mapped sprite sheet/blitter；Phase 2D map/flags/tile-precision tline；Phase 2E visual P8SCII/custom font；Phase 2F real-WASM/Chrome conformance、performance 与 recovery gate |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolver、label presentation、完整 Graphics/AudioSynth/device Input/deterministic conformance scheduler/Persistence、完整 cart swap 与 multicart |
+| **Deferred** | include resolver、label presentation、advanced Graphics、AudioSynth、gamepad/touch/multiplayer/devkit Input、deterministic conformance scheduler、Persistence、完整 cart swap 与 multicart |
 
 Phase 0E control 协议以
 [`phase-0e-runtime-contract.json`](../spec/phase-0e-runtime-contract.json)为准；Phase 0F browser
@@ -85,7 +85,9 @@ TypeScript 负责：
 
 ### 2.3 Phase 0 决策与验证账本
 
-下表同时包含“架构已锁定、Phase 0 只校准参数”的事项，以及仍需实验选择的暂定方向。`Accepted` 不能由普通 spike 改写；实验失败时必须新建 ADR。`Proposed` 则必须在 Phase 0 exit 前转成 Accepted/Rejected 并同步本文。
+下表保留 Phase 0 decision ledger 的当前结论。`Accepted` 不能由普通 spike 改写；实验失败时
+必须新建 ADR。仍为 `Proposed` 的阈值或兼容范围不构成实现授权，必须由后续 active phase
+明确认领、验证并同步本文。
 
 | ID | 状态 | 方向 | Phase 0 所需证据 |
 |---|---|---|---|
@@ -96,8 +98,8 @@ TypeScript 负责：
 | `P0-RT-05` | L1 policy Implemented（Phase 1C）；完整兼容仍 Proposed | fresh VM graph；64 KiB clear + `0x5f54/0x5f55` defaults + Cart ROM `0..0x42ff` copy；input/frame clock reset | fake + real z8lua lifecycle/RAM tests 已通过；未来 `run/reload/cartdata` 仍需官方 golden |
 | `P0-RT-06` | Accepted with constraints（ADR-017；Phase 0E） | root host-call 可恢复；nested guest coroutine 固定 unsupported，L3 外部数据只用预供给/同步 cache | root byte-string continuation 与 nested sentinel tests 已通过；一般 bubbling 需新 ADR |
 | `P0-RT-07` | Mechanism Accepted / thresholds Proposed（ADR-017） | Window command watchdog terminate/recreate + generation；各命令 deadline 后续校准 | fake stale-generation test 与 Chrome JS-stall recovery 已通过；250ms/2s/8ms 尚不作为最终 release threshold |
-| `P0-RT-08` | Accepted（ADR-013；Phase 0B passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 已通过；interop cost 留给 Phase 0C |
-| `P0-RT-09` | Accepted（ADR-015） | 四 package DAG + main/worker/worklet execution domains | Phase 0S exports/project references、architecture tests 与 negative fixtures |
+| `P0-RT-08` | Accepted（ADR-013；Phase 0B/0C passed） | z8lua `@/%/$` 与 TS memory API 共用 upper-RAM/video-remap mapper | alias/remap/wrap patch conformance 与 real-WASM interop benchmark 已通过 |
+| `P0-RT-09` | Accepted（ADR-015；Phase 0S passed） | 四 package DAG + main/worker/worklet execution domains | exports/project references、architecture tests 与 negative fixtures 已通过 |
 | `P0-RT-10` | Accepted（ADR-017；Phase 0E passed） | `FrameSliceRuntime` 通过 `FrameVmPort` 驱动 callback/custom loop；startup epoch 和后续 logical time 只按 committed slice 推进 | 官方 Web Player clock capture、60-step counts、Q16.16 time、input/frame RAM hash、budget/error/HostRequest 与 Chrome Worker gate |
 
 `P0-RT-03` 现为与系统架构图一致的唯一默认数据路径。Window relay
@@ -408,38 +410,17 @@ RuntimeCore graphics 与 frame snapshot 均由同一 mapper 决定 physical byte
 
 ## 7. Graphics
 
-> 状态：Phase 1D L1 raster 已 Implemented；完整 Graphics 是 Target；Phase 0F presenter boundary 已 Implemented（ADR-009）。
+> 状态：Phase 2 exit 已实现 standard 128×128 packed-4bpp graphics/text profile 与
+> Phase 0F presenter boundary；advanced screen/bitplane 和 `tline(bits)` 仍 Deferred。
 
 ### 7.1 分层
 
-```ts
-interface Graphics {
-  resetDrawState(): void;
-  cls(colorRaw?: number): void;
-  pset(xRaw: number, yRaw: number, colorRaw?: number): void;
-  pget(xRaw: number, yRaw: number): number;
-  spr(...rawArgs: number[]): void;
-  sspr(...rawArgs: number[]): void;
-  map(...rawArgs: number[]): void;
-  // line/circ/oval/rect/tline/print/pal/palt/clip/camera/fillp/...
-}
+Graphics 在 Worker 内做确定性 software rendering，直接读写 mapped packed RAM。
+`RuntimeFrame` 只快照 packed screen 与 display palette；主线程 `ScreenPresenter` 负责
+palette-to-RGBA、Canvas2D 最近邻呈现和 letterbox。精确 DTO 由 app transport source 拥有，
+本节不维护第二份 TypeScript wire interface。
 
-type PresentedFrame = Readonly<{
-  sessionGeneration: number;
-  tick: bigint;
-  width: 128;
-  height: 128;
-  rgba: Uint8ClampedArray;
-}>;
-
-interface ScreenEncoder {
-  encode(ram: PicoRamLayout, target: Uint8ClampedArray): void;
-}
-```
-
-`Graphics` 在 Worker 内做确定性 software rendering，直接读写 packed RAM。`ScreenEncoder` 应用 screen palette 并生成 128×128 RGBA；主线程 `ScreenPresenter` 只负责最近邻缩放和 letterbox。
-
-Phase 2B–2E 当前实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`、
+Phase 2 exit 实现位于 `graphics/l1-graphics.ts`、`graphics/map-memory.ts`、
 `graphics/p8scii-text.ts` 与 `graphics/p8scii-font.ts`：支持
 `cls/color/camera/clip/pal/palt/fillp/pget/pset/line/rect/rectfill/circ/circfill/oval/ovalfill`，
 使用 mapped packed screen，并从 `0x5f00..0x5f3f` 与 `0x5f60..0x5f6f` 即时读写 draw state。
@@ -470,19 +451,11 @@ palette，main Canvas 只把 palette index 映射到标准/extended RGBA。当�
 
 ## 8. AudioSynth 与 AudioWorklet
 
-> 状态：完整 AudioSynth 是 Target；Phase 0F transport/queue/device adapter 已 Implemented（ADR-010）。
+> 状态：AudioSynth 尚未实现；Phase 0F transport/queue/device adapter 已 Implemented
+>（ADR-010）。Phase 3 激活时必须在机器合同中确定 synth public contract，不能把本节描述
+> 直接当作已授权接口。
 
 ### 8.1 责任边界
-
-```ts
-interface AudioSynth {
-  reset(): void;
-  sfx(id: number, channel?: number, offset?: number, length?: number): void;
-  music(pattern?: number, fadeMs?: number, channelMask?: number): void;
-  renderLogicalTicks(ticks: number, fps: 30 | 60): Int16Array;
-  snapshotStats(): AudioStats;
-}
-```
 
 已实现 transport DTO 不在本文复制；精确的 version、generation、sequence、
 decimal sample index、frame count、stats 与 control fields 由
@@ -515,35 +488,20 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 ## 9. Input
 
-> 状态：Phase 1D player 0 六键 held/edge/repeat 已 Implemented；完整 device/multiplayer Input 是 Target。
-
-```ts
-type NormalizedInputSnapshot = Readonly<{
-  sequence: number;
-  players: readonly number[]; // 每项为 6-button held bitmask，最多 8 players
-  mouse?: { x: number; y: number; buttons: number; dx: number; dy: number };
-  key?: { keyCode: number; down: boolean };
-}>;
-
-interface PicoInput {
-  accept(snapshot: NormalizedInputSnapshot): void;
-  beginSimulationSlice(fps: 30 | 60): void;
-  btn(button?: number, player?: number): number | boolean;
-  btnp(button?: number, player?: number): number | boolean;
-  clearAll(reason: "blur" | "swap" | "pause" | "disconnect"): void;
-}
-```
-
-主线程负责 DOM keyboard/pointer 事件与每次 rAF 的 Gamepad polling；Worker 负责 PICO 语义：
+> 状态：RuntimeCore player 0 六键 held/edge/repeat 与 app keyboard/blur/visibility lifecycle
+> 已 Implemented；gamepad、touch、multiplayer 和 devkit input 尚未实现。Phase 3 激活时必须
+> 在机器合同中确定扩展 snapshot，不复用本文旧的 speculative interface。
 
 Phase 1D 的 RuntimeCore input 只消费 `PicoInputSnapshot.buttons`，在每个 boot/step transaction
 前锁存一次，写 `0x5f4c` 并按 30/60Hz 与 `0x5f5c/0x5f5d` 计算 `btnp`。HostRequest completion
-复用当前 latch；CartSession generation reset 清除 held/edge/duration。physical keyboard mapping、
-blur/visibility/device lifecycle、多玩家与 devkit input 仍由后续 work unit 实现。
+复用当前 latch；CartSession generation reset 清除 held/edge/duration。主线程
+`KeyboardInputFrontend` 已实现 keyboard alias、focus、blur/visibility 清理；gamepad/touch polling、
+多玩家 snapshot 和 devkit registers/API 仍由后续 work unit 实现。设备 frontend 只负责采样与
+映射，held/edge/repeat 和逐 slice latch 继续由 Worker/RuntimeCore 拥有。
 
 - **MUST** 在每个 simulation slice 开始锁存输入；常规 callback 模式在 `_update`/`_update60` 前可见，自定义 loop 则在 resume 后直至下一 `flip()` boundary 保持稳定。同一 slice 内多次 `btn()` 结果相同；慢帧多 update 的重锁存细节由 conformance 固定。
 - `btnp()` edge/repeat 由 Worker 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效。
-- replay 记录每 tick 的 `NormalizedInputSnapshot`，不记录 DOM timestamp。相同 replay 必须产生相同状态 hash。
+- replay 记录每 tick 的 normalized input snapshot，不记录 DOM timestamp。相同 replay 必须产生相同状态 hash。
 - `blur`、visibility loss、设备断连和 cart swap 必须显式清 held 状态，防止 stuck key。
 - 主线程映射可配置，但 core 只接收 PICO button index；UI 快捷键不得泄漏为 cart 输入。
 - devkit mouse/keyboard 模式通过 `0x5f2d` 与对应 `stat()`/RAM 契约实现。基础六键输入是 MUST，devkit 输入是兼容阶段的 SHOULD。
@@ -595,22 +553,11 @@ type StepResult = Readonly<{
 
 ## 11. Persistence
 
+> 状态：尚未实现。现有 storage adapter 只是 composition scaffold；Phase 3 激活文档和机器
+> 契约必须先定义 public port、同步 guest mirror 与异步 commit transaction，本文只保留所有权和
+> 语义约束。
+
 ### 11.1 同步 guest、异步浏览器
-
-```ts
-interface PersistencePort {
-  hydrate(): Promise<ReadonlyMap<string, Uint8Array>>;
-  commitCartData(id: string, bytes: Uint8Array): Promise<void>;
-  commitCartOverlay(identity: CartIdentity, rom: Uint8Array): Promise<void>;
-  flush(): Promise<void>;
-}
-
-interface CartDataWindow {
-  open(id: string): boolean; // 同步；返回记录此前是否存在
-  afterTick(): void;
-  closeAndFlush(): Promise<void>;
-}
-```
 
 `cartdata(id)` 是同步 Lua API，而 IndexedDB 是异步的。因此 Runtime 启动 VM 前 **MUST** `hydrate()` 出可同步查询的镜像；禁止在 WASM import 内等待 Promise 或让 `cartdata()` 永远返回 false。
 
@@ -679,6 +626,10 @@ type RuntimeEvent =
 `250ms` 前台单 tick 与 `2s` startup/compile 只是 `P0-RT-07` 的暂定测试值；最终值必须由 conformance/perf corpus 校准，并允许调试构建放宽。
 
 ## 13. `load`、`reload`、`cstore` 与 cart swap
+
+> 状态：Target。当前 Runtime 只有 host 驱动的 load/reset；guest `load/reload/cstore` 和 cart
+> swap 尚未实现。Phase 3 work unit 必须明确选择获授权的同步-cache/persistence 子集；不得由本节
+> 自动扩大到 BBS resolver、网络加载或 multicart。
 
 ### 13.1 状态机
 
@@ -894,7 +845,7 @@ type SerializedRuntimeError = Readonly<{
 ### 17.7 性能门槛
 
 - CI 必须保存 `16K pset/frame`、大量 `peek/poke`、满屏 `spr/map` 三组基准趋势。
-- `P0-RT-07` 的暂定门槛是：在项目指定的 desktop reference browser/hardware 上，ordinary 60Hz corpus 的 VM + TS Runtime core tick p95 应不超过 8ms；任何 60Hz 单帧超过 16.67ms 的比例另记为 missed-frame 指标，不能用该硬上限替代 8ms p95 门禁。专项压力 case 使用 [测试文档的场景预算](./06-testing-compatibility.md#102-场景预算)。Phase 0 必须据实校准，并通过 ADR 同步修订所有引用和 CI 配置。
+- `P0-RT-07` 的暂定门槛是：在项目指定的 desktop reference browser/hardware 上，ordinary 60Hz corpus 的 VM + TS Runtime core tick p95 应不超过 8ms；任何 60Hz 单帧超过 16.67ms 的比例另记为 missed-frame 指标，不能用该硬上限替代 8ms p95 门禁。专项压力 case 使用 [测试文档的场景预算](./06-testing-compatibility.md#102-场景预算)。Phase 1/2 的 project gates 已证明 bounded corpus 通过；最终 release threshold 仍是 Proposed，必须由后续性能 work unit 和 ADR 同步定案。
 - 若 JS↔WASM 边界未达门槛，先以 profile 定位 API，再决定批处理或下沉；不得以关闭 conformance 功能换性能。
 
 ## 18. 明确不做

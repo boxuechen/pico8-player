@@ -672,7 +672,7 @@ Player UI 已实现。
 
 | 行为 | Phase 0F 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
-| packed 4bpp → RGBA / Canvas2D | 128×128 exact RGBA hash；DPR 1/2/1.25 与 fractional resize 无 blended colors | `implemented-boundary` | Phase 1/2 graphics golden 复用 presenter contract |
+| packed 4bpp → RGBA / Canvas2D | 128×128 exact RGBA hash；DPR 1/2/1.25 与 fractional resize 无 blended colors | `implemented-boundary` | Phase 2 graphics gate 已复用 presenter contract；后续保持回归 |
 | present performance/lifetime | 10,000 frames p95 `0.0388 ms`；heap delta `15,156 B`；stale generation/dispose passed | `implemented-boundary` | Chrome 升级时重跑 evidence |
 | dedicated PCM transport | 44.1/48 kHz 并发 10 分钟；steady underrun/overrun/drop/discontinuity 均为 `0` | `implemented-boundary` | AudioSynth 实现后保留同一 queue 门禁 |
 | queue/resource bound | capacity `66,150`，high water `44,100`；实测 peak `22,406` / `22,530` | `implemented-boundary` | 参数变更必须更新 spec/evidence |
@@ -681,13 +681,13 @@ Player UI 已实现。
 ### 15.8 Phase 1D L1 Graphics/Input 矩阵
 
 本表只覆盖 Phase 1D 的 player 0 六键与基础 integer raster。测试 cart 和 framebuffer/input
-vectors 均为项目原创；完整官方 differential 属于 1F/Phase 2 compatibility gate。
+vectors 均为项目原创；Phase 2 project exit 见 15.11，完整官方 differential 留给 Phase 4。
 
 | 行为 | Phase 1D 结果 | 功能状态 | 后续动作 |
 | --- | --- | --- | --- |
-| `line/rect/rectfill/circ/circfill` generated dispatch | raw Q16.16、optional、stable id `4..9` 与 stack path passed | `partial` | 1F official representative cart；Phase 2 补完整 draw state |
+| `line/rect/rectfill/circ/circfill` generated dispatch | raw Q16.16、optional、stable id `4..9` 与 stack path passed | `partial` | Phase 2 exit summary 见 15.11；official edge differential 留 Phase 4 |
 | packed mapped screen | `0x5f55=0xe0` project vector、nibble/corner/radius/physical bounds passed | `partial` | camera/clip/palette/fillp/bitplane/screen mode deferred |
-| pen/polyline state | `0x5f25`、`0x5f35`、`0x5f3c..0x5f3f` reset/readback passed | `implemented-l1` | Phase 2 交互矩阵与 official golden |
+| pen/polyline state | `0x5f25`、`0x5f35`、`0x5f3c..0x5f3f` reset/readback passed | `implemented-l1` | Phase 2 project interaction matrix 见 15.11；official differential 留 Phase 4 |
 | `btn` held / `0x5f4c` | player 0 six bits、update 前可见、invalid player/button passed | `implemented-l1` | multiplayer、pause/mouse/devkit input deferred |
 | `btnp` edge/repeat | release/repress、30Hz 15/4、60Hz 30/8、自定义寄存器和 255 disable passed | `implemented-l1` | 1F trace differential；完整 device input 属于后续阶段 |
 | input transaction | invalid snapshot 不消费；HostRequest resume 不 double-advance；generation reset passed | `implemented-l1` | Phase 1E physical mapping/scheduling passed；1F trace differential |
@@ -713,18 +713,18 @@ logical clock、reset 和 fresh replay hash 一致。Reviewed raw artifact 与�
 
 | Cart / behavior | Phase 1F result | 功能/Cart 状态 | Claim boundary / 后续动作 |
 | --- | --- | --- | --- |
-| `l1/callback-30-input` | text `.p8`；30Hz callback；held + `btnp`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | 完整 graphics/device input 仍 Phase 2/3；无 official-exact 声明 |
+| `l1/callback-30-input` | text `.p8`；30Hz callback；held + `btnp`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | standard graphics 已由 Phase 2 exit 关闭；完整 device input 仍属 Phase 3；无 official-exact 声明 |
 | `l1/callback-60-p8png` | generated project `.p8.png`；60Hz `_update60`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | 压缩/codec 广度由 parser suite；代表游戏 corpus 属于 Phase 4 |
 | `l1/custom-flip-30` | text `.p8`；top-level `flip()`；trace/final/reset exact against reviewed project oracle | `compatible`；bounded flow `C2` | custom slow-frame/host suspension 未扩大 |
 | Chrome real-rAF pacing | callback/custom 30Hz median `33.40/33.20ms`；60Hz `16.00ms`；frame/slice continuous | `compatible`（Chrome desktop L1） | background/slow-frame policy保持 ADR-011；release soak deferred |
 | Chrome keyboard visible response | Player 0 position `8→11`；O `btnp` edge visible；无 browser repeat dependence | `compatible`（bounded six-button） | multiplayer/gamepad/touch/devkit input deferred |
 | fault/reload | instruction budget fault structured；main responsive；generation `4→5`；valid cart reloaded | `compatible` host-safety path | CPU cost calibration Phase 4；hard Worker hang由 0F/1E gate继续覆盖 |
-| ordinary 60Hz performance | 120 measured Worker round-trips；p95 `0.1001ms`；`>16.67ms` `0/120` | gate passed | 只适用于 ordinary L1 cart；Phase 2/4 stress corpus 必须另测 |
+| ordinary 60Hz performance | 120 measured Worker round-trips；p95 `0.1001ms`；`>16.67ms` `0/120` | gate passed | Phase 2 representative gate 已通过；Phase 4 stress corpus 另测 |
 
 三个 bounded flows 均完成完整关键流程，所以按 15.2 记 `C2`；它们不是 MVP 代表游戏
 corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known Differences：
 
-- Phase 2E 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
+- Phase 2 exit 已关闭 standard-4bpp palette/clip/camera/基础图元、sprite/map、tile-precision
   `tline` 与 visual P8SCII/custom font；P8SCII audio/timed controls、`tline(bits)` precision
   overload 与 advanced screen/bitplane mode 仍 `partial`。
 - AudioSynth、persistence、gamepad/touch/multiplayer 和 resolver 仍 `unsupported`/Deferred。
@@ -733,99 +733,13 @@ corpus，`3/3` 不作为第三方 playable rate，也不授予 C3。当前 Known
 
 以上均为已声明后续范围，不是开放 P0/P1；Phase 1 exit 时开放 P0/P1 为 `0`。
 
-### 15.11 Phase 2A Memory/Host ABI 矩阵
+### 15.11 Phase 2 Graphics/Memory/Text Exit 矩阵
 
-本表覆盖 in-session Base RAM 和 Phase 2 host-call foundation，不包含 Phase 3 的
-`reload/cstore/cartdata`，也不把项目 vector 升级为官方 bit-exact。
-
-| 行为 | Phase 2A 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| `peek/poke` variadic | scalar 与 8192 result/value 通过；8193 在 side effect 前结构化失败 | `compatible`（手册边界） | 代表 cart differential 留 Phase 4 |
-| width/block memory | unaligned/cross-wrap `peek2/4`、`poke2/4`、overlap-safe `memcpy`、`memset` 通过 | `compatible`（project vectors） | 非法/溢出参数 edge 仍 `unknown` |
-| canonical remap | direct/API/RuntimeCore graphics/frame snapshot 在 GFX/SCREEN remap 下收敛 | `compatible`（documented bases） | invalid video base defensive fallback 继续 `unknown` |
-| logical-memory port | stable lease、buffer identity、destroy 后 stale rejection、无 browser/WASM concrete type leak | `compatible`（architecture contract） | map resolver 属于 2D，不混入 low-level mapper |
-| Host call frame | ABI `0x00010002`、80 bytes、12 scalar slots、presence、byte pointer/length、result/error passed | `implemented-foundation` | byte-string guest behavior已由 2E `print` 完成；multi-return 仍 deferred |
-| regression/performance | reproducible artifact、Phase 0C benchmark、Phase 0E/1A/1D 与 Chrome production gates passed | gate passed | graphics stress 从 2B/2C 建立 |
-
-Known Differences：memory API 的未定义 invalid inputs 沿用 defensive/structured error，不宣称
-official exact；`reload/cstore/cartdata` 仍 unsupported/deferred。2A 没有开放 P0/P1。
-
-### 15.12 Phase 2B Draw State/Primitive 矩阵
-
-本表只声明 standard 128×128 packed-4bpp。测试 cart、packed-RAM golden 与 Chrome 页面均为
-项目原创；advanced screen/bitplane mode 未被标记 compatible。
-
-| 行为 | Phase 2B 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| typed graphics bindings | append-only id `10..18`；boolean scalar、Q16 result、`pal(table)` bounded wrapper passed | `compatible`（2B profile） | sprite flip 已在 2C 复用 boolean lowering |
-| RAM-backed draw state | `0x5f00..0x5f3f`、secondary `0x5f60..0x5f6f` default/API/direct-poke 双向 passed | `compatible`（standard 4bpp） | advanced mode 明确 deferred |
-| raster ordering | camera→clip→draw palette→fillp、pattern transparency/global secondary/inversion passed | `compatible`（project vectors） | sprite apply-pattern 已由 2C 关闭 |
-| primitive golden | existing primitives + reversed/fractional/off-screen oval hash `0f5af6e7…39dcc` deterministic | `compatible`（project golden） | official edge differential 留 2F/Phase 4 |
-| display palette boundary | 16-byte RuntimeFrame/Worker DTO、validator/dual transfer、standard+extended RGBA Canvas passed | `compatible`（Chrome 150） | Canvas 禁止读取 RAM/draw state |
-| regression/performance | Phase 1D/1E/1F passed；ordinary Worker p95 `0.4001ms`，`>16.67ms` `0/120` | gate passed | sprite stress 从 2C 建立 |
-
-Known Differences：camera/clip 的 undocumented multi-return 不是当前 v0.2.7 manual claim；bitplane、
-advanced screen modes 仍未实现；map/tile-precision tline 已由 2D、visual text 已由 2E 关闭。2B 没有开放 P0/P1。
-
-### 15.13 Phase 2C Sprite Sheet/Blitter 矩阵
-
-本表只声明 standard 128×128 packed-4bpp sprite path。测试 cart、RAM/framebuffer golden 与
-Chrome 页面均为项目原创；advanced screen/bitplane mode 不在本 unit 的兼容声明内。
-
-| 行为 | Phase 2C 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| typed sprite bindings | append-only id `19..22`；`sspr` 10 scalar/boolean 参数沿用 80-byte frame | `compatible`（2C profile） | map/tline 从 2D 复用同一 host boundary |
-| `sget/sset` 与 mapper | low/high nibble、fractional/bounds/custom return、default/explicit palette、direct poke equality passed | `compatible`（documented GFX bases） | invalid remap bases 仍 `unknown` |
-| GFX alias | default、screen 与 upper-RAM remap 下 API/direct/frame 共用 canonical mapper | `compatible`（documented bases） | MAP base/width resolver 属于 2D |
-| `spr` raster | fractional `w/h`、sheet row boundary、camera/clip、flip、palette/transparency passed | `compatible`（project vectors） | official edge differential 留 2F/Phase 4 |
-| `sspr` sampling | up/down scale、negative destination dimensions、source clipping 与 bounded visible iteration passed | `compatible`（project vectors） | negative source dimensions 未作 official-exact 声明 |
-| sprite fill pattern | draw palette→secondary pair、pattern transparency；global-secondary primitive regression passed | `compatible`（manual ordering） | map/tline 在 2D 复用同一 sprite pixel path |
-| framebuffer/Chrome | packed golden `337c0b37…07180`；production Worker/Canvas pattern 与 negative-scale pixels passed | gate passed（Chrome 150） | 2D 继续保持 transport/presenter 无 tile dependency |
-
-Known Differences：advanced screen/bitplane mode 和 undocumented invalid/overflow input 仍不声明
-official exact；map、flags 与 tile-precision `tline` 已由 2D、visual text 已由 2E 关闭。2C 没有开放 P0/P1。
-
-### 15.14 Phase 2D Map/Flags/Tline 矩阵
-
-本表只声明 standard packed-4bpp、tile-coordinate Q16.16 `tline` profile。测试 cart、RAM/
-framebuffer golden 与 Chrome 页面均为项目原创；不存在 Canvas/Worker tile-state dependency。
-
-| 行为 | Phase 2D 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| typed map bindings | append-only id `23..28`；`fget/fset` boolean presence 与 9 参数 `tline` 沿用 80-byte frame | `compatible`（2D profile） | `print/cursor` 从 2E 首次消费 byte-string slot |
-| map resolver | default/shared lower ring、`0x30..0x3f` alias、upper base、width `128/256/4`、derived height/OOB/direct RAM passed | `compatible`（documented bases） | invalid lower base fallback 仅 defensive，不声明 official exact |
-| flags | `0x3000..0x30ff` whole-byte/bit、boolean lowering、direct poke 与 invalid boundaries passed | `compatible`（manual API） | 无第二份 flag cache |
-| `map` raster | defaults/explicit range、tile 0 override、layer masks、upper source、camera/clip 与 bounded visible work passed | `compatible`（standard 4bpp） | advanced screen/bitplane mode deferred |
-| `tline` sampler | horizontal/diagonal/reversed、default/positive/zero/negative delta、mask/offset、layers、draw state passed | `partial` | v0.2.7 one-argument precision mode `tline(bits)` 留后续兼容阶段 |
-| upper arbitration | MAP overlap 使冲突 GFX/SCREEN 回退默认；不重叠 upper video mapping 保持生效 | `compatible`（documented bases） | undocumented invalid register values 仍 `unknown` |
-| framebuffer/Chrome | packed golden `c99d9aaf…24e60`；Chrome 150 production Worker/Canvas map+tline pixels passed | gate passed（Chrome 150） | 2F 汇总 project conformance 与性能/恢复门禁 |
-
-Known Differences：`tline(bits)` precision-setting overload、advanced screen/bitplane mode 和未记录
-invalid/overflow edge 不在 2D compatible claim；project golden 不等于 official bit-exact。2D 没有开放 P0/P1。
-
-### 15.15 Phase 2E P8SCII/Custom Font 矩阵
-
-本表只声明同步 visual P8SCII、standard packed-4bpp text path。测试 byte arrays、RAM/framebuffer
-golden 与 Chrome 页面均为项目原创；字体 bitmap 的固定来源、checkout、hash 和 MIT notice 记录于
-[`10-reference-sources.md`](./10-reference-sources.md) 与 RuntimeCore third-party notice。
-
-| 行为 | Phase 2E 结果 | 功能状态 | 后续动作 |
-| --- | --- | --- | --- |
-| byte-string host binding | append-only id `29..30`；empty、embedded NUL、non-UTF8、1024 bytes、类型/arity/error 与同步 lifetime passed | `compatible`（2E profile） | async-retained byte view 仍禁止；multi-return deferred |
-| `print/cursor` basics | explicit/implicit overload、rightmost return、cursor/pen、NUL/newline/carriage return 与 scroll enable/disable passed | `compatible`（project vectors） | undocumented invalid coordinate edge 仍 `unknown` |
-| built-in/custom font | 256 glyph bitmap hash `a36a2826…5ea6`；`0x5600..0x5dff` rows/attrs/adjustments/tab 和 `0x5f58..5b` defaults live-read passed | `compatible`（documented RAM） | external Unicode font shaping 不在 P8SCII runtime scope |
-| visual controls | repeat、shift/tab、decorate、foreground/font switch、special modes、one-off、outline 与 raw writes passed | `compatible`（visual synchronous profile） | audio control 无 synth side effect；timed controls 不 suspend |
-| raster ordering | camera/clip、foreground/background draw palette、mapped screen、scroll 与 packed framebuffer hash `da6169dd…9f65` deterministic | `compatible`（standard 4bpp） | advanced screen/bitplane mode deferred |
-| bounds/fuzz | 65,536-byte input、65,536 glyph、8,388,608 pixel-write、256 nested-control hard caps；10,000 deterministic arrays 无 crash/hang/OOB | gate passed | 代表 cart stress/performance 由 2F 汇总 |
-| Chrome boundary | Chrome 150 production Worker/Canvas built-in/custom/one-off/background pixels passed；frame DTO 无 text/font/glyph state | gate passed（Chrome 150） | 2F 汇总同 cart Node/Chrome oracle |
-
-Known Differences：P8SCII audio command 只被同步消费而不产生 AudioSynth side effect，timed delay/
-frame-skip commands 不引入 suspension；`tline(bits)`、advanced screen/bitplane mode 仍 deferred。
-project golden 不等于 official bit-exact。2E 没有开放 P0/P1。
-
-### 15.16 Phase 2F Graphics/Memory/Text Exit 矩阵
-
-本表汇总 Phase 2A–2F 的 project-owned standard packed-4bpp profile。它只证明机器合同列出的
+2A–2E 的逐 work-unit 数值与执行历史只由
+[`phase-2-graphics-memory-text-contract.json`](../spec/phase-2-graphics-memory-text-contract.json)、
+相关 tests 和不可变 [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md)
+保存，不在 living compatibility contract 中重复。本表汇总 Phase 2A–2F 的 project-owned
+standard packed-4bpp profile。它只证明机器合同列出的
 memory/draw/sprite/map/text 组合在相同 production path 中可复现，不表示第三方 playable rate、
 完整官方 differential、advanced video mode 或 Phase 3 audio/input/persistence 已完成。
 

@@ -352,7 +352,7 @@ Pending request 的完成契约：
 
 ## 7. WASM import 与 host-call frame
 
-Phase 2A 将 scalar import 升级为 ABI minor `0x00010002`：binding id 加一个 bridge-owned
+Phase 2A 已将 scalar import 升级为 ABI minor `0x00010002`：binding id 加一个 bridge-owned
 80-byte call frame，同步调用 module-local TS dispatcher。它捕获 TS throw，并映射为
 `P8W_STATUS_HOST_API_ERROR` / `E_HOST_API`。当前 artifact layout 为：
 
