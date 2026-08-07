@@ -4,6 +4,12 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/main/public.d.ts",
+      "import": "./dist/main/public.js"
+    }
+  },
   "scripts": {
     "build": "tsc -b tsconfig.json --pretty false",
     "typecheck": "tsc -b tsconfig.json --pretty false"

@@ -145,7 +145,9 @@ export class Phase0FPlayerComposition {
 
 export interface PlayerCompositionOptions {
   readonly canvas: HTMLCanvasElement;
-  readonly runtimeWorkerFactory: PlayerRuntimeWorkerFactory;
+  readonly runtimeWorkerFactory?: PlayerRuntimeWorkerFactory;
+  /** Use package-owned, relative Worker and AudioWorklet assets. */
+  readonly useDefaultAssets?: boolean;
   readonly commandTimeoutMs?: PlayerRuntimeClientOptions["commandTimeoutMs"];
   readonly workletModuleUrl?: string | URL;
   readonly audio?: AudioFrontendOptions;
@@ -186,7 +188,22 @@ export class PlayerComposition {
   }
 
   static async create(options: PlayerCompositionOptions): Promise<PlayerComposition> {
-    const runtime = new PlayerRuntimeClient(options.runtimeWorkerFactory, {
+    if (options.useDefaultAssets === true && options.runtimeWorkerFactory !== undefined) {
+      throw new TypeError("default assets and a custom Worker factory are mutually exclusive");
+    }
+    const runtimeWorkerFactory = options.useDefaultAssets === true
+      ? () => new Worker(
+        new URL("../browser/player-worker.mjs", import.meta.url),
+        { type: "module" },
+      )
+      : options.runtimeWorkerFactory;
+    if (runtimeWorkerFactory === undefined) {
+      throw new TypeError("a runtime Worker factory is required");
+    }
+    const workletModuleUrl = options.useDefaultAssets === true
+      ? new URL("../worklet/pico8-audio-processor.js", import.meta.url)
+      : options.workletModuleUrl;
+    const runtime = new PlayerRuntimeClient(runtimeWorkerFactory, {
       ...(options.commandTimeoutMs === undefined
         ? {}
         : { commandTimeoutMs: options.commandTimeoutMs }),
@@ -195,10 +212,10 @@ export class PlayerComposition {
     presenter.reset(runtime.sessionGeneration);
     let audio: DedicatedAudioFrontend | undefined;
     try {
-      if (options.workletModuleUrl !== undefined) {
+      if (workletModuleUrl !== undefined) {
         audio = await DedicatedAudioFrontend.create(
           runtime,
-          options.workletModuleUrl,
+          workletModuleUrl,
           options.audio,
         );
       }
@@ -275,8 +292,8 @@ export class PlayerComposition {
     this.#disposed = true;
     this.#removeRuntimeListener();
     this.#removeGenerationListener();
-    await this.audio?.dispose();
     this.presenter.dispose();
+    await this.audio?.dispose();
     await this.runtime.dispose();
   }
 

@@ -17,7 +17,7 @@ async function sha256(relativePath) {
 
 const contract = await readJson("spec/phase-7-web-player-release-candidate-contract.json");
 
-test("Phase 7A freezes the completed Phase 6 baseline", async () => {
+test("Phase 7A remains anchored to the completed Phase 6 baseline", async () => {
   assert.equal(contract.phase, "7");
   assert.equal(contract.status, "active");
   assert.equal(
@@ -25,11 +25,11 @@ test("Phase 7A freezes the completed Phase 6 baseline", async () => {
     "reproducible embeddable PICO-8 v0.2.7 web-player release candidate for Chrome/Chromium desktop",
   );
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
-  assert.deepEqual(contract.completedWorkUnits, ["7A"]);
+  assert.ok(contract.completedWorkUnits.includes("7A"));
   assert.equal(contract.workUnits["7A"].status, "complete");
-  assert.equal(contract.activeWorkUnit, "7B");
-  assert.equal(contract.nextWorkUnit, "7B");
-  assert.equal(contract.workUnits["7B"].status, "active");
+  assert.match(contract.activeWorkUnit, /^7[B-H]$/u);
+  assert.equal(contract.nextWorkUnit, contract.activeWorkUnit);
+  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
   assert.equal(
     Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
     1,
@@ -99,9 +99,9 @@ test("Phase 7A routes Codex to exactly one active work unit", async () => {
   const packageJson = await readJson("package.json");
 
   assert.match(docsReadme, /当前阶段 \| Phase 7/u);
-  assert.match(docsReadme, /Active work unit \| 7B/u);
+  assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
   assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
-  assert.match(phase, /Active work unit：7B/u);
+  assert.match(phase, /Active work unit：7[B-H]/u);
   assert.ok(phase.includes("不新增网络、BBS、任意 URL"));
   assert.ok(rootReadme.includes("Phase 7 Web Player Release Candidate"));
   assert.doesNotMatch(rootReadme, /Full cart hardware.+not implemented/u);

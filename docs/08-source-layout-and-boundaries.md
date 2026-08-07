@@ -44,6 +44,8 @@ package；package 只用于强制真正的架构边界。
 │       │   │   ├── audio-protocol.ts
 │       │   │   └── validators.ts
 │       │   ├── main/
+│       │   │   ├── public.ts
+│       │   │   ├── embed-player.ts
 │       │   │   ├── main.ts
 │       │   │   ├── compose-player.ts
 │       │   │   ├── player-controller.ts
@@ -303,7 +305,11 @@ flowchart LR
 
 - `runtime-worker.ts` 只做消息 schema 校验、调用 composed Runtime、序列化结果；不实现 PICO API。
 - `compose-runtime.ts` 创建 CartParser、z8lua adapter、RuntimeCore、persistence/repository adapters 并注入 ports；不得承载 frame algorithm。
-- `compose-player.ts` 创建 Worker client、presenter、input frontend、AudioContext/Worklet 和 UI controller；不得读取 WASM/Pico RAM。
+- `compose-player.ts` 是 Window adapter composition root，创建 package-owned relative Worker/Worklet
+  assets、Worker client、presenter 和 AudioContext frontend；不得读取 WASM/Pico RAM。
+- `main/public.ts` 只 re-export versioned stable embed contract；`embed-player.ts` 只组合
+  `mountPico8Player`、串行 lifecycle 和 copy-owned typed events，不得创建 concrete Worker、Worklet、
+  presenter 或 persistence adapter。
 - 每个 player session 使用独立 object graph；禁止用 module-level mutable singleton 保存 VM、RAM、cartdata 或 input state。
 - dispose 顺序必须由 composition root 显式管理，并测试 Worker、AudioWorklet、MessagePort、RAF 和事件监听器全部释放。
 
@@ -332,6 +338,11 @@ z8lua context 先提供 WASM memory，PicoApiHost 随后才可围绕该 memory �
 ## 5. Public API 与 import 规则
 
 每个 package 必须通过 `package.json#exports` 暴露有限入口。默认入口映射到 `src/public.ts`；只有确有独立稳定契约时才能增加显式 subpath，例如 `./ports` 或 `./testing`。
+
+`@pico8-web/web-player` 同样只暴露一个 package root，映射到 `main/public.ts`。旧的 `main/main.ts`、
+transport DTO、controller、composition 和 adapter 文件均为 app internal，不能成为 consumer deep import。
+公开 cart authority 只允许 bytes/local bundle；Worker/Worklet 的 package-owned relative asset URL 是
+composition detail，不成为 caller-provided URL capability。
 
 允许：
 

@@ -22,7 +22,7 @@
 | 4 L2 / MVP Compatibility（4A–4H） | Complete | [Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [contract](../spec/phase-4-l2-mvp-contract.json) |
 | 5 L3 local/multicart | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
 | 6 Real-cart Qualification（6A–6H） | Complete | [Phase 6 exit](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
-| 7 Web Player Release Candidate（7A–7H） | Active — 7B | [phase](./phases/7-web-player-release-candidate.md) / [contract](../spec/phase-7-web-player-release-candidate-contract.json) |
+| 7 Web Player Release Candidate（7A–7H） | Active — 7C | [phase](./phases/7-web-player-release-candidate.md) / [contract](../spec/phase-7-web-player-release-candidate-contract.json) |
 
 Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
 corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
@@ -30,7 +30,7 @@ corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence �
 
 ## 3. 当前阶段边界
 
-Phase 7 已由 7A 激活，当前唯一 work unit 为 7B。它把关闭的 Runtime/profile 产品化为可重复构建、
+Phase 7 已由 7A 激活，7B 已关闭 stable embed API，当前唯一 work unit 为 7C。它把关闭的 Runtime/profile 产品化为可重复构建、
 可嵌入的 Chrome/Chromium desktop Release Candidate；不扩大 cart 来源、网络 authority、公开第三方
 兼容率或浏览器范围。精确 capability delta、7A–7H 顺序和 exit gate 只由
 [active phase](./phases/7-web-player-release-candidate.md) 与

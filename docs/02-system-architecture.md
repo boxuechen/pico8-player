@@ -8,7 +8,7 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented** | 三执行域 production path；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
+| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
 | **Deferred** | general nested-coroutine HostRequest、include resolution、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
 
 第 4–11 节只维护稳定架构约束，不复制容易漂移的 DTO 和 error union。当前 production player
@@ -50,6 +50,7 @@ flowchart LR
 - 建立专用 `MessageChannel`，把两个端口分别转交 Runtime Worker 与 AudioWorklet；
   [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) 已接受该唯一默认路径。
 - Worker watchdog、终止和重建。
+- versioned embed lifecycle 和 typed event facade；public consumer 不直接依赖 Worker transport DTO。
 
 禁止：
 
@@ -72,6 +73,19 @@ Runtime Worker 是一局 player session 的唯一权威状态源。
 ### AudioWorklet
 
 只负责消费已生成的 PCM、重采样/缓冲中必要的实时部分和输出。它不得拥有游戏逻辑或权威 audio/music state。
+
+### Stable embed facade
+
+`@pico8-web/web-player` 的单一 package root 是 Window execution domain 的稳定消费入口。它只接受
+caller-provided `Uint8Array` 与 bounded caller-authorized local bundle；不接受 cart URL，也不执行
+cart discovery 或 implicit fetch。公开 lifecycle 为 `create/loadCart/start/pause/resume/reset/stop/dispose`，
+公开事件只包含 copy-owned `state/frame/diagnostic/fault`，不把 app-owned Worker DTO 作为 consumer contract。
+
+所有 mutating lifecycle operation 在每个 facade 实例内串行化。`dispose()` 是 idempotent terminal
+barrier：立即拆除 public listener、controller listener、presenter 和 audio output path；尚未开始的操作
+fail closed，in-flight completion 不得再提交 frame、audio、state 或 diagnostic。每个 `create()` 构造独立
+Worker、presenter、input、AudioContext/Worklet 和 persistence adapter object graph；模块级不得保存 mutable
+player singleton。
 
 ## 2. 所有权与共享内存
 

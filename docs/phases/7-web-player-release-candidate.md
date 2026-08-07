@@ -1,7 +1,7 @@
 # Phase 7 — Web Player Release Candidate
 
 > 状态：Active
-> Active work unit：7B — Stable Embed API
+> Active work unit：7C — Distributable Artifact Pipeline
 > 机器合同：[`spec/phase-7-web-player-release-candidate-contract.json`](../../spec/phase-7-web-player-release-candidate-contract.json)
 > 基线：Phase 6 exit commit `117882a8bbd368ea8d8ebea2a2145d8f71152ec3`
 
@@ -37,41 +37,54 @@ L3 local/multicart compatibility claim。
 
 验证：`pnpm run test:phase-7a`。
 
-## 4. 当前工作：7B Stable Embed API
+## 4. 已完成：7B Stable Embed API
 
-### 4.1 范围内
+7B 已建立 `@pico8-web/web-player` v1 单一 public root，提供 bytes-first lifecycle 与
+copy-owned typed events。每实例 operation queue、generation 过滤与 terminal dispose barrier 阻止 stale
+输出；package-owned relative Worker/Worklet assets 不向 consumer 开放 URL/cart discovery authority。Node
+合同与 Chrome production-path 证明双实例拥有独立 Worker、presenter、input、audio 和 persistence
+lifecycle。
 
-- 在 `apps/web-player/src/main/` 建立单一 versioned public root。
-- 暴露 bytes-first `create/loadCart/start/pause/resume/reset/stop/dispose` 和 typed event subscription。
-- 保持现有 Worker protocol 为 app-owned transport；public consumer 不直接依赖 transport DTO。
-- 串行化所有 mutating operations；明确重复调用、并发 load/dispose、fault 后 retry 和 idempotent dispose。
-- 用 generation 和 listener teardown 阻止 stale frame/audio/state/diagnostic commit。
-- 证明两个 player 实例拥有独立 Worker、Canvas presenter、input、audio 和 persistence lifecycle。
-- 为 public exports、Node lifecycle 和 Chrome production path 添加独立测试。
+验证：`pnpm run test:phase-7b`、`pnpm run verify`。
 
-### 4.2 范围外
+## 5. 当前工作：7C Distributable Artifact Pipeline
 
-- 不在 7B 构建最终 release bundle、CSS 或 demo；属于 7C。
-- 不在 7B 重做默认 DOM shell；属于 7D。
-- 不读取或调用 `menuitem()` registry；属于 7E。
-- 不修改 P8 Lua builtin、Pico API 或 compatibility inventory；属于 7F。
-- 不新增 URL 参数、自动 fetch、BBS resolver、service worker 或缓存 authority。
+### 5.1 范围内
 
-### 4.3 验收
+- 新增单一 release builder，将 main facade、module Worker、AudioWorklet、WASM、基础 styles 和最小
+  local-bytes demo 输出到 ignored `apps/web-player/dist/release/`。
+- 生成 versioned `manifest.json`；consumer 只依赖 `main/worker/worklet/wasm/styles/demo` stable keys，
+  不依赖 content-hashed 文件名。
+- 所有运行时引用使用相对 manifest/base resolution；在非 root HTTP path 与非 cross-origin-isolated
+  Chrome 中启动。
+- Worker 优先使用正确 `application/wasm` 的 streaming instantiate，并在 MIME 不支持时回退到
+  ArrayBuffer，不改变 runtime bytes/hash。
+- 新增 artifact verifier，锁定 SHA-256、byte length、MIME、CSP、provenance、允许文件集合和 excluded
+  paths；拒绝 `ref/`、local corpus、third-party cart/screenshot/playtest 产物。
+- 在两个全新临时 output root 中执行 pinned Node/pnpm/Emscripten build，并逐文件证明 byte-identical。
+- 添加 Node artifact contract 与 Chrome relative-base/MIME/CSP/fallback production-path gate。
 
-1. public root 只接收 bytes/local bundle，不接收 URL。
-2. lifecycle operation 顺序可观察且 deterministic；dispose exactly-once 释放 listener、Worker、audio 和
-   presenter。
-3. pending load/pulse 与 dispose 竞态不能在 dispose 后产生可见输出。
-4. 两实例的 state、generation、input、frame 和 teardown 不串扰。
-5. Node contract 与 Chrome production-path 测试通过。
-6. `pnpm run verify` 通过；完成后单独提交，并把唯一 active work unit 切到 7C。
+### 5.2 范围外
 
-## 5. 后续 units
+- 不重做最终 DOM shell interaction/accessibility；属于 7D。7C demo 只证明 artifact boot 和
+  caller-provided local bytes。
+- 不实现 pause menu、required API compatibility closure、long soak 或 publication。
+- 不引入 CDN、service worker、arbitrary base URL/cart URL、BBS access、registry publish 或部署脚本。
+- 不把 ignored release output 或临时 reproducibility directories 提交到 git。
+
+### 5.3 验收
+
+1. 六个 stable artifact keys 都解析到 verifier 认可的 local file、hash、length 和 MIME。
+2. Chrome 在 nested relative base、strict CSP、正确/错误 WASM MIME 两种路径可从 manifest 启动 demo。
+3. 两次 clean build 的完整 manifest 与每个 emitted byte 一致。
+4. release allowlist/provenance/exclusion audit fail closed。
+5. Node 与 Chrome 7C gates、受影响回归和 `pnpm run verify` 通过。
+6. 完成后单独提交，并把唯一 active work unit 切到 7D。
+
+## 6. 后续 units
 
 | Unit | 结果边界 |
 | --- | --- |
-| 7C | 可重复的 main/Worker/Worklet/WASM/styles/demo 静态 artifact 与 manifest |
 | 7D | production DOM shell、local choose/drop、mute/fullscreen、状态恢复与 accessibility |
 | 7E | VM-local menuitem snapshot + root-safe callback invocation + DOM pause menu |
 | 7F | 28 个 required unknown API 与 partial mode 的 conformance closure |

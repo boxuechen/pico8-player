@@ -10,7 +10,9 @@ import type { GamepadSource } from "./gamepad-input.js";
 
 export interface MountPlayerOptions {
   readonly root: HTMLElement;
-  readonly runtimeWorkerFactory: PlayerCompositionOptions["runtimeWorkerFactory"];
+  readonly runtimeWorkerFactory?: PlayerCompositionOptions["runtimeWorkerFactory"];
+  /** Internal release composition switch; public consumers use createPico8WebPlayer. */
+  readonly useDefaultAssets?: boolean;
   readonly commandTimeoutMs?: number;
   readonly workletModuleUrl?: string | URL;
   readonly audio?: PlayerCompositionOptions["audio"];
@@ -85,7 +87,12 @@ export async function mountPico8Player(
 
   const composition = await PlayerComposition.create({
     canvas,
-    runtimeWorkerFactory: options.runtimeWorkerFactory,
+    ...(options.runtimeWorkerFactory === undefined
+      ? {}
+      : { runtimeWorkerFactory: options.runtimeWorkerFactory }),
+    ...(options.useDefaultAssets === undefined
+      ? {}
+      : { useDefaultAssets: options.useDefaultAssets }),
     ...(options.commandTimeoutMs === undefined
       ? {}
       : { commandTimeoutMs: options.commandTimeoutMs }),

@@ -3,6 +3,7 @@ import { RuntimeClientError } from "./runtime-client.js";
 import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
 import { PlayerInputFrontend } from "./player-input.js";
+import type { PlayerLocalCartSource } from "./player-runtime-client.js";
 
 export type PlayerShellState =
   | "idle"
@@ -39,6 +40,19 @@ export interface PlayerControllerOptions {
   readonly gamepadSource?: GamepadSource;
 }
 
+export interface PlayerControllerLoadOptions {
+  readonly displayName?: string;
+  readonly instructionBudget?: number;
+  readonly localCartBundle?: readonly PlayerLocalCartSource[];
+}
+
+export interface PlayerShellStateEvent {
+  readonly state: PlayerShellState;
+  readonly message: string;
+}
+
+export type PlayerShellStateListener = (event: PlayerShellStateEvent) => void;
+
 export class PlayerController {
   readonly #composition: PlayerComposition;
   readonly #elements: PlayerShellElements;
@@ -48,6 +62,7 @@ export class PlayerController {
   readonly #input: PlayerInputFrontend;
   readonly #removeRuntimeListener: () => void;
   readonly #removeListeners: (() => void)[] = [];
+  readonly #stateListeners = new Set<PlayerShellStateListener>();
   #state: PlayerShellState = "idle";
   #frameHandle: number | undefined;
   #environmentPaused = false;
@@ -133,8 +148,19 @@ export class PlayerController {
     return this.#input.snapshot().controllers;
   }
 
-  async loadCart(source: Uint8Array, displayName = "cartridge"): Promise<void> {
+  onStateChange(listener: PlayerShellStateListener): () => void {
     this.#assertActive();
+    this.#stateListeners.add(listener);
+    return () => this.#stateListeners.delete(listener);
+  }
+
+  async loadCart(
+    source: Uint8Array,
+    options: string | PlayerControllerLoadOptions = {},
+  ): Promise<void> {
+    this.#assertActive();
+    const normalized = typeof options === "string" ? { displayName: options } : options;
+    const displayName = normalized.displayName ?? "cartridge";
     this.#cancelFrame();
     this.#input.setEnabled(false);
     this.#input.setDevkitFlags(0);
@@ -142,7 +168,12 @@ export class PlayerController {
     this.#setState("loading", `Loading ${displayName}…`);
     this.#elements.diagnostic.textContent = "";
     try {
-      await this.#composition.loadCart(source);
+      await this.#composition.loadCart(
+        source,
+        normalized.instructionBudget,
+        normalized.localCartBundle,
+      );
+      if (this.#disposed) return;
       this.#setState("ready", `${displayName} ready`);
     } catch (error) {
       this.#fail(error);
@@ -155,7 +186,9 @@ export class PlayerController {
     if (this.#state !== "ready") return;
     try {
       await this.#composition.resumeAudio();
+      if (this.#disposed) return;
       await this.#composition.start();
+      if (this.#disposed) return;
       this.#environmentPaused = false;
       this.#input.setEnabled(true);
       this.#elements.canvas.focus();
@@ -179,7 +212,9 @@ export class PlayerController {
     if (this.#state !== "paused") return;
     try {
       await this.#composition.resumeAudio();
+      if (this.#disposed) return;
       await this.#composition.resume();
+      if (this.#disposed) return;
       this.#input.setEnabled(true);
       this.#elements.canvas.focus();
       this.#setState("running", "Running");
@@ -198,6 +233,7 @@ export class PlayerController {
     this.#composition.runtime.clearInput();
     try {
       await this.#composition.reset();
+      if (this.#disposed) return;
       this.#elements.diagnostic.textContent = "";
       this.#setState("ready", "Reset complete");
     } catch (error) {
@@ -215,7 +251,9 @@ export class PlayerController {
     this.#composition.runtime.clearInput();
     try {
       await this.#composition.stop();
+      if (this.#disposed) return;
       await this.#composition.suspendAudio();
+      if (this.#disposed) return;
       this.#setState("stopped", "Stopped");
     } catch (error) {
       this.#fail(error);
@@ -226,12 +264,12 @@ export class PlayerController {
   async dispose(): Promise<void> {
     if (this.#disposed) return;
     this.#disposed = true;
-    this.#state = "disposed";
-    this.#renderState("Disposed");
+    this.#setState("disposed", "Disposed");
     this.#cancelFrame();
     this.#input.dispose();
     this.#removeRuntimeListener();
     for (const remove of this.#removeListeners.splice(0)) remove();
+    this.#stateListeners.clear();
     await this.#composition.dispose();
   }
 
@@ -266,7 +304,9 @@ export class PlayerController {
     this.#composition.runtime.clearInput();
     try {
       await this.#composition.pause();
+      if (this.#disposed) return;
       await this.#composition.suspendAudio();
+      if (this.#disposed) return;
       this.#setState("paused", "Paused");
     } catch (error) {
       this.#fail(error);
@@ -343,6 +383,9 @@ export class PlayerController {
       this.#elements.stopButton.disabled = !["ready", "running", "paused", "faulted"].includes(
         this.#state,
       );
+    }
+    for (const listener of this.#stateListeners) {
+      listener({ state: this.#state, message: text });
     }
   }
 

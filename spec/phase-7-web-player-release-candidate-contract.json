@@ -65,7 +65,7 @@
     "saveBoundary": "only serialized cartdata crosses the persistence port; renderer and DOM objects are never persisted"
   },
   "embedApiContract": {
-    "status": "proposed-until-7B",
+    "status": "implemented",
     "inputAuthority": "Uint8Array bytes and bounded local bundle only",
     "lifecycle": ["create", "loadCart", "start", "pause", "resume", "reset", "stop", "dispose"],
     "events": ["state", "frame", "diagnostic", "fault"],
@@ -115,9 +115,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A"],
-  "activeWorkUnit": "7B",
-  "nextWorkUnit": "7B",
+  "completedWorkUnits": ["7A", "7B"],
+  "activeWorkUnit": "7C",
+  "nextWorkUnit": "7C",
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -154,16 +154,21 @@
     },
     "7B": {
       "name": "Stable Embed API",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "apps/web-player/src/main/",
         "apps/web-player/src/transport/",
         "apps/web-player/package.json",
         "tests/runtime/phase-7b-embed-api.test.mjs",
         "tests/browser/phase-7b.*",
+        "tests/contract/phase-5a-activation.test.mjs",
+        "tests/contract/phase-6a-activation.test.mjs",
+        "tests/contract/phase-7a-activation.test.mjs",
+        "tests/conformance/phase-6h-exit.test.mjs",
         "tools/browser/run-phase-7b.mjs",
         "tools/browser/build-player-worker.mjs",
         "docs/02-system-architecture.md",
+        "docs/05-delivery-plan.md",
         "docs/08-source-layout-and-boundaries.md",
         "docs/README.md",
         "docs/phases/7-web-player-release-candidate.md",
@@ -178,11 +183,39 @@
         "the public API performs no fetch and accepts no URL authority",
         "Node contract and Chrome production-path tests pass",
         "pnpm run verify passes and 7C becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "apiVersion": 1,
+        "packageRoot": "@pico8-web/web-player",
+        "inputAuthority": "Uint8Array bytes and bounded local bundle only",
+        "networkSurfaceChanged": false,
+        "chrome": "three independent Worker and AudioContext lifecycles plus load/dispose race",
+        "verification": ["pnpm run test:phase-7b", "pnpm run verify"]
+      }
     },
     "7C": {
       "name": "Distributable Artifact Pipeline",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "apps/web-player/src/main/",
+        "apps/web-player/src/worker/",
+        "apps/web-player/src/release/",
+        "apps/web-player/public/",
+        "apps/web-player/package.json",
+        "tools/release/",
+        "tools/browser/",
+        "tests/artifact/phase-7c-*",
+        "tests/browser/phase-7c.*",
+        "spec/phase-7-web-player-release-candidate-contract.json",
+        "spec/release-artifact-contract.json",
+        "docs/02-system-architecture.md",
+        "docs/06-testing-compatibility.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/05-delivery-plan.md",
+        "docs/phases/7-web-player-release-candidate.md",
+        "package.json"
+      ],
       "exit": [
         "the release build emits main, Worker, AudioWorklet, WASM, styles and demo behind stable manifest keys",
         "relative-base HTTP deployment, correct MIME and WASM ArrayBuffer fallback boot in Chrome",
