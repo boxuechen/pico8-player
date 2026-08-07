@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 
 #include "lauxlib.h"
 #include "lua.h"
@@ -486,6 +487,79 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_prng_function(state, "rnd", pico8_rnd, pico_ram);
   register_prng_function(state, "srand", pico8_srand, pico_ram);
   seed_prng(pico_ram, 0);
+}
+
+bool copy_menuitem_snapshot(lua_State *state, uint8_t *destination,
+                            uint32_t capacity) {
+  if (destination == nullptr || capacity != kMenuitemSnapshotBytes) {
+    return false;
+  }
+  std::memset(destination, 0, capacity);
+  destination[0] = 1;
+  destination[1] = static_cast<uint8_t>(kMenuitemSlotCount);
+  destination[2] = static_cast<uint8_t>(kMenuitemSnapshotRecordBytes);
+  lua_getfield(state, LUA_REGISTRYINDEX, kMenuitemRegistryKey);
+  for (uint32_t slot = 1; slot <= kMenuitemSlotCount; ++slot) {
+    uint8_t *record = destination + 4 +
+                      (slot - 1) * kMenuitemSnapshotRecordBytes;
+    lua_rawgeti(state, -1, static_cast<int>(slot));
+    if (lua_istable(state, -1)) {
+      lua_rawgeti(state, -1, 1);
+      size_t label_length = 0;
+      const char *label = lua_tolstring(state, -1, &label_length);
+      lua_pop(state, 1);
+      lua_rawgeti(state, -1, 3);
+      const uint16_t filter = static_cast<uint16_t>(lua_tointeger(state, -1));
+      lua_pop(state, 1);
+      if (label != nullptr && label_length <= kMenuitemLabelBytes) {
+        record[0] = 1;
+        record[1] = static_cast<uint8_t>(label_length);
+        record[2] = static_cast<uint8_t>(filter & 0xffu);
+        record[3] = static_cast<uint8_t>(filter >> 8u);
+        if (label_length != 0) {
+          std::memcpy(record + 4, label, label_length);
+        }
+      }
+    }
+    lua_pop(state, 1);
+  }
+  lua_pop(state, 1);
+  return true;
+}
+
+MenuitemLookup push_menuitem_callback(lua_State *state, uint32_t slot,
+                                      uint32_t button_mask) {
+  if (slot < 1 || slot > kMenuitemSlotCount) return MenuitemLookup::Missing;
+  lua_getfield(state, LUA_REGISTRYINDEX, kMenuitemRegistryKey);
+  lua_rawgeti(state, -1, static_cast<int>(slot));
+  if (!lua_istable(state, -1)) {
+    lua_pop(state, 2);
+    return MenuitemLookup::Missing;
+  }
+  lua_rawgeti(state, -1, 3);
+  const uint16_t filter = static_cast<uint16_t>(lua_tointeger(state, -1));
+  lua_pop(state, 1);
+  if (((filter >> 8u) & button_mask) != 0) {
+    lua_pop(state, 2);
+    return MenuitemLookup::Filtered;
+  }
+  lua_rawgeti(state, -1, 2);
+  if (!lua_isfunction(state, -1)) {
+    lua_pop(state, 3);
+    return MenuitemLookup::Missing;
+  }
+  lua_remove(state, -2);
+  lua_remove(state, -2);
+  return MenuitemLookup::Ready;
+}
+
+bool menuitem_slot_occupied(lua_State *state, uint32_t slot) {
+  if (slot < 1 || slot > kMenuitemSlotCount) return false;
+  lua_getfield(state, LUA_REGISTRYINDEX, kMenuitemRegistryKey);
+  lua_rawgeti(state, -1, static_cast<int>(slot));
+  const bool occupied = lua_istable(state, -1);
+  lua_pop(state, 2);
+  return occupied;
 }
 
 }  // namespace p8w

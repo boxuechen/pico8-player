@@ -84,6 +84,24 @@ export type VmOperationOutcome =
       readonly error: VmFaultRecord;
     };
 
+export type MenuButtonIntent = 1 | 2 | 4;
+
+export interface MenuItemSnapshot {
+  readonly slot: 1 | 2 | 3 | 4 | 5;
+  readonly label: Uint8Array;
+  /** Encoded PICO-8 index filter bits, restricted to 0xff00. */
+  readonly filter: number;
+}
+
+export interface MenuSnapshot {
+  readonly items: readonly MenuItemSnapshot[];
+}
+
+export type VmMenuInvocationOutcome =
+  | { readonly kind: "close" | "keep-open" | "removed" }
+  | { readonly kind: "rejected"; readonly message: string }
+  | { readonly kind: "fault"; readonly error: VmFaultRecord };
+
 /** Runtime-neutral VM port. The concrete z8lua/Emscripten adapter lives elsewhere. */
 export interface PicoLogicalMemoryPort {
   readonly memoryLeaseId: string;
@@ -108,6 +126,12 @@ export interface FrameVmPort {
     isError: boolean,
     instructionBudget: number,
   ): VmOperationOutcome;
+  snapshotMenuItems(): MenuSnapshot;
+  invokeMenuItem(
+    slot: MenuItemSnapshot["slot"],
+    button: MenuButtonIntent,
+    instructionBudget: number,
+  ): VmMenuInvocationOutcome;
   destroy(): void;
 }
 
@@ -191,6 +215,12 @@ export type RuntimeStepResult =
       readonly parameter: Uint8Array;
       readonly cartDataCommit?: PicoCartDataCommit;
     };
+
+export interface RuntimeMenuInvocationOutcome {
+  readonly kind: "close" | "keep-open" | "removed";
+  readonly snapshot: MenuSnapshot;
+  readonly cartDataCommit?: PicoCartDataCommit;
+}
 
 export interface FrameRuntimeOptions {
   /** Safety hard cap for one transaction; independent from the 4M inst/s soft budget. */
@@ -483,6 +513,59 @@ export class FrameSliceRuntime {
       pending.remainingBudget,
       pending.consumedInstructions,
     );
+  }
+
+  snapshotMenuItems(): RuntimeResult<MenuSnapshot> {
+    if (this.#state !== "ready") {
+      return { ok: false, error: invalidState("runtime session is not ready for menu snapshot") };
+    }
+    try {
+      const snapshot = this.#vm.snapshotMenuItems();
+      return {
+        ok: true,
+        value: {
+          items: snapshot.items.map((item) => ({
+            slot: item.slot,
+            label: item.label.slice(),
+            filter: item.filter,
+          })),
+        },
+      };
+    } catch (error) {
+      return this.#acceptFault({
+        code: "E_INVARIANT",
+        message: `menu snapshot failed: ${error instanceof Error ? error.message : String(error)}`,
+        phase: "menuitem",
+      });
+    }
+  }
+
+  invokeMenuItem(
+    slot: MenuItemSnapshot["slot"],
+    button: MenuButtonIntent,
+  ): RuntimeResult<RuntimeMenuInvocationOutcome> {
+    if (this.#state !== "ready") {
+      return { ok: false, error: invalidState("runtime session is not ready for menu invocation") };
+    }
+    const outcome = this.#vm.invokeMenuItem(slot, button, this.#instructionBudget);
+    if (outcome.kind === "rejected") {
+      return { ok: false, error: invalidState(outcome.message) };
+    }
+    if (outcome.kind === "fault") return this.#acceptFault(outcome.error);
+    const snapshot = this.snapshotMenuItems();
+    if (!snapshot.ok) return snapshot;
+    const cartDataCommit = this.#takeCartDataCommit();
+    if (!cartDataCommit.ok) return cartDataCommit;
+    return {
+      ok: true,
+      value: {
+        kind: outcome.kind,
+        snapshot: snapshot.value,
+        ...(cartDataCommit.value === undefined
+          ? {}
+          : { cartDataCommit: cartDataCommit.value }),
+      },
+    };
   }
 
   copyRam(offset: number, length: number): Uint8Array {

@@ -53,7 +53,8 @@ export type RuntimePhase =
   | "update60"
   | "draw"
   | "custom-loop"
-  | "host-call";
+  | "host-call"
+  | "menuitem";
 
 export interface SerializedRuntimeError {
   readonly code: RuntimeErrorCode;

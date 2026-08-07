@@ -9,13 +9,13 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | --- | --- |
 | 最近完成 | Phase 6；[Real-cart qualification exit evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) |
 | 当前阶段 | Phase 7 — Web Player Release Candidate；[`docs/phases/7-web-player-release-candidate.md`](./phases/7-web-player-release-candidate.md) |
-| Active work unit | 7E — Pause Menu / menuitem Completion |
+| Active work unit | 7F — Required API Conformance Closure |
 | 当前机器合同 | [`spec/phase-7-web-player-release-candidate-contract.json`](../spec/phase-7-web-player-release-candidate-contract.json) |
 
 Phase 6A–6H 已关闭 local real-cart qualification。Phase 7A 已冻结 bytes-first、local-only、
 Chrome/Chromium desktop Release Candidate 合同，7B 已关闭 stable embed API，7C 已关闭可重复构建的
-release artifact pipeline，7D 已关闭 production DOM player shell；当前唯一授权工作是 7E pause
-menu / menuitem completion。7F–7H
+release artifact pipeline，7D 已关闭 production DOM player shell，7E 已关闭 pause menu / `menuitem()`
+completion；当前唯一授权工作是 7F required API conformance closure。7G–7H
 只有在前一 unit 验证、提交并由机器合同显式激活后才获得 production implementation 授权；roadmap、
 Target 示例和历史 evidence 不能单独授权后续 work unit。
 

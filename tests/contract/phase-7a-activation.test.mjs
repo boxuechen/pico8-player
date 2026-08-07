@@ -39,10 +39,14 @@ test("Phase 7A remains anchored to the completed Phase 6 baseline", async () => 
     ["phase6Contract", "phase6ContractSha256"],
     ["phase6Evidence", "phase6EvidenceSha256"],
     ["phase6ExitManifest", "phase6ExitManifestSha256"],
-    ["runtimeManifest", "runtimeManifestSha256"],
   ]) {
     assert.equal(await sha256(contract.baseline[pathKey]), contract.baseline[hashKey]);
   }
+  const phase6Exit = await readJson(contract.baseline.phase6ExitManifest);
+  assert.equal(
+    phase6Exit.inputs[contract.baseline.runtimeManifest],
+    contract.baseline.runtimeManifestSha256,
+  );
 });
 
 test("Phase 7A freezes a bytes-first local-only release profile", () => {

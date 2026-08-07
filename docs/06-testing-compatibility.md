@@ -3,7 +3,7 @@
 > 状态：执行规范（living document）
 > 适用架构：z8lua WASM + TypeScript Runtime
 > 基准版本：PICO-8 0.2.7
-> 最近核验：2026-08-06
+> 最近核验：2026-08-07
 
 ## 状态路由
 
@@ -143,6 +143,16 @@ artifact 验证 local choose/drop、host lifecycle controls、mute/fullscreen、
 该 gate 使用 DOM role/name/live/pressed/disabled、hit target 和实际 resource state 作为 oracle，不用截图
 代替语义断言。Chrome autoplay gate 必须先证明无用户激活的 resume 留在 suspended，再证明命中可见
 control 的 trusted click 进入 running；测试不得把 CDP 对视口外 `<html>` 的点击误当作用户操作。
+
+### 3.3 Cart pause-menu gate
+
+`pnpm run test:phase-7e` 是已实现的 `menuitem()` completion gate。real-WASM Node 覆盖 copy-owned
+104-byte snapshot、slot/filter/argument/return、callback 内 replace/remove、instruction budget、fault、
+custom-loop boundary 与 20-generation 零泄漏；Worker contract 覆盖 generation、exactly-once、host
+pause/menu pause 分离、timeout recovery 和 stale/dispose fail-closed。Chrome 从 release artifact 验证
+P8SCII label、Continue、keyboard/pointer/touch、44 CSS px target、filter、keep-open refresh、focus return、
+simulation/audio pause、blur、cart replacement 和 callback fault recovery。该 gate 只实现
+cart-defined items，不包含 PICO-8 system settings 或完整 console menu。
 
 ## 4. 确定性执行模型
 
@@ -676,7 +686,6 @@ in-profile case 完成 fixed smoke，3 个代表 case 完成 C2。该补充只�
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
 | `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
-| `P6-KD-01` | `menuitem()` pause-menu UI / callback invocation | VM-local add/replace/remove 已支持，但 player 没有暂停菜单，玩家不能选择条目或触发 callback | 只依赖注册的 cart 可启动；依赖菜单交互的 cart 尚未达到可玩兼容；见 [ADR-021](./adr/021-menuitem-registration-boundary.md) |
 | `P6-KD-02` | top-level custom loop 在 guest-created coroutine 内耗尽 implicit quantum | nested work 会计入 CPU，但画面提交延迟到控制返回 Runtime-owned root；永不返回则命中 hard cap | 将长循环留在 root 或从 root 调用 `flip()`；见 [ADR-022](./adr/022-cpu-slicing-decision.md) |
 
 ### 15.6 Coverage limitation 与范围排除
@@ -690,8 +699,9 @@ surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profil
 `unknown`，不能计作 official-compatible。精确 API 名单只由
 [`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 维护，不在 living 文档复制。
 
-- Conditional：`printh`、`extcmd`；`menuitem` 已实现 bounded VM-local registration，但 UI/invocation
-  仍为 `P6-KD-01`。
+- Conditional：`printh`、`extcmd`；`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
+  Phase 7E Node/Worker/Chrome gate 完成，历史 `P6-KD-01` 已关闭。PICO-8 system menu 仍属于 player scope
+  exclusion，不计作 `menuitem()` API 差异。
 - Excluded platform API：`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；guest root
   `load` 已进入当前 local L3 profile。
 - External/local corpus、BBS bytes 和第三方结果对公开分母贡献为 `0`。

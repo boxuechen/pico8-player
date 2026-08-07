@@ -259,6 +259,24 @@ export class PlayerComposition {
     return this.runtime.pause();
   }
 
+  openPauseMenu() {
+    this.#assertActive();
+    return this.runtime.openPauseMenu();
+  }
+
+  closePauseMenu() {
+    this.#assertActive();
+    return this.runtime.closePauseMenu();
+  }
+
+  invokeMenuItem(
+    slot: 1 | 2 | 3 | 4 | 5,
+    button: 1 | 2 | 4,
+  ) {
+    this.#assertActive();
+    return this.runtime.invokeMenuItem(slot, button);
+  }
+
   resume() {
     this.#assertActive();
     return this.runtime.resume();

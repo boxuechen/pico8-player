@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "abiName": "p8w",
-  "abiVersion": 65539,
+  "abiVersion": 65540,
   "numberEncoding": "signed-q16.16-raw-int32",
   "stringEncoding": "byte-string-pointer-length",
   "memory": {
@@ -54,7 +54,14 @@
     "UPDATE60": 5,
     "DRAW": 6,
     "CUSTOM_LOOP": 7,
-    "HOST_CALL": 8
+    "HOST_CALL": 8,
+    "MENUITEM": 9
+  },
+  "menuOutcomes": {
+    "NONE": 0,
+    "CLOSE": 1,
+    "KEEP_OPEN": 2,
+    "REMOVED": 3
   },
   "operations": [
     { "name": "p8w_abi_version", "parameters": [], "result": "u32" },
@@ -66,6 +73,9 @@
     { "name": "p8w_boot", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_step", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_complete_host_request", "parameters": ["u32:handle", "u32:request_id", "ptr:u8:response", "u32:length", "u32:is_error", "u32:budget"], "result": "status" },
+    { "name": "p8w_menu_snapshot", "parameters": ["u32:handle", "ptr:u8:destination", "u32:capacity"], "result": "status" },
+    { "name": "p8w_menu_invoke", "parameters": ["u32:handle", "u32:slot", "u32:button_mask", "u32:budget"], "result": "status" },
+    { "name": "p8w_menu_outcome", "parameters": ["u32:handle"], "result": "menuOutcome" },
     { "name": "p8w_state", "parameters": ["u32:handle"], "result": "state" },
     { "name": "p8w_mode", "parameters": ["u32:handle"], "result": "mode" },
     { "name": "p8w_target_fps", "parameters": ["u32:handle"], "result": "u32" },
@@ -105,6 +115,8 @@
     "Lua heap diagnostics are read-only and return zero for stale handles; destroyed contexts are excluded from p8w_live_contexts",
     "root run returns RESTART and root stop returns STOPPED; nested control suspension remains unsupported",
     "nested guest coroutine host suspension returns FEATURE_UNSUPPORTED with nested-host-suspend",
+    "menu snapshots use the fixed 104-byte ADR-023 codec and expose no VM-owned pointer",
+    "menu callbacks run only at a completed frame boundary with one L/R/X bit and never advance the frame clock",
     "Phase 0C p8w0c_bench symbols are absent from the runtime artifact"
   ]
 }

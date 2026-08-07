@@ -6,10 +6,14 @@ import type {
   FrameVmMode,
   FrameVmPort,
   FrameVmState,
+  MenuButtonIntent,
+  MenuItemSnapshot,
+  MenuSnapshot,
   PicoLogicalMemoryPort,
   PicoApiHost,
   VmFaultRecord,
   VmOperationOutcome,
+  VmMenuInvocationOutcome,
 } from "@pico8-web/runtime-core";
 import {
   dispatchPicoHostCall,
@@ -215,6 +219,14 @@ export interface FrameRuntimeModule {
     isError: number,
     budget: number,
   ): number;
+  _p8w_menu_snapshot(handle: number, destination: number, capacity: number): number;
+  _p8w_menu_invoke(
+    handle: number,
+    slot: number,
+    buttonMask: number,
+    budget: number,
+  ): number;
+  _p8w_menu_outcome(handle: number): number;
   _p8w_state(handle: number): number;
   _p8w_mode(handle: number): number;
   _p8w_target_fps(handle: number): number;
@@ -247,7 +259,7 @@ export interface Z8LuaFrameVmOptions {
   readonly luaHeapLimit?: number;
 }
 
-const FRAME_ABI_VERSION = 0x0001_0003;
+const FRAME_ABI_VERSION = 0x0001_0004;
 const STATUS_OK = 0;
 const STATUS_YIELDED = 1;
 const STATUS_INVALID_HANDLE = 2;
@@ -262,6 +274,10 @@ const STATUS_HOST_ERROR = 10;
 const STATUS_STOPPED = 11;
 const STATUS_HOST_API_ERROR = 13;
 const STATUS_RESTART = 14;
+const MENU_OUTCOME_CLOSE = 1;
+const MENU_OUTCOME_KEEP_OPEN = 2;
+const MENU_OUTCOME_REMOVED = 3;
+const MENU_SNAPSHOT_BYTES = 104;
 const YIELD_FRAME_END = 1;
 const YIELD_FLIP = 2;
 const YIELD_HOST_REQUEST = 3;
@@ -461,6 +477,7 @@ function runtimePhase(raw: number): VmFaultRecord["phase"] {
       "draw",
       "custom-loop",
       "host-call",
+      "menuitem",
     ] as const
   )[raw] ?? "none";
 }
@@ -741,6 +758,81 @@ export class Z8LuaFrameVm implements FrameVmPort {
       ),
     );
     return this.#outcome(status, "complete-host");
+  }
+
+  snapshotMenuItems(): MenuSnapshot {
+    this.#assertLive();
+    const pointer = this.#module._p8w_alloc(MENU_SNAPSHOT_BYTES) >>> 0;
+    if (pointer === 0 || pointer + MENU_SNAPSHOT_BYTES > this.#module.HEAPU8.byteLength) {
+      if (pointer !== 0) this.#module._p8w_free(pointer);
+      throw new Error("unable to allocate menu snapshot buffer");
+    }
+    let bytes: Uint8Array;
+    try {
+      const status = this.#module._p8w_menu_snapshot(
+        this.#handle,
+        pointer,
+        MENU_SNAPSHOT_BYTES,
+      ) >>> 0;
+      if (status !== STATUS_OK) {
+        throw new Error(`menu snapshot rejected: p8w status ${status}`);
+      }
+      bytes = this.#module.HEAPU8.slice(pointer, pointer + MENU_SNAPSHOT_BYTES);
+    } finally {
+      this.#module._p8w_free(pointer);
+    }
+    if (bytes[0] !== 1 || bytes[1] !== 5 || bytes[2] !== 20 || bytes[3] !== 0) {
+      throw new Error("unsupported or malformed menu snapshot codec");
+    }
+    const items: MenuItemSnapshot[] = [];
+    for (let index = 0; index < 5; index += 1) {
+      const offset = 4 + index * 20;
+      const occupied = bytes[offset];
+      const length = bytes[offset + 1]!;
+      const filter = bytes[offset + 2]! | (bytes[offset + 3]! << 8);
+      if ((occupied !== 0 && occupied !== 1) || length > 16 ||
+        (occupied === 0 && (length !== 0 || filter !== 0))) {
+        throw new Error("malformed menu snapshot slot record");
+      }
+      if (occupied === 1) {
+        items.push({
+          slot: (index + 1) as MenuItemSnapshot["slot"],
+          label: bytes.slice(offset + 4, offset + 4 + length),
+          filter,
+        });
+      }
+    }
+    return { items };
+  }
+
+  invokeMenuItem(
+    slot: MenuItemSnapshot["slot"],
+    button: MenuButtonIntent,
+    instructionBudget: number,
+  ): VmMenuInvocationOutcome {
+    this.#assertLive();
+    const status = this.#module._p8w_menu_invoke(
+      this.#handle,
+      slot,
+      button,
+      checkedUint32("instructionBudget", instructionBudget, true),
+    ) >>> 0;
+    if (status === STATUS_INVALID_STATE || status === STATUS_BAD_ARGUMENT) {
+      return { kind: "rejected", message: `menu invocation rejected: p8w status ${status}` };
+    }
+    if (status !== STATUS_OK) return { kind: "fault", error: this.#fault(status) };
+    const outcome = this.#module._p8w_menu_outcome(this.#handle) >>> 0;
+    if (outcome === MENU_OUTCOME_CLOSE) return { kind: "close" };
+    if (outcome === MENU_OUTCOME_KEEP_OPEN) return { kind: "keep-open" };
+    if (outcome === MENU_OUTCOME_REMOVED) return { kind: "removed" };
+    return {
+      kind: "fault",
+      error: {
+        code: "E_INVARIANT",
+        message: `unknown menu invocation outcome ${outcome}`,
+        phase: "menuitem",
+      },
+    };
   }
 
   destroy(): void {

@@ -61,7 +61,17 @@ enum P8wPhase {
   P8W_PHASE_DRAW = 6,
   P8W_PHASE_CUSTOM_LOOP = 7,
   P8W_PHASE_HOST_CALL = 8,
+  P8W_PHASE_MENUITEM = 9,
 };
+
+enum P8wMenuOutcome {
+  P8W_MENU_OUTCOME_NONE = 0,
+  P8W_MENU_OUTCOME_CLOSE = 1,
+  P8W_MENU_OUTCOME_KEEP_OPEN = 2,
+  P8W_MENU_OUTCOME_REMOVED = 3,
+};
+
+enum { P8W_MENU_SNAPSHOT_BYTES = 104 };
 
 uint32_t p8w_abi_version(void);
 uint32_t p8w_create(uint32_t lua_heap_limit);
@@ -79,6 +89,11 @@ uint32_t p8w_complete_host_request(uint32_t handle, uint32_t request_id,
                                    const uint8_t *bytes, uint32_t length,
                                    uint32_t is_error,
                                    uint32_t instruction_budget);
+uint32_t p8w_menu_snapshot(uint32_t handle, uint8_t *destination,
+                           uint32_t capacity);
+uint32_t p8w_menu_invoke(uint32_t handle, uint32_t slot,
+                         uint32_t button_mask, uint32_t instruction_budget);
+uint32_t p8w_menu_outcome(uint32_t handle);
 
 uint32_t p8w_state(uint32_t handle);
 uint32_t p8w_mode(uint32_t handle);

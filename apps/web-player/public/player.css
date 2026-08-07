@@ -171,6 +171,39 @@ body {
   transition: opacity 120ms ease, transform 120ms ease;
 }
 
+.pico8-player__pause-menu {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: stretch;
+  gap: 0.5rem;
+  padding: clamp(0.75rem, 5%, 2rem);
+  background: rgb(17 19 26 / 92%);
+}
+
+.pico8-player__pause-menu[hidden] {
+  display: none;
+}
+
+.pico8-player__pause-menu-title {
+  margin: 0;
+  color: var(--p8-pink);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.pico8-player__pause-menu-items {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.pico8-player__pause-menu .pico8-player__button {
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+}
+
 .pico8-player[data-player-state="idle"] .pico8-player__drop-hint,
 .pico8-player[data-drop-active="true"] .pico8-player__drop-hint {
   opacity: 1;

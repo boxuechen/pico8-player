@@ -644,9 +644,10 @@ transaction failure -> fault event + internal fault containment
 ```
 
 这里的 `paused` 只表示 host lifecycle/scheduler policy，不是 PICO-8 pause menu。按照
-[ADR-021](./adr/021-menuitem-registration-boundary.md)，`menuitem()` 当前只在 z8lua VM 内注册；
-RuntimeCore、Worker/Main transport 和 DOM 不接收菜单快照或 Lua callback handle，也不会由 host
-`pause` 触发 guest callback。
+[ADR-023](./adr/023-menuitem-invocation-boundary.md)，Worker 另拥有 transient `menu-open`：它在 completed
+frame boundary 暂停 scheduler、清 input/audio queue，并只传递 copy-owned slot DTO。Main 发送
+generation-bound intent；callback/ref 仍不离开 VM。host `pause` 可关闭 guest menu 后进入普通 `paused`，
+后续 `resume` 不会重开 guest menu。
 
 ### 13.2 HostRequest
 

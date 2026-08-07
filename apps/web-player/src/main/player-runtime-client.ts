@@ -50,7 +50,7 @@ export interface PlayerLocalCartSource {
 interface PendingPlayerCommand {
   readonly workerGeneration: number;
   sessionGeneration: number;
-  readonly terminalType: "state" | "heartbeat";
+  readonly terminalType: "state" | "heartbeat" | "pause-menu";
   readonly timer: number;
   readonly resolve: (event: PlayerRuntimeToHost) => void;
   readonly reject: (error: RuntimeClientError) => void;
@@ -191,6 +191,23 @@ export class PlayerRuntimeClient {
   pause(): Promise<PlayerRuntimeToHost> {
     this.clearInput();
     return this.#send({ type: "pause" }, "state");
+  }
+
+  openPauseMenu(): Promise<PlayerRuntimeToHost> {
+    this.clearInput();
+    return this.#send({ type: "openPauseMenu" }, "pause-menu");
+  }
+
+  closePauseMenu(): Promise<PlayerRuntimeToHost> {
+    this.clearInput();
+    return this.#send({ type: "closePauseMenu" }, "pause-menu");
+  }
+
+  invokeMenuItem(
+    slot: 1 | 2 | 3 | 4 | 5,
+    button: 1 | 2 | 4,
+  ): Promise<PlayerRuntimeToHost> {
+    return this.#send({ type: "invokeMenuItem", slot, button }, "pause-menu");
   }
 
   resume(): Promise<PlayerRuntimeToHost> {

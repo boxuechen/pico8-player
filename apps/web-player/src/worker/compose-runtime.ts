@@ -26,6 +26,7 @@ import {
   FrameSliceRuntime,
   type CartSessionBootResult,
   type CartSessionHostRequest,
+  type CartSessionMenuSnapshot,
   type CartSessionStepResult,
   type RootHostRequestCompletion,
   type RootHostRequestHandlerPort,
@@ -230,6 +231,7 @@ type PlayerWorkerLifecycle =
   | "running"
   | "waiting-host"
   | "paused"
+  | "menu-open"
   | "stopped"
   | "faulted"
   | "disposed";
@@ -374,6 +376,7 @@ export function createPlayerWorkerController(
   let pendingHostRequest: PendingRootHostRequest | undefined;
   let pendingGuestLoad: PendingGuestLoad | undefined;
   let pendingExternalCartData: PendingExternalCartData | undefined;
+  let activeMenuSnapshot: CartSessionMenuSnapshot | undefined;
   const externalCstoreTargetIdentities = new Set<string>();
   const breadcrumbStack: Uint8Array[] = [];
 
@@ -540,6 +543,7 @@ export function createPlayerWorkerController(
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
     cancelPendingExternalCartData();
+    activeMenuSnapshot = undefined;
     lifecycle = "faulted";
     scheduler.pause();
     clearInputState();
@@ -559,6 +563,25 @@ export function createPlayerWorkerController(
       mode,
       targetFps,
       devkitFlags,
+    };
+  }
+
+  function pauseMenuEvent(
+    command: PlayerRuntimeControlCommand,
+    open: boolean,
+    outcome: "opened" | "keep-open" | "closed" | "removed",
+    snapshot?: CartSessionMenuSnapshot,
+  ): PlayerRuntimeToHost {
+    return {
+      ...playerBase(command),
+      type: "pause-menu",
+      open,
+      outcome,
+      items: (snapshot?.items ?? []).map((item) => ({
+        slot: item.slot,
+        label: item.label.slice().buffer,
+        filter: item.filter,
+      })),
     };
   }
 
@@ -1027,6 +1050,7 @@ export function createPlayerWorkerController(
     result: RuntimeResult<CartSessionBootResult>,
     continueRunning = false,
   ): readonly PlayerRuntimeToHost[] {
+    activeMenuSnapshot = undefined;
     let current = result;
     const events: PlayerRuntimeToHost[] = [];
     for (let restartCount = 0; restartCount <= 8; restartCount += 1) {
@@ -1113,7 +1137,7 @@ export function createPlayerWorkerController(
       command.workerGeneration !== workerGeneration ||
       command.sessionGeneration !== sessionGeneration ||
       command.sequence <= inputSequence ||
-      lifecycle === "disposed" || lifecycle === "faulted"
+      lifecycle !== "running"
     ) return;
     inputSequence = command.sequence;
     inputControllers = command.input.controllers.slice();
@@ -1331,6 +1355,7 @@ export function createPlayerWorkerController(
       cancelPendingHostRequest();
       cancelPendingGuestLoad();
       cancelPendingExternalCartData();
+      activeMenuSnapshot = undefined;
       sessionGeneration = command.sessionGeneration;
       instructionBudget = command.instructionBudget;
       scheduler.reset();
@@ -1376,6 +1401,7 @@ export function createPlayerWorkerController(
       cancelPendingHostRequest();
       cancelPendingGuestLoad();
       cancelPendingExternalCartData();
+      activeMenuSnapshot = undefined;
       scheduler.reset();
       clearInputState();
       const result = session.dispose();
@@ -1396,6 +1422,7 @@ export function createPlayerWorkerController(
       cancelPendingHostRequest();
       cancelPendingGuestLoad();
       cancelPendingExternalCartData();
+      activeMenuSnapshot = undefined;
       sessionGeneration = command.sessionGeneration;
       scheduler.reset();
       inputSequence = -1;
@@ -1416,14 +1443,90 @@ export function createPlayerWorkerController(
       lifecycle = "running";
       return [state(command, "running")];
     }
+    if (command.type === "openPauseMenu") {
+      if (lifecycle !== "running") {
+        return generationFault(command, "openPauseMenu requires a running session");
+      }
+      scheduler.pause();
+      clearInputState();
+      resetAudioQueue(command.sessionGeneration);
+      const snapshot = session.snapshotMenuItems(session.generation);
+      if (!snapshot.ok) return [fault(command, snapshot.error)];
+      activeMenuSnapshot = snapshot.value;
+      lifecycle = "menu-open";
+      return [pauseMenuEvent(command, true, "opened", snapshot.value)];
+    }
+    if (command.type === "closePauseMenu") {
+      if (lifecycle !== "menu-open" || activeMenuSnapshot === undefined) {
+        return generationFault(command, "closePauseMenu requires an open pause menu");
+      }
+      activeMenuSnapshot = undefined;
+      clearInputState();
+      scheduler.resume();
+      lifecycle = "running";
+      return [
+        pauseMenuEvent(command, false, "closed"),
+        state(command, "running"),
+      ];
+    }
+    if (command.type === "invokeMenuItem") {
+      const snapshot = activeMenuSnapshot;
+      if (lifecycle !== "menu-open" || snapshot === undefined ||
+        snapshot.generation !== session.generation) {
+        return generationFault(command, "invokeMenuItem requires the active pause menu");
+      }
+      const item = snapshot.items.find(({ slot }) => slot === command.slot);
+      if (item === undefined || ((item.filter >> 8) & command.button) !== 0) {
+        return generationFault(command, "menu item intent is missing or filtered");
+      }
+      const invoked = session.invokeMenuItem(
+        snapshot.generation,
+        command.slot,
+        command.button,
+      );
+      if (!invoked.ok) {
+        return invoked.error.code === "E_INVALID_STATE"
+          ? generationFault(command, invoked.error.message)
+          : [fault(command, invoked.error)];
+      }
+      if (invoked.value.cartDataCommit !== undefined) {
+        enqueueCartDataCommit(invoked.value.cartDataCommit);
+      }
+      if (invoked.value.kind === "keep-open") {
+        activeMenuSnapshot = invoked.value.snapshot;
+        return [pauseMenuEvent(
+          command,
+          true,
+          "keep-open",
+          invoked.value.snapshot,
+        )];
+      }
+      activeMenuSnapshot = undefined;
+      clearInputState();
+      scheduler.resume();
+      lifecycle = "running";
+      return [
+        pauseMenuEvent(
+          command,
+          false,
+          invoked.value.kind === "removed" ? "removed" : "closed",
+        ),
+        state(command, "running"),
+      ];
+    }
     if (command.type === "pause") {
-      if (lifecycle !== "running" && lifecycle !== "paused") {
+      if (lifecycle !== "running" && lifecycle !== "paused" && lifecycle !== "menu-open") {
         return generationFault(command, "pause requires a running session");
       }
+      const closedMenu = lifecycle === "menu-open";
       scheduler.pause();
       lifecycle = "paused";
       clearInputState();
-      return [state(command, "paused")];
+      activeMenuSnapshot = undefined;
+      return [
+        ...(closedMenu ? [pauseMenuEvent(command, false, "closed")] : []),
+        state(command, "paused"),
+      ];
     }
     if (command.type === "resume") {
       if (lifecycle !== "paused" && lifecycle !== "running") {
@@ -1439,6 +1542,7 @@ export function createPlayerWorkerController(
     const stopped = session.stop();
     scheduler.reset();
     clearInputState();
+    activeMenuSnapshot = undefined;
     devkitFlags = 0;
     if (!stopped.ok) return [fault(command, stopped.error)];
     lifecycle = "stopped";
@@ -1452,6 +1556,7 @@ export function createPlayerWorkerController(
     cancelPendingExternalCartData();
     scheduler.reset();
     clearInputState();
+    activeMenuSnapshot = undefined;
     devkitFlags = 0;
     session.dispose();
     localCartResolver.dispose();

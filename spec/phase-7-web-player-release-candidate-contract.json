@@ -116,9 +116,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A", "7B", "7C", "7D"],
-  "activeWorkUnit": "7E",
-  "nextWorkUnit": "7E",
+  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E"],
+  "activeWorkUnit": "7F",
+  "nextWorkUnit": "7F",
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -275,12 +275,16 @@
     },
     "7E": {
       "name": "Pause Menu / menuitem Completion",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/p8w_pico8_compat.*",
-        "wasm/bridge/p8w_runtime_v1.*",
+        "wasm/bridge/p8w_frame_runtime.*",
         "wasm/runtime-v1.manifest.lock.json",
+        "tools/wasm/config.mjs",
+        "tools/wasm/build.mjs",
+        "tools/wasm/verify-runtime-manifest.mjs",
         "packages/z8lua-bridge/src/",
+        "packages/contracts/src/",
         "packages/runtime-core/src/",
         "apps/web-player/src/transport/",
         "apps/web-player/src/main/",
@@ -291,6 +295,9 @@
         "spec/phase-7-web-player-release-candidate-contract.json",
         "tests/runtime/phase-7e-*",
         "tests/conformance/phase-7e-*",
+        "tests/conformance/phase-4e-system-integration.test.mjs",
+        "tests/conformance/phase-6h-exit.test.mjs",
+        "tests/contract/phase-7a-activation.test.mjs",
         "tests/compat/fixtures/phase-7e-*",
         "tests/browser/phase-7e.*",
         "tools/browser/run-phase-7e.mjs",
@@ -314,11 +321,67 @@
         "the DOM pause menu is keyboard, pointer and touch operable",
         "P6-KD-01 is closed or narrowed by conformance evidence",
         "pnpm run verify passes and 7F becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "decision": "docs/adr/023-menuitem-invocation-boundary.md",
+        "abiVersion": 65540,
+        "snapshotCodec": "104 bytes: 4-byte header plus five 20-byte copy-owned slot records",
+        "invocation": "VM-local callback at a completed root boundary with Left/Right/X filter and instruction budget",
+        "currentCompatibility": {
+          "compatibleApis": 73,
+          "unknownRequired": 28,
+          "partialApis": ["flip", "stat", "print"],
+          "closedKnownDifference": "P6-KD-01"
+        },
+        "runtimeArtifact": {
+          "manifestSha256": "ec3c5a88031021d5e30972bc9378c6580c4159691660ba6026ac146acf757098",
+          "moduleSha256": "006a2d4323a38f52b4560ce260fbcd39cf122194bcec290d8514aa2f1e260644",
+          "wasmSha256": "7dcd584a51ef504431fae47df11eb1a9a685efd6b1b2c372478f796766888fa8"
+        },
+        "chrome": "P8SCII DOM labels, dialog/focus, keyboard/pointer/touch, 44px targets, filter, keep-open refresh, simulation/audio pause, generation cleanup and fault recovery",
+        "networkSurfaceChanged": false,
+        "publicationPerformed": false,
+        "verification": ["pnpm run test:phase-7e", "pnpm run verify"]
+      }
     },
     "7F": {
       "name": "Required API Conformance Closure",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "wasm/z8lua/lbaselib.c",
+        "wasm/z8lua/lmathlib.c",
+        "wasm/z8lua/lpico8lib.c",
+        "wasm/z8lua/fix32.h",
+        "wasm/z8lua/trigtables.h",
+        "wasm/z8lua/lapi.c",
+        "wasm/z8lua/ltable.c",
+        "wasm/z8lua/ltm.c",
+        "wasm/z8lua/lobject.c",
+        "wasm/z8lua/lvm.c",
+        "wasm/bridge/p8w_pico8_compat.*",
+        "wasm/bridge/p8w_frame_runtime.*",
+        "wasm/runtime-v1.manifest.lock.json",
+        "tools/wasm/config.mjs",
+        "packages/z8lua-bridge/src/",
+        "packages/runtime-core/src/",
+        "apps/web-player/src/worker/",
+        "spec/pico-api-inventory.yaml",
+        "spec/phase-7-web-player-release-candidate-contract.json",
+        "tests/conformance/carts/phase-7f/",
+        "tests/conformance/manifests/phase-7f-*",
+        "tests/conformance/phase-7f-*",
+        "tests/runtime/phase-7f-*",
+        "tests/browser/phase-7f.*",
+        "tools/browser/run-phase-7f.mjs",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/04-typescript-runtime.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/README.md",
+        "docs/phases/7-web-player-release-candidate.md",
+        "package.json"
+      ],
       "exit": [
         "all 28 required unknown APIs have project-owned manual-linked real-WASM conformance vectors",
         "math, bitwise, table iteration, metatable, raw access and select failures are fixed without cart-specific hacks",

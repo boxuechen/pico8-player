@@ -42,6 +42,13 @@ export type PlayerRuntimeControlCommand =
       readonly timestampMs: number;
     })
   | (PlayerCommandEnvelope & { readonly type: "pause" })
+  | (PlayerCommandEnvelope & { readonly type: "openPauseMenu" })
+  | (PlayerCommandEnvelope & { readonly type: "closePauseMenu" })
+  | (PlayerCommandEnvelope & {
+      readonly type: "invokeMenuItem";
+      readonly slot: 1 | 2 | 3 | 4 | 5;
+      readonly button: 1 | 2 | 4;
+    })
   | (PlayerCommandEnvelope & { readonly type: "resume" })
   | (PlayerCommandEnvelope & { readonly type: "reset" })
   | (PlayerCommandEnvelope & { readonly type: "stop" })
@@ -81,6 +88,12 @@ export type PlayerRuntimeState =
   | "stopped"
   | "disposed";
 
+export interface PlayerMenuItemSnapshot {
+  readonly slot: 1 | 2 | 3 | 4 | 5;
+  readonly label: ArrayBuffer;
+  readonly filter: number;
+}
+
 export type PlayerRuntimeToHost =
   | (PlayerEventEnvelope & {
       /** Must be the first event published for an atomic guest load() commit. */
@@ -90,6 +103,12 @@ export type PlayerRuntimeToHost =
       readonly cartRef: string;
       readonly breadcrumb: ArrayBuffer;
       readonly breadcrumbDepth: number;
+    })
+  | (PlayerEventEnvelope & {
+      readonly type: "pause-menu";
+      readonly open: boolean;
+      readonly outcome: "opened" | "keep-open" | "closed" | "removed";
+      readonly items: readonly PlayerMenuItemSnapshot[];
     })
   | (PlayerEventEnvelope & {
       readonly type: "state";

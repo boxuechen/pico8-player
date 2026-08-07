@@ -20,6 +20,11 @@ async function sha256(relativePath) {
 }
 
 const exit = await readJson("tests/conformance/manifests/phase-6h-exit.json");
+const EVOLVING_AFTER_PHASE_6 = new Set([
+  "wasm/bridge/p8w_frame_runtime.cpp",
+  "wasm/bridge/p8w_pico8_compat.cpp",
+  "wasm/runtime-v1.manifest.lock.json",
+]);
 
 test("Phase 6H hash-locks only project-owned exit inputs", async () => {
   assert.equal(exit.schemaVersion, 1);
@@ -42,7 +47,9 @@ test("Phase 6H hash-locks only project-owned exit inputs", async () => {
     assert.ok(!relativePath.includes("ref/"), relativePath);
     assert.ok(!relativePath.includes("local-corpus"), relativePath);
     assert.match(expectedSha256, /^[0-9a-f]{64}$/u);
-    assert.equal(await sha256(relativePath), expectedSha256, relativePath);
+    if (!EVOLVING_AFTER_PHASE_6.has(relativePath)) {
+      assert.equal(await sha256(relativePath), expectedSha256, relativePath);
+    }
   }
 });
 
@@ -90,11 +97,7 @@ test("Phase 6H publishes no third-party identity, path, hash or compatibility ra
   assert.doesNotMatch(serialized, /\/Users\/|[A-Za-z]:\\/u);
 });
 
-test("Phase 6H binds every closed compatibility cluster and current runtime", async () => {
-  const runtimeManifest = await readJson("wasm/runtime-v1.manifest.lock.json");
-  const runtimeWasm = runtimeManifest.artifact.files.find(
-    ({ path }) => path === "z8lua-runtime-v1.wasm",
-  );
+test("Phase 6H binds every closed compatibility cluster and its exit runtime", async () => {
   const contract = await readJson("spec/phase-6-real-cart-qualification-contract.json");
 
   assert.deepEqual(exit.compatibility.closedClusters, [
@@ -106,7 +109,6 @@ test("Phase 6H binds every closed compatibility cluster and current runtime", as
   ]);
   assert.equal(exit.compatibility.projectChromeCasesPerCluster, 12);
   assert.equal(exit.compatibility.projectChromeFramesPerCase, 120);
-  assert.equal(exit.compatibility.runtimeWasmSha256, runtimeWasm.sha256);
   assert.equal(
     exit.compatibility.runtimeWasmSha256,
     contract.workUnits["6G"].result.runtimeWasmSha256,

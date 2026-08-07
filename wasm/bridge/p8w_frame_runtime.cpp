@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr uint32_t kAbiVersion = 0x00010003u;
+constexpr uint32_t kAbiVersion = 0x00010004u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
@@ -46,7 +46,15 @@ EM_JS(uint32_t, dispatch_host_call,
         }
       });
 
-enum class ActiveKind : uint8_t { None, TopLevel, Init, Update, Update60, Draw };
+enum class ActiveKind : uint8_t {
+  None,
+  TopLevel,
+  Init,
+  Update,
+  Update60,
+  Draw,
+  MenuItem,
+};
 
 struct AllocationStats {
   uint32_t live_bytes = 0;
@@ -66,6 +74,7 @@ struct Context {
   P8wVmMode mode = P8W_MODE_NONE;
   P8wYieldReason yield_reason = P8W_YIELD_NONE;
   P8wPhase phase = P8W_PHASE_NONE;
+  P8wMenuOutcome menu_outcome = P8W_MENU_OUTCOME_NONE;
   ActiveKind active_kind = ActiveKind::None;
   uint32_t target_fps = 0;
   uint32_t accounting_fps = 0;
@@ -910,6 +919,22 @@ bool begin_budget(Context *context, uint32_t budget, bool continuation) {
   return true;
 }
 
+bool at_menu_boundary(const Context *context) {
+  if (context->pending_request || context->state == P8W_STATE_WAITING_HOST) {
+    return false;
+  }
+  if (context->state == P8W_STATE_CALLBACK_LOOP) {
+    return context->active == nullptr && context->active_kind == ActiveKind::None;
+  }
+  // A custom-loop cart retains its suspended Runtime-owned root coroutine at
+  // FLIP/frame-end. It is safe to run a separate callback thread between root
+  // resumes, but never while another callback/frame operation is active.
+  return context->state == P8W_STATE_CUSTOM_LOOP &&
+         context->active != nullptr &&
+         context->active_kind == ActiveKind::TopLevel &&
+         context->yield_reason != P8W_YIELD_HOST_REQUEST;
+}
+
 void release_active(Context *context) {
   if (context->active_ref != LUA_NOREF) {
     luaL_unref(context->main, LUA_REGISTRYINDEX, context->active_ref);
@@ -1311,6 +1336,90 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_complete_host_request(
   return continue_after_host_response(context);
 }
 
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_menu_snapshot(uint32_t handle,
+                                                uint8_t *destination,
+                                                uint32_t capacity) {
+  Context *context = context_from_handle(handle);
+  if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  if (!at_menu_boundary(context)) return P8W_STATUS_INVALID_STATE;
+  if (destination == nullptr || capacity != P8W_MENU_SNAPSHOT_BYTES ||
+      p8w::kMenuitemSnapshotBytes != P8W_MENU_SNAPSHOT_BYTES) {
+    return P8W_STATUS_BAD_ARGUMENT;
+  }
+  context->menu_outcome = P8W_MENU_OUTCOME_NONE;
+  return p8w::copy_menuitem_snapshot(context->main, destination, capacity)
+             ? P8W_STATUS_OK
+             : P8W_STATUS_INTERNAL_ERROR;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_menu_invoke(
+    uint32_t handle, uint32_t slot, uint32_t button_mask,
+    uint32_t instruction_budget) {
+  Context *context = context_from_handle(handle);
+  if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  if (!at_menu_boundary(context)) return P8W_STATUS_INVALID_STATE;
+  if (slot < 1 || slot > p8w::kMenuitemSlotCount ||
+      (button_mask != 1 && button_mask != 2 && button_mask != 4) ||
+      instruction_budget == 0) {
+    return P8W_STATUS_BAD_ARGUMENT;
+  }
+
+  context->menu_outcome = P8W_MENU_OUTCOME_NONE;
+  const p8w::MenuitemLookup lookup =
+      p8w::push_menuitem_callback(context->main, slot, button_mask);
+  if (lookup != p8w::MenuitemLookup::Ready) {
+    return P8W_STATUS_INVALID_STATE;
+  }
+  if (!begin_budget(context, instruction_budget, false)) {
+    lua_pop(context->main, 1);
+    return P8W_STATUS_BAD_ARGUMENT;
+  }
+
+  lua_State *saved_active = context->active;
+  const int saved_active_ref = context->active_ref;
+  const ActiveKind saved_active_kind = context->active_kind;
+  lua_State *thread = lua_newthread(context->main);
+  const int callback_ref = luaL_ref(context->main, LUA_REGISTRYINDEX);
+  lua_xmove(context->main, thread, 1);
+  context->active = thread;
+  context->active_ref = callback_ref;
+  context->active_kind = ActiveKind::MenuItem;
+  context->phase = P8W_PHASE_MENUITEM;
+  lua_pushnumber(thread, lua_Number(static_cast<int32_t>(button_mask)));
+  const int lua_status = lua_resume(thread, context->main, 1);
+
+  P8wStatus status = P8W_STATUS_OK;
+  if (context->budget_poisoned || context->nested_suspend_attempt ||
+      (lua_status != LUA_OK && lua_status != LUA_YIELD)) {
+    status = classify_resume_error(context, thread, lua_status);
+  } else if (lua_status == LUA_YIELD) {
+    context->pending_request = false;
+    context->response_ready = false;
+    fault(context, P8W_STATUS_FEATURE_UNSUPPORTED,
+          "menuitem callback cannot suspend");
+    status = P8W_STATUS_FEATURE_UNSUPPORTED;
+  }
+
+  const bool keep_open = status == P8W_STATUS_OK && lua_gettop(thread) > 0 &&
+                         lua_isboolean(thread, 1) &&
+                         lua_toboolean(thread, 1) != 0;
+  luaL_unref(context->main, LUA_REGISTRYINDEX, callback_ref);
+  context->active = saved_active;
+  context->active_ref = saved_active_ref;
+  context->active_kind = saved_active_kind;
+  if (status != P8W_STATUS_OK) return status;
+
+  if (!p8w::menuitem_slot_occupied(context->main, slot)) {
+    context->menu_outcome = P8W_MENU_OUTCOME_REMOVED;
+  } else {
+    context->menu_outcome = keep_open ? P8W_MENU_OUTCOME_KEEP_OPEN
+                                      : P8W_MENU_OUTCOME_CLOSE;
+  }
+  context->phase = P8W_PHASE_NONE;
+  context->yield_reason = P8W_YIELD_NONE;
+  return P8W_STATUS_OK;
+}
+
 #define P8W_GETTER(name, type, fallback, field)               \
   EMSCRIPTEN_KEEPALIVE type name(uint32_t handle) {           \
     Context *context = context_from_handle(handle);           \
@@ -1325,6 +1434,7 @@ P8W_GETTER(p8w_phase, uint32_t, P8W_PHASE_NONE, phase)
 P8W_GETTER(p8w_pending_request_id, uint32_t, 0, request_id)
 P8W_GETTER(p8w_pending_request_length, uint32_t, 0, request_length)
 P8W_GETTER(p8w_control_bytes_length, uint32_t, 0, control_bytes_length)
+P8W_GETTER(p8w_menu_outcome, uint32_t, P8W_MENU_OUTCOME_NONE, menu_outcome)
 P8W_GETTER(p8w_error_status, uint32_t, P8W_STATUS_INVALID_HANDLE, error_status)
 P8W_GETTER(p8w_error_line, int32_t, -1, error_line)
 P8W_GETTER(p8w_error_message_length, uint32_t, 0, error_message_length)

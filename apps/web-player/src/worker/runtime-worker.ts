@@ -33,8 +33,10 @@ function postPlayerResponse(
     ? [response.packedScreen, response.displayPalette]
     : response.type === "runtime-control"
       ? [response.payload]
-      : response.type === "session-replaced"
-        ? [response.breadcrumb]
+    : response.type === "session-replaced"
+      ? [response.breadcrumb]
+      : response.type === "pause-menu"
+        ? response.items.map((item) => item.label)
       : [];
   scope.postMessage(response, transfer);
 }

@@ -14,11 +14,21 @@ export interface PlayerShellElements {
   readonly dropZone: HTMLElement;
   readonly playButton: HTMLButtonElement;
   readonly pauseButton: HTMLButtonElement;
+  readonly menuButton: HTMLButtonElement;
   readonly resetButton: HTMLButtonElement;
   readonly stopButton: HTMLButtonElement;
   readonly muteButton: HTMLButtonElement;
   readonly fullscreenButton: HTMLButtonElement;
   readonly touchControls: HTMLElement;
+  readonly pauseMenu: HTMLElement;
+  readonly pauseMenuItems: HTMLElement;
+  readonly continueButton: HTMLButtonElement;
+}
+
+export interface PlayerPauseMenuItem {
+  readonly slot: 1 | 2 | 3 | 4 | 5;
+  readonly label: string;
+  readonly filter: number;
 }
 
 export interface PlayerShellViewOptions {
@@ -98,6 +108,7 @@ export class PlayerShellView {
     shell.setAttribute("aria-label", "PICO-8 player");
     shell.dataset.playerState = "idle";
     shell.dataset.scale = "1";
+    shell.dataset.menuOpen = "false";
 
     const chrome = document.createElement("header");
     chrome.className = "pico8-player__chrome";
@@ -139,6 +150,7 @@ export class PlayerShellView {
     fileLabel.append(fileInput);
     const playButton = button(document, "Play", "play");
     const pauseButton = button(document, "Pause", "pause");
+    const menuButton = button(document, "Menu", "menu");
     const resetButton = button(document, "Reset", "reset");
     const stopButton = button(document, "Stop", "stop");
     const muteButton = button(document, "Mute", "mute");
@@ -149,6 +161,7 @@ export class PlayerShellView {
       fileLabel,
       playButton,
       pauseButton,
+      menuButton,
       resetButton,
       stopButton,
       muteButton,
@@ -169,6 +182,24 @@ export class PlayerShellView {
       touchControls.append(control);
     }
 
+    const pauseMenu = document.createElement("section");
+    pauseMenu.className = "pico8-player__pause-menu";
+    pauseMenu.setAttribute("role", "dialog");
+    pauseMenu.setAttribute("aria-modal", "true");
+    pauseMenu.setAttribute("aria-label", "Cartridge pause menu");
+    pauseMenu.hidden = true;
+    const pauseMenuTitle = document.createElement("h2");
+    pauseMenuTitle.className = "pico8-player__pause-menu-title";
+    pauseMenuTitle.textContent = "Paused";
+    const pauseMenuItems = document.createElement("div");
+    pauseMenuItems.className = "pico8-player__pause-menu-items";
+    pauseMenuItems.setAttribute("role", "menu");
+    const continueButton = button(document, "Continue", "menu-continue");
+    continueButton.setAttribute("role", "menuitem");
+    pauseMenuItems.append(continueButton);
+    pauseMenu.append(pauseMenuTitle, pauseMenuItems);
+    dropZone.append(pauseMenu);
+
     const diagnostic = document.createElement("pre");
     diagnostic.className = "pico8-player__diagnostic";
     diagnostic.setAttribute("role", "alert");
@@ -188,11 +219,15 @@ export class PlayerShellView {
       dropZone,
       playButton,
       pauseButton,
+      menuButton,
       resetButton,
       stopButton,
       muteButton,
       fullscreenButton,
       touchControls,
+      pauseMenu,
+      pauseMenuItems,
+      continueButton,
     }, { ...options, document });
   }
 
@@ -218,6 +253,7 @@ export class PlayerShellView {
     elements.playButton.disabled = presentation.playDisabled;
     elements.playButton.textContent = presentation.playLabel;
     elements.pauseButton.disabled = presentation.pauseDisabled;
+    elements.menuButton.disabled = presentation.menuDisabled;
     elements.resetButton.disabled = presentation.resetDisabled;
     elements.stopButton.disabled = presentation.stopDisabled;
     elements.muteButton.disabled = presentation.muteDisabled;
@@ -241,6 +277,46 @@ export class PlayerShellView {
 
   clearDiagnostic(): void {
     this.showDiagnostic("");
+  }
+
+  showPauseMenu(items: readonly PlayerPauseMenuItem[], preferredSlot?: number): void {
+    this.#assertActive();
+    const { pauseMenu, pauseMenuItems, continueButton, root } = this.elements;
+    for (const item of pauseMenuItems.querySelectorAll("[data-menu-slot]")) item.remove();
+    for (const item of items) {
+      const itemButton = button(this.#document, item.label, "menu-item");
+      itemButton.setAttribute("role", "menuitem");
+      itemButton.dataset.menuSlot = String(item.slot);
+      itemButton.dataset.menuFilter = String(item.filter);
+      itemButton.title = "Left/Right or X";
+      pauseMenuItems.append(itemButton);
+    }
+    pauseMenu.hidden = false;
+    root.dataset.menuOpen = "true";
+    const preferred = preferredSlot === undefined
+      ? undefined
+      : pauseMenuItems.querySelector<HTMLButtonElement>(
+        `[data-menu-slot="${preferredSlot}"]`,
+      );
+    const target = preferred ?? continueButton;
+    for (const entry of this.pauseMenuButtons()) entry.tabIndex = entry === target ? 0 : -1;
+    target.focus();
+  }
+
+  hidePauseMenu(focusPlayfield = true): void {
+    if (this.#disposed) return;
+    this.elements.pauseMenu.hidden = true;
+    this.elements.root.dataset.menuOpen = "false";
+    for (const item of this.elements.pauseMenuItems.querySelectorAll("[data-menu-slot]")) {
+      item.remove();
+    }
+    if (focusPlayfield) this.elements.canvas.focus();
+  }
+
+  pauseMenuButtons(): readonly HTMLButtonElement[] {
+    return Array.from(
+      this.elements.pauseMenuItems.querySelectorAll<HTMLButtonElement>("[role=menuitem]"),
+    );
   }
 
   setDropActive(active: boolean): void {
@@ -279,6 +355,7 @@ export class PlayerShellView {
 
   dispose(): void {
     if (this.#disposed) return;
+    this.hidePauseMenu(false);
     this.#disposed = true;
     this.#resizeObserver?.disconnect();
     this.#document.removeEventListener("fullscreenchange", this.#onFullscreenChange);

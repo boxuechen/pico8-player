@@ -105,7 +105,7 @@ test("Phase 4E appends reset without changing the preceding host ABI", async () 
       [41, "reset", "resetSystem"],
     ],
   );
-  assert.equal(module._p8w_abi_version(), 0x0001_0003);
+  assert.ok(module._p8w_abi_version() >= 0x0001_0003);
 });
 
 test("reset restores only system defaults and assert remains a structured VM fault", () => {

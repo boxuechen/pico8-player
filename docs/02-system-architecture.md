@@ -78,7 +78,8 @@ Runtime Worker 是一局 player session 的唯一权威状态源。
 
 `@pico8-web/web-player` 的单一 package root 是 Window execution domain 的稳定消费入口。它只接受
 caller-provided `Uint8Array` 与 bounded caller-authorized local bundle；不接受 cart URL，也不执行
-cart discovery 或 implicit fetch。公开 lifecycle 为 `create/loadCart/start/pause/resume/reset/stop/dispose`，
+cart discovery 或 implicit fetch。公开 embed lifecycle 为 `create/loadCart/start/pause/resume/reset/stop/dispose`；
+默认 shell 另以 private versioned transport 提供 `openPauseMenu/closePauseMenu/invokeMenuItem`，
 公开事件只包含 copy-owned `state/frame/diagnostic/fault`，不把 app-owned Worker DTO 作为 consumer contract。
 
 所有 mutating lifecycle operation 在每个 facade 实例内串行化。`dispose()` 是 idempotent terminal
@@ -107,12 +108,12 @@ responsive/fullscreen presentation 由 `main/ui` 所有；`PlayerController` 只
 lifecycle。shell 只接受用户明确选择或 drop 的单个 bounded `.p8`/`.p8.png` 文件，不接受 URL、目录、
 clipboard 或隐式 network authority。
 
-`idle/loading/ready/running/audio-blocked/paused/stopped/faulted/disposed` 都有独立 DOM state。无手势的
+`idle/loading/ready/running/audio-blocked/menu-open/paused/stopped/faulted/disposed` 都有独立 DOM state。无手势的
 AudioContext 恢复失败只进入可恢复 `audio-blocked`，不升级为 cart fault；visual simulation 可以继续，
 用户可再次解锁、静音运行或替换 cart。Canvas backing store 固定 128×128，CSS 只选择容器可容纳的整数
 scale；DPR、ResizeObserver 和 fullscreen 不进入 simulation input。
 
-文件 controls、status、diagnostic、touch buttons 和后续 pause menu 都位于 Canvas 外。keyboard/touch
+文件 controls、status、diagnostic、touch buttons 和 cart pause menu 都位于 Canvas 外。keyboard/touch
 输入只在可玩状态启用，blur/visibility/dispose 清除 transient input；reduced-motion、ARIA live/pressed/
 disabled state 和至少 44 CSS px touch target 属于同一 shell contract。样式由 release stylesheet、class
 和 data attributes 驱动，production source 不写 inline layout style。
@@ -223,7 +224,7 @@ stateDiagram-v2
 > 本文不维护第二份协议 union。
 
 v1 Window → Worker 包含 `loadCart`（可携带 caller-authorized local bundle）、
-`start/vsync/pause/resume/reset/stop/dispose`、versioned input 与 persistence flush；Worker → Window
+`start/vsync/pause/resume/reset/stop/dispose`、`openPauseMenu/closePauseMenu/invokeMenuItem`、versioned input 与 persistence flush；Worker → Window
 包含 `session-replaced`、state/frame/heartbeat/runtime-control/diagnostic/fault。root HostRequest
 属于 Worker 内部 RuntimeCore port，不把 resolver request/completion 绕到 Window。
 

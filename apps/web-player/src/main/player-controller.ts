@@ -1,4 +1,7 @@
-import type { PlayerRuntimeToHost } from "../transport/public.js";
+import type {
+  PlayerMenuItemSnapshot,
+  PlayerRuntimeToHost,
+} from "../transport/public.js";
 import { RuntimeClientError } from "./runtime-client.js";
 import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
@@ -42,6 +45,33 @@ export interface PlayerShellStateEvent {
 
 export type PlayerShellStateListener = (event: PlayerShellStateEvent) => void;
 
+const P8SCII_EXTENDED_GLYPHS =
+  "█▒🐱⬇░✽●♥☉웃⌂⬅😐♪🅾◆…➡★⧗⬆ˇ∧❎▤▥" +
+  "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよ" +
+  "らりるれろわをんっゃゅょ" +
+  "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨ" +
+  "ラリルレロワヲンッャュョ◜◝";
+
+const P8SCII_LOW_GLYPHS = new Map<number, string>([
+  ...Array.from("¹²³⁴⁵⁶⁷⁸", (glyph, index) => [index + 1, glyph] as const),
+  [0x0b, "ᵇ"], [0x0c, "ᶜ"], [0x0e, "ᵉ"], [0x0f, "ᶠ"],
+  ...Array.from("▮■□⁙⁘‖◀▶「」¥•、。゛゜", (glyph, index) =>
+    [index + 0x10, glyph] as const),
+]);
+
+function decodeP8sciiLabel(bytes: Uint8Array): string {
+  const extended = Array.from(P8SCII_EXTENDED_GLYPHS);
+  return Array.from(bytes, (byte) => {
+    if (byte >= 0x20 && byte <= 0x7e) return String.fromCharCode(byte);
+    if (byte === 0x7f) return "○";
+    if (byte >= 0x80) return extended[byte - 0x80] ?? "�";
+    if (byte === 0x09) return "\t";
+    if (byte === 0x0a) return "\n";
+    if (byte === 0x0d) return "\r";
+    return P8SCII_LOW_GLYPHS.get(byte) ?? "�";
+  }).join("");
+}
+
 export class PlayerController {
   readonly #composition: PlayerComposition;
   readonly #view: PlayerShellView;
@@ -57,6 +87,7 @@ export class PlayerController {
   #frameHandle: number | undefined;
   #environmentPaused = false;
   #muted = false;
+  #menuWasAudioBlocked = false;
   #stateMessage = "Select a local .p8 or .p8.png cartridge";
   #disposed = false;
   #operation = Promise.resolve();
@@ -125,6 +156,22 @@ export class PlayerController {
       });
     });
     this.#bind(elements.pauseButton, "click", () => this.#enqueue(() => this.pause()));
+    this.#bind(elements.menuButton, "click", () => this.#enqueue(() => this.openPauseMenu()));
+    this.#bind(elements.pauseMenuItems, "click", (event) => {
+      if (this.#state !== "menu-open") return;
+      const target = event.target instanceof Element
+        ? event.target.closest<HTMLButtonElement>("[role=menuitem]")
+        : null;
+      if (target === null) return;
+      const slot = this.#menuSlot(target);
+      if (slot === undefined) this.#enqueue(() => this.closePauseMenu());
+      else if (!this.#menuFiltered(target, 4)) {
+        this.#enqueue(() => this.invokeMenuItem(slot, 4));
+      }
+    });
+    this.#bind(elements.pauseMenu, "keydown", (event) => {
+      this.#onPauseMenuKeydown(event as KeyboardEvent);
+    });
     this.#bind(elements.resetButton, "click", () => this.#enqueue(async () => {
       const restart = isActivelyPlaying(this.#state);
       await this.reset();
@@ -180,6 +227,7 @@ export class PlayerController {
     this.#input.setEnabled(false);
     this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
+    this.#view.hidePauseMenu(false);
     this.#setState("loading", `Loading ${displayName}…`);
     this.#view.clearDiagnostic();
     try {
@@ -219,9 +267,62 @@ export class PlayerController {
 
   async pause(): Promise<void> {
     this.#assertActive();
-    if (!isActivelyPlaying(this.#state)) return;
+    if (!isActivelyPlaying(this.#state) && this.#state !== "menu-open") return;
     this.#environmentPaused = false;
     await this.#pauseInternal();
+  }
+
+  async openPauseMenu(): Promise<void> {
+    this.#assertActive();
+    if (!isActivelyPlaying(this.#state)) return;
+    this.#menuWasAudioBlocked = this.#state === "audio-blocked";
+    this.#cancelFrame();
+    this.#input.setEnabled(false);
+    this.#composition.runtime.clearInput();
+    try {
+      const event = await this.#composition.openPauseMenu();
+      if (this.#disposed) return;
+      if (event.type !== "pause-menu" || !event.open) {
+        throw new Error("Runtime did not open the cartridge pause menu");
+      }
+      await this.#composition.suspendAudio();
+      if (this.#disposed) return;
+      this.#view.showPauseMenu(this.#decodeMenuItems(event.items));
+      this.#setState("menu-open", "Cartridge menu");
+    } catch (error) {
+      this.#fail(error);
+      throw error;
+    }
+  }
+
+  async closePauseMenu(): Promise<void> {
+    this.#assertActive();
+    if (this.#state !== "menu-open") return;
+    const event = await this.#composition.closePauseMenu();
+    if (this.#disposed) return;
+    if (event.type !== "pause-menu" || event.open) {
+      throw new Error("Runtime did not close the cartridge pause menu");
+    }
+    await this.#resumeAfterMenu();
+  }
+
+  async invokeMenuItem(
+    slot: 1 | 2 | 3 | 4 | 5,
+    button: 1 | 2 | 4,
+  ): Promise<void> {
+    this.#assertActive();
+    if (this.#state !== "menu-open") return;
+    const event = await this.#composition.invokeMenuItem(slot, button);
+    if (this.#disposed) return;
+    if (event.type !== "pause-menu") {
+      throw new Error("Runtime returned an invalid menu invocation outcome");
+    }
+    if (event.open) {
+      this.#view.showPauseMenu(this.#decodeMenuItems(event.items), slot);
+      this.#setState("menu-open", "Cartridge menu");
+      return;
+    }
+    await this.#resumeAfterMenu();
   }
 
   async resume(audioProbe?: Promise<boolean>): Promise<void> {
@@ -250,6 +351,7 @@ export class PlayerController {
     this.#input.setEnabled(false);
     this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
+    this.#view.hidePauseMenu(false);
     try {
       await this.#composition.reset();
       if (this.#disposed) return;
@@ -268,6 +370,7 @@ export class PlayerController {
     this.#input.setEnabled(false);
     this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
+    this.#view.hidePauseMenu(false);
     try {
       await this.#composition.stop();
       if (this.#disposed) return;
@@ -286,6 +389,7 @@ export class PlayerController {
     this.#setState("disposed", "Disposed");
     this.#cancelFrame();
     this.#input.dispose();
+    this.#view.hidePauseMenu(false);
     this.#removeRuntimeListener();
     for (const remove of this.#removeListeners.splice(0)) remove();
     this.#stateListeners.clear();
@@ -361,6 +465,7 @@ export class PlayerController {
       if (this.#disposed) return;
       await this.#composition.suspendAudio();
       if (this.#disposed) return;
+      this.#view.hidePauseMenu(false);
       this.#setState("paused", "Paused");
     } catch (error) {
       this.#fail(error);
@@ -369,7 +474,7 @@ export class PlayerController {
   }
 
   #pauseForEnvironment(): void {
-    if (!isActivelyPlaying(this.#state)) return;
+    if (!isActivelyPlaying(this.#state) && this.#state !== "menu-open") return;
     this.#environmentPaused = true;
     this.#enqueue(() => this.#pauseInternal());
   }
@@ -401,6 +506,8 @@ export class PlayerController {
       this.#view.showDiagnostic(`${event.error.code}: ${event.error.message}`);
     } else if (event.type === "fault") {
       this.#fail(new RuntimeClientError(event.error));
+    } else if (event.type === "pause-menu" && !event.open) {
+      this.#view.hidePauseMenu(false);
     }
   }
 
@@ -410,6 +517,7 @@ export class PlayerController {
     this.#input.setEnabled(false);
     this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
+    this.#view.hidePauseMenu(false);
     const message = error instanceof RuntimeClientError
       ? `${error.record.code}: ${error.record.message}`
       : error instanceof Error ? error.message : String(error);
@@ -444,6 +552,82 @@ export class PlayerController {
         "audio-blocked",
         "Running without audio · Select Enable audio to try again",
       );
+    }
+  }
+
+  async #resumeAfterMenu(): Promise<void> {
+    this.#view.hidePauseMenu(true);
+    this.#composition.runtime.clearInput();
+    const audioReady = this.#muted
+      ? true
+      : this.#menuWasAudioBlocked
+        ? false
+        : await this.#composition.resumeAudio();
+    if (this.#disposed) return;
+    this.#input.setEnabled(true);
+    this.#setPlayingState(audioReady);
+    this.#scheduleFrame();
+  }
+
+  #decodeMenuItems(items: readonly PlayerMenuItemSnapshot[]) {
+    return items.map((item) => ({
+      slot: item.slot,
+      label: decodeP8sciiLabel(new Uint8Array(item.label)),
+      filter: item.filter,
+    }));
+  }
+
+  #menuSlot(button: HTMLButtonElement): 1 | 2 | 3 | 4 | 5 | undefined {
+    const raw = Number(button.dataset.menuSlot);
+    return raw >= 1 && raw <= 5 && Number.isInteger(raw)
+      ? raw as 1 | 2 | 3 | 4 | 5
+      : undefined;
+  }
+
+  #menuFiltered(button: HTMLButtonElement, intent: 1 | 2 | 4): boolean {
+    return ((Number(button.dataset.menuFilter ?? 0) >> 8) & intent) !== 0;
+  }
+
+  #onPauseMenuKeydown(event: KeyboardEvent): void {
+    if (this.#state !== "menu-open") return;
+    const buttons = this.#view.pauseMenuButtons();
+    const current = event.target instanceof HTMLButtonElement
+      ? buttons.indexOf(event.target)
+      : -1;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      this.#enqueue(() => this.closePauseMenu());
+      return;
+    }
+    if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const next = event.key === "Home" ? 0
+        : event.key === "End" ? buttons.length - 1
+        : event.key === "ArrowUp"
+          ? (current <= 0 ? buttons.length - 1 : current - 1)
+          : (current + 1) % buttons.length;
+      for (const [index, button] of buttons.entries()) button.tabIndex = index === next ? 0 : -1;
+      buttons[next]?.focus();
+      return;
+    }
+    const target = current < 0 ? undefined : buttons[current];
+    if (target === undefined) return;
+    const slot = this.#menuSlot(target);
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      if (slot === undefined) return;
+      event.preventDefault();
+      const intent = event.key === "ArrowLeft" ? 1 : 2;
+      if (!this.#menuFiltered(target, intent)) {
+        this.#enqueue(() => this.invokeMenuItem(slot, intent));
+      }
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (slot === undefined) this.#enqueue(() => this.closePauseMenu());
+      else if (!this.#menuFiltered(target, 4)) {
+        this.#enqueue(() => this.invokeMenuItem(slot, 4));
+      }
     }
   }
 

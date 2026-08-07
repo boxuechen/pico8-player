@@ -8,6 +8,7 @@ export type PlayerShellState =
   | "ready"
   | "running"
   | "audio-blocked"
+  | "menu-open"
   | "paused"
   | "stopped"
   | "faulted"
@@ -25,6 +26,7 @@ export interface PlayerShellPresentation {
   readonly cartSelectionDisabled: boolean;
   readonly fullscreenDisabled: boolean;
   readonly muteDisabled: boolean;
+  readonly menuDisabled: boolean;
   readonly pauseDisabled: boolean;
   readonly playDisabled: boolean;
   readonly playLabel: "Play" | "Resume" | "Enable audio";
@@ -60,11 +62,12 @@ export function derivePlayerShellPresentation(
     cartSelectionDisabled: loading || disposed,
     fullscreenDisabled: disposed,
     muteDisabled: disposed,
-    pauseDisabled: !active,
+    menuDisabled: !active,
+    pauseDisabled: !active && state !== "menu-open",
     playDisabled: !["ready", "paused", "audio-blocked"].includes(state),
     playLabel: audioBlocked ? "Enable audio" : state === "paused" ? "Resume" : "Play",
     resetDisabled: !options.hasRetainedCart || loading || disposed,
-    stopDisabled: !["ready", "running", "audio-blocked", "paused", "faulted"].includes(
+    stopDisabled: !["ready", "running", "audio-blocked", "menu-open", "paused", "faulted"].includes(
       state,
     ),
     touchDisabled: !active,

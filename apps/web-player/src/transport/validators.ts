@@ -99,7 +99,7 @@ function isPlayerError(value: unknown): boolean {
   ]);
   const phases = new Set([
     "none", "compile", "boot", "init", "update", "update60", "draw",
-    "custom-loop", "host-call",
+    "custom-loop", "host-call", "menuitem",
   ]);
   const detailsValid = value.details === undefined || (
     isRecord(value.details) &&
@@ -193,9 +193,15 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
   }
   if (
     value.type === "start" || value.type === "pause" || value.type === "resume" ||
-    value.type === "reset" || value.type === "stop"
+    value.type === "reset" || value.type === "stop" ||
+    value.type === "openPauseMenu" || value.type === "closePauseMenu"
   ) {
     return isPositiveUint(value.sessionGeneration);
+  }
+  if (value.type === "invokeMenuItem") {
+    return isPositiveUint(value.sessionGeneration) &&
+      isUint(value.slot) && Number(value.slot) >= 1 && Number(value.slot) <= 5 &&
+      (value.button === 1 || value.button === 2 || value.button === 4);
   }
   return value.type === "dispose";
 }
@@ -213,6 +219,15 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
       typeof value.cartRef === "string" && value.cartRef.length > 0 &&
       value.breadcrumb instanceof ArrayBuffer &&
       value.breadcrumb.byteLength <= 4096 && isUint(value.breadcrumbDepth);
+  }
+  if (value.type === "pause-menu") {
+    return typeof value.open === "boolean" &&
+      ["opened", "keep-open", "closed", "removed"].includes(String(value.outcome)) &&
+      Array.isArray(value.items) && value.items.length <= 5 &&
+      value.items.every((item) => isRecord(item) &&
+        isUint(item.slot) && Number(item.slot) >= 1 && Number(item.slot) <= 5 &&
+        item.label instanceof ArrayBuffer && item.label.byteLength <= 16 &&
+        isUint(item.filter) && (Number(item.filter) & 0xffff_00ff) === 0);
   }
   if (value.type === "state") {
     if (!isUint(value.devkitFlags) || Number(value.devkitFlags) > 0x07) return false;

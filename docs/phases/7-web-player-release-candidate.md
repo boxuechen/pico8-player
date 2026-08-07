@@ -1,7 +1,7 @@
 # Phase 7 — Web Player Release Candidate
 
 > 状态：Active
-> Active work unit：7E — Pause Menu / menuitem Completion
+> Active work unit：7F — Required API Conformance Closure
 > 机器合同：[`spec/phase-7-web-player-release-candidate-contract.json`](../../spec/phase-7-web-player-release-candidate-contract.json)
 > 基线：Phase 6 exit commit `117882a8bbd368ea8d8ebea2a2145d8f71152ec3`
 
@@ -67,70 +67,70 @@ fullscreen 和 dispose 资源释放；Canvas 仍只包含 128×128 playfield。
 验证：`pnpm run test:phase-7d`、`pnpm run test:phase-7b`、`pnpm run test:phase-7c`、
 `pnpm run verify`。
 
-## 7. 当前工作：7E Pause Menu / menuitem Completion
+## 7. 已完成：7E Pause Menu / menuitem Completion
 
-### 7.1 边界与所有权
+7E 已按 [ADR-023](../adr/023-menuitem-invocation-boundary.md) 建立 VM-local callback、104-byte copy-out
+snapshot、root-safe invoke 与 Worker-authoritative menu pause。production DOM 提供 Continue 与最多五个
+cart item；P8SCII label、L/R/X filter、仅 boolean `true` keep-open、replace/remove、fault、generation、
+watchdog 和资源回收都有 real-WASM/Worker/Chrome 行为证据。`menuitem` 已升级为 compatible，历史
+`P6-KD-01` 关闭；完整 PICO-8 system menu 仍是产品范围排除。
 
-- 在任何 production 修改前，以 replacement ADR 固定 snapshot、invoke、callback return、button filter、
-  pause/continue、fault 和 generation 语义；ADR-021 的“registration only”决定不得被静默扩张。
-- 当前 `lua_State` 继续独占五槽 registry、callback 强引用和调用栈。WASM 只导出 copy-out snapshot 与
-  root-safe invoke operation；Lua function pointer、registry ref、stack address 和 borrowed label view 不得
-  进入 TypeScript、Worker DTO 或 DOM。
-- Runtime Worker 是 menu-open、generation、simulation pause 和 callback outcome 的权威源。Main 只渲染
-  generation-bound slot DTO 并发送用户 intent；host lifecycle `pause()` 仍是独立命令，不能伪装成
-  PICO-8 pause menu。
-- Canvas 只呈现 playfield。Continue 与 cart-defined items 必须是 Canvas 外 DOM；菜单关闭后 focus 返回
-  playfield，DOM 不缓存跨 generation callback identity。
+验证：`pnpm run test:phase-7e`、受影响回归、`pnpm run verify`。
 
-### 7.2 具体实现
+## 8. 当前工作：7F Required API Conformance Closure
 
-1. 在 z8lua production ABI 增加 bounded snapshot/invoke entry points。snapshot 按 slot 顺序复制 label bytes、
-   filter 和 occupied 状态；invoke 只接受 `slot 1..5 + button bitfield`，并返回结构化
-   `close/keep-open/removed/fault/stale` outcome。调用期间可安全 replace/remove menuitem，返回 `true`
-   保持菜单打开，其余成功返回关闭菜单。
-2. Runtime/transport 增加 versioned `openPauseMenu/closePauseMenu/invokeMenuItem` transaction。open 必须先在
-   Runtime-owned frame boundary 停止 simulation 并清空 gameplay input；每个 snapshot/outcome 绑定当前
-   generation。非 menu-open、slot/filter 不匹配、cart swap/reset/stop/dispose 或 stale generation 均
-   fail closed，且不得调用 callback。
-3. callback 在 Runtime-owned Lua root 执行并受现有 instruction/memory/fault containment 约束。callback
-   fault 进入结构化 cart fault、关闭菜单且不提交半完成 generation；不得在 Main 重试 callback。
-4. 在 production DOM shell 加独立“Menu”入口、Continue 和最多五个 cart item。使用 dialog/menu 语义、
-   roving focus 或等价有界 keyboard model，覆盖 Escape、Enter/Space、方向键、pointer/touch 与 44 CSS px
-   target；filter 禁用的 L/R/X intent 不得触发 callback。
-5. menu-open 时 gameplay keyboard/touch/gamepad input 与 rAF pulse 不进入 simulation，AudioContext 按 pause
-   policy suspend；keep-open outcome 原位刷新 snapshot/focus，close outcome 恢复同一 generation、清空边沿
-   input 并把 focus 返回 playfield。
-6. cart reset/replacement、host stop/fault、visibility/pagehide 和 dispose 必须关闭/清空菜单；late snapshot
-   或 outcome 不得重开 DOM、恢复旧 generation 或产生 stale frame/audio。
+### 8.1 目标与证据边界
 
-### 7.3 自动化与验收
+- 关闭历史 `P4-CL-01`：28 个 required/implemented/unknown API 必须各有 project-owned、manual-linked、
+  real-WASM 行为向量，不能用“当前能调用”或 inventory 改标签替代 conformance。
+- 当前唯一清单是：`pairs`；`max/min/mid/flr/ceil/cos/sin/atan2/sqrt/abs/sgn`；
+  `band/bor/bxor/bnot/shl/shr/lshr/rotl/rotr`；以及
+  `setmetatable/getmetatable/rawset/rawget/rawequal/rawlen/select`。
+- 每个向量固定 cart source/hash、PICO-8 0.2.7 manual section、输入类型与 Q16.16 raw oracle、返回数量/
+  类型、error behavior、reset replay 和 Node/Chrome 结果。第三方 cart、官方二进制 output 和参考实现
+  不能成为 tracked oracle。
+- 先写 failing conformance vector，再修改 production；没有失败证据时只允许补测试和 inventory evidence。
 
-- real-WASM Node gate 覆盖 snapshot copy ownership、slot order、16-byte label、button filter、callback argument、
-  `true` keep-open、nil/false close、callback 内 replace/remove、fault、reset/cart swap 和 20-generation cleanup。
-- Runtime/transport contract 覆盖 operation allowlist、generation binding、invalid state、stale response、
-  callback exactly-once、host pause/menu pause 分离，以及 timeout/dispose fail closed。
-- Chrome production release gate 用 project-owned cart 验证 Menu/Continue、keyboard/pointer/touch、filter、
-  keep-open refresh、callback fault recovery、focus return、audio/simulation pause 与 cart replacement cleanup；
-  语义断言优先于截图。
-- 更新 `pico-api-inventory.yaml` 与 Known Difference：只有上述 official-required modes 都有行为证据后，
-  `menuitem` 才能从 partial 升级；否则把剩余模式精确保留为 Known Difference。
-- `pnpm run test:phase-7e`、受影响的 WASM/runtime/7B/7C/7D 回归与 `pnpm run verify` 通过；完成后
-  单独提交并把唯一 active work unit 切到 7F。
+### 8.2 四个实现簇
 
-### 7.4 范围外
+1. **Table iteration**：验证 `pairs(table)`、empty/nil、iteration termination、key/value 多返回和
+   `__pairs` 行为；不能依赖宿主 JS key order，也不能把 Lua table 跨 WASM 边界。
+2. **Q16.16 math**：覆盖正常值、负数、边界/overflow、角度方向与周期、零和 invalid-domain 行为；
+   三角函数使用 raw Q16 oracle，禁止以 browser `Math.*` 作为运行时真值。
+3. **Bitwise**：覆盖多参数/default、32-bit mask、负值、shift count normalization、logical/arithmetic
+   shift、rotate 与 Q16.16 raw bit pattern；结果必须来自 z8lua VM，不新增 host binding。
+4. **Lua base/raw surface**：覆盖 metatable 保护/查询、raw bypass、identity、string/table raw length、
+   `select("#", ...)`、正负 index、多返回和 invalid index error；不开放 debug/package/io/os library。
 
-- 不复刻 PICO-8 system settings、options、reset-cart prompt、gamepad remap 或完整 console pause menu；7E 只实现
-  Continue 与 cart-defined menuitem surface。
-- 不把任意 Lua function invocation 做成 public API，不允许 menu callback 从 nested guest coroutine 或 Main
-  直接调用，不改变 ADR-019 的 nested suspension 范围。
-- 不顺带关闭 7F 的其他 required APIs，不执行 7G soak/fuzz/performance closure，不加入网络 cart、移动/
-  non-Chrome gate 或外部发布。
+修复优先落在对应 z8lua builtin/base implementation；只有向量证明跨 Runtime transaction 的真实缺陷时，
+才允许触及 bridge/RuntimeCore。不得加入 cart-specific 分支、JS math fallback 或新网络/文件 authority。
 
-## 8. 后续 units
+### 8.3 Partial-mode closure
+
+- `flip`：分别记录 root custom-loop compatible mode 与 ADR-019 nested suspension Known Difference；不得把
+  nested guest coroutine 伪装为成功。
+- `stat`：为当前 release-required selector 建显式向量，并把未支持 selector 精确留在 Known Difference；
+  不能用统一 `false` 测试掩盖应支持 selector。
+- `print`：分别证明普通/visual/custom-font/audio control；timed delay 若仍无 root suspension contract，
+  保持 `P4-KD-03`，不得仅改成 compatible。
+- `menuitem` 只做 7E 回归，不重复扩张 system menu 范围。完成后 inventory 必须满足 required unknown 为
+  0；remaining partial modes 都必须有精确 supported/unsupported evidence。
+
+### 8.4 自动化与验收
+
+- 建立一个 versioned 7F manifest 和小型 project-owned carts；Node runner 在真实 release WASM 上输出
+  byte/raw/type/error oracle，Chrome runner 通过 production Worker 对同一 carts 复核，不复制第二套语义。
+- contract test 必须检查 28 个 API 一一覆盖、manual link 存在、manifest/cart hash 锁定、inventory evidence
+  可达，以及 required unknown 计数为 0；negative vector 必须证明错误不会污染下一 generation。
+- 对 production 修复运行对应 cluster test、WASM reproducibility、Phase 4C/4D/6G/7E 回归；最终运行
+  `pnpm run test:phase-7f` 与 `pnpm run verify`。
+- 验证通过后独立提交，把唯一 active work unit 切到 7G；7F 不执行 600-second soak、fuzz/provenance
+  aggregate、外部发布、网络/BBS cart 或 non-Chrome 测试。
+
+## 9. 后续 units
 
 | Unit | 结果边界 |
 | --- | --- |
-| 7F | 28 个 required unknown API 与 partial mode 的 conformance closure |
 | 7G | Chrome release matrix、20-cycle recovery、600-second soak、perf/fuzz/provenance |
 | 7H | aggregate RC manifest/evidence、`test:release`、关闭合同且不执行外部发布 |
 

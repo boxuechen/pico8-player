@@ -10,6 +10,10 @@ import {
 
 import type {
   RuntimeBootResult,
+  MenuButtonIntent,
+  MenuItemSnapshot,
+  MenuSnapshot,
+  RuntimeMenuInvocationOutcome,
   RuntimeHostRequest,
   RuntimeResult,
   RuntimeSessionState,
@@ -45,6 +49,11 @@ export interface CartSessionRuntimePort {
     response: Uint8Array,
     isError?: boolean,
   ): RuntimeResult<RuntimeBootResult | RuntimeStepResult>;
+  snapshotMenuItems(): RuntimeResult<MenuSnapshot>;
+  invokeMenuItem(
+    slot: MenuItemSnapshot["slot"],
+    button: MenuButtonIntent,
+  ): RuntimeResult<RuntimeMenuInvocationOutcome>;
   copyRam(offset: number, length: number): Uint8Array;
   copySuspendedLogicalRam?(offset: number, length: number): Uint8Array;
   writeSuspendedLogicalRam?(offset: number, bytes: Uint8Array): void;
@@ -122,6 +131,17 @@ export interface CartSessionStopResult {
 export interface CartSessionDisposeResult {
   readonly kind: "disposed";
   readonly generation: number;
+}
+
+export interface CartSessionMenuSnapshot extends MenuSnapshot {
+  readonly generation: number;
+}
+
+export interface CartSessionMenuInvocationOutcome {
+  readonly generation: number;
+  readonly kind: RuntimeMenuInvocationOutcome["kind"];
+  readonly snapshot: CartSessionMenuSnapshot;
+  readonly cartDataCommit?: PicoCartDataCommit;
 }
 
 interface CartRunSnapshot extends CartSessionCartMetadata {
@@ -403,6 +423,91 @@ export class CartSession {
       ));
     }
     return this.#acceptStepResult(result.value);
+  }
+
+  snapshotMenuItems(generation: number): RuntimeResult<CartSessionMenuSnapshot> {
+    if (generation !== this.#generation) {
+      return invalid("menu snapshot belongs to a stale generation", {
+        activeGeneration: this.#generation,
+        requestGeneration: generation,
+      });
+    }
+    const runtime = this.#runtime;
+    if (this.#state !== "ready" || runtime === undefined) {
+      return invalid("cart session is not ready for menu snapshot");
+    }
+    let result: RuntimeResult<MenuSnapshot>;
+    try {
+      result = runtime.snapshotMenuItems();
+    } catch (error) {
+      return this.#faultCurrent(lifecycleError(
+        "E_INVARIANT",
+        `menu snapshot threw: ${errorMessage(error)}`,
+      ));
+    }
+    if (!result.ok) {
+      if (result.error.code === "E_INVALID_STATE") return result;
+      return this.#faultCurrent(result.error);
+    }
+    return {
+      ok: true,
+      value: {
+        generation: this.#generation,
+        items: result.value.items.map((item) => ({
+          slot: item.slot,
+          label: item.label.slice(),
+          filter: item.filter,
+        })),
+      },
+    };
+  }
+
+  invokeMenuItem(
+    generation: number,
+    slot: MenuItemSnapshot["slot"],
+    button: MenuButtonIntent,
+  ): RuntimeResult<CartSessionMenuInvocationOutcome> {
+    if (generation !== this.#generation) {
+      return invalid("menu invocation belongs to a stale generation", {
+        activeGeneration: this.#generation,
+        requestGeneration: generation,
+      });
+    }
+    const runtime = this.#runtime;
+    if (this.#state !== "ready" || runtime === undefined) {
+      return invalid("cart session is not ready for menu invocation");
+    }
+    let result: RuntimeResult<RuntimeMenuInvocationOutcome>;
+    try {
+      result = runtime.invokeMenuItem(slot, button);
+    } catch (error) {
+      return this.#faultCurrent(lifecycleError(
+        "E_INVARIANT",
+        `menu invocation threw: ${errorMessage(error)}`,
+      ));
+    }
+    if (!result.ok) {
+      if (result.error.code === "E_INVALID_STATE") return result;
+      return this.#faultCurrent(result.error);
+    }
+    return {
+      ok: true,
+      value: {
+        generation: this.#generation,
+        kind: result.value.kind,
+        snapshot: {
+          generation: this.#generation,
+          items: result.value.snapshot.items.map((item) => ({
+            slot: item.slot,
+            label: item.label.slice(),
+            filter: item.filter,
+          })),
+        },
+        ...(result.value.cartDataCommit === undefined
+          ? {}
+          : { cartDataCommit: copyCartDataCommit(result.value.cartDataCommit) }),
+      },
+    };
   }
 
   copyRam(offset: number, length: number): RuntimeResult<Uint8Array> {
