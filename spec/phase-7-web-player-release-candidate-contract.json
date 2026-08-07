@@ -78,14 +78,15 @@
     ]
   },
   "artifactContract": {
-    "status": "proposed-until-7C",
+    "status": "implemented",
+    "contract": "spec/release-artifact-contract.json",
     "outputRoot": "apps/web-player/dist/release/",
     "manifest": "apps/web-player/dist/release/manifest.json",
     "stableKeys": ["main", "worker", "worklet", "wasm", "styles", "demo"],
     "requirements": [
       "relative-base deployment",
       "streaming-WASM with ArrayBuffer fallback",
-      "CSP-compatible execution without eval",
+      "strict CSP execution with wasm-unsafe-eval as the only evaluation capability",
       "content hashes and byte lengths",
       "reproducible bytes on the pinned toolchain",
       "no ref, test cart, local corpus or third-party playtest artifacts"
@@ -115,9 +116,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A", "7B"],
-  "activeWorkUnit": "7C",
-  "nextWorkUnit": "7C",
+  "completedWorkUnits": ["7A", "7B", "7C"],
+  "activeWorkUnit": "7D",
+  "nextWorkUnit": "7D",
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -195,7 +196,7 @@
     },
     "7C": {
       "name": "Distributable Artifact Pipeline",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "apps/web-player/src/main/",
         "apps/web-player/src/worker/",
@@ -223,11 +224,36 @@
         "two clean pinned-toolchain builds are byte-identical",
         "no ref, local corpus or third-party playtest artifact is emitted",
         "pnpm run verify passes and 7D becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "artifactContract": "spec/release-artifact-contract.json",
+        "stableKeys": ["main", "worker", "worklet", "wasm", "styles", "demo"],
+        "emittedFiles": 12,
+        "wasmLoading": "instantiateStreaming for application/wasm; Emscripten ArrayBuffer fallback for wrong MIME",
+        "csp": "self-only with wasm-unsafe-eval and no unsafe-eval",
+        "crossOriginIsolationRequired": false,
+        "publicationPerformed": false,
+        "verification": ["pnpm run test:phase-7c", "pnpm run test:phase-7b", "pnpm run verify"]
+      }
     },
     "7D": {
       "name": "Production DOM Player Shell",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "apps/web-player/src/main/",
+        "apps/web-player/public/",
+        "tests/runtime/phase-7d-*",
+        "tests/browser/phase-7d.*",
+        "tools/browser/run-phase-7d.mjs",
+        "docs/02-system-architecture.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/7-web-player-release-candidate.md",
+        "spec/phase-7-web-player-release-candidate-contract.json",
+        "package.json"
+      ],
       "exit": [
         "the default DOM shell supports local choose/drop, play, pause, reset, stop, mute and fullscreen",
         "loading, ready, running, paused, stopped, audio-blocked and faulted states are user-visible and recoverable",

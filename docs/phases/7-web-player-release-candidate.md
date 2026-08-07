@@ -1,7 +1,7 @@
 # Phase 7 — Web Player Release Candidate
 
 > 状态：Active
-> Active work unit：7C — Distributable Artifact Pipeline
+> Active work unit：7D — Production DOM Player Shell
 > 机器合同：[`spec/phase-7-web-player-release-candidate-contract.json`](../../spec/phase-7-web-player-release-candidate-contract.json)
 > 基线：Phase 6 exit commit `117882a8bbd368ea8d8ebea2a2145d8f71152ec3`
 
@@ -47,45 +47,69 @@ lifecycle。
 
 验证：`pnpm run test:phase-7b`、`pnpm run verify`。
 
-## 5. 当前工作：7C Distributable Artifact Pipeline
+## 5. 已完成：7C Distributable Artifact Pipeline
 
-### 5.1 范围内
+7C 已建立由 [`spec/release-artifact-contract.json`](../../spec/release-artifact-contract.json) 锁定的
+单一 release builder/verifier。ignored output 含 12 个 allowlisted files，consumer 只依赖六个 stable
+manifest keys。两个 fresh output build 逐 byte 一致；Chrome 在 nested base、非 isolated 环境和严格
+CSP 下同时通过正确 WASM MIME streaming 与错误 MIME ArrayBuffer fallback。artifact 不含 `ref/`、
+local corpus、third-party cart、截图或 playtest output，也未执行 publication。
 
-- 新增单一 release builder，将 main facade、module Worker、AudioWorklet、WASM、基础 styles 和最小
-  local-bytes demo 输出到 ignored `apps/web-player/dist/release/`。
-- 生成 versioned `manifest.json`；consumer 只依赖 `main/worker/worklet/wasm/styles/demo` stable keys，
-  不依赖 content-hashed 文件名。
-- 所有运行时引用使用相对 manifest/base resolution；在非 root HTTP path 与非 cross-origin-isolated
-  Chrome 中启动。
-- Worker 优先使用正确 `application/wasm` 的 streaming instantiate，并在 MIME 不支持时回退到
-  ArrayBuffer，不改变 runtime bytes/hash。
-- 新增 artifact verifier，锁定 SHA-256、byte length、MIME、CSP、provenance、允许文件集合和 excluded
-  paths；拒绝 `ref/`、local corpus、third-party cart/screenshot/playtest 产物。
-- 在两个全新临时 output root 中执行 pinned Node/pnpm/Emscripten build，并逐文件证明 byte-identical。
-- 添加 Node artifact contract 与 Chrome relative-base/MIME/CSP/fallback production-path gate。
+验证：`pnpm run test:phase-7c`、`pnpm run test:phase-7b`、`pnpm run verify`。
 
-### 5.2 范围外
+## 6. 当前工作：7D Production DOM Player Shell
 
-- 不重做最终 DOM shell interaction/accessibility；属于 7D。7C demo 只证明 artifact boot 和
-  caller-provided local bytes。
-- 不实现 pause menu、required API compatibility closure、long soak 或 publication。
-- 不引入 CDN、service worker、arbitrary base URL/cart URL、BBS access、registry publish 或部署脚本。
-- 不把 ignored release output 或临时 reproducibility directories 提交到 git。
+### 6.1 边界与所有权
 
-### 5.3 验收
+- `main/ui` 拥有 DOM structure、control availability、drop-zone、status copy、mute/fullscreen 与 responsive
+  layout；`PlayerController` 只把 UI intent 映射到 stable lifecycle，不复制 Runtime 状态机。
+- Worker/Runtime 仍是 simulation、frame、pause 和 fault 的权威源；Canvas 只呈现 128×128 playfield，
+  controls、status、fault 和后续 pause menu 都必须是 Canvas 外的 DOM。
+- 文件选择和 drop 只读取用户提供的 `.p8`/`.p8.png` bytes；不得接受 URL、目录、clipboard 或隐式
+  network authority。每次只接受一个 bounded file，失败后仍可重新选择。
+- 视觉样式只来自 release stylesheet/class/state attributes；production source 不写 inline layout style，
+  不引入 UI framework 或新的 package/execution-domain edge。
 
-1. 六个 stable artifact keys 都解析到 verifier 认可的 local file、hash、length 和 MIME。
-2. Chrome 在 nested relative base、strict CSP、正确/错误 WASM MIME 两种路径可从 manifest 启动 demo。
-3. 两次 clean build 的完整 manifest 与每个 emitted byte 一致。
-4. release allowlist/provenance/exclusion audit fail closed。
-5. Node 与 Chrome 7C gates、受影响回归和 `pnpm run verify` 通过。
-6. 完成后单独提交，并把唯一 active work unit 切到 7D。
+### 6.2 具体实现
 
-## 6. 后续 units
+1. 把 Phase 1E 临时 shell 拆为独立 DOM view/controller boundary，提供 choose/drop、play/resume、pause、
+   reset、stop、mute/unmute 和 fullscreen controls；control labels、pressed/disabled state 只由当前
+   shell state 派生。
+2. 显式呈现 `idle/loading/ready/running/paused/stopped/audio-blocked/faulted/disposed`。AudioContext
+   无手势或被策略阻止时不得把 cart 判为 faulted；显示可操作的 audio resume 状态，并允许 silent
+   playback、再次解锁或重新选择 cart。
+3. drop-zone 支持 keyboard focus、drag enter/leave/drop 与 file picker；拒绝 multiple/unsupported/oversize
+   input 时给出 `aria-live` diagnostic，且不改变已提交 Runtime generation。
+4. Canvas 保持 128×128 backing store、nearest-neighbor 与整数 CSS scale；ResizeObserver/viewport/fullscreen
+   只选择容器可容纳的最大整数 scale，窄容器降到 1×，不得拉伸或把 DPR 变成 simulation input。
+5. keyboard focus 不困住页面；game controls 仅在 playfield focus/running 时消费。touch controls 提供可读
+   label、pressed state、pointer cancellation 和至少 44 CSS px hit target；mute/fullscreen state 可被
+   keyboard、pointer 与 assistive technology观察。
+6. `prefers-reduced-motion: reduce` 禁用非必要 transition/animation；状态、错误与操作结果不依赖颜色、
+   动画或 hover。fullscreen exit、blur/visibility 与 dispose 必须清理 transient UI/input state。
+
+### 6.3 自动化与验收
+
+- Node DOM-policy/view-model contract 覆盖 state→controls/ARIA mapping、file validation、integer scale 和
+  audio-blocked recovery，不依赖浏览器成为 simulation oracle。
+- Chrome production-path gate 通过真实 release artifact 验证 choose 与 drop、play/pause/resume/reset/
+  stop、mute、fullscreen request/exit、keyboard focus、touch/pointer、resize、reduced motion、fault 后重选
+  cart，以及 dispose 后无 listener/RAF 输出。
+- 可访问性门禁至少检查 landmark/name/role、live region、tab order、disabled/pressed semantics、canvas
+  accessible name、touch target 和 200% viewport layout；不以截图替代语义断言。
+- `pnpm run test:phase-7d`、受影响 7B/7C 回归与 `pnpm run verify` 通过；完成后单独提交并把唯一
+  active work unit 切到 7E。
+
+### 6.4 范围外
+
+- 不实现 7E pause menu/menuitem callback invocation；7D 的 pause button 仍是 host lifecycle pause。
+- 不修复/重分类 required PICO API，不做 long soak/fuzz/performance closure，也不创建 public compatibility rate。
+- 不加入 cart URL/BBS access、service worker、UI asset CDN、telemetry、mobile/non-Chrome gate 或外部发布。
+
+## 7. 后续 units
 
 | Unit | 结果边界 |
 | --- | --- |
-| 7D | production DOM shell、local choose/drop、mute/fullscreen、状态恢复与 accessibility |
 | 7E | VM-local menuitem snapshot + root-safe callback invocation + DOM pause menu |
 | 7F | 28 个 required unknown API 与 partial mode 的 conformance closure |
 | 7G | Chrome release matrix、20-cycle recovery、600-second soak、perf/fuzz/provenance |

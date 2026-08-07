@@ -8,7 +8,7 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
+| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；stable-manifest release artifact；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
 | **Deferred** | general nested-coroutine HostRequest、include resolution、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
 
 第 4–11 节只维护稳定架构约束，不复制容易漂移的 DTO 和 error union。当前 production player
@@ -86,6 +86,19 @@ barrier：立即拆除 public listener、controller listener、presenter 和 aud
 fail closed，in-flight completion 不得再提交 frame、audio、state 或 diagnostic。每个 `create()` 构造独立
 Worker、presenter、input、AudioContext/Worklet 和 persistence adapter object graph；模块级不得保存 mutable
 player singleton。
+
+### Release artifact discovery
+
+静态发布包由 [`spec/release-artifact-contract.json`](../spec/release-artifact-contract.json) 定义；
+`manifest.json` 是唯一公开 discovery surface，稳定 key 为 `main/worker/worklet/wasm/styles/demo`。
+key 指向的相对 path、hash、byte length、MIME 和 provenance 由 verifier fail closed 校验，实际文件名和
+目录深度仍是 build detail。main facade 以自身 `import.meta.url` 解析 package-owned Worker/Worklet，
+Worker 再以相邻 Emscripten loader 定位 WASM，因此相同 bytes 可部署到任意 nested same-origin base。
+
+发布 profile 不要求 cross-origin isolation。正确 `application/wasm` 使用 streaming instantiate；错误
+MIME 由 Emscripten 回退到 ArrayBuffer。严格 CSP 只额外开放 WebAssembly 所需的
+`'wasm-unsafe-eval'`，不得开放 `'unsafe-eval'`、inline script、任意网络 cart 或 caller-supplied
+Worker/WASM URL。release builder 只拥有 packaging，不取得 Runtime、cart 或网络 authority。
 
 ## 2. 所有权与共享内存
 

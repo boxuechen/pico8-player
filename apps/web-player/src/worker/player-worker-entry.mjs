@@ -11,16 +11,9 @@ const persistence = new IndexedDbCartDataPersistenceAdapter();
 const heapLimitText = new URL(import.meta.url).searchParams.get("luaHeapLimit");
 const luaHeapLimit = heapLimitText === null ? undefined : Number(heapLimitText);
 const controller = (async () => {
-  const wasmUrl = new URL(
-    "../../../../wasm/dist/z8lua-runtime-v1.wasm",
-    import.meta.url,
-  );
-  const wasmResponse = await fetch(wasmUrl);
-  if (!wasmResponse.ok) {
-    throw new Error(`Unable to load z8lua WASM: HTTP ${wasmResponse.status}`);
-  }
-  const wasmBinary = await wasmResponse.arrayBuffer();
-  const module = await createZ8LuaModule({ wasmBinary });
+  // Emscripten owns streaming instantiation and its ArrayBuffer fallback. The
+  // runtime loader and .wasm remain adjacent in both workspace and release layouts.
+  const module = await createZ8LuaModule();
   return createPlayerWorkerController(module, {
     audioTransport,
     persistence,

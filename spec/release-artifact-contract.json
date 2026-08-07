@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "artifactId": "pico8-web-player-rc-v1",
+  "target": "desktop Chrome/Chromium",
+  "outputRoot": "apps/web-player/dist/release",
+  "manifest": "manifest.json",
+  "stableKeys": ["main", "worker", "worklet", "wasm", "styles", "demo"],
+  "artifacts": {
+    "main": "main/player.mjs",
+    "worker": "browser/player-worker.mjs",
+    "worklet": "worklet/pico8-audio-processor.js",
+    "wasm": "wasm/z8lua-runtime-v1.wasm",
+    "styles": "player.css",
+    "demo": "demo/index.html"
+  },
+  "files": {
+    "main/player.mjs": "text/javascript; charset=utf-8",
+    "browser/player-worker.mjs": "text/javascript; charset=utf-8",
+    "worklet/pico8-audio-processor.js": "text/javascript; charset=utf-8",
+    "wasm/z8lua-runtime-v1.mjs": "text/javascript; charset=utf-8",
+    "wasm/z8lua-runtime-v1.wasm": "application/wasm",
+    "player.css": "text/css; charset=utf-8",
+    "demo/index.html": "text/html; charset=utf-8",
+    "demo/demo.mjs": "text/javascript; charset=utf-8",
+    "THIRD_PARTY_NOTICES.md": "text/markdown; charset=utf-8",
+    "licenses/Emscripten.txt": "text/plain; charset=utf-8",
+    "licenses/Lua-5.2.txt": "text/plain; charset=utf-8",
+    "licenses/WTFPL-2.txt": "text/plain; charset=utf-8"
+  },
+  "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; worker-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  "runtime": {
+    "loader": "wasm/z8lua-runtime-v1.mjs",
+    "manifest": "wasm/runtime-v1.manifest.lock.json",
+    "streaming": "WebAssembly.instantiateStreaming",
+    "fallback": "falling back to ArrayBuffer instantiation"
+  },
+  "toolchain": {
+    "node": "22.22.0",
+    "pnpm": "10.8.0",
+    "esbuild": "0.28.1",
+    "emscripten": "6.0.5",
+    "sourceDateEpoch": "1731622349"
+  },
+  "policy": {
+    "cartAuthority": "caller-provided Uint8Array or caller-authorized local bundle only",
+    "networkCartAccess": false,
+    "arbitraryUrlAccess": false,
+    "crossOriginIsolationRequired": false,
+    "publicationPerformed": false,
+    "forbiddenPathFragments": [
+      "ref/",
+      "local-corpus",
+      "local-observations",
+      "screenshots/",
+      "playtest",
+      ".p8",
+      ".p8.png",
+      ".map"
+    ],
+    "forbiddenJavaScriptPatterns": ["eval(", "new Function(", "//# sourceMappingURL="]
+  },
+  "provenance": {
+    "phaseContract": "spec/phase-7-web-player-release-candidate-contract.json",
+    "runtimeManifest": "wasm/runtime-v1.manifest.lock.json",
+    "sourceLock": "wasm/source.lock.json",
+    "thirdPartyNotices": "wasm/THIRD_PARTY_NOTICES.md"
+  }
+}

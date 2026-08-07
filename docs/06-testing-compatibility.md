@@ -11,7 +11,7 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance 与 Chrome scripts；Phase 5 L3 local/multicart project-profile exit 已关闭 |
+| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance、release artifact 与 Chrome scripts；Phase 5 L3 local/multicart project-profile exit 已关闭 |
 | **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、项目原创 6-case local L3 corpus；精确 Known Differences/coverage limitation 见第 15 节 |
 | **Historical results** | Phase 0–5 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
 | **Target** | 第 3 节其余测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与未来 activation contract |
@@ -120,6 +120,18 @@ pnpm test:release
 ```
 
 这些命令在脚本尚未建立时是目标契约。落地后不得无迁移说明地改名。
+
+### 3.1 Release artifact gate
+
+`pnpm run test:phase-7c` 是当前已实现的 artifact gate：先从 pinned source/toolchain 构建 ignored
+release output，再校验 [`spec/release-artifact-contract.json`](../spec/release-artifact-contract.json)
+中的精确 allowlist、stable keys、SHA-256、byte length、MIME、CSP、provenance 和排除路径。测试还在
+两个全新临时 output root 构建并逐文件比较 bytes，任何额外文件或 mutation 都必须失败关闭。
+
+Chrome gate 从 nested same-origin base 运行同一 local-bytes demo；`application/wasm` 必须只请求一次，
+错误 MIME 必须经 Emscripten ArrayBuffer fallback 成功启动。两条路径都必须在严格 CSP（仅允许
+`'wasm-unsafe-eval'`，禁止 `'unsafe-eval'`/inline script）和非 cross-origin-isolated 环境进入
+`running`。该门禁不授权网络 cart、第三方 cart、截图或 artifact publication。
 
 ## 4. 确定性执行模型
 

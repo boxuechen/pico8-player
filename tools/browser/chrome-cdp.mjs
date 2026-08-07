@@ -109,7 +109,7 @@ export async function waitForDocumentStatus(
       const progress = await evaluate(cdp, "document.body?.dataset?.progress ?? ''");
       const detail = await evaluate(
         cdp,
-        "document.querySelector('#result')?.textContent ?? ''",
+        "document.querySelector('#result, #release-status')?.textContent ?? ''",
       );
       throw new Error(`${progress}: ${detail}`);
     }

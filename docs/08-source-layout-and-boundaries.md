@@ -70,6 +70,9 @@ package；package 只用于强制真正的架构边界。
 │       │       ├── pico8-audio-processor.ts
 │       │       └── pcm-queue.ts
 │       ├── public/
+│       │   ├── player.css
+│       │   └── demo/
+│       ├── dist/release/            # ignored, reproducible static release output
 │       └── package.json
 ├── packages/
 │   ├── contracts/
@@ -137,6 +140,8 @@ package；package 只用于强制真正的架构边界。
 │   ├── fixtures/
 │   └── external-corpus.example.json
 ├── tools/
+│   ├── release/                     # deterministic builder + fail-closed artifact verifier
+│   └── browser/                     # Chrome/Chromium gates; never a cart/network authority
 ├── docs/
 ├── ref/                       # gitignored local reference clones; never a build input
 ├── pnpm-workspace.yaml
@@ -254,6 +259,13 @@ RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worke
 - `worklet/`：PCM queue、重采样所需的实时设备逻辑和 processor 注册；不得 import RuntimeCore 或 z8lua。
 
 `apps/web-player` 可以依赖 packages；任何 package **MUST NOT** import `apps/web-player`。
+
+`public/` 只保存 release-owned static source（stylesheet 与 local-bytes demo），不保存 cart、截图或
+runtime state。`tools/release/` 是唯一 packaging composition root：它从 tracked source、编译输出和
+锁定 WASM 输入生成 ignored `dist/release/`，并按
+[`spec/release-artifact-contract.json`](../spec/release-artifact-contract.json) 校验精确 allowlist、hash、
+length、MIME、CSP 与 provenance。release tool 可以组合 execution-domain artifacts，但不得成为任何
+production package 的 import dependency，也不得读取 `ref/`、local corpus 或网络 cart。
 
 `player-worker-entry.mjs` 是异步 WASM bootstrap/bundle entry：它必须先调用
 `installPlayerRuntimeWorker` 注册 message listener，再等待 WASM/controller promise；esbuild 只
