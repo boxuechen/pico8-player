@@ -146,7 +146,11 @@ test("Phase 7H tracks no release output, third-party cart corpus or screenshot",
   assert.doesNotMatch(serialized, /"projectCarts"|"cartSha256"|"sourceSha256"/u);
 });
 
-test("Phase 7H documentation routes to immutable evidence and no active phase", async () => {
+test("Phase 7H documentation preserves immutable evidence under its successor phase", async () => {
+  const phase8 = JSON.parse(await readFile(
+    "spec/phase-8-expanded-real-cart-qualification-contract.json",
+    "utf8",
+  ));
   const [docsReadme, phaseIndex, roadmap, scope, compatibility, evidence] =
     await Promise.all([
       readFile("docs/README.md", "utf8"),
@@ -156,10 +160,16 @@ test("Phase 7H documentation routes to immutable evidence and no active phase", 
       readFile("docs/06-testing-compatibility.md", "utf8"),
       readFile(evidencePath, "utf8"),
     ]);
-  assert.match(docsReadme, /当前阶段 \| 无/u);
-  assert.match(docsReadme, /Active work unit \| 无/u);
   assert.ok(docsReadme.includes("81-phase-7-web-player-release-candidate-exit-evidence.md"));
   assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
+  if (phase8.status === "active") {
+    assert.match(docsReadme, /当前阶段 \| Phase 8/u);
+    assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
+    assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
+  } else {
+    assert.match(docsReadme, /当前阶段 \| 无/u);
+    assert.match(docsReadme, /Active work unit \| 无/u);
+  }
   assert.match(roadmap, /7 Web Player Release Candidate（7A–7H） \| Complete/u);
   assert.match(scope, /101 compatible/u);
   assert.match(compatibility, /101 compatible/u);

@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "phase": "8",
+  "name": "Expanded Real-cart Qualification",
+  "status": "active",
+  "target": "expanded local real-cart qualification for the PICO-8 v0.2.7 RC profile on Chrome/Chromium desktop",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase7Contract": "spec/phase-7-web-player-release-candidate-contract.json",
+    "phase7ContractSha256": "90e5d793b65df93f7dc0077343511a421b131b2508d08e5f41cbf008f2a4cb4c",
+    "phase7Evidence": "docs/evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md",
+    "phase7EvidenceSha256": "87d57635eddee4ee1b134910ad4b2040d3f20ee98d331e747d07a668c8e47318",
+    "phase7ExitManifest": "tests/conformance/manifests/phase-7h-exit.json",
+    "phase7ExitManifestSha256": "08d441d69cd0378ed7a88e01f6401d52bd4efce20d8a37ac608f20f0dc8a3365",
+    "runtimeManifest": "wasm/runtime-v1.manifest.lock.json",
+    "runtimeManifestSha256": "ec3c5a88031021d5e30972bc9378c6580c4159691660ba6026ac146acf757098",
+    "baselineCommit": "49b24ad32b54d14d4678ebd5b7225d3a9bec668e"
+  },
+  "externalSource": {
+    "repository": "https://github.com/MiniMechMedia/pico8-games.git",
+    "revision": "9c846040438bdc649b30c115c355c8864cbba06e",
+    "userAuthorizedLocalResearch": true,
+    "rootLicensePresent": false,
+    "topLevelProjects": 71,
+    "cartFiles": 168,
+    "p8Files": 98,
+    "p8PngFiles": 70,
+    "byteUniqueFiles": 167,
+    "canonicalLogicalCarts": 100,
+    "formatPairs": 65,
+    "explicitCcByNcSaTopLevelProjects": 23,
+    "trackedPerCartIdentity": false,
+    "trackedPerCartHash": false,
+    "redistributionAuthorized": false
+  },
+  "corpusPolicy": {
+    "mode": "caller-authorized-local-only",
+    "sourceRuntimePath": "outside repository",
+    "refPathMayBeTestInput": false,
+    "networkAccess": false,
+    "automatedBbsAccess": false,
+    "repositoryCartBytes": 0,
+    "repositoryThirdPartyScreenshots": 0,
+    "ciDependency": false,
+    "releaseArtifactDependency": false,
+    "publicCompatibilityRate": false,
+    "canonicalSelection": "top-level project plus cart basename; prefer export p8.png, then p8.png, then p8; drop byte-identical duplicate",
+    "canonicalCases": 100,
+    "formatPairCases": 65,
+    "maximumBatchCases": 64
+  },
+  "classification": {
+    "cartResults": ["C0", "C1", "C2", "C3", "CU"],
+    "failureClusters": [
+      "parse",
+      "language",
+      "ram",
+      "graphics",
+      "audio",
+      "input",
+      "timing",
+      "persistence",
+      "multicart",
+      "unsupported-host-feature"
+    ],
+    "requiredEnvironment": ["playerCommit", "runtimeWasmSha256", "chromeVersion", "sourceRevision"],
+    "thirdPartyPerCartResultsTracked": false
+  },
+  "capabilityDelta": {
+    "required": [
+      "deterministic-external-corpus-discovery",
+      "one-hundred-cart-chrome-smoke",
+      "sixty-five-format-pair-qualification",
+      "generic-real-cart-regressions",
+      "ten-case-c2-playability",
+      "local-screenshot-review",
+      "aggregate-only-exit"
+    ],
+    "excluded": [
+      "bbs-crawler",
+      "automated-cart-download",
+      "arbitrary-url-resolver",
+      "host-filesystem-resolver",
+      "third-party-content-redistribution",
+      "tracked-third-party-cart-fixtures",
+      "tracked-third-party-screenshots",
+      "cart-specific-runtime-hacks",
+      "non-chrome-browser-gate",
+      "mobile-release-claim",
+      "public-third-party-compatibility-rate"
+    ]
+  },
+  "phaseExitGate": {
+    "canonicalCasesClassified": 100,
+    "inProfileChromeSmoke": "all",
+    "formatPairsQualified": 65,
+    "minimumC2Cases": 10,
+    "screenshotReviewRequired": true,
+    "openP0": 0,
+    "openP1": 0,
+    "trackedThirdPartyCartBytes": false,
+    "trackedThirdPartyScreenshots": false,
+    "trackedThirdPartyPerCartResults": false,
+    "publicCompatibilityRate": false,
+    "networkAccess": false,
+    "testRelease": "pass",
+    "fullVerify": "pass"
+  },
+  "completedWorkUnits": ["8A"],
+  "activeWorkUnit": "8B",
+  "nextWorkUnit": "8B",
+  "nextPhase": "deferred",
+  "workUnits": {
+    "8A": {
+      "name": "Activation / Corpus Contract",
+      "status": "complete",
+      "allowedPaths": [
+        "docs/README.md",
+        "docs/05-delivery-plan.md",
+        "docs/10-reference-sources.md",
+        "docs/phases/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "tests/contract/phase-8a-activation.test.mjs",
+        "tests/contract/phase-5a-activation.test.mjs",
+        "tests/contract/phase-6a-activation.test.mjs",
+        "tests/contract/phase-7a-activation.test.mjs",
+        "tests/conformance/phase-7h-exit.test.mjs",
+        "package.json"
+      ],
+      "exit": [
+        "Phase 7 baseline files and hashes are frozen",
+        "the external source revision and aggregate 100-cart plus 65-pair selection are machine readable",
+        "ref quarantine, license uncertainty, no redistribution and aggregate-only privacy are explicit",
+        "Chrome-only smoke, screenshot review, C2 and release regression exits are measurable",
+        "docs route exactly one active work unit to 8B",
+        "the activation test is part of test and verify",
+        "the worktree is clean after a dedicated commit"
+      ],
+      "result": {
+        "productionChanged": false,
+        "networkSurfaceChanged": false,
+        "thirdPartyContentTracked": false,
+        "verification": ["pnpm run test:phase-8a"]
+      }
+    },
+    "8B": {
+      "name": "External Corpus Tooling",
+      "status": "active",
+      "allowedPaths": [
+        ".gitignore",
+        "tools/compat/",
+        "spec/compat/",
+        "tests/compat/",
+        "tests/external-corpus.example.json",
+        "docs/06-testing-compatibility.md",
+        "docs/10-reference-sources.md",
+        "docs/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "external directory discovery is deterministic and rejects ref, URL, symlink escape and tracked third-party input",
+        "canonical selection yields 100 carts and a separate 65-pair format lane at the locked source revision",
+        "runner-compatible batches and aggregate index are local-only and hash validated",
+        "project-owned tests cover selection, dedupe, bounds, quarantine and redaction",
+        "architecture tests pass and 8C becomes the only active work unit"
+      ]
+    },
+    "8C": {
+      "name": "Canonical Chrome Smoke",
+      "status": "pending",
+      "exit": [
+        "all 100 canonical carts receive a deterministic production Chrome smoke observation",
+        "boot, fault, version, framebuffer and resource outcomes are aggregated without tracked per-cart data",
+        "failures are assigned to bounded clusters and 8D becomes the only active work unit"
+      ]
+    },
+    "8D": {
+      "name": "Fault Triage / Core Fixes",
+      "status": "pending",
+      "exit": [
+        "parser, language, CPU and timing clusters have project-owned minimal reproducers",
+        "generic fixes or explicit Known Differences replace every in-scope P0/P1",
+        "no cart identity or cart-specific branch enters production and 8E becomes active"
+      ]
+    },
+    "8E": {
+      "name": "Format / Multicart Qualification",
+      "status": "pending",
+      "exit": [
+        "65 source/export pairs have decode and boot parity dispositions",
+        "multicart, graphics, audio, input and persistence risks are qualified",
+        "generic fixes have project-owned regressions and 8F becomes active"
+      ]
+    },
+    "8F": {
+      "name": "Representative Playability",
+      "status": "pending",
+      "exit": [
+        "at least 10 stratified representative cases meet C2 duration or critical-flow gates",
+        "main verbs, input, visual, audio, persistence, crash and soft-lock outcomes are reviewed",
+        "Canvas screenshots are reviewed locally and never tracked; 8G becomes active"
+      ]
+    },
+    "8G": {
+      "name": "Release Regression Requalification",
+      "status": "pending",
+      "exit": [
+        "all generic fixes pass affected conformance plus release artifact and Chrome lifecycle gates",
+        "test:release and full verify pass without external corpus or ref dependency",
+        "open P0 and P1 are zero and 8H becomes active"
+      ]
+    },
+    "8H": {
+      "name": "Aggregate Exit",
+      "status": "pending",
+      "exit": [
+        "aggregate evidence binds project source and local report hashes without cart identity, path or hash",
+        "compatibility claims distinguish smoke, C2 and Known Differences without publishing a third-party rate",
+        "the contract closes, the active phase document is removed and the repository is clean"
+      ]
+    }
+  }
+}

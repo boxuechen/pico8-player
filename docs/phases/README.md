@@ -1,8 +1,9 @@
 # Phase documents
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
-phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前没有 active phase，
-production implementation 未授权。最近完成结果见
+phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前唯一入口是
+[Phase 8 — Expanded Real-cart Qualification](./8-expanded-real-cart-qualification.md)，唯一 active work
+unit 为 8B。最近完成结果见
 [Phase 7 evidence](../evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md)。
 
 ## Activation contract

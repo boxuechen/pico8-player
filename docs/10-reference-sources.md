@@ -9,6 +9,7 @@
 | `ref/zepto8/` | <https://github.com/samhocevar/zepto8> | `b2929a4fe31e5765ef66d7794edd11086b9638b4`（`master`，detached） | 独立 emulator 行为及 compression/runtime 交叉检查 |
 | `ref/tac08/` | <https://github.com/0xcafed00d/tac08> | `38c1f3bb2ae81c06983dc5132d45f0c8747dff95`（`master`） | Phase 2E 内建字体 provenance 与 MIT notice 交叉检查 |
 | `ref/emsdk/` | <https://github.com/emscripten-core/emsdk> | `17a714fde0f1aaac53d282efcc6093b377addc8d`（detached） | Emscripten release mapping 与安装器审计；实际 toolchain 安装在 repo 外且由 `wasm/toolchain.lock.json` 锁定 |
+| `ref/pico8-games/` | <https://github.com/MiniMechMedia/pico8-games> | `9c846040438bdc649b30c115c355c8864cbba06e` | Phase 8 caller-authorized local compatibility source inventory；测试只读取仓库外副本，不把 `ref/` 作为 input |
 
 默认不初始化 submodule。只有明确、有限的调研需要时才能初始化指定 submodule，并把仓库和 commit 补记在本页。
 
@@ -38,6 +39,9 @@ git -C ref/tac08 checkout --detach 38c1f3bb2ae81c06983dc5132d45f0c8747dff95
 
 git clone https://github.com/emscripten-core/emsdk.git ref/emsdk
 git -C ref/emsdk checkout --detach 17a714fde0f1aaac53d282efcc6093b377addc8d
+
+git clone https://github.com/MiniMechMedia/pico8-games.git ref/pico8-games
+git -C ref/pico8-games checkout --detach 9c846040438bdc649b30c115c355c8864cbba06e
 ```
 
 这些命令只复现研究输入，不是 production dependency 的安装流程。clone 更新后必须同步本页；本地 `ref/README.md` 不属于 tracked source of truth。

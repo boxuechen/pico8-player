@@ -23,6 +23,7 @@
 | 5 L3 local/multicart | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
 | 6 Real-cart Qualification（6A–6H） | Complete | [Phase 6 exit](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
 | 7 Web Player Release Candidate（7A–7H） | Complete | [Phase 7 exit](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) / [contract](../spec/phase-7-web-player-release-candidate-contract.json) |
+| 8 Expanded Real-cart Qualification（8A–8H） | Active | [Phase 8](./phases/8-expanded-real-cart-qualification.md) / [contract](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
 
 Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
 corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
@@ -30,10 +31,10 @@ corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence �
 
 ## 3. 当前阶段边界
 
-Phase 7 已关闭并把既有 Runtime/profile 产品化为可重复构建、可嵌入的 Chrome/Chromium desktop
-Release Candidate；未扩大 cart 来源、网络 authority、公开第三方兼容率或浏览器范围。aggregate 结果、
-release gate 和 Known Differences 见 Phase 7 evidence 与关闭机器合同。当前没有 active phase；后续阶段
-必须先显式激活。
+Phase 8 已激活，唯一 active work unit 为 8B。它在不改变 bytes-first、Chrome-only、zero-network
+产品边界的前提下，把本地真实 cart qualification 扩展为 100 个 canonical case、65 个格式 pair 和
+至少 10 个 C2 case。执行细节和允许文件只见 active phase 文档；第三方内容与逐-cart evidence 不进入
+tracked repository。
 
 Phase 6 的 aggregate qualification、输入 hash 与 privacy boundary 继续只由关闭合同和
 [exit evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) 保存；Phase 7 不把

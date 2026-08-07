@@ -8,17 +8,15 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 7；[Web Player Release Candidate exit evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
-| 当前阶段 | 无；production implementation 未授权 |
-| Active work unit | 无 |
-| 最近关闭机器合同 | [`spec/phase-7-web-player-release-candidate-contract.json`](../spec/phase-7-web-player-release-candidate-contract.json) |
+| 当前阶段 | Phase 8；[Expanded Real-cart Qualification](./phases/8-expanded-real-cart-qualification.md) |
+| Active work unit | 8B — External Corpus Tooling |
+| 当前机器合同 | [`spec/phase-8-expanded-real-cart-qualification-contract.json`](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
 
-Phase 7A–7H 已关闭：bytes-first embed API、可重复静态 artifact、production DOM shell、VM-safe
-pause menu、required API conformance、Chrome release hardening、aggregate manifest、clean-checkout gate
-和 RC evidence 均已归档。当前没有 active phase；后续 production 修改必须先建立新的 phase 文档和机器
-合同。Roadmap、Target 示例和历史 evidence 不能单独授权实现。
+Phase 7A–7H 已关闭。Phase 8 只把 caller-authorized external corpus qualification 扩展到 100 个
+canonical logical cart 和 65 个格式 pair；第三方 bytes、截图、路径、hash 与逐-cart 结果保持本地，
+不成为 CI、release artifact 或公开兼容率。当前唯一授权工作是 8B external-corpus tooling。
 
-日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。当前无 active phase，
-因此只能做只读梳理或先激活新阶段。不要把
+日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务

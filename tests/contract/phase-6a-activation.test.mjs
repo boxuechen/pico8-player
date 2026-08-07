@@ -99,17 +99,19 @@ test("Phase 6A routes Codex and keeps local corpus paths ignored", async () => {
     assert.ok(phase.includes("不自动访问 BBS"));
   } else {
     const phase7 = await readJson("spec/phase-7-web-player-release-candidate-contract.json");
+    const phase8 = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
     assert.ok(!phaseIndex.includes("6-real-cart-qualification.md"));
-    if (phase7.status === "complete") {
+    assert.equal(phase7.status, "complete");
+    assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
+    if (phase8.status === "active") {
+      assert.match(docsReadme, /当前阶段 \| Phase 8/u);
+      assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
+      assert.ok(docsReadme.includes("81-phase-7-web-player-release-candidate-exit-evidence.md"));
+      assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
+    } else {
       assert.match(docsReadme, /当前阶段 \| 无/u);
       assert.match(docsReadme, /Active work unit \| 无/u);
       assert.ok(docsReadme.includes("81-phase-7-web-player-release-candidate-exit-evidence.md"));
-      assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
-    } else {
-      assert.match(docsReadme, /当前阶段 \| Phase 7/u);
-      assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
-      assert.ok(docsReadme.includes("71-phase-6-real-cart-qualification-exit-evidence.md"));
-      assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
     }
     await assert.rejects(
       readFile(new URL("docs/phases/6-real-cart-qualification.md", projectRoot)),
