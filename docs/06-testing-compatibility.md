@@ -695,9 +695,11 @@ surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profil
 已在 caller-authorized local bundle 中实现 root external `reload/cstore`，但不包含 URL、filesystem
 或 BBS fallback。
 
-`P4-CL-01` 覆盖 28 个已实现但仍缺 official edge vectors 的 required VM builtin；它们继续标为
-`unknown`，不能计作 official-compatible。精确 API 名单只由
-[`phase-4h-exit.json`](../tests/conformance/manifests/phase-4h-exit.json) 维护，不在 living 文档复制。
+历史 `P4-CL-01` 已由 Phase 7F 关闭：28 个 required VM builtin 均有 project-owned、manual-linked、
+real-WASM Node/Chrome 行为向量，required unknown 为 0。Q16.16 raw oracle、类型/多返回、错误、reset 与
+fresh-generation recovery 由
+[`phase-7f-required-api.json`](../tests/conformance/manifests/phase-7f-required-api.json) 锁定；这不是
+official bit-exact 或第三方 cart 成功率声明。
 
 - Conditional：`printh`、`extcmd`；`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
   Phase 7E Node/Worker/Chrome gate 完成，历史 `P6-KD-01` 已关闭。PICO-8 system menu 仍属于 player scope

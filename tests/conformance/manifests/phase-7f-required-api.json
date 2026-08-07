@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "ownership": "Project-authored PICO-8 conformance carts; no third-party, BBS, network, official binary output or ref content",
+  "target": "PICO-8 0.2.7 required API closure for the Chrome/Chromium release profile",
+  "manual": "https://www.lexaloffle.com/dl/docs/pico-8_manual.html",
+  "requiredApis": [
+    "pairs",
+    "max", "min", "mid", "flr", "ceil", "cos", "sin", "atan2", "sqrt", "abs", "sgn",
+    "band", "bor", "bxor", "bnot", "shl", "shr", "lshr", "rotl", "rotr",
+    "setmetatable", "getmetatable", "rawset", "rawget", "rawequal", "rawlen", "select"
+  ],
+  "cases": [
+    {
+      "id": "phase-7f/math",
+      "cluster": "q16.16-math",
+      "manualSection": "API Reference: Math; Number Format and Quirks",
+      "source": "tests/conformance/carts/phase-7f/math.p8",
+      "format": "p8",
+      "mode": "callback",
+      "targetFps": 60,
+      "sourceSha256": "a3fc431140293772f2f8e7eeab3a672d719e90e3c7001d5a1000cdaaefca2c26",
+      "cartSha256": "a3fc431140293772f2f8e7eeab3a672d719e90e3c7001d5a1000cdaaefca2c26",
+      "instructionBudget": 200000,
+      "apis": ["max", "min", "mid", "flr", "ceil", "cos", "sin", "atan2", "sqrt", "abs", "sgn"],
+      "apiVectors": [
+        { "api": "max", "offsets": [0, 72], "inputs": ["negative/positive", "nil default"], "returnType": "number" },
+        { "api": "min", "offsets": [4, 76], "inputs": ["negative/positive", "nil default"], "returnType": "number" },
+        { "api": "mid", "offsets": [8], "inputs": ["unsorted triple"], "returnType": "number" },
+        { "api": "flr", "offsets": [12, 16], "inputs": ["positive fraction", "negative fraction"], "returnType": "number" },
+        { "api": "ceil", "offsets": [20, 24], "inputs": ["positive fraction", "negative fraction"], "returnType": "number" },
+        { "api": "cos", "offsets": [28, 32], "inputs": ["zero turns", "quarter turn"], "returnType": "number" },
+        { "api": "sin", "offsets": [36, 40], "inputs": ["inverted quarter turn", "three-quarter turn"], "returnType": "number" },
+        { "api": "atan2", "offsets": [44], "inputs": ["screen-space axis"], "returnType": "number" },
+        { "api": "sqrt", "offsets": [48, 52], "inputs": ["perfect square", "negative domain"], "returnType": "number" },
+        { "api": "abs", "offsets": [56, 60, 80], "inputs": ["negative fraction", "minimum raw number", "non-number default"], "returnType": "number" },
+        { "api": "sgn", "offsets": [64, 68, 84], "inputs": ["negative fraction", "zero quirk", "non-number default"], "returnType": "number" }
+      ],
+      "expected": {
+        "address": 24576,
+        "length": 88,
+        "hex": "000003000000feff00000700000004000000fdff000005000000feff00000100000000000000ffff0000010000400000000003000000000000800200ffffff7f0000ffff0000010000000200000000000000000000000100",
+        "rawWords": [
+          "0x00030000", "0xfffe0000", "0x00070000", "0x00040000", "0xfffd0000", "0x00050000",
+          "0xfffe0000", "0x00010000", "0x00000000", "0xffff0000", "0x00010000", "0x00004000",
+          "0x00030000", "0x00000000", "0x00028000", "0x7fffffff", "0xffff0000", "0x00010000",
+          "0x00020000", "0x00000000", "0x00000000", "0x00010000"
+        ],
+        "screenSha256": "8f2616ee131d8c7f42fdab1c0c3431f7d483644ce2146d6891aa8d147da9d158"
+      }
+    },
+    {
+      "id": "phase-7f/bitwise",
+      "cluster": "raw-q16.16-bitwise",
+      "manualSection": "API Reference: Bitwise Operations",
+      "source": "tests/conformance/carts/phase-7f/bitwise.p8",
+      "format": "p8",
+      "mode": "callback",
+      "targetFps": 60,
+      "sourceSha256": "9679f2d06f5777b358337e8b9a109f5f2f7cb7c7b08fae015ac2aa4dd99411ee",
+      "cartSha256": "9679f2d06f5777b358337e8b9a109f5f2f7cb7c7b08fae015ac2aa4dd99411ee",
+      "instructionBudget": 200000,
+      "apis": ["band", "bor", "bxor", "bnot", "shl", "shr", "lshr", "rotl", "rotr"],
+      "apiVectors": [
+        { "api": "band", "offsets": [0, 68], "inputs": ["raw mask", "non-number default"], "returnType": "number" },
+        { "api": "bor", "offsets": [4], "inputs": ["raw mask"], "returnType": "number" },
+        { "api": "bxor", "offsets": [8], "inputs": ["raw mask"], "returnType": "number" },
+        { "api": "bnot", "offsets": [12, 76], "inputs": ["raw complement", "missing default"], "returnType": "number" },
+        { "api": "shl", "offsets": [16, 36, 56, 72], "inputs": ["positive count", "negative count", "count 32", "non-number count"], "returnType": "number" },
+        { "api": "shr", "offsets": [20, 40, 60], "inputs": ["arithmetic sign extension", "negative count", "count 32 clamp"], "returnType": "number" },
+        { "api": "lshr", "offsets": [24, 44, 64], "inputs": ["logical zero fill", "negative count", "count 32"], "returnType": "number" },
+        { "api": "rotl", "offsets": [28, 48], "inputs": ["positive count", "count modulo 32"], "returnType": "number" },
+        { "api": "rotr", "offsets": [32, 52], "inputs": ["positive count", "negative count"], "returnType": "number" }
+      ],
+      "expected": {
+        "address": 24576,
+        "length": 80,
+        "hex": "78003400ff56ff128756cb1287a9cbed80674523000000c0000000401278563456341278008000000000020000000200127856341278563400000000ffffffff000000000000000000000100ffffffff",
+        "rawWords": [
+          "0x00340078", "0x12ff56ff", "0x12cb5687", "0xedcba987", "0x23456780",
+          "0xc0000000", "0x40000000", "0x34567812", "0x78123456", "0x00008000",
+          "0x00020000", "0x00020000", "0x34567812", "0x34567812", "0x00000000",
+          "0xffffffff", "0x00000000", "0x00000000", "0x00010000", "0xffffffff"
+        ],
+        "screenSha256": "5b80e40e023d25a54abfb02b1a16ff570ef07a1704be3069f61dfa60a7c13bb2"
+      }
+    },
+    {
+      "id": "phase-7f/lua-base",
+      "cluster": "pairs-metatable-raw-select",
+      "manualSection": "P8 Lua: Tables, Metatables and Raw Access",
+      "source": "tests/conformance/carts/phase-7f/lua-base.p8",
+      "format": "p8",
+      "mode": "callback",
+      "targetFps": 60,
+      "sourceSha256": "ff7c9524a44ecace8e807c8b1cabb4c53f671a2b8ed0dc6971f294c04add934e",
+      "cartSha256": "ff7c9524a44ecace8e807c8b1cabb4c53f671a2b8ed0dc6971f294c04add934e",
+      "instructionBudget": 200000,
+      "apis": ["pairs", "setmetatable", "getmetatable", "rawset", "rawget", "rawequal", "rawlen", "select"],
+      "apiVectors": [
+        { "api": "pairs", "offsets": [0, 1, 2, 3, 4, 5, 6, 7, 8], "inputs": ["mixed-key table without order assumption", "empty", "nil", "__pairs", "invalid type"], "returnShape": "iterator,state,initial; iterator key,value" },
+        { "api": "setmetatable", "offsets": [9, 11, 13, 14], "inputs": ["set", "clear", "protected", "invalid receiver"], "returnShape": "table or error" },
+        { "api": "getmetatable", "offsets": [10, 11, 12], "inputs": ["identity", "nil", "protected value"], "returnShape": "table, nil or protected value" },
+        { "api": "rawget", "offsets": [15, 16, 17], "inputs": ["bypass __index", "value set without __newindex", "invalid receiver"], "returnShape": "value or error" },
+        { "api": "rawset", "offsets": [16, 18], "inputs": ["bypass __newindex and return identity", "invalid receiver"], "returnShape": "table or error" },
+        { "api": "rawequal", "offsets": [19], "inputs": ["bypass __eq and preserve identity"], "returnType": "boolean" },
+        { "api": "rawlen", "offsets": [20, 21, 22], "inputs": ["bypass __len", "embedded-NUL string byte length", "invalid type"], "returnShape": "number or error" },
+        { "api": "select", "offsets": [23, 24, 25, 26, 27, 28, 29, 30], "inputs": ["# count with nil", "positive index multi-return", "negative index", "past end", "zero error", "negative out-of-range error"], "returnShape": "zero or multiple values, or error" }
+      ],
+      "expected": {
+        "address": 24576,
+        "length": 32,
+        "hex": "03210301000001010101010101010101010101010101010302011e1e00010100",
+        "screenSha256": "c470483af6e65da44cc9c50f9884bc0a814951446d7ae0e499f41f743f5faf9c"
+      }
+    }
+  ],
+  "faultCase": {
+    "id": "phase-7f/select-fault",
+    "manualSection": "P8 Lua: SELECT",
+    "source": "tests/conformance/carts/phase-7f/runtime-fault.p8",
+    "sourceSha256": "6e03e5bdb60cc59c00a5c26a4e37d6e48c6ddaa7bb22fa9a88cee7cb4937592e",
+    "cartSha256": "6e03e5bdb60cc59c00a5c26a4e37d6e48c6ddaa7bb22fa9a88cee7cb4937592e",
+    "instructionBudget": 200000,
+    "expectedCode": "E_VM_RUNTIME",
+    "expectedMessage": "index out of range"
+  },
+  "partialModes": {
+    "flip": {
+      "supported": ["root custom-loop suspension and continuation"],
+      "knownDifferences": ["P5-KD-01 nested-host-suspend: guest coroutine flip has zero side effects and faults closed"],
+      "evidence": ["tests/runtime/phase-5f-coroutine-policy.test.mjs", "tests/conformance/manifests/phase-4f-cpu-scheduler.json"]
+    },
+    "stat": {
+      "supported": ["1", "6", "7", "20", "30", "31", "32", "33", "34", "36", "38", "39"],
+      "knownDifferences": ["selector 0 and all unlisted selectors return false"],
+      "evidence": ["tests/runtime/phase-6d-stat20.test.mjs", "tests/runtime/phase-3d-devkit-input.test.mjs", "tests/conformance/manifests/phase-4f-cpu-scheduler.json", "tests/runtime/phase-5d-guest-load.test.mjs"]
+    },
+    "print": {
+      "supported": ["ordinary visual text", "P8SCII control stream", "custom font", "synchronous audio control"],
+      "knownDifferences": ["P4-KD-03 timed print delays do not suspend root execution"],
+      "evidence": ["tests/runtime/phase-2e-p8scii.test.mjs", "tests/runtime/phase-3b-music-audio.test.mjs"]
+    },
+    "menuitem": {
+      "supported": ["Phase 7E VM-local five-slot registration and DOM pause-menu invocation"],
+      "knownDifferences": [],
+      "evidence": ["tests/runtime/phase-7e-menuitem-invocation.test.mjs", "tests/runtime/phase-7e-menu-runtime.test.mjs", "tools/browser/run-phase-7e.mjs"]
+    }
+  }
+}

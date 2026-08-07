@@ -116,9 +116,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E"],
-  "activeWorkUnit": "7F",
-  "nextWorkUnit": "7F",
+  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E", "7F"],
+  "activeWorkUnit": "7G",
+  "nextWorkUnit": "7G",
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -346,7 +346,7 @@
     },
     "7F": {
       "name": "Required API Conformance Closure",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/z8lua/lbaselib.c",
         "wasm/z8lua/lmathlib.c",
@@ -389,11 +389,63 @@
         "no required release mode remains unknown and no status is upgraded without behavior evidence",
         "Node and Chrome conformance gates pass",
         "pnpm run verify passes and 7G becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "manifest": "tests/conformance/manifests/phase-7f-required-api.json",
+        "manifestSha256": "e9cc785434babdbf11f57a0aa9a0084bdcee6dc70246adcfbe0b94e1befce7b8",
+        "projectCarts": 3,
+        "requiredApisClosed": 28,
+        "currentCompatibility": {
+          "compatibleApis": 101,
+          "unknownRequired": 0,
+          "partialApis": ["flip", "stat", "print"]
+        },
+        "productionChanged": false,
+        "abiChanged": false,
+        "runtimeArtifactChanged": false,
+        "node": "real-WASM raw/byte/type/multi-return/error/reset and fresh-generation recovery",
+        "chrome": "same three carts through the production Worker with exact screen hashes and structured fault recovery",
+        "networkSurfaceChanged": false,
+        "publicationPerformed": false,
+        "verification": ["pnpm run test:phase-7f", "pnpm run verify"]
+      }
     },
     "7G": {
       "name": "Chrome Release Hardening",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "apps/web-player/src/main/",
+        "apps/web-player/src/transport/",
+        "apps/web-player/src/worker/",
+        "apps/web-player/src/worklet/",
+        "apps/web-player/src/release/",
+        "apps/web-player/public/",
+        "apps/web-player/package.json",
+        "packages/contracts/src/",
+        "packages/runtime-core/src/",
+        "packages/z8lua-bridge/src/",
+        "spec/release-artifact-contract.json",
+        "spec/phase-7-web-player-release-candidate-contract.json",
+        "tests/artifact/phase-7g-*",
+        "tests/browser/phase-7g.*",
+        "tests/conformance/carts/phase-7g/",
+        "tests/conformance/manifests/phase-7g-*",
+        "tests/conformance/phase-7g-*",
+        "tests/runtime/phase-7g-*",
+        "tests/helpers/",
+        "tools/browser/run-phase-7g.mjs",
+        "tools/browser/phase-7g/",
+        "tools/release/",
+        "docs/02-system-architecture.md",
+        "docs/04-typescript-runtime.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/7-web-player-release-candidate.md",
+        "package.json"
+      ],
       "exit": [
         "Chrome stable and the fixed Chromium runner cover HTTP MIME, CSP, non-isolated mode and relative base paths",
         "Audio unlock, 44.1/48 kHz, suspend/resume and persistence denied/quota paths recover visibly",

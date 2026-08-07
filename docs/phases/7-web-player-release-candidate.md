@@ -1,7 +1,7 @@
 # Phase 7 — Web Player Release Candidate
 
 > 状态：Active
-> Active work unit：7F — Required API Conformance Closure
+> Active work unit：7G — Chrome Release Hardening
 > 机器合同：[`spec/phase-7-web-player-release-candidate-contract.json`](../../spec/phase-7-web-player-release-candidate-contract.json)
 > 基线：Phase 6 exit commit `117882a8bbd368ea8d8ebea2a2145d8f71152ec3`
 
@@ -77,61 +77,67 @@ watchdog 和资源回收都有 real-WASM/Worker/Chrome 行为证据。`menuitem`
 
 验证：`pnpm run test:phase-7e`、受影响回归、`pnpm run verify`。
 
-## 8. 当前工作：7F Required API Conformance Closure
+## 8. 已完成：7F Required API Conformance Closure
 
-### 8.1 目标与证据边界
+7F 用三个 project-owned、manual-linked cart 在同一 real-WASM / production Worker 路径关闭了历史
+`P4-CL-01`。28 个 required unknown API 现均为 compatible；Q16.16 raw word、类型/多返回、metatable/raw
+bypass、无序 `pairs` 聚合、reset replay、invalid `select` fault 与 fresh-generation recovery 均由
+[`phase-7f-required-api.json`](../../tests/conformance/manifests/phase-7f-required-api.json) 锁定。没有行为向量
+失败，因此未修改 z8lua、bridge、RuntimeCore 或 ABI。
 
-- 关闭历史 `P4-CL-01`：28 个 required/implemented/unknown API 必须各有 project-owned、manual-linked、
-  real-WASM 行为向量，不能用“当前能调用”或 inventory 改标签替代 conformance。
-- 当前唯一清单是：`pairs`；`max/min/mid/flr/ceil/cos/sin/atan2/sqrt/abs/sgn`；
-  `band/bor/bxor/bnot/shl/shr/lshr/rotl/rotr`；以及
-  `setmetatable/getmetatable/rawset/rawget/rawequal/rawlen/select`。
-- 每个向量固定 cart source/hash、PICO-8 0.2.7 manual section、输入类型与 Q16.16 raw oracle、返回数量/
-  类型、error behavior、reset replay 和 Node/Chrome 结果。第三方 cart、官方二进制 output 和参考实现
-  不能成为 tracked oracle。
-- 先写 failing conformance vector，再修改 production；没有失败证据时只允许补测试和 inventory evidence。
+剩余 partial 只包含 `flip`、`stat`、`print`；各自 supported modes 与 `P5-KD-01`、selector subset、
+`P4-KD-03` 已精确记录。`menuitem` 保持 7E compatible 回归，required unknown 为 0。
 
-### 8.2 四个实现簇
+验证：`pnpm run test:phase-7f`、`pnpm run verify`。
 
-1. **Table iteration**：验证 `pairs(table)`、empty/nil、iteration termination、key/value 多返回和
-   `__pairs` 行为；不能依赖宿主 JS key order，也不能把 Lua table 跨 WASM 边界。
-2. **Q16.16 math**：覆盖正常值、负数、边界/overflow、角度方向与周期、零和 invalid-domain 行为；
-   三角函数使用 raw Q16 oracle，禁止以 browser `Math.*` 作为运行时真值。
-3. **Bitwise**：覆盖多参数/default、32-bit mask、负值、shift count normalization、logical/arithmetic
-   shift、rotate 与 Q16.16 raw bit pattern；结果必须来自 z8lua VM，不新增 host binding。
-4. **Lua base/raw surface**：覆盖 metatable 保护/查询、raw bypass、identity、string/table raw length、
-   `select("#", ...)`、正负 index、多返回和 invalid index error；不开放 debug/package/io/os library。
+## 9. 当前工作：7G Chrome Release Hardening
 
-修复优先落在对应 z8lua builtin/base implementation；只有向量证明跨 Runtime transaction 的真实缺陷时，
-才允许触及 bridge/RuntimeCore。不得加入 cart-specific 分支、JS math fallback 或新网络/文件 authority。
+### 9.1 目标与输入边界
 
-### 8.3 Partial-mode closure
+- 对 7C release artifact 和 7D/7E public shell 做 release hardening，不新增 cart API、网络 authority、
+  浏览器或移动端范围；测试 cart 只用 project-owned bytes。
+- 建立 versioned 7G gate manifest，固定 Chrome/Chromium-only matrix、project carts、artifact/provenance
+  hashes、测量方法、性能/resource budgets 和每个 gate 的 fail-closed 条件。动态临时 profile、trace、截图
+  和第三方内容不得提交。
+- 先用自动化复现失败，再修改对应 owner；UI/lifecycle 修复留在 app main，Worker recovery 留在 transport/
+  composition root，simulation 修复才进入 RuntimeCore。不得用测试专用 production branch 跳过失败。
 
-- `flip`：分别记录 root custom-loop compatible mode 与 ADR-019 nested suspension Known Difference；不得把
-  nested guest coroutine 伪装为成功。
-- `stat`：为当前 release-required selector 建显式向量，并把未支持 selector 精确留在 Known Difference；
-  不能用统一 `false` 测试掩盖应支持 selector。
-- `print`：分别证明普通/visual/custom-font/audio control；timed delay 若仍无 root suspension contract，
-  保持 `P4-KD-03`，不得仅改成 compatible。
-- `menuitem` 只做 7E 回归，不重复扩张 system menu 范围。完成后 inventory 必须满足 required unknown 为
-  0；remaining partial modes 都必须有精确 supported/unsupported evidence。
+### 9.2 Release/browser matrix
 
-### 8.4 自动化与验收
+1. **Artifact boot**：复用 stable manifest keys，在 Chrome stable/fixed runner 上覆盖正确/错误 WASM MIME、
+   strict CSP、non-cross-origin-isolated、nested relative base 和无网络 cart authority；验证 fallback 不重复启动。
+2. **Audio/persistence recovery**：production AudioContext/AudioWorklet 分别在 44.1 kHz、48 kHz 覆盖 unlock、
+   suspend/resume、mute 与 dispose；IndexedDB denied/quota/blocked 结果必须结构化、用户可见、可继续运行且不
+   污染下一 generation。
+3. **Page lifecycle**：覆盖 visibility、blur、pagehide/pageshow（含 bfcache 语义）、fullscreen、整数 resize、
+   reduced motion 和多实例 teardown；隐藏/恢复不得积压 simulation burst 或留下 input/audio state。
 
-- 建立一个 versioned 7F manifest 和小型 project-owned carts；Node runner 在真实 release WASM 上输出
-  byte/raw/type/error oracle，Chrome runner 通过 production Worker 对同一 carts 复核，不复制第二套语义。
-- contract test 必须检查 28 个 API 一一覆盖、manual link 存在、manifest/cart hash 锁定、inventory evidence
-  可达，以及 required unknown 计数为 0；negative vector 必须证明错误不会污染下一 generation。
-- 对 production 修复运行对应 cluster test、WASM reproducibility、Phase 4C/4D/6G/7E 回归；最终运行
-  `pnpm run test:phase-7f` 与 `pnpm run verify`。
-- 验证通过后独立提交，把唯一 active work unit 切到 7G；7F 不执行 600-second soak、fuzz/provenance
-  aggregate、外部发布、网络/BBS cart 或 non-Chrome 测试。
+### 9.3 Recovery、soak 与安全预算
 
-## 9. 后续 units
+- 运行 20 个 fault/hang/Worker-termination/recreate cycle；每轮 generation、frame/audio/state 必须隔离，最后
+  仅一个 active instance，旧 Worker/AudioContext/listener/RAF 不可继续输出。
+- 用 project-owned 60 Hz representative cart 运行 600 秒 Chrome desktop wall-clock soak；记录 committed
+  frames、scheduler backlog、audio queue/underrun、command latency、JS/WASM memory 和 teardown result。
+  `audioUnderruns=0` 是硬门禁，其他数值必须在 manifest 预先公布的预算内，不能测后放宽。
+- 对 public byte ingress、DOM local file/drop metadata、Worker command/generation 和 persistence result 做
+  deterministic bounded fuzz；超限/畸形输入只能得到结构化拒绝，不得 crash、hang、stale commit 或联网。
+- provenance audit 重新验证 release allowlist、source/artifact hashes、license boundary、无 `ref/`/local corpus/
+  third-party output、无绝对路径和无 publication side effect。
+
+### 9.4 自动化与验收
+
+- `test:phase-7g` 是单一 gate：release matrix、lifecycle/audio/persistence、20-cycle recovery、fuzz、artifact
+  audit 和 600-second soak 都必须真实运行；可提供仅供定位的子命令，但不能以短测结果代替 exit。
+- runner 输出一个无 cart identity/路径的 aggregate result；contract test 检查 gate completeness、预算先验、
+  Chrome version、artifact/input hash、zero underrun、zero stale output、resource teardown 和 provenance。
+- 运行受影响的 7B–7F regression 与 `pnpm run verify`。验证通过后独立提交并只激活 7H。
+- 7G 不写 RC exit evidence、不创建 `test:release`、不删除 active phase 文档，也不执行 npm/网站/GitHub
+  publication。
+
+## 10. 后续 unit
 
 | Unit | 结果边界 |
 | --- | --- |
-| 7G | Chrome release matrix、20-cycle recovery、600-second soak、perf/fuzz/provenance |
 | 7H | aggregate RC manifest/evidence、`test:release`、关闭合同且不执行外部发布 |
 
 每个 unit 完成后必须把结果压缩进机器合同、更新本页唯一 active work unit、运行与影响面相称的
