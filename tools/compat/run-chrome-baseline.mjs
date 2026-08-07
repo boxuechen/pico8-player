@@ -47,10 +47,11 @@ export async function runChromeBaseline({
   manifestPath,
   observationsPath,
   screenshotsDirectory,
+  expectedCaseCount = 12,
 }) {
   const corpus = await loadLocalCorpusManifest({ manifestPath, projectRoot });
-  if (corpus.entries.length !== 12) {
-    throw new Error("E_PHASE6C_CASE_COUNT: Phase 6C requires exactly 12 cases");
+  if (expectedCaseCount !== null && corpus.entries.length !== expectedCaseCount) {
+    throw new Error(`E_PHASE6C_CASE_COUNT: Phase 6C requires exactly ${expectedCaseCount} cases`);
   }
   const safeObservations = assertSafeLocalObservationsPath(observationsPath, projectRoot);
   const screenshotProbe = assertSafeLocalOutputPath(

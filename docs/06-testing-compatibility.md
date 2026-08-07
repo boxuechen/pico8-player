@@ -164,6 +164,18 @@ release gate 固定 Chrome/Chromium desktop、caller-provided bytes、zero netwo
 audio underrun、zero stale output 和完整 Worker/RAF/listener/AudioContext teardown。它不访问 BBS、不读取
 `ref/`/local corpus、不提交 ignored build output，也不执行 registry、网站或 GitHub Release publication。
 
+### 3.5 Expanded local real-cart gate
+
+Phase 8 使用 `prepare:phase-8:local` 从**仓库外**的 caller-authorized checkout 生成 deterministic local
+index、两个 50-case canonical batch 和三个 44/44/42-case format-pair batch。工具拒绝 URL、repository/
+`ref/` path、symlink escape、revision/inventory drift 和超过 64 cases 的 runner batch；Phase 6 的旧入口
+继续严格要求 12 cases。
+
+`qualification:phase-8:chrome` 对单个 local batch 运行 production Chrome fixed-tick smoke，并把 screenshot
+与 observation 写到仓库外。100-cart aggregate、65-pair parity 和 C2 review 只能从这些 local artifacts
+生成；`pnpm run verify`、CI 和 release artifact 不读取它们。tracked test 仅使用运行时生成的项目原创
+fixture 验证 discovery、selection、dedupe、batch、hash 和 path quarantine。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：

@@ -22,12 +22,13 @@
     "userAuthorizedLocalResearch": true,
     "rootLicensePresent": false,
     "topLevelProjects": 71,
-    "cartFiles": 168,
-    "p8Files": 98,
+    "cartFiles": 167,
+    "p8Files": 97,
     "p8PngFiles": 70,
-    "byteUniqueFiles": 167,
+    "byteUniqueFiles": 166,
     "canonicalLogicalCarts": 100,
     "formatPairs": 65,
+    "corpusFingerprint": "941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c",
     "explicitCcByNcSaTopLevelProjects": 23,
     "trackedPerCartIdentity": false,
     "trackedPerCartHash": false,
@@ -106,9 +107,9 @@
     "testRelease": "pass",
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["8A"],
-  "activeWorkUnit": "8B",
-  "nextWorkUnit": "8B",
+  "completedWorkUnits": ["8A", "8B"],
+  "activeWorkUnit": "8C",
+  "nextWorkUnit": "8C",
   "nextPhase": "deferred",
   "workUnits": {
     "8A": {
@@ -146,12 +147,13 @@
     },
     "8B": {
       "name": "External Corpus Tooling",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         ".gitignore",
         "tools/compat/",
         "spec/compat/",
         "tests/compat/",
+        "tests/conformance/phase-6h-exit.test.mjs",
         "tests/external-corpus.example.json",
         "docs/06-testing-compatibility.md",
         "docs/10-reference-sources.md",
@@ -166,11 +168,35 @@
         "runner-compatible batches and aggregate index are local-only and hash validated",
         "project-owned tests cover selection, dedupe, bounds, quarantine and redaction",
         "architecture tests pass and 8C becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "inventoryCorrection": "root untitled.p8 is outside carts and excluded",
+        "cartFiles": 167,
+        "logicalIdentities": 101,
+        "canonicalCases": 100,
+        "formatPairs": 65,
+        "canonicalBatchCases": [50, 50],
+        "formatPairBatchCases": [44, 44, 42],
+        "corpusFingerprint": "941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c",
+        "productionChanged": false,
+        "networkAccess": false,
+        "thirdPartyContentTracked": false,
+        "verification": ["pnpm run test:phase-8b", "pnpm run test:architecture"]
+      }
     },
     "8C": {
       "name": "Canonical Chrome Smoke",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "tools/compat/",
+        "spec/compat/",
+        "tests/compat/",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "package.json"
+      ],
       "exit": [
         "all 100 canonical carts receive a deterministic production Chrome smoke observation",
         "boot, fault, version, framebuffer and resource outcomes are aggregated without tracked per-cart data",

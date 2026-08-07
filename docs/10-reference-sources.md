@@ -46,6 +46,18 @@ git -C ref/pico8-games checkout --detach 9c846040438bdc649b30c115c355c8864cbba06
 
 这些命令只复现研究输入，不是 production dependency 的安装流程。clone 更新后必须同步本页；本地 `ref/README.md` 不属于 tracked source of truth。
 
+## Phase 8 external compatibility source
+
+用户明确授权把 `MiniMechMedia/pico8-games` 用于本地兼容研究。锁定 checkout 的 `carts/` 含 71 个顶层
+项目、167 个 cart 文件（97 `.p8`、70 `.p8.png`）、166 份 byte-unique 输入、101 个
+`project + basename` identity；去掉一份 byte-identical template 后得到 100 个 canonical cart，其中
+65 个具有双格式 pair。仓库根部的 `untitled.p8` 是开发模板，不属于 `carts/`，不进入分母。
+
+该 upstream 没有 root license，只有 23 个顶层项目在各自 README 明确写出 CC BY-NC-SA 4.0；因此本
+登记只证明 caller-authorized local research，不授予再分发。Phase 8 实际 runner 只读取仓库外的临时
+checkout；`ref/pico8-games` 只用于 revision/provenance 盘点，cart bytes、截图、路径、hash 和逐-cart
+结果不进入 tracked source、CI 或 release artifact。
+
 ## Phase 0D cart-codec 交叉检查记录
 
 Phase 0D 在设计 raw/legacy/PXA contract 时检查了以下锁定路径：

@@ -1,7 +1,7 @@
 # Phase 8 — Expanded Real-cart Qualification
 
 > 状态：Active
-> Active work unit：8B — External Corpus Tooling
+> Active work unit：8C — Canonical Chrome Smoke
 > 机器合同：[`spec/phase-8-expanded-real-cart-qualification-contract.json`](../../spec/phase-8-expanded-real-cart-qualification-contract.json)
 > 基线：Phase 7 exit commit `49b24ad32b54d14d4678ebd5b7225d3a9bec668e`
 
@@ -34,60 +34,53 @@ BBS/URL/host-filesystem authority，不发布第三方 cart、截图、路径、
 | Unit | 状态 | 可观察结果 |
 | --- | --- | --- |
 | 8A Activation / Corpus Contract | Complete | Phase 7 baseline、100-cart/65-pair 口径、许可/隐私边界和退出门禁锁定 |
-| 8B External Corpus Tooling | **Active** | 仓库外 discovery、canonical selection、batch manifest、aggregate validator 可重复生成 |
-| 8C Canonical Chrome Smoke | Pending | 100 个 canonical cart 完成 fixed-tick Chrome production smoke 与失败簇聚合 |
+| 8B External Corpus Tooling | Complete | 仓库外 discovery、canonical selection、batch manifest、aggregate validator 可重复生成 |
+| 8C Canonical Chrome Smoke | **Active** | 100 个 canonical cart 完成 fixed-tick Chrome production smoke 与失败簇聚合 |
 | 8D Fault Triage / Core Fixes | Pending | 高频 parser/language/CPU/timing 问题由原创复现关闭或登记 Known Difference |
 | 8E Format / Multicart Qualification | Pending | 65 组格式配对及 multicart、graphics/audio/input/persistence 风险完成定性 |
 | 8F Representative Playability | Pending | 至少 10 个分层代表 case 完成 C2，截图本地人工审阅 |
 | 8G Release Regression Requalification | Pending | 所有修复通过 RC、资源回收、确定性和 clean tracked-input 回归 |
 | 8H Aggregate Exit | Pending | aggregate-only evidence、兼容口径与机器合同关闭 |
 
-## 4. 当前工作：8B External Corpus Tooling
+## 4. 已完成：8B External Corpus Tooling
 
-### 4.1 Observable behavior
+8B 建立仓库外 deterministic discovery、canonical selection、format pairing 和 runner-compatible batching。
+干净 checkout 事实为 167 个 `carts/` 输入、101 个 logical identity、100 canonical、65 pairs；两个
+canonical batch 为 50/50，三个 pair batch 为 44/44/42。稳定 corpus fingerprint 为
+`941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c`。Phase 6 默认仍严格为 12 cases，
+Phase 8 wrapper 才允许 12–64 cases。验证：`pnpm run test:phase-8b`、`pnpm run test:architecture`。
 
-- 新建 Phase 8 external-corpus discovery/aggregation 工具；输入必须是仓库外的本地目录，`ref/**`、URL、
-  symlink escape 和 tracked third-party corpus 必须 fail closed。
-- 按 `top-level project + cart basename` 建立 logical identity，优先选择 `export/*.p8.png`，否则选择
-  `.p8.png` 或 `.p8`；排除 byte-identical duplicate，并保留 65 个双格式 pair 的独立 parity lane。
-- 100 个 canonical cart 分成不超过 v1 runner 上限的 deterministic batches；manifest 记录 source revision、
-  caller authorization、cart hash、target Runtime、固定 trace，但输出保持本地且 gitignored。
-- aggregate index 只在本地包含逐-cart路径/identity；tracked contract/test 只断言 schema、limits、去重、
-  determinism、path quarantine 和 aggregate counts。
+## 5. 当前工作：8C Canonical Chrome Smoke
 
-### 4.2 允许修改
+### 5.1 Observable behavior
+
+- 从仓库外 local index 逐一运行两个 50-case canonical batch；每个 case 使用 production Worker/WASM/
+  Canvas/Audio path 执行 120 fixed ticks并保存本地 observation 与 screenshot。
+- 合并两个 batch 时必须验证 corpus fingerprint、source revision、player commit、WASM hash、Chrome version、
+  exact case coverage 和 observation schema；重复、缺失或跨环境结果 fail closed。
+- tracked 输出只允许 aggregate count、failure-cluster count、环境和 project-owned source hash；不得包含 cart
+  identity、label、path、cart hash、screen hash、fault message 或截图。
+- 8C 只分类和最小化故障，不修改 Runtime；通用 production 修复属于 8D。
+
+### 5.2 允许修改
 
 - `tools/compat/`
 - `spec/compat/`
 - `tests/compat/` 下项目原创 fixture/test
-- `tests/external-corpus.example.json`
-- `.gitignore`
-- `package.json`
 - `docs/06-testing-compatibility.md`
-- `docs/10-reference-sources.md`
 - `docs/README.md`
 - `docs/phases/8-expanded-real-cart-qualification.md`
 - `spec/phase-8-expanded-real-cart-qualification-contract.json`
+- `package.json`
 
-不得在 8B 修改 Runtime、WASM、Worker、renderer、audio 或 release artifact 行为。
+### 5.3 验证与退出
 
-### 4.3 路由合同
+- 两个 canonical batch 都完成 Chrome run，合计 exactly 100 observations；本地 screenshot count 为 100。
+- aggregate validator 输出 C0/C1/C2/C3/CU、boot/fail 和 bounded failure clusters，不泄漏 per-cart facts。
+- fault case 进入本地最小化队列；tracked 8C contract 只保存 aggregate 与 project-owned runner hashes。
+- `pnpm run test:phase-8c`、`pnpm run test:architecture` 通过；8C 独立提交后 8D 成为 active。
 
-- External corpus、C* 与隐私：[06 §15.2、§15.6](../06-testing-compatibility.md#152-cart-结果)
-- Reference quarantine：[08 §1](../08-source-layout-and-boundaries.md#1-canonical-workspace)
-- Reference provenance：[10 §边界规则](../10-reference-sources.md#边界规则)
-- Phase 6 runner baseline：[Phase 6 evidence](../evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md)
-
-### 4.4 验证与退出
-
-- `pnpm run test:phase-8b`（建立后）覆盖 deterministic selection、format pair、duplicate、bounds、URL、
-  `ref/`、symlink escape、hash 与 aggregate redaction。
-- 使用仓库外临时 clone 在当前锁定 checkout 生成两个 deterministic batch 和一个 local aggregate index；
-  canonical=`100`、format pairs=`65`、tracked cart/screenshot=`0`。
-- `pnpm run test:architecture` 继续证明没有 `ref/` 或 external corpus dependency。
-- 8B 独立提交且工作树干净后，8C 成为唯一 active work unit。
-
-## 5. Phase exit gate
+## 6. Phase exit gate
 
 - 100/100 canonical case 有 C* disposition；所有 in-profile case 完成 production Chrome fixed smoke。
 - 65 个 `.p8`/`.p8.png` pair 均完成 decode/boot parity 定性；差异必须进入 failure cluster 或 Known Difference。

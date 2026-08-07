@@ -15,11 +15,11 @@ test("Phase 8A freezes the completed Phase 7 release baseline", async () => {
   assert.equal(contract.phase, "8");
   assert.equal(contract.status, "active");
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
-  assert.deepEqual(contract.completedWorkUnits, ["8A"]);
-  assert.equal(contract.activeWorkUnit, "8B");
-  assert.equal(contract.nextWorkUnit, "8B");
+  assert.ok(contract.completedWorkUnits.includes("8A"));
+  assert.match(contract.activeWorkUnit, /^8[B-H]$/u);
+  assert.equal(contract.nextWorkUnit, contract.activeWorkUnit);
   assert.equal(contract.workUnits["8A"].status, "complete");
-  assert.equal(contract.workUnits["8B"].status, "active");
+  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
   assert.equal(
     Object.values(contract.workUnits).filter(({ status }) => status === "active").length,
     1,
@@ -37,10 +37,10 @@ test("Phase 8A locks the expanded external corpus without granting redistributio
   assert.equal(contract.externalSource.userAuthorizedLocalResearch, true);
   assert.equal(contract.externalSource.rootLicensePresent, false);
   assert.equal(contract.externalSource.topLevelProjects, 71);
-  assert.equal(contract.externalSource.cartFiles, 168);
-  assert.equal(contract.externalSource.p8Files, 98);
+  assert.equal(contract.externalSource.cartFiles, 167);
+  assert.equal(contract.externalSource.p8Files, 97);
   assert.equal(contract.externalSource.p8PngFiles, 70);
-  assert.equal(contract.externalSource.byteUniqueFiles, 167);
+  assert.equal(contract.externalSource.byteUniqueFiles, 166);
   assert.equal(contract.externalSource.canonicalLogicalCarts, 100);
   assert.equal(contract.externalSource.formatPairs, 65);
   assert.equal(contract.externalSource.explicitCcByNcSaTopLevelProjects, 23);
@@ -79,9 +79,9 @@ test("Phase 8A routes one active phase and tracks no third-party artifacts", asy
     readJson("package.json"),
   ]);
   assert.match(docsReadme, /当前阶段 \| Phase 8/u);
-  assert.match(docsReadme, /Active work unit \| 8B/u);
+  assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
   assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
-  assert.match(phase, /Active work unit：8B/u);
+  assert.match(phase, /Active work unit：8[B-H]/u);
   assert.match(phase, /100 个 canonical logical cart/u);
   assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Active/u);
   assert.ok(references.includes("MiniMechMedia/pico8-games"));

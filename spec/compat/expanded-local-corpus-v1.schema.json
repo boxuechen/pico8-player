@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.invalid/spec/compat/expanded-local-corpus-v1.schema.json",
+  "title": "Local expanded PICO-8 corpus index v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runner",
+    "targetRuntime",
+    "corpusFingerprint",
+    "source",
+    "inventory",
+    "canonical",
+    "formatPairs"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "runner": { "const": "phase-8-expanded-corpus-v1" },
+    "targetRuntime": { "const": "PICO-8 v0.2.7" },
+    "corpusFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source": {
+      "type": "object",
+      "required": ["repository", "revision", "label", "root", "permissionStatus", "redistributionAuthorized"]
+    },
+    "inventory": {
+      "type": "object",
+      "required": [
+        "topLevelProjects",
+        "cartFiles",
+        "p8Files",
+        "p8PngFiles",
+        "byteUniqueFiles",
+        "logicalIdentities",
+        "canonicalLogicalCarts",
+        "formatPairs"
+      ]
+    },
+    "canonical": {
+      "type": "object",
+      "required": ["cases", "duplicateCanonical", "batches"]
+    },
+    "formatPairs": {
+      "type": "object",
+      "required": ["pairs", "batches"]
+    }
+  }
+}
