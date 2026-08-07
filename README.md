@@ -1,25 +1,18 @@
 # PICO-8 Web Player
 
-Web-native PICO-8 player project using a z8lua WASM language core and a
-TypeScript runtime. Phase 0S–0F are complete, including shared Pico RAM,
-interop evidence, a bounded lossless `.p8.png` codec, a host-driven
-callback/custom-loop frame slice, Worker fault containment, a Canvas2D frame
-presenter, and a bounded Worker→AudioWorklet PCM transport. Browser support and
-release testing target Chrome/Chromium only. Phase 1A–1F also include the host
-API boundary, text `.p8` decoding, generation-owned CartSession cold reset, L1
-graphics/input, a bounded Worker scheduler, keyboard mapping and a minimal DOM
-player shell. The Phase 1 L1 bounded profile passed project-owned 30/60/custom-loop
-conformance and the production Chrome Worker gate. Full cart hardware, Graphics,
-AudioSynth, device/multiplayer input, persistence, resolver support and general
-third-party cart compatibility are not implemented yet.
+Chrome/Chromium-only PICO-8 v0.2.7 web player built with a z8lua WASM language core and a
+browser-neutral TypeScript RuntimeCore. The player supports `.p8` and `.p8.png`, shared Pico RAM,
+graphics, audio, keyboard/gamepad/touch input, cartdata persistence, bounded Worker execution and
+caller-authorized local multicart `load/reload/cstore`.
 
-Start with [the engineering documentation](./docs/README.md). Phase 0F's decision
-and browser evidence live in the
-[completed execution record](./docs/evidence/phase-0/17-phase-0f-evidence.md);
-all completed Phase 0 records live in the
-[evidence archive](./docs/evidence/phase-0/README.md) and are not required reading
-for each implementation task. Phase 1's bounded compatibility conclusion is in
-the [Phase 1 exit evidence](./docs/evidence/phase-1/21-phase-1-l1-exit-evidence.md).
+Phase 6 real-cart qualification is complete. Phase 7 Web Player Release Candidate is active and is
+turning the validated runtime into a reproducible static artifact with a stable bytes-first embed API,
+production DOM shell, VM-safe pause menu, conformance closure and Chrome release gates. It does not
+add automated BBS access, arbitrary URL loading, public cart mirroring or non-Chrome support.
+
+Start with [the engineering documentation](./docs/README.md). The current executable work unit is
+routed from that page; target architecture examples and historical evidence do not authorize future
+work units.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -28,7 +21,6 @@ pnpm run verify
 ```
 
 The exact emsdk manager commit and Emscripten version are documented in
-[`wasm/README.md`](./wasm/README.md); `verify` rejects a mismatched compiler.
-
-Local reference repositories live under the gitignored `ref/` directory and
-must never become production or test inputs.
+[`wasm/README.md`](./wasm/README.md); verification rejects a mismatched compiler. Local reference
+repositories and third-party playtest carts remain under gitignored paths and never become build,
+test or release inputs.

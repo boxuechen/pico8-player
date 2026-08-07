@@ -8,13 +8,14 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 6；[Real-cart qualification exit evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) |
-| 当前阶段 | 无；后续阶段尚未激活 |
-| 最近关闭合同 | [`spec/phase-6-real-cart-qualification-contract.json`](../spec/phase-6-real-cart-qualification-contract.json) |
+| 当前阶段 | Phase 7 — Web Player Release Candidate；[`docs/phases/7-web-player-release-candidate.md`](./phases/7-web-player-release-candidate.md) |
+| Active work unit | 7B — Stable Embed API |
+| 当前机器合同 | [`spec/phase-7-web-player-release-candidate-contract.json`](../spec/phase-7-web-player-release-candidate-contract.json) |
 
-Phase 6A–6H 已关闭 local-only policy、脱敏 runner、12-cart baseline、`stat(20)`、VM-local
-`menuitem()` registration、root-safe CPU slicing、language compatibility、3-case Chrome playability
-与 aggregate-only exit。当前没有 active phase；production implementation 默认未授权，直到新的
-phase 文档与机器合同显式激活。roadmap、Target 示例和历史 evidence 不能单独授权后续 work unit。
+Phase 6A–6H 已关闭 local real-cart qualification。Phase 7A 已冻结 bytes-first、local-only、
+Chrome/Chromium desktop Release Candidate 合同；当前唯一授权工作是 7B stable embed API。7C–7H
+只有在前一 unit 验证、提交并由机器合同显式激活后才获得 production implementation 授权；roadmap、
+Target 示例和历史 evidence 不能单独授权后续 work unit。
 
 日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

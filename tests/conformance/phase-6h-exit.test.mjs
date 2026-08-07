@@ -155,8 +155,10 @@ test("Phase 6 contract, evidence, roadmap and active route are closed", async ()
   assert.ok(evidence.includes(exit.target));
   for (const id of exit.knownDifferences) assert.ok(evidence.includes(id), id);
   assert.ok(docsReadme.includes("71-phase-6-real-cart-qualification-exit-evidence.md"));
-  assert.ok(!docsReadme.includes("Active work unit |"));
+  assert.match(docsReadme, /当前阶段 \| Phase 7/u);
+  assert.match(docsReadme, /Active work unit \| 7B/u);
   assert.ok(!phaseIndex.includes("6-real-cart-qualification.md"));
+  assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
   assert.ok(roadmap.includes("Phase 6 exit"));
   assert.ok(compatibility.includes(exit.target));
   assert.ok(packageJson.scripts.test.includes("test:phase-6h"));

@@ -99,8 +99,10 @@ test("Phase 6A routes Codex and keeps local corpus paths ignored", async () => {
     assert.ok(phase.includes("不自动访问 BBS"));
   } else {
     assert.ok(docsReadme.includes("71-phase-6-real-cart-qualification-exit-evidence.md"));
-    assert.ok(!docsReadme.includes("Active work unit |"));
+    assert.match(docsReadme, /当前阶段 \| Phase 7/u);
+    assert.match(docsReadme, /Active work unit \| 7B/u);
     assert.ok(!phaseIndex.includes("6-real-cart-qualification.md"));
+    assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
     await assert.rejects(
       readFile(new URL("docs/phases/6-real-cart-qualification.md", projectRoot)),
       { code: "ENOENT" },

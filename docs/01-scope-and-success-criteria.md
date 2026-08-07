@@ -86,7 +86,9 @@ Differences。它不表示 official bit-exact、第三方/BBS cart 成功率、�
 [兼容性当前口径](./06-testing-compatibility.md#154-当前发布-profile)和
 [L3 exit evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)维护。
 
-当前没有 active phase；在新 phase 与机器合同明确扩展范围前，不改变当前产品承诺。
+Phase 7 Web Player Release Candidate 当前处于 active 状态，但在 7H exit 前不改变当前产品承诺。
+Phase 7 的 productization、embed API、artifact、DOM shell、menuitem UI 和 release gate 只由
+[`docs/phases/7-web-player-release-candidate.md`](./phases/7-web-player-release-candidate.md) 与机器合同授权。
 
 ## 6. 当前成功标准
 
