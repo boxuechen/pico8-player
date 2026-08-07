@@ -7,19 +7,18 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 6；[Real-cart qualification exit evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) |
-| 当前阶段 | Phase 7 — Web Player Release Candidate；[`docs/phases/7-web-player-release-candidate.md`](./phases/7-web-player-release-candidate.md) |
-| Active work unit | 7H — Release Candidate Exit |
-| 当前机器合同 | [`spec/phase-7-web-player-release-candidate-contract.json`](../spec/phase-7-web-player-release-candidate-contract.json) |
+| 最近完成 | Phase 7；[Web Player Release Candidate exit evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
+| 当前阶段 | 无；production implementation 未授权 |
+| Active work unit | 无 |
+| 最近关闭机器合同 | [`spec/phase-7-web-player-release-candidate-contract.json`](../spec/phase-7-web-player-release-candidate-contract.json) |
 
-Phase 6A–6H 已关闭 local real-cart qualification。Phase 7A 已冻结 bytes-first、local-only、
-Chrome/Chromium desktop Release Candidate 合同，7B 已关闭 stable embed API，7C 已关闭可重复构建的
-release artifact pipeline，7D 已关闭 production DOM player shell，7E 已关闭 pause menu / `menuitem()`
-completion，7F 已把 required unknown API 收口为 0，7G 已关闭 Chrome release hardening；当前唯一授权工作
-是 7H Release Candidate Exit。Phase 7 只有在 aggregate manifest、release 文档、clean-checkout gate 与
-evidence 全部关闭后才算完成；roadmap、Target 示例和历史 evidence 不能单独授权后续工作。
+Phase 7A–7H 已关闭：bytes-first embed API、可重复静态 artifact、production DOM shell、VM-safe
+pause menu、required API conformance、Chrome release hardening、aggregate manifest、clean-checkout gate
+和 RC evidence 均已归档。当前没有 active phase；后续 production 修改必须先建立新的 phase 文档和机器
+合同。Roadmap、Target 示例和历史 evidence 不能单独授权实现。
 
-日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。不要把
+日常实现默认只读：本页 → active phase（存在时）→ 它明确链接的 contract 小节。当前无 active phase，
+因此只能做只读梳理或先激活新阶段。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务

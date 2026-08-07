@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "phase": "7",
   "name": "Web Player Release Candidate",
-  "status": "active",
+  "status": "complete",
   "target": "reproducible embeddable PICO-8 v0.2.7 web-player release candidate for Chrome/Chromium desktop",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
@@ -116,9 +116,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E", "7F", "7G"],
-  "activeWorkUnit": "7H",
-  "nextWorkUnit": "7H",
+  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E", "7F", "7G", "7H"],
+  "activeWorkUnit": null,
+  "nextWorkUnit": null,
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -481,7 +481,7 @@
     },
     "7H": {
       "name": "Release Candidate Exit",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "README.md",
         "apps/web-player/public/demo/",
@@ -495,6 +495,10 @@
         "docs/phases/7-web-player-release-candidate.md",
         "spec/phase-7-web-player-release-candidate-contract.json",
         "tests/artifact/phase-7h-*",
+        "tests/contract/phase-5a-activation.test.mjs",
+        "tests/contract/phase-6a-activation.test.mjs",
+        "tests/contract/phase-7a-activation.test.mjs",
+        "tests/conformance/phase-6h-exit.test.mjs",
         "tests/conformance/manifests/phase-7h-*",
         "tests/conformance/phase-7h-*",
         "package.json"
@@ -506,7 +510,29 @@
         "pnpm run test:release and pnpm run verify pass from a clean checkout",
         "no registry, website or GitHub release publication occurs",
         "evidence is archived, the phase document is removed and no active phase remains"
-      ]
+      ],
+      "result": {
+        "exitManifest": "tests/conformance/manifests/phase-7h-exit.json",
+        "evidence": "docs/evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md",
+        "browser": "Google Chrome 151.0.7922.76",
+        "apiInventory": {
+          "total": 113,
+          "compatible": 101,
+          "partial": ["flip", "stat", "print"],
+          "unsupported": 9,
+          "unknownRequired": 0
+        },
+        "releaseArtifactFiles": 12,
+        "stableArtifactKeys": 6,
+        "testRelease": "pass",
+        "cleanCheckoutInstallOffline": "pass",
+        "cleanCheckoutTestRelease": "pass",
+        "cleanCheckoutVerify": "pass",
+        "productionChanged": false,
+        "networkSurfaceChanged": false,
+        "publicationPerformed": false,
+        "verification": ["pnpm run test:release", "pnpm run verify"]
+      }
     }
   }
 }

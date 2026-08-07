@@ -19,7 +19,7 @@ const contract = await readJson("spec/phase-7-web-player-release-candidate-contr
 
 test("Phase 7A remains anchored to the completed Phase 6 baseline", async () => {
   assert.equal(contract.phase, "7");
-  assert.equal(contract.status, "active");
+  assert.ok(["active", "complete"].includes(contract.status));
   assert.equal(
     contract.target,
     "reproducible embeddable PICO-8 v0.2.7 web-player release candidate for Chrome/Chromium desktop",
@@ -27,13 +27,22 @@ test("Phase 7A remains anchored to the completed Phase 6 baseline", async () => 
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
   assert.ok(contract.completedWorkUnits.includes("7A"));
   assert.equal(contract.workUnits["7A"].status, "complete");
-  assert.match(contract.activeWorkUnit, /^7[B-H]$/u);
-  assert.equal(contract.nextWorkUnit, contract.activeWorkUnit);
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
-  assert.equal(
-    Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
-    1,
-  );
+  if (contract.status === "active") {
+    assert.match(contract.activeWorkUnit, /^7[B-H]$/u);
+    assert.equal(contract.nextWorkUnit, contract.activeWorkUnit);
+    assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
+    assert.equal(
+      Object.values(contract.workUnits).filter((unit) => unit.status === "active").length,
+      1,
+    );
+  } else {
+    assert.equal(contract.activeWorkUnit, null);
+    assert.equal(contract.nextWorkUnit, null);
+    assert.deepEqual(contract.completedWorkUnits, [
+      "7A", "7B", "7C", "7D", "7E", "7F", "7G", "7H",
+    ]);
+    assert.ok(Object.values(contract.workUnits).every((unit) => unit.status === "complete"));
+  }
 
   for (const [pathKey, hashKey] of [
     ["phase6Contract", "phase6ContractSha256"],
@@ -92,22 +101,33 @@ test("Phase 7A records compatibility debt and measurable exit gates", () => {
   assert.equal(contract.releaseCandidateExitGate.networkAccess, false);
 });
 
-test("Phase 7A routes Codex to exactly one active work unit", async () => {
+test("Phase 7A routes Codex to one active unit or the closed Phase 7 evidence", async () => {
   const docsReadme = await readFile(new URL("docs/README.md", projectRoot), "utf8");
   const phaseIndex = await readFile(new URL("docs/phases/README.md", projectRoot), "utf8");
-  const phase = await readFile(
-    new URL("docs/phases/7-web-player-release-candidate.md", projectRoot),
-    "utf8",
-  );
   const rootReadme = await readFile(new URL("README.md", projectRoot), "utf8");
   const packageJson = await readJson("package.json");
 
-  assert.match(docsReadme, /当前阶段 \| Phase 7/u);
-  assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
-  assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
-  assert.match(phase, /Active work unit：7[B-H]/u);
-  assert.ok(phase.includes("不新增网络、BBS、任意 URL"));
-  assert.ok(rootReadme.includes("Phase 7 Web Player Release Candidate"));
+  if (contract.status === "active") {
+    const phase = await readFile(
+      new URL("docs/phases/7-web-player-release-candidate.md", projectRoot),
+      "utf8",
+    );
+    assert.match(docsReadme, /当前阶段 \| Phase 7/u);
+    assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
+    assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
+    assert.match(phase, /Active work unit：7[B-H]/u);
+    assert.ok(phase.includes("不新增网络、BBS、任意 URL"));
+  } else {
+    assert.match(docsReadme, /最近完成 \| Phase 7/u);
+    assert.match(docsReadme, /当前阶段 \| 无/u);
+    assert.match(docsReadme, /Active work unit \| 无/u);
+    assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
+    await assert.rejects(
+      readFile(new URL("docs/phases/7-web-player-release-candidate.md", projectRoot)),
+      { code: "ENOENT" },
+    );
+  }
+  assert.ok(rootReadme.includes("release-candidate PICO-8 v0.2.7 web player"));
   assert.doesNotMatch(rootReadme, /Full cart hardware.+not implemented/u);
   assert.equal(
     packageJson.scripts["test:phase-7a"],

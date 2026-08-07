@@ -98,11 +98,19 @@ test("Phase 6A routes Codex and keeps local corpus paths ignored", async () => {
     assert.match(phase, /Active work unit：6[B-H]/u);
     assert.ok(phase.includes("不自动访问 BBS"));
   } else {
-    assert.ok(docsReadme.includes("71-phase-6-real-cart-qualification-exit-evidence.md"));
-    assert.match(docsReadme, /当前阶段 \| Phase 7/u);
-    assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
+    const phase7 = await readJson("spec/phase-7-web-player-release-candidate-contract.json");
     assert.ok(!phaseIndex.includes("6-real-cart-qualification.md"));
-    assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
+    if (phase7.status === "complete") {
+      assert.match(docsReadme, /当前阶段 \| 无/u);
+      assert.match(docsReadme, /Active work unit \| 无/u);
+      assert.ok(docsReadme.includes("81-phase-7-web-player-release-candidate-exit-evidence.md"));
+      assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
+    } else {
+      assert.match(docsReadme, /当前阶段 \| Phase 7/u);
+      assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
+      assert.ok(docsReadme.includes("71-phase-6-real-cart-qualification-exit-evidence.md"));
+      assert.ok(phaseIndex.includes("7-web-player-release-candidate.md"));
+    }
     await assert.rejects(
       readFile(new URL("docs/phases/6-real-cart-qualification.md", projectRoot)),
       { code: "ENOENT" },

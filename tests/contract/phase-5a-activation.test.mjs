@@ -112,6 +112,7 @@ test("Phase 5A capability and service policy fail closed", () => {
 });
 
 test("Phase 5A activation history routes to closed Phase 5 evidence", async () => {
+  const phase7 = await readJson("spec/phase-7-web-player-release-candidate-contract.json");
   const docsReadme = await readFile(new URL("docs/README.md", projectRoot), "utf8");
   const phaseIndex = await readFile(new URL("docs/phases/README.md", projectRoot), "utf8");
   const evidence = await readFile(
@@ -127,11 +128,17 @@ test("Phase 5A activation history routes to closed Phase 5 evidence", async () =
   );
   const packageJson = await readJson("package.json");
 
-  assert.match(docsReadme, /最近完成 \| Phase 6/u);
-  assert.match(docsReadme, /当前阶段 \| Phase 7/u);
-  assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
+  assert.match(docsReadme, /最近完成 \| Phase [67]/u);
   assert.doesNotMatch(phaseIndex, /5-l3-local-multicart\.md/u);
-  assert.match(phaseIndex, /7-web-player-release-candidate\.md/u);
+  if (phase7.status === "complete") {
+    assert.match(docsReadme, /当前阶段 \| 无/u);
+    assert.match(docsReadme, /Active work unit \| 无/u);
+    assert.doesNotMatch(phaseIndex, /7-web-player-release-candidate\.md/u);
+  } else {
+    assert.match(docsReadme, /当前阶段 \| Phase 7/u);
+    assert.match(docsReadme, /Active work unit \| 7[B-H]/u);
+    assert.match(phaseIndex, /7-web-player-release-candidate\.md/u);
+  }
   assert.ok(evidence.includes("5A–5H"));
   assert.ok(evidence.includes("BBS"));
   assert.ok(decisions.includes("ADR-018"));

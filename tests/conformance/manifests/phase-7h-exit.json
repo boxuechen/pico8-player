@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "phase": "7H",
+  "target": "PICO-8 v0.2.7 Web Player Release Candidate on desktop Chrome/Chromium",
+  "profile": {
+    "cartAuthority": "caller-provided bytes or caller-authorized local bundle",
+    "networkAccess": false,
+    "automatedBbsAccess": false,
+    "arbitraryUrlAccess": false,
+    "hostFilesystemAccess": false,
+    "officialBitExactClaimed": false,
+    "thirdPartyOrBbsCompatibilityClaimed": false,
+    "externalPublicationPerformed": false
+  },
+  "sourceLocks": {
+    "spec/phase-7-web-player-release-candidate-contract.json": "90e5d793b65df93f7dc0077343511a421b131b2508d08e5f41cbf008f2a4cb4c",
+    "tests/conformance/manifests/phase-7g-chrome-hardening.json": "6ac574d15b2b90dbdbabb70b5b96407180a9d1a8a5a0884d3be78f13ec1c5b16",
+    "spec/pico-api-inventory.yaml": "f7457766989c6a9a21e0531f2f5de23e726ac9b615fe8720ffbc922b00d638df",
+    "wasm/runtime-v1.manifest.lock.json": "ec3c5a88031021d5e30972bc9378c6580c4159691660ba6026ac146acf757098",
+    "spec/release-artifact-contract.json": "ed29245aa148b4b16f8ad57e08fe220fab8532e917a69bd2c26d6920d770414f"
+  },
+  "gateSourceHashes": {
+    "spec/release-artifact-contract.json": "ed29245aa148b4b16f8ad57e08fe220fab8532e917a69bd2c26d6920d770414f",
+    "wasm/runtime-v1.manifest.lock.json": "ec3c5a88031021d5e30972bc9378c6580c4159691660ba6026ac146acf757098",
+    "tests/conformance/manifests/phase-4g-resource-long-run.json": "91fef7708ba4e179159ba5560ad71ca8038137cccdd419d9370021e0bd2a6b02",
+    "apps/web-player/src/main/player-controller.ts": "0e63ae90acabb9a4350ae7cb37fa9c5e802d82dbf76f3af6e0f99f646821e5a4",
+    "apps/web-player/public/demo/demo.mjs": "a3cf423839de197e9b83b28be4a4700c26940cd116cda276c78cb36e479d1ee0",
+    "tests/browser/phase-7g.html": "3bcad5c57870dd8d60be44aac0a4ea96ea274a526bcc757462f21490e34e2765",
+    "tests/browser/phase-7g.mjs": "c070a7355cfb2ebac01efb2b6abc004f9aea75cc5ca9ebaee311d00a5ab1031f",
+    "tests/runtime/phase-7g-persistence-failures.test.mjs": "58c813221f518601d77fd20de8444bde1b5df17a61d5bf2f7e03b3f29c4b0b48",
+    "tools/browser/run-phase-7g.mjs": "5dd5ef162b06f8981529e15d5d0a7b71c849c9e76a3c02616c3195e052ab5e76",
+    "tools/browser/phase-7g/run-soak.mjs": "01eb8c11ec9d6ac232907068b750bd9f112699aa8d5d3f09c04871f1697e7965"
+  },
+  "releaseArtifact": {
+    "generatedManifest": "apps/web-player/dist/release/manifest.json",
+    "manifestSha256": "37c62e119fa0a53c1fd96a26dc12d524a27c9189d2a8f59aae9827a4ff37ff17",
+    "fileCount": 12,
+    "stableKeys": ["main", "worker", "worklet", "wasm", "styles", "demo"],
+    "stableArtifactSha256": {
+      "main": "c523fe4507a9c7491f98e968f07df9cf1c4a4bae769a27ffcc81751ed9b7ce45",
+      "worker": "83e5b60fd2eeb9605de4c03bb49e105a651baf38a4049d7580071be3971d36e6",
+      "worklet": "fb535fecb5af527321fb94ada77dd2321ea463c22112a756ea0031d99fb8af1e",
+      "wasm": "7dcd584a51ef504431fae47df11eb1a9a685efd6b1b2c372478f796766888fa8",
+      "styles": "50b799f1eb0c95ecefff3d1d8ac6eb5e13a11f90209a82fae54c58c4b28f3fcc",
+      "demo": "5762207e054277617cb02191eabebbe382a9ff794dd3ec2347b852cd9574abad"
+    },
+    "fileSha256": {
+      "THIRD_PARTY_NOTICES.md": "b0957a11915f43945c9a11878b74d91d29911675fa69ae4bc690e5196017b73c",
+      "browser/player-worker.mjs": "83e5b60fd2eeb9605de4c03bb49e105a651baf38a4049d7580071be3971d36e6",
+      "demo/demo.mjs": "a3cf423839de197e9b83b28be4a4700c26940cd116cda276c78cb36e479d1ee0",
+      "demo/index.html": "5762207e054277617cb02191eabebbe382a9ff794dd3ec2347b852cd9574abad",
+      "licenses/Emscripten.txt": "2fd38dc06e484cdd7a3f1e2f6577f5d53062052a2fd85131b56b89fbd673731c",
+      "licenses/Lua-5.2.txt": "7cd641a360b8c28f13fc32e186c0664aaa4ad2391452d9ca3e643500273be8b2",
+      "licenses/WTFPL-2.txt": "97f447536de3b0d1a2df792f749459a67ab613e7b877e9494ae6d45eca383a28",
+      "main/player.mjs": "c523fe4507a9c7491f98e968f07df9cf1c4a4bae769a27ffcc81751ed9b7ce45",
+      "player.css": "50b799f1eb0c95ecefff3d1d8ac6eb5e13a11f90209a82fae54c58c4b28f3fcc",
+      "wasm/z8lua-runtime-v1.mjs": "006a2d4323a38f52b4560ce260fbcd39cf122194bcec290d8514aa2f1e260644",
+      "wasm/z8lua-runtime-v1.wasm": "7dcd584a51ef504431fae47df11eb1a9a685efd6b1b2c372478f796766888fa8",
+      "worklet/pico8-audio-processor.js": "fb535fecb5af527321fb94ada77dd2321ea463c22112a756ea0031d99fb8af1e"
+    },
+    "networkCartAccess": false,
+    "arbitraryUrlAccess": false,
+    "crossOriginIsolationRequired": false,
+    "reproducible": true,
+    "publicationPerformed": false
+  },
+  "compatibility": {
+    "inventoryTotal": 113,
+    "compatible": 101,
+    "partial": ["flip", "stat", "print"],
+    "unsupported": 9,
+    "unknownRequiredReleaseModes": 0,
+    "openP0": 0,
+    "openP1": 0,
+    "knownDifferences": [
+      "P4-KD-02",
+      "P4-KD-03",
+      "P4-KD-05",
+      "P4-KD-06",
+      "P5-KD-01",
+      "P6-KD-02"
+    ]
+  },
+  "chromeGate": {
+    "exactVersion": "Google Chrome 151.0.7922.76",
+    "desktopSoakSeconds": 600,
+    "profilesHz": [30, 60],
+    "minimumCadenceRatio": 0.995,
+    "maximumDroppedTickRatio": 0.001,
+    "steadyAudioUnderruns": 0,
+    "audioOverruns": 0,
+    "audioDiscontinuities": 0,
+    "workerErrors": 0,
+    "mainThreadLongTasks": 0,
+    "workerRecoveryCycles": 20,
+    "fuzzIterations": 64,
+    "staleOutputs": 0,
+    "externalRequests": 0,
+    "resourceRelease": true
+  },
+  "releaseGate": {
+    "command": "pnpm run test:release",
+    "fullVerifyCommand": "pnpm run verify",
+    "diagnosticMaySubstitute": false,
+    "cleanCheckout": {
+      "install": "pnpm install --offline --frozen-lockfile",
+      "testRelease": "pass",
+      "verify": "pass"
+    }
+  },
+  "privacy": {
+    "repositoryThirdPartyCartBytes": 0,
+    "repositoryThirdPartyScreenshots": 0,
+    "thirdPartyCartIdentitiesPublished": false,
+    "thirdPartyCartHashesPublished": false,
+    "thirdPartyPathsPublished": false,
+    "thirdPartyPerCartResultsPublished": false
+  }
+}

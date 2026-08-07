@@ -11,11 +11,11 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance、release artifact 与 Chrome scripts；Phase 5 L3 local/multicart project-profile exit 已关闭 |
-| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、项目原创 6-case local L3 corpus；精确 Known Differences/coverage limitation 见第 15 节 |
-| **Historical results** | Phase 0–5 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
-| **Target** | 第 3 节其余测试资产布局、尚未落地的 fuzz/differential/nightly/release 命令与未来 activation contract |
-| **Deferred** | 完整兼容等级、官方 golden corpus、移动 Chrome 和正式 release qualification |
+| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance、release artifact、`test:release` 与 Chrome scripts；Phase 7 RC exit 已关闭 |
+| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、101 compatible / 3 partial / 9 unsupported、required unknown=0；精确 Known Differences/coverage limitation 见第 15 节 |
+| **Historical results** | Phase 0–7 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
+| **Target** | 第 3 节其余测试资产布局、尚未落地的 differential/nightly 命令与未来 activation contract |
+| **Deferred** | 官方 golden corpus、移动 Chrome、非 Chrome 浏览器和任何外部 publication |
 
 执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本。第 15 节维护当前
 compatibility/known-difference 结论和必要摘要；原始环境记录与完整历史测量只在
@@ -109,14 +109,14 @@ tests/
 测试命令形成稳定接口，供开发者和 CI 使用：
 
 ```text
-pnpm test:architecture
-pnpm test:unit
-pnpm test:conformance
-pnpm test:browser
-pnpm test:fuzz
-pnpm test:performance
-pnpm test:differential
-pnpm test:release
+pnpm run test:architecture
+pnpm run test:unit
+pnpm run test:conformance
+pnpm run test:browser
+pnpm run test:fuzz
+pnpm run test:performance
+pnpm run test:differential
+pnpm run test:release
 ```
 
 这些命令在脚本尚未建立时是目标契约。落地后不得无迁移说明地改名。
@@ -153,6 +153,16 @@ pause/menu pause 分离、timeout recovery 和 stale/dispose fail-closed。Chrom
 P8SCII label、Continue、keyboard/pointer/touch、44 CSS px target、filter、keep-open refresh、focus return、
 simulation/audio pause、blur、cart replacement 和 callback fault recovery。该 gate 只实现
 cart-defined items，不包含 PICO-8 system settings 或完整 console menu。
+
+### 3.4 Release candidate gate
+
+`pnpm run test:release` 是当前单一 RC gate：从 tracked source 重建并校验 release artifact，运行 7G
+完整 Chrome hardening（含 600 秒 30/60 Hz desktop soak），最后校验 7H aggregate exit、兼容口径、许可、
+provenance 与文档。`test:phase-7g:diagnostic` 的 10 秒 soak 只供定位，不能替代 release gate。
+
+release gate 固定 Chrome/Chromium desktop、caller-provided bytes、zero network cart authority、zero steady
+audio underrun、zero stale output 和完整 Worker/RAF/listener/AudioContext teardown。它不访问 BBS、不读取
+`ref/`/local corpus、不提交 ignored build output，也不执行 registry、网站或 GitHub Release publication。
 
 ## 4. 确定性执行模型
 
@@ -659,9 +669,17 @@ playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 
 ### 15.4 当前发布 profile
 
-当前可发布口径严格为 **PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop**。
-它绑定项目原创 local corpus、受审 build 和 Chrome production path，不是 official
-bit-exact、第三方/BBS cart 成功率或正式 release qualification。
+当前可发布口径严格为 **PICO-8 v0.2.7 Web Player Release Candidate / L3 local-multicart project profile
+on Chrome/Chromium desktop**。它绑定项目原创 corpus、受审 build、caller-provided bytes 与 Chrome
+production path，不是 official bit-exact 或第三方/BBS cart 成功率，也不授权外部 publication。
+
+Phase 5 关闭时的历史 target 仍精确保留为
+**PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop**；当前 RC 是该
+profile 的产品化发布候选，不改写历史 claim。
+
+API inventory 共 `113` 项：`101 compatible`、`3 partial`（`flip`、`stat`、`print`）、`9 unsupported`，
+required unknown release mode 为 `0`。只有 compatible 计入支持；partial 的精确 mode 与 workaround 仍由
+下节 Known Differences 约束。
 
 Phase 6 另已关闭 **local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop**：
 12 个 caller-supplied local case 全部有 aggregate C* disposition，11/11
@@ -676,6 +694,8 @@ in-profile case 完成 fixed smoke，3 个代表 case 完成 C2。该补充只�
 | Resource gate | fixed 16 MiB WASM、1 MiB default Lua heap、`1800.0644s` Chrome mixed soak | Phase 5 evidence |
 | Aggregate claim | profile、inputs、scope 与 artifact hash machine-checked | [`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) |
 | Local real-cart qualification | `12/12` classified aggregate、`11/11` in-profile smoke、3 个 C2、公开分母贡献 `0` | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [`phase-6h-exit.json`](../tests/conformance/manifests/phase-6h-exit.json) |
+| RC artifact | 12-file allowlist、6 stable keys、reproducible build、strict CSP/MIME/relative-base Chrome gate | [Phase 7 evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
+| RC hardening | Chrome 30/60 Hz 600 秒 soak、zero steady underrun/stale output、20 recovery cycles、完整 teardown | [`phase-7h-exit.json`](../tests/conformance/manifests/phase-7h-exit.json) |
 
 ### 15.5 Published Known Differences
 
@@ -724,6 +744,7 @@ official bit-exact 或第三方 cart 成功率声明。
 | Phase 4 L2/MVP hardening | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
 | Phase 5 L3 local/multicart | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 | Phase 6 real-cart qualification | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) |
+| Phase 7 Web Player Release Candidate | [Phase 7 evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
 
 新回归只更新当前 compatibility entry、机器 inventory/issue registry 和新 phase evidence；不得把
 旧 work-unit 表重新复制回本文件。
