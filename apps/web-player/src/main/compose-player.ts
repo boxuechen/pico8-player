@@ -153,6 +153,8 @@ export interface PlayerCompositionOptions {
   readonly audio?: AudioFrontendOptions;
 }
 
+const AUDIO_RESUME_PROBE_TIMEOUT_MS = 250;
+
 /** Stable player composition; DOM policy remains in PlayerController. */
 export class PlayerComposition {
   readonly runtime: PlayerRuntimeClient;
@@ -277,14 +279,33 @@ export class PlayerComposition {
     this.runtime.flushPersistence();
   }
 
-  resumeAudio(): Promise<void> {
+  async resumeAudio(): Promise<boolean> {
     this.#assertActive();
-    return this.audio?.resume() ?? Promise.resolve();
+    if (this.audio === undefined) return true;
+    let timeout: number | undefined;
+    try {
+      await Promise.race([
+        this.audio.resume(),
+        new Promise<void>((resolve) => {
+          timeout = globalThis.setTimeout(resolve, AUDIO_RESUME_PROBE_TIMEOUT_MS);
+        }),
+      ]);
+      return this.audio.contextState === "running";
+    } catch {
+      return false;
+    } finally {
+      if (timeout !== undefined) globalThis.clearTimeout(timeout);
+    }
   }
 
   suspendAudio(): Promise<void> {
     this.#assertActive();
     return this.audio?.suspend() ?? Promise.resolve();
+  }
+
+  setMuted(muted: boolean): void {
+    this.#assertActive();
+    this.audio?.setMuted(muted);
   }
 
   async dispose(): Promise<void> {

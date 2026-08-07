@@ -1,6 +1,7 @@
 import {
   PlayerComposition,
   PlayerController,
+  PlayerShellView,
 } from "/apps/web-player/dist/main/main.js";
 import { failureClusterForFault } from "../failure-clusters-v1.mjs";
 
@@ -54,12 +55,7 @@ class ManualAnimationFrames {
 }
 
 function elements() {
-  const canvas = document.createElement("canvas");
-  canvas.setAttribute("aria-label", "PICO-8 playfield");
-  const status = document.createElement("output");
-  const diagnostic = document.createElement("pre");
-  shell.replaceChildren(status, diagnostic, canvas);
-  return { root: shell, canvas, status, diagnostic };
+  return PlayerShellView.create(shell, { window, document });
 }
 
 async function screenTelemetry(canvas, hasFrame) {
@@ -96,7 +92,8 @@ async function dispose() {
 async function runCase(payloadBase64, trace) {
   await dispose();
   const animationFrames = new ManualAnimationFrames();
-  const playerElements = elements();
+  const view = elements();
+  const playerElements = view.elements;
   const composition = await PlayerComposition.create({
     canvas: playerElements.canvas,
     runtimeWorkerFactory: () => new Worker(
@@ -105,7 +102,7 @@ async function runCase(payloadBase64, trace) {
     ),
     commandTimeoutMs: 15_000,
   });
-  const controller = new PlayerController(composition, playerElements, {
+  const controller = new PlayerController(composition, view, {
     animationFrames,
     window,
     document,

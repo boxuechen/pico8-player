@@ -2,7 +2,7 @@
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
 phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前唯一入口是
-[Phase 7 Web Player Release Candidate](./7-web-player-release-candidate.md)，Active work unit 为 7B。
+[Phase 7 Web Player Release Candidate](./7-web-player-release-candidate.md)，Active work unit 为 7E。
 最近完成阶段结果见 [Phase 6 evidence](../evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md)。
 
 ## Activation contract

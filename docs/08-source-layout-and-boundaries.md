@@ -254,7 +254,7 @@ RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worke
 这是产品 application shell 和唯一浏览器集成层，不是可被 packages 反向复用的 library。
 
 - `transport/`：只放 Window ↔ Worker 与 Worker ↔ AudioWorklet 的 versioned structured-clone DTO、validator 和 transfer-list helper；不得放状态机或业务逻辑。
-- `main/`：DOM/UI、输入设备采样与 physical→normalized action mapping、Canvas/WebGL presenter、AudioContext 生命周期、Worker watchdog 和 `RuntimeClient`。
+- `main/`：DOM/UI、输入设备采样与 physical→normalized action mapping、Canvas/WebGL presenter、AudioContext 生命周期、Worker watchdog 和 `RuntimeClient`。其中 `main/ui/` 只拥有 DOM view、derived control policy、bounded local-file preflight 和 integer-scale presentation；`PlayerController` 映射 intent 到 lifecycle，二者都不得复制 Worker simulation 状态机或读取 WASM/Pico RAM。
 - `worker/`：Runtime Worker entrypoint、消息适配、IndexedDB/repository adapters，以及唯一的 `compose-runtime.ts`。
 - `worklet/`：PCM queue、重采样所需的实时设备逻辑和 processor 注册；不得 import RuntimeCore 或 z8lua。
 

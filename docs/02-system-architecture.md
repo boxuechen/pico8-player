@@ -8,7 +8,7 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；stable-manifest release artifact；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
+| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；stable-manifest release artifact；class-driven production DOM shell；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
 | **Deferred** | general nested-coroutine HostRequest、include resolution、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
 
 第 4–11 节只维护稳定架构约束，不复制容易漂移的 DTO 和 error union。当前 production player
@@ -99,6 +99,23 @@ Worker 再以相邻 Emscripten loader 定位 WASM，因此相同 bytes 可部署
 MIME 由 Emscripten 回退到 ArrayBuffer。严格 CSP 只额外开放 WebAssembly 所需的
 `'wasm-unsafe-eval'`，不得开放 `'unsafe-eval'`、inline script、任意网络 cart 或 caller-supplied
 Worker/WASM URL。release builder 只拥有 packaging，不取得 Runtime、cart 或网络 authority。
+
+### Production DOM shell
+
+默认 shell 的 DOM structure、状态文案、control availability、local file preflight、integer-scale policy 和
+responsive/fullscreen presentation 由 `main/ui` 所有；`PlayerController` 只把 UI intent 映射到稳定
+lifecycle。shell 只接受用户明确选择或 drop 的单个 bounded `.p8`/`.p8.png` 文件，不接受 URL、目录、
+clipboard 或隐式 network authority。
+
+`idle/loading/ready/running/audio-blocked/paused/stopped/faulted/disposed` 都有独立 DOM state。无手势的
+AudioContext 恢复失败只进入可恢复 `audio-blocked`，不升级为 cart fault；visual simulation 可以继续，
+用户可再次解锁、静音运行或替换 cart。Canvas backing store 固定 128×128，CSS 只选择容器可容纳的整数
+scale；DPR、ResizeObserver 和 fullscreen 不进入 simulation input。
+
+文件 controls、status、diagnostic、touch buttons 和后续 pause menu 都位于 Canvas 外。keyboard/touch
+输入只在可玩状态启用，blur/visibility/dispose 清除 transient input；reduced-motion、ARIA live/pressed/
+disabled state 和至少 44 CSS px touch target 属于同一 shell contract。样式由 release stylesheet、class
+和 data attributes 驱动，production source 不写 inline layout style。
 
 ## 2. 所有权与共享内存
 

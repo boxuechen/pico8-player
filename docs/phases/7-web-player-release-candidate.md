@@ -1,7 +1,7 @@
 # Phase 7 — Web Player Release Candidate
 
 > 状态：Active
-> Active work unit：7D — Production DOM Player Shell
+> Active work unit：7E — Pause Menu / menuitem Completion
 > 机器合同：[`spec/phase-7-web-player-release-candidate-contract.json`](../../spec/phase-7-web-player-release-candidate-contract.json)
 > 基线：Phase 6 exit commit `117882a8bbd368ea8d8ebea2a2145d8f71152ec3`
 
@@ -57,60 +57,79 @@ local corpus、third-party cart、截图或 playtest output，也未执行 publi
 
 验证：`pnpm run test:phase-7c`、`pnpm run test:phase-7b`、`pnpm run verify`。
 
-## 6. 当前工作：7D Production DOM Player Shell
+## 6. 已完成：7D Production DOM Player Shell
 
-### 6.1 边界与所有权
+7D 已把临时页面拆成 class-driven DOM view/controller boundary，提供 bounded local choose/drop、完整
+host lifecycle controls、mute/fullscreen、显式 audio-blocked recovery、整数 Canvas scale、keyboard/touch
+input 与可访问状态。真实 release artifact 在 Chrome 中覆盖 200% 窄视口、reduced motion、fault 后重选、
+fullscreen 和 dispose 资源释放；Canvas 仍只包含 128×128 playfield。
 
-- `main/ui` 拥有 DOM structure、control availability、drop-zone、status copy、mute/fullscreen 与 responsive
-  layout；`PlayerController` 只把 UI intent 映射到 stable lifecycle，不复制 Runtime 状态机。
-- Worker/Runtime 仍是 simulation、frame、pause 和 fault 的权威源；Canvas 只呈现 128×128 playfield，
-  controls、status、fault 和后续 pause menu 都必须是 Canvas 外的 DOM。
-- 文件选择和 drop 只读取用户提供的 `.p8`/`.p8.png` bytes；不得接受 URL、目录、clipboard 或隐式
-  network authority。每次只接受一个 bounded file，失败后仍可重新选择。
-- 视觉样式只来自 release stylesheet/class/state attributes；production source 不写 inline layout style，
-  不引入 UI framework 或新的 package/execution-domain edge。
+验证：`pnpm run test:phase-7d`、`pnpm run test:phase-7b`、`pnpm run test:phase-7c`、
+`pnpm run verify`。
 
-### 6.2 具体实现
+## 7. 当前工作：7E Pause Menu / menuitem Completion
 
-1. 把 Phase 1E 临时 shell 拆为独立 DOM view/controller boundary，提供 choose/drop、play/resume、pause、
-   reset、stop、mute/unmute 和 fullscreen controls；control labels、pressed/disabled state 只由当前
-   shell state 派生。
-2. 显式呈现 `idle/loading/ready/running/paused/stopped/audio-blocked/faulted/disposed`。AudioContext
-   无手势或被策略阻止时不得把 cart 判为 faulted；显示可操作的 audio resume 状态，并允许 silent
-   playback、再次解锁或重新选择 cart。
-3. drop-zone 支持 keyboard focus、drag enter/leave/drop 与 file picker；拒绝 multiple/unsupported/oversize
-   input 时给出 `aria-live` diagnostic，且不改变已提交 Runtime generation。
-4. Canvas 保持 128×128 backing store、nearest-neighbor 与整数 CSS scale；ResizeObserver/viewport/fullscreen
-   只选择容器可容纳的最大整数 scale，窄容器降到 1×，不得拉伸或把 DPR 变成 simulation input。
-5. keyboard focus 不困住页面；game controls 仅在 playfield focus/running 时消费。touch controls 提供可读
-   label、pressed state、pointer cancellation 和至少 44 CSS px hit target；mute/fullscreen state 可被
-   keyboard、pointer 与 assistive technology观察。
-6. `prefers-reduced-motion: reduce` 禁用非必要 transition/animation；状态、错误与操作结果不依赖颜色、
-   动画或 hover。fullscreen exit、blur/visibility 与 dispose 必须清理 transient UI/input state。
+### 7.1 边界与所有权
 
-### 6.3 自动化与验收
+- 在任何 production 修改前，以 replacement ADR 固定 snapshot、invoke、callback return、button filter、
+  pause/continue、fault 和 generation 语义；ADR-021 的“registration only”决定不得被静默扩张。
+- 当前 `lua_State` 继续独占五槽 registry、callback 强引用和调用栈。WASM 只导出 copy-out snapshot 与
+  root-safe invoke operation；Lua function pointer、registry ref、stack address 和 borrowed label view 不得
+  进入 TypeScript、Worker DTO 或 DOM。
+- Runtime Worker 是 menu-open、generation、simulation pause 和 callback outcome 的权威源。Main 只渲染
+  generation-bound slot DTO 并发送用户 intent；host lifecycle `pause()` 仍是独立命令，不能伪装成
+  PICO-8 pause menu。
+- Canvas 只呈现 playfield。Continue 与 cart-defined items 必须是 Canvas 外 DOM；菜单关闭后 focus 返回
+  playfield，DOM 不缓存跨 generation callback identity。
 
-- Node DOM-policy/view-model contract 覆盖 state→controls/ARIA mapping、file validation、integer scale 和
-  audio-blocked recovery，不依赖浏览器成为 simulation oracle。
-- Chrome production-path gate 通过真实 release artifact 验证 choose 与 drop、play/pause/resume/reset/
-  stop、mute、fullscreen request/exit、keyboard focus、touch/pointer、resize、reduced motion、fault 后重选
-  cart，以及 dispose 后无 listener/RAF 输出。
-- 可访问性门禁至少检查 landmark/name/role、live region、tab order、disabled/pressed semantics、canvas
-  accessible name、touch target 和 200% viewport layout；不以截图替代语义断言。
-- `pnpm run test:phase-7d`、受影响 7B/7C 回归与 `pnpm run verify` 通过；完成后单独提交并把唯一
-  active work unit 切到 7E。
+### 7.2 具体实现
 
-### 6.4 范围外
+1. 在 z8lua production ABI 增加 bounded snapshot/invoke entry points。snapshot 按 slot 顺序复制 label bytes、
+   filter 和 occupied 状态；invoke 只接受 `slot 1..5 + button bitfield`，并返回结构化
+   `close/keep-open/removed/fault/stale` outcome。调用期间可安全 replace/remove menuitem，返回 `true`
+   保持菜单打开，其余成功返回关闭菜单。
+2. Runtime/transport 增加 versioned `openPauseMenu/closePauseMenu/invokeMenuItem` transaction。open 必须先在
+   Runtime-owned frame boundary 停止 simulation 并清空 gameplay input；每个 snapshot/outcome 绑定当前
+   generation。非 menu-open、slot/filter 不匹配、cart swap/reset/stop/dispose 或 stale generation 均
+   fail closed，且不得调用 callback。
+3. callback 在 Runtime-owned Lua root 执行并受现有 instruction/memory/fault containment 约束。callback
+   fault 进入结构化 cart fault、关闭菜单且不提交半完成 generation；不得在 Main 重试 callback。
+4. 在 production DOM shell 加独立“Menu”入口、Continue 和最多五个 cart item。使用 dialog/menu 语义、
+   roving focus 或等价有界 keyboard model，覆盖 Escape、Enter/Space、方向键、pointer/touch 与 44 CSS px
+   target；filter 禁用的 L/R/X intent 不得触发 callback。
+5. menu-open 时 gameplay keyboard/touch/gamepad input 与 rAF pulse 不进入 simulation，AudioContext 按 pause
+   policy suspend；keep-open outcome 原位刷新 snapshot/focus，close outcome 恢复同一 generation、清空边沿
+   input 并把 focus 返回 playfield。
+6. cart reset/replacement、host stop/fault、visibility/pagehide 和 dispose 必须关闭/清空菜单；late snapshot
+   或 outcome 不得重开 DOM、恢复旧 generation 或产生 stale frame/audio。
 
-- 不实现 7E pause menu/menuitem callback invocation；7D 的 pause button 仍是 host lifecycle pause。
-- 不修复/重分类 required PICO API，不做 long soak/fuzz/performance closure，也不创建 public compatibility rate。
-- 不加入 cart URL/BBS access、service worker、UI asset CDN、telemetry、mobile/non-Chrome gate 或外部发布。
+### 7.3 自动化与验收
 
-## 7. 后续 units
+- real-WASM Node gate 覆盖 snapshot copy ownership、slot order、16-byte label、button filter、callback argument、
+  `true` keep-open、nil/false close、callback 内 replace/remove、fault、reset/cart swap 和 20-generation cleanup。
+- Runtime/transport contract 覆盖 operation allowlist、generation binding、invalid state、stale response、
+  callback exactly-once、host pause/menu pause 分离，以及 timeout/dispose fail closed。
+- Chrome production release gate 用 project-owned cart 验证 Menu/Continue、keyboard/pointer/touch、filter、
+  keep-open refresh、callback fault recovery、focus return、audio/simulation pause 与 cart replacement cleanup；
+  语义断言优先于截图。
+- 更新 `pico-api-inventory.yaml` 与 Known Difference：只有上述 official-required modes 都有行为证据后，
+  `menuitem` 才能从 partial 升级；否则把剩余模式精确保留为 Known Difference。
+- `pnpm run test:phase-7e`、受影响的 WASM/runtime/7B/7C/7D 回归与 `pnpm run verify` 通过；完成后
+  单独提交并把唯一 active work unit 切到 7F。
+
+### 7.4 范围外
+
+- 不复刻 PICO-8 system settings、options、reset-cart prompt、gamepad remap 或完整 console pause menu；7E 只实现
+  Continue 与 cart-defined menuitem surface。
+- 不把任意 Lua function invocation 做成 public API，不允许 menu callback 从 nested guest coroutine 或 Main
+  直接调用，不改变 ADR-019 的 nested suspension 范围。
+- 不顺带关闭 7F 的其他 required APIs，不执行 7G soak/fuzz/performance closure，不加入网络 cart、移动/
+  non-Chrome gate 或外部发布。
+
+## 8. 后续 units
 
 | Unit | 结果边界 |
 | --- | --- |
-| 7E | VM-local menuitem snapshot + root-safe callback invocation + DOM pause menu |
 | 7F | 28 个 required unknown API 与 partial mode 的 conformance closure |
 | 7G | Chrome release matrix、20-cycle recovery、600-second soak、perf/fuzz/provenance |
 | 7H | aggregate RC manifest/evidence、`test:release`、关闭合同且不执行外部发布 |

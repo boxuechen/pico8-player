@@ -9,10 +9,22 @@ interface TouchBinding {
   readonly button: number;
 }
 
+interface TouchControl {
+  readonly element: HTMLElement;
+  readonly binding: TouchBinding;
+}
+
 export interface TouchInputFrontendOptions {
   readonly window?: Window;
   readonly document?: Document;
   readonly onChange?: (snapshot: PicoControllerSnapshot) => void;
+}
+
+function setOptionalAttribute(element: HTMLElement, name: string, value: string): void {
+  const compatible = element as HTMLElement & {
+    readonly setAttribute?: (attribute: string, attributeValue: string) => void;
+  };
+  compatible.setAttribute?.(name, value);
 }
 
 /** Converts multi-pointer virtual controls to an isolated controller source. */
@@ -22,6 +34,7 @@ export class TouchInputFrontend {
   readonly #onChange: ((snapshot: PicoControllerSnapshot) => void) | undefined;
   readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
   readonly #pointers = new Map<number, TouchBinding>();
+  readonly #controls: TouchControl[] = [];
   readonly #removeListeners: (() => void)[] = [];
   #enabled = false;
   #disposed = false;
@@ -36,6 +49,8 @@ export class TouchInputFrontend {
       if (!Number.isInteger(player) || player < 0 || player >= PLAYER_CONTROLLER_COUNT ||
         !Number.isInteger(button) || button < 0 || button >= PLAYER_CONTROLLER_BUTTON_COUNT) continue;
       const binding = { player, button };
+      this.#controls.push({ element, binding });
+      setOptionalAttribute(element, "aria-pressed", "false");
       this.#bind(element, "pointerdown", (event) => this.#press(event as PointerEvent, binding));
       this.#bind(element, "pointerup", (event) => this.#release(event as PointerEvent));
       this.#bind(element, "pointercancel", (event) => this.#release(event as PointerEvent));
@@ -54,6 +69,12 @@ export class TouchInputFrontend {
   setEnabled(enabled: boolean): void {
     this.#assertActive();
     this.#enabled = enabled;
+    for (const { element } of this.#controls) {
+      if ("disabled" in element) {
+        (element as HTMLButtonElement).disabled = !enabled;
+      }
+      setOptionalAttribute(element, "aria-disabled", String(!enabled));
+    }
     if (!enabled) this.clear();
   }
 
@@ -62,6 +83,7 @@ export class TouchInputFrontend {
     if (this.#pointers.size === 0 && this.#controllers.every((value) => value === 0)) return;
     this.#pointers.clear();
     this.#controllers.fill(0);
+    this.#syncPressedState();
     this.#onChange?.(this.snapshot());
   }
 
@@ -97,7 +119,17 @@ export class TouchInputFrontend {
     }
     if (next.every((value, index) => value === this.#controllers[index])) return;
     this.#controllers.set(next);
+    this.#syncPressedState();
     this.#onChange?.(this.snapshot());
+  }
+
+  #syncPressedState(): void {
+    for (const { element, binding } of this.#controls) {
+      const pressed = [...this.#pointers.values()].some(
+        (active) => active.player === binding.player && active.button === binding.button,
+      );
+      setOptionalAttribute(element, "aria-pressed", String(pressed));
+    }
   }
 
   #bind(target: EventTarget, type: string, listener: EventListener): void {

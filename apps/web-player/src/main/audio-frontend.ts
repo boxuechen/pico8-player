@@ -37,8 +37,10 @@ export class DedicatedAudioFrontend {
   readonly #node: AudioWorkletNode;
   readonly #gain: GainNode;
   readonly #channelFactory: () => MessageChannel;
+  readonly #outputGain: number;
   readonly #waiters = new Set<StatsWaiter>();
   #lastStats: AudioDeviceStatsMessage | undefined;
+  #muted = false;
   #disposed = false;
 
   private constructor(
@@ -46,11 +48,13 @@ export class DedicatedAudioFrontend {
     node: AudioWorkletNode,
     gain: GainNode,
     channelFactory: () => MessageChannel,
+    outputGain: number,
   ) {
     this.#context = context;
     this.#node = node;
     this.#gain = gain;
     this.#channelFactory = channelFactory;
+    this.#outputGain = outputGain;
     node.port.onmessage = (event) => this.#receive(event.data);
   }
 
@@ -83,13 +87,15 @@ export class DedicatedAudioFrontend {
         outputChannelCount: [2],
       });
       const gain = context.createGain();
-      gain.gain.value = options.outputGain ?? 1;
+      const outputGain = options.outputGain ?? 1;
+      gain.gain.value = outputGain;
       node.connect(gain).connect(context.destination);
       const frontend = new DedicatedAudioFrontend(
         context,
         node,
         gain,
         channelFactory,
+        outputGain,
       );
       frontend.attach(target);
       return frontend;
@@ -109,6 +115,10 @@ export class DedicatedAudioFrontend {
 
   get lastStats(): AudioDeviceStatsMessage | undefined {
     return this.#lastStats;
+  }
+
+  get muted(): boolean {
+    return this.#muted;
   }
 
   attach(target: RuntimeAudioPortTarget): void {
@@ -132,6 +142,12 @@ export class DedicatedAudioFrontend {
   suspend(): Promise<void> {
     this.#assertActive();
     return this.#context.suspend();
+  }
+
+  setMuted(muted: boolean): void {
+    this.#assertActive();
+    this.#muted = muted;
+    this.#gain.gain.value = muted ? 0 : this.#outputGain;
   }
 
   requestStats(timeoutMs = 1000): Promise<AudioDeviceStatsMessage> {

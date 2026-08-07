@@ -116,9 +116,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A", "7B", "7C"],
-  "activeWorkUnit": "7D",
-  "nextWorkUnit": "7D",
+  "completedWorkUnits": ["7A", "7B", "7C", "7D"],
+  "activeWorkUnit": "7E",
+  "nextWorkUnit": "7E",
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -238,13 +238,14 @@
     },
     "7D": {
       "name": "Production DOM Player Shell",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "apps/web-player/src/main/",
         "apps/web-player/public/",
         "tests/runtime/phase-7d-*",
         "tests/browser/phase-7d.*",
         "tools/browser/run-phase-7d.mjs",
+        "tools/compat/browser/phase-6c.mjs",
         "docs/02-system-architecture.md",
         "docs/05-delivery-plan.md",
         "docs/06-testing-compatibility.md",
@@ -261,12 +262,52 @@
         "UI state does not become authoritative simulation state and the canvas contains only the playfield",
         "Chrome interaction and accessibility tests pass",
         "pnpm run verify passes and 7E becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "viewBoundary": "class-driven DOM view and derived-control policy under apps/web-player/src/main/ui",
+        "localCartInput": "one bounded user-selected .p8 or .p8.png file through choose or drop",
+        "states": ["idle", "loading", "ready", "running", "audio-blocked", "paused", "stopped", "faulted", "disposed"],
+        "canvas": "128x128 backing store with nearest-neighbor integer CSS scaling",
+        "accessibility": "named landmark/playfield/controls, live status and diagnostics, pressed/disabled semantics, reduced motion and 44 CSS px touch targets",
+        "chrome": "release artifact choose/drop, lifecycle, audio recovery, mute, fullscreen, keyboard, touch, 200 percent narrow viewport, fault recovery and resource disposal",
+        "verification": ["pnpm run test:phase-7d", "pnpm run test:phase-7b", "pnpm run test:phase-7c", "pnpm run verify"]
+      }
     },
     "7E": {
       "name": "Pause Menu / menuitem Completion",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "wasm/bridge/p8w_pico8_compat.*",
+        "wasm/bridge/p8w_runtime_v1.*",
+        "wasm/runtime-v1.manifest.lock.json",
+        "packages/z8lua-bridge/src/",
+        "packages/runtime-core/src/",
+        "apps/web-player/src/transport/",
+        "apps/web-player/src/main/",
+        "apps/web-player/src/worker/",
+        "apps/web-player/public/",
+        "spec/abi/",
+        "spec/pico-api-inventory.yaml",
+        "spec/phase-7-web-player-release-candidate-contract.json",
+        "tests/runtime/phase-7e-*",
+        "tests/conformance/phase-7e-*",
+        "tests/compat/fixtures/phase-7e-*",
+        "tests/browser/phase-7e.*",
+        "tools/browser/run-phase-7e.mjs",
+        "docs/adr/023-menuitem-invocation-boundary.md",
+        "docs/02-system-architecture.md",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/04-typescript-runtime.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/7-web-player-release-candidate.md",
+        "package.json"
+      ],
       "exit": [
+        "a replacement ADR fixes copy-out snapshot, root-safe invoke, callback return, filter, pause and generation semantics before production implementation",
         "the VM exports copied menu slot snapshots without exposing Lua handles or WASM pointers",
         "a paused generation-bound command invokes one registered callback at a Runtime-owned root-safe boundary",
         "replacement, removal, callback fault, reset, cart swap, stale generation and dispose fail closed",

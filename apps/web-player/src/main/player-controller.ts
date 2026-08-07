@@ -4,29 +4,18 @@ import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
 import { PlayerInputFrontend } from "./player-input.js";
 import type { PlayerLocalCartSource } from "./player-runtime-client.js";
+import {
+  isActivelyPlaying,
+  validateLocalCartSelection,
+  type PlayerShellState,
+} from "./ui/player-shell-policy.js";
+import {
+  PlayerShellView,
+  type PlayerShellElements,
+} from "./ui/player-shell-view.js";
 
-export type PlayerShellState =
-  | "idle"
-  | "loading"
-  | "ready"
-  | "running"
-  | "paused"
-  | "stopped"
-  | "faulted"
-  | "disposed";
-
-export interface PlayerShellElements {
-  readonly root: HTMLElement;
-  readonly canvas: HTMLCanvasElement;
-  readonly status: HTMLElement;
-  readonly diagnostic: HTMLElement;
-  readonly fileInput?: HTMLInputElement;
-  readonly playButton?: HTMLButtonElement;
-  readonly pauseButton?: HTMLButtonElement;
-  readonly resetButton?: HTMLButtonElement;
-  readonly stopButton?: HTMLButtonElement;
-  readonly touchControls?: HTMLElement;
-}
+export type { PlayerShellState } from "./ui/player-shell-policy.js";
+export type { PlayerShellElements } from "./ui/player-shell-view.js";
 
 export interface AnimationFrameSource {
   request(callback: FrameRequestCallback): number;
@@ -55,6 +44,7 @@ export type PlayerShellStateListener = (event: PlayerShellStateEvent) => void;
 
 export class PlayerController {
   readonly #composition: PlayerComposition;
+  readonly #view: PlayerShellView;
   readonly #elements: PlayerShellElements;
   readonly #window: Window;
   readonly #document: Document;
@@ -66,16 +56,20 @@ export class PlayerController {
   #state: PlayerShellState = "idle";
   #frameHandle: number | undefined;
   #environmentPaused = false;
+  #muted = false;
+  #stateMessage = "Select a local .p8 or .p8.png cartridge";
   #disposed = false;
   #operation = Promise.resolve();
 
   constructor(
     composition: PlayerComposition,
-    elements: PlayerShellElements,
+    view: PlayerShellView,
     options: PlayerControllerOptions = {},
   ) {
     this.#composition = composition;
-    this.#elements = elements;
+    this.#view = view;
+    this.#elements = view.elements;
+    const elements = view.elements;
     this.#window = options.window ?? window;
     this.#document = options.document ?? document;
     this.#animationFrames = options.animationFrames ?? {
@@ -89,43 +83,60 @@ export class PlayerController {
       ...(options.gamepadSource === undefined
         ? {}
         : { gamepadSource: options.gamepadSource }),
-      ...(elements.touchControls === undefined
-        ? {}
-        : { touchRoot: elements.touchControls }),
+      touchRoot: elements.touchControls,
     });
     this.#removeRuntimeListener = composition.runtime.onEvent(
       (event) => this.#onRuntimeEvent(event),
     );
     this.#bind(elements.canvas, "click", () => elements.canvas.focus());
-    if (elements.fileInput !== undefined) {
-      this.#bind(elements.fileInput, "change", () => {
-        const file = elements.fileInput?.files?.[0];
-        if (file === undefined) return;
-        this.#enqueue(async () => {
-          await this.loadCart(new Uint8Array(await file.arrayBuffer()), file.name);
-          await this.start();
-        });
+    this.#bind(elements.fileInput, "change", () => {
+      const files = elements.fileInput.files === null
+        ? []
+        : Array.from(elements.fileInput.files);
+      void this.#loadLocalFiles(files).finally(() => {
+        elements.fileInput.value = "";
       });
-    }
-    if (elements.playButton !== undefined) {
-      this.#bind(elements.playButton, "click", () => this.#enqueue(async () => {
-        if (this.#state === "paused") await this.resume();
-        else if (this.#state === "ready") await this.start();
-      }));
-    }
-    if (elements.pauseButton !== undefined) {
-      this.#bind(elements.pauseButton, "click", () => this.#enqueue(() => this.pause()));
-    }
-    if (elements.resetButton !== undefined) {
-      this.#bind(elements.resetButton, "click", () => this.#enqueue(async () => {
-        const restart = this.#state === "running";
-        await this.reset();
-        if (restart) await this.start();
-      }));
-    }
-    if (elements.stopButton !== undefined) {
-      this.#bind(elements.stopButton, "click", () => this.#enqueue(() => this.stop()));
-    }
+    });
+    this.#bind(elements.dropZone, "dragenter", (event) => this.#drag(event as DragEvent));
+    this.#bind(elements.dropZone, "dragover", (event) => this.#drag(event as DragEvent));
+    this.#bind(elements.dropZone, "dragleave", () => this.#view.setDropActive(false));
+    this.#bind(elements.dropZone, "drop", (event) => {
+      const dragEvent = event as DragEvent;
+      dragEvent.preventDefault();
+      this.#view.setDropActive(false);
+      const files = dragEvent.dataTransfer === null
+        ? []
+        : Array.from(dragEvent.dataTransfer.files);
+      void this.#loadLocalFiles(files);
+    });
+    this.#bind(elements.playButton, "click", () => {
+      if (this.#state === "audio-blocked") {
+        void this.retryAudio().catch((error) => this.#showUiError(error));
+        return;
+      }
+      // AudioContext.resume() must be called in the trusted event task. Runtime
+      // mutations remain serialized behind the controller operation queue.
+      const audioProbe = this.#muted
+        ? Promise.resolve(true)
+        : this.#composition.resumeAudio();
+      this.#enqueue(async () => {
+        if (this.#state === "paused") await this.resume(audioProbe);
+        else if (this.#state === "ready") await this.start(audioProbe);
+      });
+    });
+    this.#bind(elements.pauseButton, "click", () => this.#enqueue(() => this.pause()));
+    this.#bind(elements.resetButton, "click", () => this.#enqueue(async () => {
+      const restart = isActivelyPlaying(this.#state);
+      await this.reset();
+      if (restart) await this.start();
+    }));
+    this.#bind(elements.stopButton, "click", () => this.#enqueue(() => this.stop()));
+    this.#bind(elements.muteButton, "click", () => {
+      void this.toggleMute().catch((error) => this.#showUiError(error));
+    });
+    this.#bind(elements.fullscreenButton, "click", () => {
+      void this.#view.toggleFullscreen().catch((error) => this.#showUiError(error));
+    });
     this.#bind(this.#window, "blur", () => this.#pauseForEnvironment());
     this.#bind(this.#window, "focus", () => this.#resumeFromEnvironment());
     this.#bind(this.#document, "visibilitychange", () => {
@@ -133,7 +144,7 @@ export class PlayerController {
       else this.#resumeFromEnvironment();
     });
     this.#bind(this.#window, "pagehide", () => this.#composition.flushPersistence());
-    this.#renderState("Select a .p8 or .p8.png cartridge");
+    this.#renderState(this.#stateMessage);
   }
 
   get state(): PlayerShellState {
@@ -146,6 +157,10 @@ export class PlayerController {
 
   get inputControllers(): readonly number[] {
     return this.#input.snapshot().controllers;
+  }
+
+  get muted(): boolean {
+    return this.#muted;
   }
 
   onStateChange(listener: PlayerShellStateListener): () => void {
@@ -166,7 +181,7 @@ export class PlayerController {
     this.#input.setDevkitFlags(0);
     this.#composition.runtime.clearInput();
     this.#setState("loading", `Loading ${displayName}…`);
-    this.#elements.diagnostic.textContent = "";
+    this.#view.clearDiagnostic();
     try {
       await this.#composition.loadCart(
         source,
@@ -181,18 +196,20 @@ export class PlayerController {
     }
   }
 
-  async start(): Promise<void> {
+  async start(audioProbe?: Promise<boolean>): Promise<void> {
     this.#assertActive();
     if (this.#state !== "ready") return;
     try {
-      await this.#composition.resumeAudio();
+      const audioReady = this.#muted
+        ? true
+        : await (audioProbe ?? this.#composition.resumeAudio());
       if (this.#disposed) return;
       await this.#composition.start();
       if (this.#disposed) return;
       this.#environmentPaused = false;
       this.#input.setEnabled(true);
       this.#elements.canvas.focus();
-      this.#setState("running", "Running");
+      this.#setPlayingState(audioReady);
       this.#scheduleFrame();
     } catch (error) {
       this.#fail(error);
@@ -202,22 +219,24 @@ export class PlayerController {
 
   async pause(): Promise<void> {
     this.#assertActive();
-    if (this.#state !== "running") return;
+    if (!isActivelyPlaying(this.#state)) return;
     this.#environmentPaused = false;
     await this.#pauseInternal();
   }
 
-  async resume(): Promise<void> {
+  async resume(audioProbe?: Promise<boolean>): Promise<void> {
     this.#assertActive();
     if (this.#state !== "paused") return;
     try {
-      await this.#composition.resumeAudio();
+      const audioReady = this.#muted
+        ? true
+        : await (audioProbe ?? this.#composition.resumeAudio());
       if (this.#disposed) return;
       await this.#composition.resume();
       if (this.#disposed) return;
       this.#input.setEnabled(true);
       this.#elements.canvas.focus();
-      this.#setState("running", "Running");
+      this.#setPlayingState(audioReady);
       this.#scheduleFrame();
     } catch (error) {
       this.#fail(error);
@@ -234,7 +253,7 @@ export class PlayerController {
     try {
       await this.#composition.reset();
       if (this.#disposed) return;
-      this.#elements.diagnostic.textContent = "";
+      this.#view.clearDiagnostic();
       this.#setState("ready", "Reset complete");
     } catch (error) {
       this.#fail(error);
@@ -270,21 +289,56 @@ export class PlayerController {
     this.#removeRuntimeListener();
     for (const remove of this.#removeListeners.splice(0)) remove();
     this.#stateListeners.clear();
+    await this.#view.exitFullscreen().catch(() => undefined);
     await this.#composition.dispose();
+    this.#view.dispose();
+  }
+
+  async retryAudio(): Promise<void> {
+    this.#assertActive();
+    if (this.#state !== "audio-blocked") return;
+    if (this.#muted) {
+      this.#setState("running", "Running · Muted");
+      return;
+    }
+    const audioReady = await this.#composition.resumeAudio();
+    if (this.#disposed) return;
+    this.#setPlayingState(audioReady);
+  }
+
+  async toggleMute(): Promise<void> {
+    this.#assertActive();
+    this.#muted = !this.#muted;
+    this.#composition.setMuted(this.#muted);
+    if (this.#muted) {
+      if (this.#state === "audio-blocked") {
+        this.#setState("running", "Running · Muted");
+      } else {
+        this.#renderState(isActivelyPlaying(this.#state) ? "Running · Muted" : this.#stateMessage);
+      }
+      return;
+    }
+    if (isActivelyPlaying(this.#state)) {
+      const audioReady = await this.#composition.resumeAudio();
+      if (this.#disposed) return;
+      this.#setPlayingState(audioReady);
+    } else {
+      this.#renderState(this.#stateMessage);
+    }
   }
 
   #scheduleFrame(): void {
-    if (this.#frameHandle !== undefined || this.#state !== "running") return;
+    if (this.#frameHandle !== undefined || !isActivelyPlaying(this.#state)) return;
     this.#frameHandle = this.#animationFrames.request((timestamp) => {
       this.#frameHandle = undefined;
-      if (this.#state !== "running") return;
+      if (!isActivelyPlaying(this.#state)) return;
       void this.#composition.pulse(timestamp, this.#input.takeSnapshot()).then(
         () => this.#scheduleFrame(),
         (error) => {
           if (
             error instanceof RuntimeClientError &&
             error.record.code === "E_INVALID_STATE" &&
-            this.#state !== "running"
+            !isActivelyPlaying(this.#state)
           ) return;
           this.#fail(error);
         },
@@ -315,7 +369,7 @@ export class PlayerController {
   }
 
   #pauseForEnvironment(): void {
-    if (this.#state !== "running") return;
+    if (!isActivelyPlaying(this.#state)) return;
     this.#environmentPaused = true;
     this.#enqueue(() => this.#pauseInternal());
   }
@@ -331,7 +385,10 @@ export class PlayerController {
     if (event.type === "state" || event.type === "frame") {
       this.#input.setDevkitFlags(event.devkitFlags);
     }
-    if (event.type === "state" && event.state === "stopped" && this.#state === "running") {
+    if (
+      event.type === "state" && event.state === "stopped" &&
+      isActivelyPlaying(this.#state)
+    ) {
       this.#cancelFrame();
       this.#input.setEnabled(false);
       this.#input.setDevkitFlags(0);
@@ -341,7 +398,7 @@ export class PlayerController {
       return;
     }
     if (event.type === "diagnostic") {
-      this.#elements.diagnostic.textContent = `${event.error.code}: ${event.error.message}`;
+      this.#view.showDiagnostic(`${event.error.code}: ${event.error.message}`);
     } else if (event.type === "fault") {
       this.#fail(new RuntimeClientError(event.error));
     }
@@ -356,37 +413,72 @@ export class PlayerController {
     const message = error instanceof RuntimeClientError
       ? `${error.record.code}: ${error.record.message}`
       : error instanceof Error ? error.message : String(error);
-    this.#elements.diagnostic.textContent = message;
+    this.#view.showDiagnostic(message);
     this.#setState("faulted", "Faulted");
   }
 
   #setState(state: PlayerShellState, text: string): void {
     this.#state = state;
+    this.#stateMessage = text;
     this.#renderState(text);
   }
 
   #renderState(text: string): void {
-    this.#elements.root.dataset.playerState = this.#state;
-    this.#elements.status.textContent = text;
-    this.#elements.status.setAttribute("aria-live", "polite");
-    this.#elements.diagnostic.setAttribute("aria-live", "assertive");
-    const canPlay = this.#state === "ready" || this.#state === "paused";
-    if (this.#elements.playButton !== undefined) this.#elements.playButton.disabled = !canPlay;
-    if (this.#elements.pauseButton !== undefined) {
-      this.#elements.pauseButton.disabled = this.#state !== "running";
-    }
-    if (this.#elements.resetButton !== undefined) {
-      this.#elements.resetButton.disabled = !this.#composition.runtime.hasRetainedCart ||
-        this.#state === "loading" || this.#state === "disposed";
-    }
-    if (this.#elements.stopButton !== undefined) {
-      this.#elements.stopButton.disabled = !["ready", "running", "paused", "faulted"].includes(
-        this.#state,
-      );
-    }
+    this.#stateMessage = text;
+    this.#view.render({
+      state: this.#state,
+      message: text,
+      hasRetainedCart: this.#composition.runtime.hasRetainedCart,
+      muted: this.#muted,
+    });
     for (const listener of this.#stateListeners) {
       listener({ state: this.#state, message: text });
     }
+  }
+
+  #setPlayingState(audioReady: boolean): void {
+    if (audioReady) {
+      this.#setState("running", this.#muted ? "Running · Muted" : "Running");
+    } else {
+      this.#setState(
+        "audio-blocked",
+        "Running without audio · Select Enable audio to try again",
+      );
+    }
+  }
+
+  async #loadLocalFiles(files: readonly File[]): Promise<void> {
+    if (this.#disposed) return;
+    const validation = validateLocalCartSelection(files);
+    if (!validation.ok) {
+      this.#view.showDiagnostic(validation.message);
+      return;
+    }
+    const file = files[0]!;
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(await file.arrayBuffer());
+    } catch (error) {
+      this.#showUiError(error);
+      return;
+    }
+    this.#enqueue(async () => {
+      await this.loadCart(bytes, file.name);
+      await this.start();
+    });
+  }
+
+  #drag(event: DragEvent): void {
+    if (this.#state === "loading" || this.#state === "disposed") return;
+    event.preventDefault();
+    if (event.dataTransfer !== null) event.dataTransfer.dropEffect = "copy";
+    this.#view.setDropActive(true);
+  }
+
+  #showUiError(error: unknown): void {
+    if (this.#disposed) return;
+    const message = error instanceof Error ? error.message : String(error);
+    this.#view.showDiagnostic(message);
   }
 
   #enqueue(operation: () => Promise<void>): void {

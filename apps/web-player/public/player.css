@@ -1,8 +1,19 @@
 :root {
   color-scheme: dark;
+  --p8-shell: #11131a;
+  --p8-panel: #1d2b53;
+  --p8-panel-raised: #28346a;
+  --p8-ink: #fff1e8;
+  --p8-muted: #c2c3c7;
+  --p8-line: #5f574f;
+  --p8-blue: #29adff;
+  --p8-pink: #ff77a8;
+  --p8-green: #00e436;
+  --p8-red: #ff004d;
+  --p8-focus: #ffec27;
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-  background: #11131a;
-  color: #fff1e8;
+  background: var(--p8-shell);
+  color: var(--p8-ink);
 }
 
 body {
@@ -10,33 +21,309 @@ body {
   min-block-size: 100vh;
   display: grid;
   place-items: center;
-  background: #11131a;
+  background:
+    radial-gradient(circle at 50% 10%, rgb(41 173 255 / 9%), transparent 38rem),
+    var(--p8-shell);
 }
 
 .release-demo {
+  box-sizing: border-box;
   inline-size: min(92vw, 38rem);
   display: grid;
   gap: 1rem;
 }
 
+.release-demo > h1,
+.release-demo > p {
+  margin: 0;
+}
+
+.release-demo > p {
+  color: var(--p8-muted);
+  line-height: 1.5;
+}
+
 .pico8-player {
+  box-sizing: border-box;
   inline-size: 100%;
-  justify-items: stretch;
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--p8-line);
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, var(--p8-panel-raised), var(--p8-panel));
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 28%);
 }
 
-.pico8-player canvas {
-  inline-size: min(100%, 32rem);
-  block-size: auto;
-  aspect-ratio: 1;
-  justify-self: center;
-  border: 1px solid #5f574f;
+.pico8-player *,
+.pico8-player *::before,
+.pico8-player *::after {
+  box-sizing: border-box;
 }
 
-.pico8-player button,
-.pico8-player input {
+.pico8-player__chrome {
+  min-inline-size: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pico8-player__brand {
+  color: var(--p8-pink);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.pico8-player__status {
+  min-inline-size: 0;
+  overflow: hidden;
+  color: var(--p8-muted);
+  font-size: 0.8125rem;
+  text-align: end;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pico8-player__stage {
+  position: relative;
+  min-inline-size: 128px;
+  min-block-size: 128px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #000;
+  border-radius: 0.375rem;
+  background: #000;
+  outline: 0 solid transparent;
+  outline-offset: 0.25rem;
+  transition: outline-color 120ms ease, outline-width 120ms ease;
+}
+
+.pico8-player[data-drop-active="true"] .pico8-player__stage {
+  outline-color: var(--p8-blue);
+  outline-width: 3px;
+}
+
+.pico8-player__canvas {
+  display: block;
+  flex: none;
+  inline-size: 128px;
+  block-size: 128px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  outline: none;
+}
+
+.pico8-player[data-scale="2"] .pico8-player__canvas {
+  inline-size: 256px;
+  block-size: 256px;
+}
+
+.pico8-player[data-scale="3"] .pico8-player__canvas {
+  inline-size: 384px;
+  block-size: 384px;
+}
+
+.pico8-player[data-scale="4"] .pico8-player__canvas {
+  inline-size: 512px;
+  block-size: 512px;
+}
+
+.pico8-player[data-scale="5"] .pico8-player__canvas {
+  inline-size: 640px;
+  block-size: 640px;
+}
+
+.pico8-player[data-scale="6"] .pico8-player__canvas {
+  inline-size: 768px;
+  block-size: 768px;
+}
+
+.pico8-player[data-scale="7"] .pico8-player__canvas {
+  inline-size: 896px;
+  block-size: 896px;
+}
+
+.pico8-player[data-scale="8"] .pico8-player__canvas {
+  inline-size: 1024px;
+  block-size: 1024px;
+}
+
+.pico8-player__canvas:focus-visible,
+.pico8-player__button:focus-visible {
+  outline: 3px solid var(--p8-focus);
+  outline-offset: 2px;
+}
+
+.pico8-player__drop-hint {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 0.4rem;
+  color: var(--p8-ink);
+  background: rgb(0 0 0 / 78%);
+  font-size: 0.75rem;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(100%);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.pico8-player[data-player-state="idle"] .pico8-player__drop-hint,
+.pico8-player[data-drop-active="true"] .pico8-player__drop-hint {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pico8-player__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.pico8-player__button {
+  min-block-size: 2.75rem;
+  display: inline-grid;
+  place-items: center;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--p8-line);
+  border-radius: 0.35rem;
+  color: var(--p8-ink);
+  background: var(--p8-shell);
   font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 120ms ease, background-color 120ms ease, transform 80ms ease;
+}
+
+.pico8-player__button:hover:not(:disabled),
+.pico8-player__file-label:hover:not([aria-disabled="true"]) {
+  border-color: var(--p8-blue);
+  background: #16213f;
+}
+
+.pico8-player__button:active:not(:disabled),
+.pico8-player__file-label:active:not([aria-disabled="true"]) {
+  transform: translateY(1px);
+}
+
+.pico8-player__button:disabled,
+.pico8-player__file-label[aria-disabled="true"] {
+  color: #837f86;
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.pico8-player__button[aria-pressed="true"] {
+  border-color: var(--p8-green);
+  color: var(--p8-green);
+}
+
+.pico8-player__file-label {
+  position: relative;
+}
+
+.pico8-player__file-input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pico8-player__file-label:has(.pico8-player__file-input:focus-visible) {
+  outline: 3px solid var(--p8-focus);
+  outline-offset: 2px;
+}
+
+.pico8-player__touch-controls {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(2.75rem, 1fr));
+  gap: 0.25rem;
+  touch-action: none;
+}
+
+.pico8-player__touch-button {
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
+  padding: 0;
+  touch-action: none;
 }
 
 .pico8-player__diagnostic {
-  color: #ff77a8;
+  max-block-size: 8rem;
+  margin: 0;
+  overflow: auto;
+  color: var(--p8-pink);
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pico8-player__diagnostic[hidden] {
+  display: none;
+}
+
+.pico8-player[data-player-state="audio-blocked"] .pico8-player__status {
+  color: var(--p8-focus);
+}
+
+.pico8-player[data-player-state="faulted"] .pico8-player__status {
+  color: var(--p8-pink);
+}
+
+.pico8-player:fullscreen {
+  inline-size: 100vw;
+  block-size: 100vh;
+  grid-template-rows: auto minmax(128px, 1fr) auto auto auto;
+  padding: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: var(--p8-shell);
+}
+
+@media (width <= 28rem) {
+  .release-demo {
+    inline-size: 100%;
+    padding: 0.5rem;
+  }
+
+  .pico8-player {
+    padding: 0.5rem;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .pico8-player__chrome {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .pico8-player__status {
+    inline-size: 100%;
+    text-align: start;
+  }
+
+  .pico8-player__button {
+    flex: 1 1 auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pico8-player *,
+  .pico8-player *::before,
+  .pico8-player *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
 }

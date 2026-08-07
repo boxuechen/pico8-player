@@ -25,8 +25,13 @@ export class Canvas2DFramePresenter {
   constructor(canvas: HTMLCanvasElement) {
     canvas.width = PICO_FRAME_WIDTH;
     canvas.height = PICO_FRAME_HEIGHT;
-    canvas.style.display = "block";
-    canvas.style.imageRendering = "pixelated";
+    const classList = (canvas as HTMLCanvasElement & { readonly classList?: DOMTokenList })
+      .classList;
+    if (classList?.contains("pico8-player__canvas") !== true) {
+      // Standalone presenter consumers do not load the production shell stylesheet.
+      canvas.style.display = "block";
+      canvas.style.imageRendering = "pixelated";
+    }
     const context = canvas.getContext("2d", {
       alpha: false,
       desynchronized: true,

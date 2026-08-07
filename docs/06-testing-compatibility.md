@@ -133,6 +133,17 @@ Chrome gate 从 nested same-origin base 运行同一 local-bytes demo；`applica
 `'wasm-unsafe-eval'`，禁止 `'unsafe-eval'`/inline script）和非 cross-origin-isolated 环境进入
 `running`。该门禁不授权网络 cart、第三方 cart、截图或 artifact publication。
 
+### 3.2 Production DOM shell gate
+
+`pnpm run test:phase-7d` 是已实现的 shell gate。Node policy tests 固定 state→controls/ARIA mapping、单文件
+suffix/size preflight、audio-blocked recovery 和 128×128 整数 scale；Chrome 从同一 nested release
+artifact 验证 local choose/drop、host lifecycle controls、mute/fullscreen、keyboard/touch/pointer、200%
+窄视口、reduced motion、fault 后重选，以及 pagehide/dispose 后 Worker、AudioContext 和 RAF 全部释放。
+
+该 gate 使用 DOM role/name/live/pressed/disabled、hit target 和实际 resource state 作为 oracle，不用截图
+代替语义断言。Chrome autoplay gate 必须先证明无用户激活的 resume 留在 suspended，再证明命中可见
+control 的 trusted click 进入 running；测试不得把 CDP 对视口外 `<html>` 的点击误当作用户操作。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：
