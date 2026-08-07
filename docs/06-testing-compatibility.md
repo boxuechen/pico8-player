@@ -172,9 +172,15 @@ index、两个 50-case canonical batch 和三个 44/44/42-case format-pair batch
 继续严格要求 12 cases。
 
 `qualification:phase-8:chrome` 对单个 local batch 运行 production Chrome fixed-tick smoke，并把 screenshot
-与 observation 写到仓库外。100-cart aggregate、65-pair parity 和 C2 review 只能从这些 local artifacts
-生成；`pnpm run verify`、CI 和 release artifact 不读取它们。tracked test 仅使用运行时生成的项目原创
-fixture 验证 discovery、selection、dedupe、batch、hash 和 path quarantine。
+与 observation 写到仓库外；`qualification:phase-8:aggregate` 再验证 exact 100-case coverage、source revision、
+manifest hash、同一 player/WASM/Chrome 环境和 screenshot coverage。aggregate 输出只有分类、失败簇、
+framebuffer 和资源计数，不含 cart identity、path、cart/screen hash、fault message 或截图。
+
+初始 canonical baseline 已在 Chrome 151 完成 100/100 observation 和 100 张本地截图：52 boots、48 fails，
+失败簇为 parse 34、language 11、timing 3。这里只是 120-tick 的故障发现计数，不是最终兼容率，也不替代
+C2 playability。65-pair parity 和 C2 review 仍只能从 local artifacts 生成；`pnpm run verify`、CI 和 release
+artifact 不读取它们。tracked test 仅使用运行时生成的项目原创 fixture 验证 discovery、selection、
+dedupe、batch、hash、environment drift、exact coverage、redaction 和 path quarantine。
 
 ## 4. 确定性执行模型
 

@@ -1,7 +1,7 @@
 # Phase 8 — Expanded Real-cart Qualification
 
 > 状态：Active
-> Active work unit：8C — Canonical Chrome Smoke
+> Active work unit：8D — Fault Triage / Core Fixes
 > 机器合同：[`spec/phase-8-expanded-real-cart-qualification-contract.json`](../../spec/phase-8-expanded-real-cart-qualification-contract.json)
 > 基线：Phase 7 exit commit `49b24ad32b54d14d4678ebd5b7225d3a9bec668e`
 
@@ -34,9 +34,9 @@ BBS/URL/host-filesystem authority，不发布第三方 cart、截图、路径、
 | Unit | 状态 | 可观察结果 |
 | --- | --- | --- |
 | 8A Activation / Corpus Contract | Complete | Phase 7 baseline、100-cart/65-pair 口径、许可/隐私边界和退出门禁锁定 |
-| 8B External Corpus Tooling | Complete | 仓库外 discovery、canonical selection、batch manifest、aggregate validator 可重复生成 |
-| 8C Canonical Chrome Smoke | **Active** | 100 个 canonical cart 完成 fixed-tick Chrome production smoke 与失败簇聚合 |
-| 8D Fault Triage / Core Fixes | Pending | 高频 parser/language/CPU/timing 问题由原创复现关闭或登记 Known Difference |
+| 8B External Corpus Tooling | Complete | 仓库外 discovery、canonical selection、batch manifest、local index 可重复生成 |
+| 8C Canonical Chrome Smoke | Complete | 100 个 canonical cart 完成 fixed-tick Chrome production smoke 与失败簇聚合 |
+| 8D Fault Triage / Core Fixes | **Active** | 高频 parser/language/CPU/timing 问题由原创复现关闭或登记 Known Difference |
 | 8E Format / Multicart Qualification | Pending | 65 组格式配对及 multicart、graphics/audio/input/persistence 风险完成定性 |
 | 8F Representative Playability | Pending | 至少 10 个分层代表 case 完成 C2，截图本地人工审阅 |
 | 8G Release Regression Requalification | Pending | 所有修复通过 RC、资源回收、确定性和 clean tracked-input 回归 |
@@ -50,37 +50,51 @@ canonical batch 为 50/50，三个 pair batch 为 44/44/42。稳定 corpus finge
 `941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c`。Phase 6 默认仍严格为 12 cases，
 Phase 8 wrapper 才允许 12–64 cases。验证：`pnpm run test:phase-8b`、`pnpm run test:architecture`。
 
-## 5. 当前工作：8C Canonical Chrome Smoke
+## 5. 已完成：8C Canonical Chrome Smoke
 
-### 5.1 Observable behavior
+两个 50-case batch 在同一 production Chrome 151、player commit 和 WASM hash 下完成 100/100 observation；
+100 张截图保留在仓库外并抽查了 boot、fault 和有帧后 fault 状态。aggregate-only 结果为 52 boots、
+48 fails，失败簇为 parse 34、language 11、timing 3；framebuffer 有帧 53、non-black 53，infrastructure
+failure 为 0。该结果不含逐-cart事实，也不作为最终兼容率。验证：`pnpm run test:phase-8c`、
+`pnpm run test:architecture`、`pnpm run verify`。
 
-- 从仓库外 local index 逐一运行两个 50-case canonical batch；每个 case 使用 production Worker/WASM/
-  Canvas/Audio path 执行 120 fixed ticks并保存本地 observation 与 screenshot。
-- 合并两个 batch 时必须验证 corpus fingerprint、source revision、player commit、WASM hash、Chrome version、
-  exact case coverage 和 observation schema；重复、缺失或跨环境结果 fail closed。
-- tracked 输出只允许 aggregate count、failure-cluster count、环境和 project-owned source hash；不得包含 cart
-  identity、label、path、cart hash、screen hash、fault message 或截图。
-- 8C 只分类和最小化故障，不修改 Runtime；通用 production 修复属于 8D。
+## 6. 当前工作：8D Fault Triage / Core Fixes
 
-### 5.2 允许修改
+### 6.1 Observable behavior
 
-- `tools/compat/`
-- `spec/compat/`
-- `tests/compat/` 下项目原创 fixture/test
+- 只在本地逐项检查 34/11/3 三个失败簇，先区分无效/内部资源 cart、multicart dependency、已知 profile
+  limitation 和可复用的 Runtime 缺口；tracked issue/repro 只使用匿名 aggregate 与项目原创最小代码。
+- 每个通用缺口必须由项目原创最小 `.p8` 或直接 WASM/Runtime contract test 复现，再按官方手册或已审阅
+  official observation 定义预期；不得复制第三方源码、字符串、资源或按 cart identity 分支。
+- parser、language、instruction-budget/timing 按共同根因合并；一个修复要证明覆盖整个语义簇，并重新运行
+  受影响的本地 case。只对单个 cart 有效的行为不得进入 production。
+- 无法安全通用修复或超出 v0.2.7 RC profile 的项登记 Known Difference/unsupported disposition；所有 P0/P1
+  必须关闭或有明确退出裁决，随后才可进入 8E format/multicart lane。
+
+### 6.2 允许修改
+
+- `packages/cart-codec/src/`、`packages/runtime-core/src/`、`packages/z8lua-bridge/src/`
+- `wasm/bridge/`、`wasm/patches/`、`wasm/z8lua/` 及对应 source/runtime lock
+- `tools/compat/`、`tools/wasm/`、`spec/abi/`、`spec/compat/`、cart-codec/API inventory 与当前 phase contract
+- `tests/cart-codec/`、`tests/runtime/`、`tests/wasm/`、`tests/compat/` 与项目原创 `tests/fixtures/phase-8/`
 - `docs/06-testing-compatibility.md`
 - `docs/README.md`
 - `docs/phases/8-expanded-real-cart-qualification.md`
 - `spec/phase-8-expanded-real-cart-qualification-contract.json`
 - `package.json`
 
-### 5.3 验证与退出
+RuntimeCore 仍不得获得浏览器依赖；codec、RuntimeCore、z8lua bridge 与 WASM 的职责按
+[`08-source-layout-and-boundaries.md`](../08-source-layout-and-boundaries.md) 第 2、7 节保持不变。
 
-- 两个 canonical batch 都完成 Chrome run，合计 exactly 100 observations；本地 screenshot count 为 100。
-- aggregate validator 输出 C0/C1/C2/C3/CU、boot/fail 和 bounded failure clusters，不泄漏 per-cart facts。
-- fault case 进入本地最小化队列；tracked 8C contract 只保存 aggregate 与 project-owned runner hashes。
-- `pnpm run test:phase-8c`、`pnpm run test:architecture` 通过；8C 独立提交后 8D 成为 active。
+### 6.3 验证与退出
 
-## 6. Phase exit gate
+- 三个初始失败簇都有 aggregate disposition、项目原创最小复现和相应 owner test，或明确 Known Difference。
+- 通用修复后的受影响本地 case 重跑；tracked 内容只记录簇级变化，不记录 cart identity/path/hash/message。
+- `pnpm run test:cart-codec`、`pnpm run test:wasm`、受影响 Runtime/Chrome 测试、
+  `pnpm run test:architecture` 与 `pnpm run verify` 通过。
+- production 无 cart-specific branch，P0/P1 为 0；8D 独立提交后 8E 成为唯一 active work unit。
+
+## 7. Phase exit gate
 
 - 100/100 canonical case 有 C* disposition；所有 in-profile case 完成 production Chrome fixed smoke。
 - 65 个 `.p8`/`.p8.png` pair 均完成 decode/boot parity 定性；差异必须进入 failure cluster 或 Known Difference。

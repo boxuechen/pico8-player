@@ -154,17 +154,15 @@ test("Phase 8B keeps Phase 6 at exactly 12 cases and exposes a separate expanded
   assert.equal(JSON.parse(schema).properties.runner.const, "phase-8-expanded-corpus-v1");
 });
 
-test("Phase 8B closes its machine contract and routes the repository to 8C", async () => {
-  const [contract, packageJson, docsReadme, phase] = await Promise.all([
+test("Phase 8B remains closed under its active successor", async () => {
+  const [contract, packageJson] = await Promise.all([
     readFile(new URL("../../spec/phase-8-expanded-real-cart-qualification-contract.json", import.meta.url), "utf8").then(JSON.parse),
     readFile(new URL("../../package.json", import.meta.url), "utf8").then(JSON.parse),
-    readFile(new URL("../../docs/README.md", import.meta.url), "utf8"),
-    readFile(new URL("../../docs/phases/8-expanded-real-cart-qualification.md", import.meta.url), "utf8"),
   ]);
-  assert.deepEqual(contract.completedWorkUnits, ["8A", "8B"]);
+  assert.ok(contract.completedWorkUnits.includes("8B"));
   assert.equal(contract.workUnits["8B"].status, "complete");
-  assert.equal(contract.workUnits["8C"].status, "active");
-  assert.equal(contract.activeWorkUnit, "8C");
+  assert.match(contract.activeWorkUnit, /^8[C-H]$/u);
+  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
   assert.equal(contract.workUnits["8B"].result.corpusFingerprint,
     "941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c");
   assert.deepEqual(contract.workUnits["8B"].result.canonicalBatchCases, [50, 50]);
@@ -175,6 +173,4 @@ test("Phase 8B closes its machine contract and routes the repository to 8C", asy
   assert.match(packageJson.scripts["qualification:phase-8:chrome"], /run-expanded-chrome-baseline\.mjs/u);
   assert.match(packageJson.scripts.test, /test:phase-8b/u);
   assert.match(packageJson.scripts.verify, /test:phase-8b/u);
-  assert.match(docsReadme, /Active work unit \| 8C/u);
-  assert.match(phase, /Active work unit：8C/u);
 });

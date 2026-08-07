@@ -107,9 +107,9 @@
     "testRelease": "pass",
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["8A", "8B"],
-  "activeWorkUnit": "8C",
-  "nextWorkUnit": "8C",
+  "completedWorkUnits": ["8A", "8B", "8C"],
+  "activeWorkUnit": "8D",
+  "nextWorkUnit": "8D",
   "nextPhase": "deferred",
   "workUnits": {
     "8A": {
@@ -186,7 +186,7 @@
     },
     "8C": {
       "name": "Canonical Chrome Smoke",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tools/compat/",
         "spec/compat/",
@@ -201,11 +201,70 @@
         "all 100 canonical carts receive a deterministic production Chrome smoke observation",
         "boot, fault, version, framebuffer and resource outcomes are aggregated without tracked per-cart data",
         "failures are assigned to bounded clusters and 8D becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "caseCount": 100,
+        "completedCaseCount": 100,
+        "smokeOutcomes": { "boots": 52, "fails": 48, "notRun": 0 },
+        "counts": { "C0": 48, "C1": 0, "C2": 0, "C3": 0, "CU": 52 },
+        "failureClusters": { "parse": 34, "language": 11, "timing": 3 },
+        "framebuffer": { "withFrame": 53, "nonBlack": 53, "blackOnly": 47 },
+        "screenshotsCapturedLocally": 100,
+        "completedBatchRuns": 2,
+        "infrastructureFailures": 0,
+        "environment": {
+          "playerCommit": "27bb92657bc2f967e65ad84273b544cd0c806dab",
+          "runtimeWasmSha256": "7dcd584a51ef504431fae47df11eb1a9a685efd6b1b2c372478f796766888fa8",
+          "chromeVersion": "Google Chrome 151.0.7922.76"
+        },
+        "projectOwnedRunnerSha256": {
+          "browserHarness": "5244a0a70db18fc79dacb0ea42e0ff1a07578c0801edb17763f2c50962df46ea",
+          "chromeRunner": "1f6eb038e067cf51a06381e8ab912450454bfe2878271537510b0fe27e6fa880",
+          "expandedWrapper": "0aefdd4d9f25e835b329e5c18031ab245cc4917fe4041c35de0499fbb3a907be",
+          "aggregateValidator": "f28b946b594b290a1d107d232622558a64cb58356f32e1f319eec46c00ba1099",
+          "aggregateCli": "4c29092b24b0552a5fd86779dc53a5c53f19af4967ac712b7495d17254116b5f"
+        },
+        "productionChanged": false,
+        "networkAccess": false,
+        "thirdPartyPerCartDataTracked": false,
+        "thirdPartyScreenshotsTracked": false,
+        "publicCompatibilityRatePublished": false,
+        "verification": [
+          "pnpm run test:phase-8c",
+          "pnpm run test:architecture",
+          "pnpm run verify"
+        ]
+      }
     },
     "8D": {
       "name": "Fault Triage / Core Fixes",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "packages/cart-codec/src/",
+        "packages/runtime-core/src/",
+        "packages/z8lua-bridge/src/",
+        "wasm/bridge/",
+        "wasm/patches/",
+        "wasm/z8lua/",
+        "wasm/source.lock.json",
+        "wasm/runtime-v1.manifest.lock.json",
+        "tools/compat/",
+        "tools/wasm/",
+        "spec/abi/",
+        "spec/compat/",
+        "spec/cart-codec-contract.json",
+        "spec/pico-api-inventory.yaml",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "tests/cart-codec/",
+        "tests/runtime/",
+        "tests/wasm/",
+        "tests/compat/",
+        "tests/fixtures/phase-8/",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "package.json"
+      ],
       "exit": [
         "parser, language, CPU and timing clusters have project-owned minimal reproducers",
         "generic fixes or explicit Known Differences replace every in-scope P0/P1",
