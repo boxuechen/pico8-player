@@ -1,7 +1,7 @@
 # Phase 7 — Web Player Release Candidate
 
 > 状态：Active
-> Active work unit：7G — Chrome Release Hardening
+> Active work unit：7H — Release Candidate Exit
 > 机器合同：[`spec/phase-7-web-player-release-candidate-contract.json`](../../spec/phase-7-web-player-release-candidate-contract.json)
 > 基线：Phase 6 exit commit `117882a8bbd368ea8d8ebea2a2145d8f71152ec3`
 
@@ -90,55 +90,49 @@ bypass、无序 `pairs` 聚合、reset replay、invalid `select` fault 与 fresh
 
 验证：`pnpm run test:phase-7f`、`pnpm run verify`。
 
-## 9. 当前工作：7G Chrome Release Hardening
+## 9. 已完成：7G Chrome Release Hardening
 
-### 9.1 目标与输入边界
+7G 由 versioned gate manifest 预先锁定 artifact、audio、persistence、lifecycle/recovery/fuzz、600 秒 soak
+和 provenance 六个门禁。release path 在 Chrome 151 覆盖正确/错误 WASM MIME、strict CSP、nested base、
+non-isolated、44.1/48 kHz、IndexedDB denied/quota/blocked、bfcache、整数 resize、reduced motion、双实例、
+64 组畸形 bytes 和 20 次 Worker watchdog recovery。production main 修复了重复环境 pause 与 persisted
+`pagehide/pageshow`；demo 只在非 bfcache 离页 dispose。30/60 Hz 并行 600 秒 wall-clock soak 达到 zero
+audio underrun、zero stale output 和完整 resource teardown，未扩大网络、cart 或浏览器 authority。
 
-- 对 7C release artifact 和 7D/7E public shell 做 release hardening，不新增 cart API、网络 authority、
-  浏览器或移动端范围；测试 cart 只用 project-owned bytes。
-- 建立 versioned 7G gate manifest，固定 Chrome/Chromium-only matrix、project carts、artifact/provenance
-  hashes、测量方法、性能/resource budgets 和每个 gate 的 fail-closed 条件。动态临时 profile、trace、截图
-  和第三方内容不得提交。
-- 先用自动化复现失败，再修改对应 owner；UI/lifecycle 修复留在 app main，Worker recovery 留在 transport/
-  composition root，simulation 修复才进入 RuntimeCore。不得用测试专用 production branch 跳过失败。
+验证：`pnpm run test:phase-7g`、`pnpm run verify`。`test:phase-7g:diagnostic` 只供定位，不能替代 exit。
 
-### 9.2 Release/browser matrix
+## 10. 当前工作：7H Release Candidate Exit
 
-1. **Artifact boot**：复用 stable manifest keys，在 Chrome stable/fixed runner 上覆盖正确/错误 WASM MIME、
-   strict CSP、non-cross-origin-isolated、nested relative base 和无网络 cart authority；验证 fallback 不重复启动。
-2. **Audio/persistence recovery**：production AudioContext/AudioWorklet 分别在 44.1 kHz、48 kHz 覆盖 unlock、
-   suspend/resume、mute 与 dispose；IndexedDB denied/quota/blocked 结果必须结构化、用户可见、可继续运行且不
-   污染下一 generation。
-3. **Page lifecycle**：覆盖 visibility、blur、pagehide/pageshow（含 bfcache 语义）、fullscreen、整数 resize、
-   reduced motion 和多实例 teardown；隐藏/恢复不得积压 simulation burst 或留下 input/audio state。
+### 10.1 冻结 aggregate release contract
 
-### 9.3 Recovery、soak 与安全预算
+- 创建 aggregate-only 7H exit manifest，绑定 Phase 7 contract、7G gate manifest、API inventory、WASM runtime
+  lock、release artifact manifest/file hashes、Chrome exact version 和 required gate source hashes。
+- manifest 只含 aggregate/profile 事实，不含 cart identity、用户路径、截图、逐-cart observation、动态 profile
+  或 third-party bytes；open P0/P1 与 unknown required release modes 必须为 0。
+- 重新生成 release artifact 后再锁 hash；任何后续 source/contract 变化都必须使 exit test fail closed，不能手改
+  hash 绕过重建。
 
-- 运行 20 个 fault/hang/Worker-termination/recreate cycle；每轮 generation、frame/audio/state 必须隔离，最后
-  仅一个 active instance，旧 Worker/AudioContext/listener/RAF 不可继续输出。
-- 用 project-owned 60 Hz representative cart 运行 600 秒 Chrome desktop wall-clock soak；记录 committed
-  frames、scheduler backlog、audio queue/underrun、command latency、JS/WASM memory 和 teardown result。
-  `audioUnderruns=0` 是硬门禁，其他数值必须在 manifest 预先公布的预算内，不能测后放宽。
-- 对 public byte ingress、DOM local file/drop metadata、Worker command/generation 和 persistence result 做
-  deterministic bounded fuzz；超限/畸形输入只能得到结构化拒绝，不得 crash、hang、stale commit 或联网。
-- provenance audit 重新验证 release allowlist、source/artifact hashes、license boundary、无 `ref/`/local corpus/
-  third-party output、无绝对路径和无 publication side effect。
+### 10.2 发布口径与最小复现文档
 
-### 9.4 自动化与验收
+- 在用户入口写明唯一支持口径：PICO-8 v0.2.7、Chrome/Chromium desktop、caller-provided bytes/local file、
+  compatible 101 / partial `flip`、`stat`、`print`，以及完整 Known Differences 与范围排除。
+- 给出从 fresh checkout 构建、静态 HTTP 承载 release artifact、打开 local demo 和调用 stable embed API 的最短
+  可复制步骤；禁止 `file://`、任意 URL/BBS fetch、host filesystem resolver 或隐式 publication。
+- demo 必须继续从 stable manifest keys 发现 assets，接受本地 `.p8`/`.p8.png`，并清楚说明不会上传或联网解析 cart。
 
-- `test:phase-7g` 是单一 gate：release matrix、lifecycle/audio/persistence、20-cycle recovery、fuzz、artifact
-  audit 和 600-second soak 都必须真实运行；可提供仅供定位的子命令，但不能以短测结果代替 exit。
-- runner 输出一个无 cart identity/路径的 aggregate result；contract test 检查 gate completeness、预算先验、
-  Chrome version、artifact/input hash、zero underrun、zero stale output、resource teardown 和 provenance。
-- 运行受影响的 7B–7F regression 与 `pnpm run verify`。验证通过后独立提交并只激活 7H。
-- 7G 不写 RC exit evidence、不创建 `test:release`、不删除 active phase 文档，也不执行 npm/网站/GitHub
-  publication。
+### 10.3 单一 release gate 与 clean-checkout proof
 
-## 10. 后续 unit
+- 新建 `test:release`，从 clean checkout 所需的 tracked inputs 开始执行 build、artifact verifier、7G full gate、
+  aggregate exit contract 与文档/许可/provenance audit；10 秒 diagnostic 不是 release gate。
+- 在临时 clean checkout/worktree 中真实运行 `pnpm install --offline --frozen-lockfile`、`pnpm run test:release` 和
+  `pnpm run verify`；证明无 ignored build output、local corpus、`ref/` 或当前工作区状态依赖。
+- 只提交 aggregate evidence 与命令结果；不提交 release build、browser profile、trace、截图或 benchmark smoke
+  output。
 
-| Unit | 结果边界 |
-| --- | --- |
-| 7H | aggregate RC manifest/evidence、`test:release`、关闭合同且不执行外部发布 |
+### 10.4 关闭与禁止事项
 
-每个 unit 完成后必须把结果压缩进机器合同、更新本页唯一 active work unit、运行与影响面相称的
-Chrome/Node gate 和 `pnpm run verify`，再以独立 commit 保持工作区干净。
+- 写入 immutable Phase 7 exit evidence，关闭机器合同，把 roadmap 压缩为 Phase 7 Complete，删除本 active phase
+  执行文档并让 `docs/README.md` 明确“无 active phase”。
+- 7H 不修改 Runtime/Worker/WASM 行为，不新增 capability，不访问 BBS，不执行 npm registry、网站、GitHub Release
+  或任何外部 publication；外部发布仍需用户另行明确授权。
+- `test:release`、clean-checkout `pnpm run verify` 与最终工作区 cleanliness 全部通过后，才允许提交 7H。

@@ -190,7 +190,13 @@ export class PlayerController {
       if (this.#document.visibilityState === "hidden") this.#pauseForEnvironment();
       else this.#resumeFromEnvironment();
     });
-    this.#bind(this.#window, "pagehide", () => this.#composition.flushPersistence());
+    this.#bind(this.#window, "pagehide", (event) => {
+      this.#composition.flushPersistence();
+      if ((event as PageTransitionEvent).persisted) this.#pauseForEnvironment();
+    });
+    this.#bind(this.#window, "pageshow", (event) => {
+      if ((event as PageTransitionEvent).persisted) this.#resumeFromEnvironment();
+    });
     this.#renderState(this.#stateMessage);
   }
 
@@ -474,16 +480,26 @@ export class PlayerController {
   }
 
   #pauseForEnvironment(): void {
-    if (!isActivelyPlaying(this.#state) && this.#state !== "menu-open") return;
+    if (
+      (!isActivelyPlaying(this.#state) && this.#state !== "menu-open") ||
+      this.#environmentPaused
+    ) return;
     this.#environmentPaused = true;
-    this.#enqueue(() => this.#pauseInternal());
+    this.#enqueue(async () => {
+      if (
+        !this.#environmentPaused ||
+        (!isActivelyPlaying(this.#state) && this.#state !== "menu-open")
+      ) return;
+      await this.#pauseInternal();
+    });
   }
 
   #resumeFromEnvironment(): void {
-    if (!this.#environmentPaused || this.#state !== "paused") return;
-    if (this.#document.visibilityState === "hidden") return;
+    if (!this.#environmentPaused || this.#document.visibilityState === "hidden") return;
     this.#environmentPaused = false;
-    this.#enqueue(() => this.resume());
+    this.#enqueue(async () => {
+      if (this.#state === "paused") await this.resume();
+    });
   }
 
   #onRuntimeEvent(event: PlayerRuntimeToHost): void {

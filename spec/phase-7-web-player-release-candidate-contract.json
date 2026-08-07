@@ -116,9 +116,9 @@
     "thirdPartyArtifactsTracked": false,
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E", "7F"],
-  "activeWorkUnit": "7G",
-  "nextWorkUnit": "7G",
+  "completedWorkUnits": ["7A", "7B", "7C", "7D", "7E", "7F", "7G"],
+  "activeWorkUnit": "7H",
+  "nextWorkUnit": "7H",
   "nextPhase": "deferred",
   "workUnits": {
     "7A": {
@@ -412,7 +412,7 @@
     },
     "7G": {
       "name": "Chrome Release Hardening",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "apps/web-player/src/main/",
         "apps/web-player/src/transport/",
@@ -454,11 +454,51 @@
         "the 600-second 60 Hz desktop soak has zero audio underruns and meets published performance/resource budgets",
         "fuzz, provenance and artifact audit gates pass",
         "pnpm run verify passes and 7H becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "manifest": "tests/conformance/manifests/phase-7g-chrome-hardening.json",
+        "manifestSha256": "6ac574d15b2b90dbdbabb70b5b96407180a9d1a8a5a0884d3be78f13ec1c5b16",
+        "projectCarts": 2,
+        "browser": "Google Chrome 151.0.7922.76",
+        "artifactMatrix": "correct/wrong WASM MIME, strict CSP, nested relative base and non-isolated boot",
+        "audioSampleRates": [44100, 48000],
+        "persistenceFailures": ["NotAllowedError", "QuotaExceededError", "blocked upgrade"],
+        "lifecycle": "idempotent blur/visibility, bfcache pagehide/pageshow, fullscreen, integer resize, reduced motion and multi-instance teardown",
+        "workerRecoveryCycles": 20,
+        "fuzzIterations": 64,
+        "desktopSoakSeconds": 600,
+        "desktopSoakProfilesHz": [30, 60],
+        "audioUnderruns": 0,
+        "staleOutputs": 0,
+        "externalRequests": 0,
+        "productionChanged": true,
+        "abiChanged": false,
+        "runtimeArtifactChanged": false,
+        "networkSurfaceChanged": false,
+        "publicationPerformed": false,
+        "verification": ["pnpm run test:phase-7g", "pnpm run verify"]
+      }
     },
     "7H": {
       "name": "Release Candidate Exit",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "README.md",
+        "apps/web-player/public/demo/",
+        "docs/README.md",
+        "docs/01-scope-and-success-criteria.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/evidence/phase-7/",
+        "docs/phases/README.md",
+        "docs/phases/7-web-player-release-candidate.md",
+        "spec/phase-7-web-player-release-candidate-contract.json",
+        "tests/artifact/phase-7h-*",
+        "tests/conformance/manifests/phase-7h-*",
+        "tests/conformance/phase-7h-*",
+        "package.json"
+      ],
       "exit": [
         "an aggregate-only exit manifest binds source, WASM, release artifact, Chrome and gate hashes",
         "the compatibility report publishes profile, Known Differences and zero open P0/P1",

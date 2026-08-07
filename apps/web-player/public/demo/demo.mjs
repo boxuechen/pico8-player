@@ -34,6 +34,6 @@ try {
   document.body.dataset.status = "error";
 }
 
-window.addEventListener("pagehide", () => {
-  void player?.dispose();
-}, { once: true });
+window.addEventListener("pagehide", (event) => {
+  if (!event.persisted) void player?.dispose();
+});
