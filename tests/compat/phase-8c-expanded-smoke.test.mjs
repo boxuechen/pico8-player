@@ -131,7 +131,7 @@ test("Phase 8C rejects cross-batch environment drift and incomplete coverage", a
   });
 });
 
-test("Phase 8C closes with aggregate-only evidence and routes one active 8D", async () => {
+test("Phase 8C remains closed with aggregate-only evidence under its active successor", async () => {
   const [contract, packageJson, docsReadme, phase, schema] = await Promise.all([
     readFile(new URL("../../spec/phase-8-expanded-real-cart-qualification-contract.json", import.meta.url), "utf8").then(JSON.parse),
     readFile(new URL("../../package.json", import.meta.url), "utf8").then(JSON.parse),
@@ -139,10 +139,10 @@ test("Phase 8C closes with aggregate-only evidence and routes one active 8D", as
     readFile(new URL("../../docs/phases/8-expanded-real-cart-qualification.md", import.meta.url), "utf8"),
     readFile(new URL("../../spec/compat/expanded-smoke-aggregate-v1.schema.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
-  assert.deepEqual(contract.completedWorkUnits, ["8A", "8B", "8C"]);
+  assert.deepEqual(contract.completedWorkUnits.slice(0, 3), ["8A", "8B", "8C"]);
   assert.equal(contract.workUnits["8C"].status, "complete");
-  assert.equal(contract.workUnits["8D"].status, "active");
-  assert.equal(contract.activeWorkUnit, "8D");
+  assert.match(contract.activeWorkUnit, /^8[D-H]$/u);
+  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
   assert.deepEqual(contract.workUnits["8C"].result.smokeOutcomes,
     { boots: 52, fails: 48, notRun: 0 });
   assert.deepEqual(contract.workUnits["8C"].result.failureClusters,
@@ -163,6 +163,6 @@ test("Phase 8C closes with aggregate-only evidence and routes one active 8D", as
   assert.match(packageJson.scripts.test, /test:phase-8c/u);
   assert.match(packageJson.scripts.verify, /test:phase-8c/u);
   assert.equal(schema.properties.runner.const, "phase-8-expanded-smoke-v1");
-  assert.match(docsReadme, /Active work unit \| 8D/u);
-  assert.match(phase, /Active work unit：8D/u);
+  assert.match(docsReadme, /Active work unit \| 8[D-H]/u);
+  assert.match(phase, /Active work unit：8[D-H]/u);
 });

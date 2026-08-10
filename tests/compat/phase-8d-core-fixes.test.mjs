@@ -5,16 +5,17 @@ import test from "node:test";
 const root = new URL("../../", import.meta.url);
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), "utf8"));
 
-test("Phase 8D records an aggregate-only 100-CU candidate without closing before commit", async () => {
+test("Phase 8D closes an aggregate-only 100-CU result at its implementation commit", async () => {
   const [contract, packageJson] = await Promise.all([
     readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
     readJson("package.json"),
   ]);
   const unit = contract.workUnits["8D"];
-  const result = unit.candidateResult;
+  const result = unit.result;
 
-  assert.equal(contract.activeWorkUnit, "8D");
-  assert.equal(unit.status, "active");
+  assert.deepEqual(contract.completedWorkUnits, ["8A", "8B", "8C", "8D"]);
+  assert.equal(contract.activeWorkUnit, "8E");
+  assert.equal(unit.status, "complete");
   assert.equal(result.caseCount, 100);
   assert.equal(result.completedCaseCount, 100);
   assert.deepEqual(result.smokeOutcomes, { boots: 99, fails: 1, notRun: 0 });
@@ -22,6 +23,11 @@ test("Phase 8D records an aggregate-only 100-CU candidate without closing before
   assert.equal(Object.values(result.failureClusters).every((count) => count === 0), true);
   assert.equal(result.expectedFaultMatches, 1);
   assert.equal(result.screenshotsCapturedLocally, 100);
+  assert.equal(result.implementationCommit,
+    "c9a0d0237b418a711a912cf9bd83a75cd0e5e7c6");
+  assert.ok(result.verification.includes("pnpm run verify"));
+  assert.equal(result.productionChanged, true);
+  assert.equal(result.networkSurfaceChanged, false);
   assert.equal(result.thirdPartyPerCartDataTracked, false);
   assert.equal(result.thirdPartyScreenshotsTracked, false);
   assert.equal(result.publicCompatibilityRatePublished, false);
@@ -32,17 +38,17 @@ test("Phase 8D records an aggregate-only 100-CU candidate without closing before
   assert.match(packageJson.scripts.verify, /test:phase-8d/u);
 });
 
-test("Phase 8D keeps current owner documents and the next unit explicit", async () => {
+test("Phase 8D routes the current owner documents to active 8E", async () => {
   const [contract, readme, phase, testing] = await Promise.all([
     readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
     readFile(new URL("docs/README.md", root), "utf8"),
     readFile(new URL("docs/phases/8-expanded-real-cart-qualification.md", root), "utf8"),
     readFile(new URL("docs/06-testing-compatibility.md", root), "utf8"),
   ]);
-  assert.equal(contract.nextWorkUnit, "8D");
-  assert.equal(contract.workUnits["8E"].status, "pending");
-  assert.match(readme, /Active work unit \| 8D/u);
-  assert.match(phase, /Active work unit：8D/u);
+  assert.equal(contract.nextWorkUnit, "8E");
+  assert.equal(contract.workUnits["8E"].status, "active");
+  assert.match(readme, /Active work unit \| 8E/u);
+  assert.match(phase, /Active work unit：8E/u);
   assert.match(phase, /99 boots/u);
   assert.match(testing, /99 boots/u);
 });

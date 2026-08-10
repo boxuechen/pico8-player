@@ -3,7 +3,7 @@
 > 状态：执行规范（living document）
 > 适用架构：z8lua WASM + TypeScript Runtime
 > 基准版本：PICO-8 0.2.7
-> 最近核验：2026-08-07
+> 最近核验：2026-08-10
 
 ## 状态路由
 
@@ -12,7 +12,7 @@
 | 状态 | 对应范围 |
 | --- | --- |
 | **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance、release artifact、`test:release` 与 Chrome scripts；Phase 7 RC exit 已关闭 |
-| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、101 compatible / 3 partial / 9 unsupported、required unknown=0；精确 Known Differences/coverage limitation 见第 15 节 |
+| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、101 compatible / 4 partial / 8 unsupported、required unknown=0；精确 Known Differences/coverage limitation 见第 15 节 |
 | **Historical results** | Phase 0–7 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
 | **Target** | 第 3 节其余测试资产布局、尚未落地的 differential/nightly 命令与未来 activation contract |
 | **Deferred** | 官方 golden corpus、移动 Chrome、非 Chrome 浏览器和任何外部 publication |
@@ -701,7 +701,7 @@ Phase 5 关闭时的历史 target 仍精确保留为
 **PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop**；当前 RC 是该
 profile 的产品化发布候选，不改写历史 claim。
 
-API inventory 共 `113` 项：`101 compatible`、`3 partial`（`flip`、`stat`、`print`）、`9 unsupported`，
+API inventory 共 `113` 项：`101 compatible`、`4 partial`（`flip`、`printh`、`stat`、`print`）、`8 unsupported`，
 required unknown release mode 为 `0`。只有 compatible 计入支持；partial 的精确 mode 与 workaround 仍由
 下节 Known Differences 约束。
 

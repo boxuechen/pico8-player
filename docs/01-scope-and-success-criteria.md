@@ -81,13 +81,14 @@
 
 当前发布口径为 **Web Player Release Candidate for the L3 local/multicart project profile**：范围严格
 限于 PICO-8 v0.2.7、Chrome/Chromium desktop、caller-provided bytes / caller-authorized local bundle、
-项目原创 corpus 和已发布 Known Differences。113 个 inventory entry 中 101 compatible、3 partial、
-9 unsupported，required unknown 为 0。它不表示 official bit-exact、第三方/BBS cart 成功率、自动网络
+项目原创 corpus 和已发布 Known Differences。113 个 inventory entry 中 101 compatible、4 partial、
+8 unsupported，required unknown 为 0。它不表示 official bit-exact、第三方/BBS cart 成功率、自动网络
 访问、任意 URL/宿主文件系统或 nested guest-coroutine host suspension。精确分母、API 状态与资源结果只由
 [兼容性当前口径](./06-testing-compatibility.md#154-当前发布-profile)和
 [Phase 7 exit evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md)维护。
 
-Phase 7 已关闭且当前没有 active phase。RC artifact 可本地构建、静态 HTTP 承载和嵌入，但构建/测试
+Phase 7 已关闭；Phase 8 正在进行 caller-authorized external corpus qualification，当前 active work unit
+由 [`docs/README.md`](./README.md) 路由。RC artifact 可本地构建、静态 HTTP 承载和嵌入，但构建/测试
 不会自动执行 npm、网站或 GitHub Release publication；外部发布仍需用户单独明确授权。
 
 ## 6. 当前成功标准

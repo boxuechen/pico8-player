@@ -107,9 +107,9 @@
     "testRelease": "pass",
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["8A", "8B", "8C"],
-  "activeWorkUnit": "8D",
-  "nextWorkUnit": "8D",
+  "completedWorkUnits": ["8A", "8B", "8C", "8D"],
+  "activeWorkUnit": "8E",
+  "nextWorkUnit": "8E",
   "nextPhase": "deferred",
   "workUnits": {
     "8A": {
@@ -238,7 +238,7 @@
     },
     "8D": {
       "name": "Fault Triage / Core Fixes",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "apps/web-player/src/worker/",
         "packages/contracts/src/",
@@ -272,6 +272,7 @@
         "docs/06-testing-compatibility.md",
         "docs/07-decisions-risks-open-questions.md",
         "docs/08-source-layout-and-boundaries.md",
+        "docs/01-scope-and-success-criteria.md",
         "docs/README.md",
         "docs/phases/8-expanded-real-cart-qualification.md",
         "package.json"
@@ -285,7 +286,7 @@
         "generic fixes or explicit Known Differences replace every in-scope P0/P1",
         "no cart identity or cart-specific branch enters production and 8E becomes active"
       ],
-      "candidateResult": {
+      "result": {
         "caseCount": 100,
         "completedCaseCount": 100,
         "smokeOutcomes": { "boots": 99, "fails": 1, "notRun": 0 },
@@ -307,6 +308,10 @@
         "screenshotsReviewedLocally": 4,
         "runtimeWasmSha256": "608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700",
         "chromeVersion": "Google Chrome 151.0.7922.76",
+        "implementationCommit": "c9a0d0237b418a711a912cf9bd83a75cd0e5e7c6",
+        "verification": ["pnpm run test:phase-8d", "pnpm run verify"],
+        "productionChanged": true,
+        "networkSurfaceChanged": false,
         "productionCartSpecificBranches": 0,
         "thirdPartyPerCartDataTracked": false,
         "thirdPartyScreenshotsTracked": false,
@@ -315,11 +320,51 @@
     },
     "8E": {
       "name": "Format / Multicart Qualification",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "apps/web-player/src/worker/",
+        "packages/contracts/src/",
+        "packages/cart-codec/src/",
+        "packages/runtime-core/src/",
+        "packages/z8lua-bridge/src/",
+        "wasm/bridge/",
+        "wasm/patches/",
+        "wasm/z8lua/",
+        "wasm/source.lock.json",
+        "wasm/manifest.lock.json",
+        "wasm/runtime-v1.manifest.lock.json",
+        "tools/compat/",
+        "tools/wasm/",
+        "spec/abi/",
+        "spec/compat/",
+        "spec/cart-codec-contract.json",
+        "spec/pico-api-inventory.yaml",
+        "tests/cart-codec/",
+        "tests/contract/",
+        "tests/runtime/",
+        "tests/wasm/",
+        "tests/compat/",
+        "tests/browser/",
+        "tests/fixtures/phase-8/",
+        "docs/adr/",
+        "docs/01-scope-and-success-criteria.md",
+        "docs/02-system-architecture.md",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "package.json"
+      ],
       "exit": [
-        "65 source/export pairs have decode and boot parity dispositions",
-        "multicart, graphics, audio, input and persistence risks are qualified",
-        "generic fixes have project-owned regressions and 8F becomes active"
+        "all 65 source/export pairs have deterministic decode and production Chrome boot parity dispositions",
+        "pair comparison is local-only and aggregate output contains no third-party identity, path, cart hash, screen hash or screenshot",
+        "multicart, graphics, audio, input and persistence risks are qualified with caller-authorized bundle ownership preserved",
+        "Canvas screenshots cover representative matched and divergent states and remain outside the repository",
+        "generic fixes have project-owned regressions, open P0/P1 are zero and 8F becomes active"
       ]
     },
     "8F": {
