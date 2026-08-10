@@ -107,9 +107,9 @@
     "testRelease": "pass",
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["8A", "8B", "8C", "8D", "8E"],
-  "activeWorkUnit": "8F",
-  "nextWorkUnit": "8F",
+  "completedWorkUnits": ["8A", "8B", "8C", "8D", "8E", "8F"],
+  "activeWorkUnit": "8G",
+  "nextWorkUnit": "8G",
   "nextPhase": "deferred",
   "workUnits": {
     "8A": {
@@ -430,7 +430,7 @@
     },
     "8F": {
       "name": "Representative Playability",
-      "status": "active",
+      "status": "complete",
       "execution": {
         "quickSmoke": {
           "corpus": "supplemental-top200-local-snapshot",
@@ -493,11 +493,90 @@
         "Canvas screenshots are reviewed locally and never tracked",
         "the supplemental Top 200 snapshot completes four 50-case 120-tick Chrome smoke batches without changing the formal Phase 8 denominator",
         "generic fixes have project-owned regressions, open P0/P1 are zero and 8G becomes active"
-      ]
+      ],
+      "result": {
+        "supplementalQuickSmoke": {
+          "caseCount": 200,
+          "completedCaseCount": 200,
+          "batches": [50, 50, 50, 50],
+          "logicalTicksPerCase": 120,
+          "smokeOutcomes": { "boots": 149, "fails": 51, "notRun": 0 },
+          "failureClusters": {
+            "language": 45,
+            "timing": 5,
+            "unsupported-host-feature": 1
+          },
+          "screenshotsCapturedLocally": 200,
+          "infrastructureFailures": 0,
+          "formalPhase8DenominatorChanged": false,
+          "publicCompatibilityRatePublished": false,
+          "localAggregateSha256": "54c352ff737973e944a773afe8396e30b012915ac40d5c3a0252932553505a7b"
+        },
+        "representativeC2": {
+          "caseCount": 10,
+          "c2CaseCount": 10,
+          "gateCounts": { "criticalFlow": 8, "duration": 2 },
+          "riskCoverage": {
+            "graphics": 10,
+            "audio": 4,
+            "input": 8,
+            "persistence": 1,
+            "multicart": 0,
+            "complex-flow": 2
+          },
+          "outcomes": {
+            "inputPass": 8,
+            "visualPass": 10,
+            "audioPass": 4,
+            "persistencePass": 1,
+            "crashFree": 10,
+            "softLockFree": 10
+          },
+          "screenshotsReviewedLocally": 10,
+          "realAudioDeviceCases": 4,
+          "persistenceReloadCases": 1,
+          "openFindings": { "P0": 0, "P1": 0, "P2": 0, "P3": 0 },
+          "evidenceSha256": "28bb0b8286a354e30d644f7a3c5a3f1692199cdee8dd08d2d2b81a6220714f14",
+          "localAggregateSha256": "9fbae1f3bbb6d63eabf81feaf691b7ef469916ae674c1d872f3ffcc721bf49f3"
+        },
+        "playerCommit": "2294287ccda5bacea698f770c3f0404e27f7c2aa",
+        "runtimeWasmSha256": "608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700",
+        "chromeVersion": "Google Chrome 151.0.7922.76",
+        "implementationCommit": "2294287ccda5bacea698f770c3f0404e27f7c2aa",
+        "productionChanged": true,
+        "networkSurfaceChanged": false,
+        "productionCartSpecificBranches": 0,
+        "thirdPartyPerCartDataTracked": false,
+        "thirdPartyScreenshotsTracked": false,
+        "qualificationComplete": true
+      }
     },
     "8G": {
       "name": "Release Regression Requalification",
-      "status": "pending",
+      "status": "active",
+      "execution": {
+        "externalCorpusDependency": false,
+        "repeatLongRealCartQualification": false,
+        "browserGate": "chrome-chromium-only",
+        "requiredCommands": [
+          "pnpm run test:phase-8f",
+          "pnpm run test:release",
+          "pnpm run verify"
+        ]
+      },
+      "allowedPaths": [
+        "tools/browser/",
+        "tools/release/",
+        "tests/artifact/",
+        "tests/browser/",
+        "tests/conformance/",
+        "tests/contract/",
+        "tests/runtime/",
+        "docs/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "package.json"
+      ],
       "exit": [
         "all generic fixes pass affected conformance plus release artifact and Chrome lifecycle gates",
         "test:release and full verify pass without external corpus or ref dependency",

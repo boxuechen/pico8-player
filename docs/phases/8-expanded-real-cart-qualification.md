@@ -1,7 +1,7 @@
 # Phase 8 — Expanded Real-cart Qualification
 
 > 状态：Active
-> Active work unit：8F — Representative Playability
+> Active work unit：8G — Release Regression Requalification
 > 机器合同：[`spec/phase-8-expanded-real-cart-qualification-contract.json`](../../spec/phase-8-expanded-real-cart-qualification-contract.json)
 > 基线：Phase 7 exit commit `49b24ad32b54d14d4678ebd5b7225d3a9bec668e`
 
@@ -38,8 +38,8 @@ BBS/URL/host-filesystem authority，不发布第三方 cart、截图、路径、
 | 8C Canonical Chrome Smoke | Complete | 100 个 canonical cart 完成 fixed-tick Chrome production smoke 与失败簇聚合 |
 | 8D Fault Triage / Core Fixes | Complete | 48 个 C0 由通用 parser/language/CPU/timing 修复收敛为 100 CU |
 | 8E Format / Multicart Qualification | Complete | 65 组格式配对及 multicart、graphics/audio/input/persistence 风险完成定性 |
-| 8F Representative Playability | **Active** | 至少 10 个分层代表 case 完成 C2，截图本地人工审阅 |
-| 8G Release Regression Requalification | Pending | 所有修复通过 RC、资源回收、确定性和 clean tracked-input 回归 |
+| 8F Representative Playability | Complete | 10 个分层代表 case 完成 C2，截图、真实音频和持久化重载均在本地审阅 |
+| 8G Release Regression Requalification | **Active** | 所有修复通过 RC、资源回收、确定性和 clean tracked-input 回归 |
 | 8H Aggregate Exit | Pending | aggregate-only evidence、兼容口径与机器合同关闭 |
 
 ## 4. 已完成：8B External Corpus Tooling
@@ -89,41 +89,52 @@ version/normalized-ROM/normalized-code 分别为 25/37/56 matched。boot 与 fra
 `608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700`。验证：
 `pnpm run test:phase-8e`、`pnpm run test:cart-codec`、`pnpm run test:architecture`。
 
-## 8. 当前工作：8F Representative Playability
+## 8. 已完成：8F Representative Playability
 
-### 8.1 Observable behavior
+supplemental Top200 snapshot 已按 4×50 batch 在 production Chrome 151 中完成 200/200 个 120-tick quick
+smoke：149 boots、51 fails、0 not-run，失败簇聚合为 language 45、timing 5、unsupported-host-feature 1；
+200 张截图保留在仓库外，infrastructure failure 为 0。该结果只用于缺口发现，不改变正式 100-cart denominator，
+也不是公开兼容率。
 
-- 从既有 100 canonical local index 分层选择至少 10 个 case；aggregate 必须覆盖 graphics、audio、input、
-  persistence 和 multicart/complex-flow 风险，但 tracked 内容不得出现选择出的 cart identity。
-- 每个 case 通过既有 C2 contract 的 900 秒 duration gate 或明确完成的 critical-flow gate；smoke/CU 不能自动
-  升级为 C2。
-- 本地 observation 记录 main verbs、input、visual、audio、persistence、crash-free、soft-lock-free、reviewedAt
-  与证据 digest。所有操作继续走 production Chrome player，不允许用测试替身代替交互路径。
-- 按 `game-playtest` 工作流检查首次可操作状态、主要动作、Canvas 画面和必要的 audio/persistence 结果；截图、
-  录制与逐 case notes 只留在仓库外。
-- 发现通用缺口时先构造项目原创最小复现；禁止 cart-specific 分支、BBS/URL/filesystem authority 扩张和
-  第三方代码复制。
-- Top200 只作为 supplemental defect-discovery corpus：固定 4×50 batch，每个 cart 只跑 120 logical tick；
-  它不改变既有 100 canonical formal denominator，也不生成或发布兼容率。
-- 为控制验证时间，正式 10-case C2 固定为 8 个 critical-flow 与 2 个 duration case。duration gate 沿用
-  Phase 6 的 `900s = 27000` logical-frame 口径，在 production Chrome player 中确定性推进，不要求等待
-  900 秒 wall clock。
+正式 C2 从既有 100 canonical corpus 中选择 10 个 case：8 个完成明确 critical flow，2 个完成 27000 logical
+frame（900 logical seconds）duration gate。风险覆盖 graphics 10、audio 4、input 8、persistence 1、
+complex-flow 2；10 张 Canvas 均人工审阅，4 个 audio case 走真实 AudioContext/AudioWorklet，实时探针的
+underrun、overrun、drop 和 discontinuity 均为 0；持久化 case 完成写入后新实例重载验证。10/10 均为 C2，
+crash/soft-lock 与 open P0–P3 均为 0。
 
-### 8.2 允许修改
+8F 只修复一个通用 player 生命周期问题：cart 在 load 期间执行 `stop()` 时，controller 不再把 Worker 的
+`stopped` 状态覆盖成 `ready`；项目原创 Chrome regression 维护该行为。逐-cart identity、bytes、path、hash、
+截图和 review 原始记录继续只在仓库外。两个本地 aggregate SHA-256 与环境事实记录在机器合同
+`workUnits.8F.result` 中。
 
-机器权威 allowlist 位于当前 phase contract 的 `workUnits.8F.allowedPaths`。Production 修改只允许用于 C2
-交互暴露且有原创回归的通用缺口；RuntimeCore、Worker/browser adapter 和 external corpus ownership 边界不变。
+## 9. 当前工作：8G Release Regression Requalification
 
-### 8.3 验证与退出
+### 9.1 工作范围
 
-- 至少 10 个分层 case 满足 C2 duration 或 critical-flow gate，风险覆盖和 review 字段完整。
-- 代表 Canvas 状态均在本地人工审阅，open P0/P1 为 0；逐 case 数据不进入 tracked/release/CI。
-- supplemental Top200 完成 4 个 50-case Chrome batch；只有失败 cluster 的聚合计数可进入机器合同，原始
-  observations、截图、cart identity/path/hash 全部留在仓库外。
-- `pnpm run test:phase-8f`、受影响 owner tests、`pnpm run test:architecture` 与 `pnpm run verify` 通过；随后
-  8G 成为唯一 active work unit。
+- 冻结 8F 的外部 qualification 结果；默认不重跑 Top200、100-case corpus、两条 duration case 或整套 C2。
+  只有 release regression 指向真实 cart 路径时，才挑 1–3 个代表 case 做短回归。
+- 运行 8F 的项目原创 contract/tooling/PlayerController 定向回归，确认 clean tracked input 下不依赖 `ref/`、
+  外部 corpus、截图或本地 observation。
+- 运行一次 `pnpm run test:release`，覆盖 release artifact、production Worker、Chrome lifecycle 和资源回收；
+  Firefox/WebKit 仍不进入 gate。
+- 在所有修改提交、工作树清洁后只运行一次完整 `pnpm run verify`。失败只重跑对应 owner test；不为获得绿灯
+  重复耗时的真实 cart 全量验证。
+- 审核 tracked/release/CI 输入，确保第三方 cart bytes、路径、hash、截图和逐-cart结果仍为 0，open P0/P1 为 0。
 
-## 9. Phase exit gate
+### 9.2 允许修改
+
+机器权威 allowlist 位于当前 phase contract 的 `workUnits.8G.allowedPaths`。8G 是 requalification unit，不授权
+新增兼容特性或扩大网络/文件系统/浏览器能力；若发现 production defect，必须先更新机器合同重新授权，而不是
+在回归阶段静默修改 RuntimeCore 或 browser adapter。
+
+### 9.3 验证与退出
+
+- `pnpm run test:phase-8f` 与受影响 owner tests 通过。
+- `pnpm run test:release` 和一次最终 `pnpm run verify` 在不读取外部 corpus 或 `ref/` 的前提下通过。
+- release artifact、Chrome lifecycle、determinism、resource cleanup 和 tracked-input privacy 无回归。
+- open P0/P1 为 0，工作树清洁，随后 8H 成为唯一 active work unit。
+
+## 10. Phase exit gate
 
 - 100/100 canonical case 有 C* disposition；所有 in-profile case 完成 production Chrome fixed smoke。
 - 65 个 `.p8`/`.p8.png` pair 均完成 decode/boot parity 定性；差异必须进入 failure cluster 或 Known Difference。
