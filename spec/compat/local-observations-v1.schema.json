@@ -74,6 +74,7 @@
         "distinctColors": { "type": "integer", "minimum": 0, "maximum": 256 },
         "screenshotCaptured": { "type": "boolean" },
         "expectedTerminationMatched": { "type": "boolean" },
+        "audioDevice": { "$ref": "#/$defs/audioDevice" },
         "playability": { "$ref": "#/$defs/playability" }
       },
       "allOf": [
@@ -110,6 +111,25 @@
           }
         }
       ]
+    },
+    "audioDevice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contextState", "deviceSampleRate", "receivedChunks", "renderedDeviceFrames", "playing",
+        "steadyUnderruns", "overruns", "droppedSourceFrames", "discontinuities"
+      ],
+      "properties": {
+        "contextState": { "const": "running" },
+        "deviceSampleRate": { "type": "integer", "minimum": 1 },
+        "receivedChunks": { "type": "integer", "minimum": 0 },
+        "renderedDeviceFrames": { "type": "integer", "minimum": 0 },
+        "playing": { "type": "boolean" },
+        "steadyUnderruns": { "type": "integer", "minimum": 0 },
+        "overruns": { "type": "integer", "minimum": 0 },
+        "droppedSourceFrames": { "type": "integer", "minimum": 0 },
+        "discontinuities": { "type": "integer", "minimum": 0 }
+      }
     },
     "playability": {
       "type": "object",

@@ -59,6 +59,7 @@ export async function runChromeBaseline({
   screenshotsDirectory,
   expectedCaseCount = 12,
   minimumCaseCount = 12,
+  enableAudio = false,
   requireCleanPlayer = false,
 }) {
   const startingPlayerCommit = playerCommit(requireCleanPlayer);
@@ -89,6 +90,11 @@ export async function runChromeBaseline({
   const observations = [];
   let infrastructureError;
   try {
+    if (enableAudio) {
+      await chrome.cdp.command("Page.addScriptToEvaluateOnNewDocument", {
+        source: "globalThis.__phase6cEnableAudio=true;",
+      });
+    }
     await chrome.cdp.command("Page.navigate", {
       url: `${server.origin}/tools/compat/browser/phase-6c.html`,
     });

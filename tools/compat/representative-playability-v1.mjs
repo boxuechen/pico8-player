@@ -7,6 +7,7 @@ import {
   assertSafeLocalObservationsPath,
   assertSafeLocalOutputPath,
   buildLocalQualificationReport,
+  loadLocalObservations,
 } from "./local-qualification-v1.mjs";
 
 export const PLAYABILITY_RUNNER = "phase-8f-representative-playability-v1";
@@ -357,10 +358,36 @@ async function selectionContext(selectionPath, projectRoot) {
   return { parsed, entries, manifestPath };
 }
 
+async function validateAudioProbe(audioObservationsPath, selectionEntries, baseEnvironment, projectRoot) {
+  if (audioObservationsPath === undefined) fail("E_AUDIO_EVIDENCE", "audio observations are required");
+  const observations = await loadLocalObservations({ observationsPath: audioObservationsPath, projectRoot });
+  if (observations.environment.runtimeWasmSha256 !== baseEnvironment.runtimeWasmSha256
+    || observations.environment.chromeVersion !== baseEnvironment.chromeVersion) {
+    fail("E_AUDIO_ENVIRONMENT", "audio probe must use the same runtime WASM and Chrome version");
+  }
+  const expectedIds = [...selectionEntries.values()]
+    .filter((entry) => entry.risks.includes("audio"))
+    .map((entry) => entry.id)
+    .sort();
+  if (observations.entries.size !== expectedIds.length
+    || expectedIds.some((id) => !observations.entries.has(id))) {
+    fail("E_AUDIO_COVERAGE", "audio observations must cover exactly the selected audio-risk cases");
+  }
+  for (const [id, observation] of observations.entries) {
+    if (!expectedIds.includes(id) || !observation.completed || observation.smokeOutcome !== "boots"
+      || observation.audioDevice === undefined || observation.audioDevice.receivedChunks < 1
+      || observation.audioDevice.renderedDeviceFrames < 1) {
+      fail("E_AUDIO_EVIDENCE", "every audio-risk case must render production AudioWorklet PCM");
+    }
+  }
+  return observations;
+}
+
 export async function finalizeRepresentativePlayability({
   selectionPath,
   rawObservationsPath,
   reviewPath,
+  audioObservationsPath,
   screenshotsDirectory,
   outputPath,
   projectRoot = repositoryRoot,
@@ -376,6 +403,12 @@ export async function finalizeRepresentativePlayability({
     projectRoot,
     minimumCases: PLAYABILITY_CASES,
   });
+  const audioProbe = await validateAudioProbe(
+    audioObservationsPath,
+    selection.entries,
+    rawReport.environment,
+    projectRoot,
+  );
   const outputEntries = [];
   for (const [position, raw] of rawReport.entries.entries()) {
     const planned = selection.entries.get(raw.id);
@@ -405,7 +438,12 @@ export async function finalizeRepresentativePlayability({
     const screenshotBytes = await readFile(screenshotPath);
     const evidenceSha256 = sha256(Buffer.concat([
       screenshotBytes,
-      Buffer.from(JSON.stringify({ raw, planned, reviewed })),
+      Buffer.from(JSON.stringify({
+        raw,
+        planned,
+        reviewed,
+        audioDevice: audioProbe.entries.get(raw.id)?.audioDevice ?? null,
+      })),
     ]));
     outputEntries.push({
       id: raw.id,
@@ -440,13 +478,19 @@ export async function finalizeRepresentativePlayability({
   const output = { schemaVersion: 1, environment: rawReport.environment, entries: outputEntries };
   const safeOutput = assertSafeLocalObservationsPath(outputPath, projectRoot);
   await writeFile(safeOutput, `${JSON.stringify(output, null, 2)}\n`, { flag: "wx" });
-  return { outputPath: safeOutput, observations: output, openFindings: validatedReview.openFindings };
+  return {
+    outputPath: safeOutput,
+    observations: output,
+    openFindings: validatedReview.openFindings,
+    audioEnvironment: audioProbe.environment,
+  };
 }
 
 export async function buildRepresentativePlayabilityAggregate({
   selectionPath,
   observationsPath,
   reviewPath,
+  audioObservationsPath,
   projectRoot = repositoryRoot,
 }) {
   const [selection, review] = await Promise.all([
@@ -460,6 +504,12 @@ export async function buildRepresentativePlayabilityAggregate({
     projectRoot,
     minimumCases: PLAYABILITY_CASES,
   });
+  const audioProbe = await validateAudioProbe(
+    audioObservationsPath,
+    selection.entries,
+    report.environment,
+    projectRoot,
+  );
   if (report.entries.length !== PLAYABILITY_CASES
     || report.entries.some((entry) => !entry.completed || entry.classification !== "C2"
       || entry.screenshotCaptured !== true || entry.playability === undefined)) {
@@ -508,6 +558,7 @@ export async function buildRepresentativePlayabilityAggregate({
     corpusFingerprint: selection.parsed.value.corpusFingerprint,
     sourceRevision: selection.parsed.value.sourceRevision,
     environment: report.environment,
+    audioEnvironment: audioProbe.environment,
     summary: {
       caseCount: PLAYABILITY_CASES,
       c2CaseCount: PLAYABILITY_CASES,
@@ -515,6 +566,7 @@ export async function buildRepresentativePlayabilityAggregate({
       riskCoverage,
       outcomes,
       screenshotsReviewed: PLAYABILITY_CASES,
+      audioDeviceCases: audioProbe.entries.size,
       openFindings: validatedReview.openFindings,
       evidenceSha256: sha256(Buffer.from([...evidenceHashes].sort().join(""))),
     },

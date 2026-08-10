@@ -356,6 +356,31 @@ function validateEnvironment(environment) {
   };
 }
 
+function validateAudioDevice(audioDevice, label) {
+  exactKeys(audioDevice, [
+    "contextState",
+    "deviceSampleRate",
+    "receivedChunks",
+    "renderedDeviceFrames",
+    "playing",
+    "steadyUnderruns",
+    "overruns",
+    "droppedSourceFrames",
+    "discontinuities",
+  ], label);
+  if (audioDevice.contextState !== "running") fail("E_AUDIO_DEVICE", `${label}.contextState must be running`);
+  for (const field of [
+    "deviceSampleRate", "receivedChunks", "renderedDeviceFrames", "steadyUnderruns", "overruns",
+    "droppedSourceFrames", "discontinuities",
+  ]) {
+    if (!Number.isSafeInteger(audioDevice[field]) || audioDevice[field] < 0) {
+      fail("E_AUDIO_DEVICE", `${label}.${field} must be a non-negative safe integer`);
+    }
+  }
+  if (typeof audioDevice.playing !== "boolean") fail("E_AUDIO_DEVICE", `${label}.playing must be boolean`);
+  return { ...audioDevice };
+}
+
 function validatePlayability(playability, label) {
   exactKeys(playability, [
     "gate",
@@ -476,6 +501,7 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       "screenshotCaptured",
       "expectedTerminationMatched",
       "playability",
+      "audioDevice",
     ], label);
     if (!ID_PATTERN.test(entry.id ?? "")) fail("E_SCHEMA", `${label}.id is invalid`);
     if (seen.has(entry.id)) fail("E_DUPLICATE_ID", `${entry.id} appears more than once in observations`);
@@ -549,6 +575,9 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
     const playability = entry.playability === undefined
       ? undefined
       : validatePlayability(entry.playability, `${label}.playability`);
+    const audioDevice = entry.audioDevice === undefined
+      ? undefined
+      : validateAudioDevice(entry.audioDevice, `${label}.audioDevice`);
     if (entry.classification === "C2" && playability === undefined) {
       fail("E_PLAYABILITY", `${label} C2 requires reviewed playability evidence`);
     }
@@ -574,6 +603,7 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
         expectedTerminationMatched: entry.expectedTerminationMatched,
       }),
       ...(playability === undefined ? {} : { playability }),
+      ...(audioDevice === undefined ? {} : { audioDevice }),
     });
   }
   return { environment, entries };
@@ -650,6 +680,9 @@ export async function buildLocalQualificationReport({
       }),
       ...(observation.playability === undefined ? {} : {
         playability: observation.playability,
+      }),
+      ...(observation.audioDevice === undefined ? {} : {
+        audioDevice: observation.audioDevice,
       }),
     };
   });

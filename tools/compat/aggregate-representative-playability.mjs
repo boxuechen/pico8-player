@@ -8,13 +8,15 @@ import {
 export async function main(argv = process.argv.slice(2)) {
   const { values } = parseArgs({ args: argv, strict: true, allowPositionals: false, options: {
     selection: { type: "string" }, observations: { type: "string" }, review: { type: "string" },
-    output: { type: "string" },
+    "audio-observations": { type: "string" }, output: { type: "string" },
   } });
-  if (!values.selection || !values.observations || !values.review || !values.output) {
-    throw new Error("usage: aggregate-representative-playability --selection <external.json> --observations <external.json> --review <external.json> --output <external.json>");
+  if (!values.selection || !values.observations || !values.review || !values["audio-observations"]
+    || !values.output) {
+    throw new Error("usage: aggregate-representative-playability --selection <external.json> --observations <external.json> --review <external.json> --audio-observations <external.json> --output <external.json>");
   }
   const report = await buildRepresentativePlayabilityAggregate({
     selectionPath: values.selection, observationsPath: values.observations, reviewPath: values.review,
+    audioObservationsPath: values["audio-observations"],
   });
   await writeRepresentativePlayabilityAggregate({ outputPath: values.output, report });
   process.stdout.write(`${JSON.stringify(report)}\n`);

@@ -169,18 +169,44 @@ test("Phase 8F finalizes reviewed screenshots and emits aggregate-only C2 eviden
     };
     const reviewPath = join(root, "review.json");
     await writeFile(reviewPath, `${JSON.stringify(review)}\n`);
+    const audioPath = join(root, "audio.json");
+    await writeFile(audioPath, `${JSON.stringify({
+      schemaVersion: 1,
+      environment,
+      entries: plan.entries.filter(({ risks }) => risks.includes("audio")).map(({ id }) => ({
+        id,
+        completed: true,
+        smokeOutcome: "boots",
+        classification: "CU",
+        failureCluster: null,
+        completedTicks: 120,
+        audioDevice: {
+          contextState: "running",
+          deviceSampleRate: 48_000,
+          receivedChunks: 4,
+          renderedDeviceFrames: 512,
+          playing: true,
+          steadyUnderruns: 0,
+          overruns: 0,
+          droppedSourceFrames: 0,
+          discontinuities: 0,
+        },
+      })),
+    })}\n`);
     const finalPath = join(root, "final.json");
     await finalizeRepresentativePlayability({
       selectionPath: prepared.selectionPath, rawObservationsPath: rawPath, reviewPath,
-      screenshotsDirectory: screenshots, outputPath: finalPath,
+      audioObservationsPath: audioPath, screenshotsDirectory: screenshots, outputPath: finalPath,
     });
     const aggregate = await buildRepresentativePlayabilityAggregate({
       selectionPath: prepared.selectionPath, observationsPath: finalPath, reviewPath,
+      audioObservationsPath: audioPath,
     });
     assert.deepEqual(aggregate.summary.gateCounts, { criticalFlow: 8, duration: 2 });
     assert.equal(aggregate.summary.c2CaseCount, 10);
     assert.equal(aggregate.summary.openFindings.P0, 0);
     assert.equal(aggregate.summary.riskCoverage.persistence, 1);
+    assert.equal(aggregate.summary.audioDeviceCases, 3);
     assert.doesNotMatch(JSON.stringify(aggregate), /project-001|cartSha256|entries|mainVerbs/u);
   });
 });

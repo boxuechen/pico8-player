@@ -70,4 +70,6 @@ is not C2. A reviewer must inspect the external screenshots and record input, vi
 persistence, crash and soft-lock conclusions before
 `qualification:phase-8f:playability:finalize` can emit reviewed C2 observations. Finally,
 `qualification:phase-8f:playability:aggregate` enforces risk/gate coverage and open P0/P1 = 0 while
-emitting no per-cart detail.
+emitting no per-cart detail. Cases selected for the audio risk also require a short external
+`--audio-observations` run with the production AudioContext/AudioWorklet path; received and rendered
+device frames are folded into the local evidence digest before an audio `pass` is accepted.

@@ -5,6 +5,7 @@ import { runChromeBaseline } from "./run-chrome-baseline.mjs";
 export async function main(argv = process.argv.slice(2)) {
   const { values } = parseArgs({ args: argv, strict: true, allowPositionals: false, options: {
     manifest: { type: "string" }, observations: { type: "string" }, screenshots: { type: "string" },
+    audio: { type: "boolean" },
   } });
   if (!values.manifest || !values.observations || !values.screenshots) {
     throw new Error("usage: run-representative-playability --manifest <external.json> --observations <external.json> --screenshots <external-directory>");
@@ -15,6 +16,7 @@ export async function main(argv = process.argv.slice(2)) {
     screenshotsDirectory: values.screenshots,
     expectedCaseCount: 10,
     minimumCaseCount: 10,
+    enableAudio: values.audio === true,
     requireCleanPlayer: true,
   });
 }

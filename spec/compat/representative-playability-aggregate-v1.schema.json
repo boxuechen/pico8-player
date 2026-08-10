@@ -4,7 +4,7 @@
   "title": "Aggregate-only Phase 8F representative playability result v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "runner", "targetRuntime", "corpusFingerprint", "sourceRevision", "environment", "summary"],
+  "required": ["schemaVersion", "runner", "targetRuntime", "corpusFingerprint", "sourceRevision", "environment", "audioEnvironment", "summary"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "runner": { "const": "phase-8f-representative-playability-v1" },
@@ -12,9 +12,10 @@
     "corpusFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "sourceRevision": { "type": "string", "minLength": 1 },
     "environment": { "$ref": "local-observations-v1.schema.json#/properties/environment" },
+    "audioEnvironment": { "$ref": "local-observations-v1.schema.json#/properties/environment" },
     "summary": {
       "type": "object", "additionalProperties": false,
-      "required": ["caseCount", "c2CaseCount", "gateCounts", "riskCoverage", "outcomes", "screenshotsReviewed", "openFindings", "evidenceSha256"],
+      "required": ["caseCount", "c2CaseCount", "gateCounts", "riskCoverage", "outcomes", "screenshotsReviewed", "audioDeviceCases", "openFindings", "evidenceSha256"],
       "properties": {
         "caseCount": { "const": 10 },
         "c2CaseCount": { "const": 10 },
@@ -34,6 +35,7 @@
         },
         "outcomes": { "type": "object" },
         "screenshotsReviewed": { "const": 10 },
+        "audioDeviceCases": { "type": "integer", "minimum": 1, "maximum": 10 },
         "openFindings": {
           "type": "object", "additionalProperties": false,
           "required": ["P0", "P1", "P2", "P3"],

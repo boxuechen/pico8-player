@@ -27,8 +27,11 @@ test("6C browser harness uses the production worker and local-only evidence path
   assert.doesNotMatch(nodeHarness, /source\.url|sourceUrl/u);
   assert.match(nodeHarness, /minimumCaseCount = 12/u);
   assert.match(nodeHarness, /minimumCases: minimumCaseCount/u);
+  assert.match(browserHarness, /__phase6cEnableAudio/u);
+  assert.match(browserHarness, /audioDevice/u);
   const observationProperties = JSON.parse(schema).$defs.observation.properties;
   assert.ok(observationProperties.screenSha256);
   assert.ok(observationProperties.screenshotCaptured);
+  assert.ok(observationProperties.audioDevice);
   assert.ok(gitignore.includes("/tests/conformance/local-corpus-results/"));
 });

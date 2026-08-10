@@ -101,6 +101,9 @@ async function runCase(payloadBase64, trace, localCartBundle = [], expectedTermi
       { type: "module" },
     ),
     commandTimeoutMs: 15_000,
+    ...(globalThis.__phase6cEnableAudio === true ? {
+      workletModuleUrl: "/apps/web-player/dist/worklet/pico8-audio-processor.js",
+    } : {}),
   });
   const controller = new PlayerController(composition, view, {
     animationFrames,
@@ -149,6 +152,21 @@ async function runCase(payloadBase64, trace, localCartBundle = [], expectedTermi
   if (controller.state === "running" && completedTicks < trace.ticks) {
     throw new Error("Chrome trace driver did not reach the requested logical tick count");
   }
+  let audioDevice;
+  if (controller.state === "running" && composition.audio !== undefined) {
+    const stats = await composition.audio.requestStats(5_000);
+    audioDevice = {
+      contextState: composition.audio.contextState,
+      deviceSampleRate: stats.deviceSampleRate,
+      receivedChunks: stats.receivedChunks,
+      renderedDeviceFrames: stats.renderedDeviceFrames,
+      playing: stats.playing,
+      steadyUnderruns: stats.steadyUnderruns,
+      overruns: stats.overruns,
+      droppedSourceFrames: stats.droppedSourceFrames,
+      discontinuities: stats.discontinuities,
+    };
+  }
   if (controller.state === "running") await controller.pause();
 
   const diagnostic = playerElements.diagnostic.textContent ?? "";
@@ -171,6 +189,7 @@ async function runCase(payloadBase64, trace, localCartBundle = [], expectedTermi
     ...(expectedTerminationMatched ? { expectedTerminationMatched: true } : {}),
     frameCount,
     ...telemetry,
+    ...(audioDevice === undefined ? {} : { audioDevice }),
     screenshotCaptured: false,
   };
 }
