@@ -7,29 +7,17 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 8；[Expanded Real-cart Qualification exit evidence](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) |
-| 当前阶段 | Phase 9；[Supplemental Compatibility Remediation](./phases/9-supplemental-compatibility-remediation.md) |
-| Active work unit | 9H — Aggregate Exit |
-| 当前机器合同 | [`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
+| 最近完成 | Phase 9；[Supplemental Compatibility Remediation exit evidence](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md) |
+| 当前阶段 | None；新的 production implementation 尚未授权 |
+| Active work unit | None |
+| 最近关闭的机器合同 | [`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
 
-Phase 8A–8H 已关闭：100 个 canonical cart 完成 fixed smoke，65 个格式 pair 完成定性，10 个代表
-case 达到 C2；supplemental 200-cart quick smoke 暴露的 51 个失败已进入 Phase 9：language 45、timing 5、
-unsupported-host-feature 1，目标是用通用修复收敛到 200 CU。
-第三方 bytes、截图、路径、hash 与逐-cart 结果保持本地，不成为 CI、release artifact 或公开兼容率。
-9A 已把 51 个失败冻结为 15 个匿名 root-cause candidate，exact coverage 为 45/5/1 且无未分类项。
-9B 已用 13 个项目原创 real-WASM 最小复现关闭全部 language candidate；10 个 external
-representative 的短 Chrome gate 全部越过对应语言根因，其中 9 个达到 CU，另 1 个继续暴露为既有
-local `load()` host-feature 边界并转交 9D。9C 已用固定 32M deterministic safety cap 和 Q16.16
-numeric-for termination 修复关闭 5 个 timing failure；5 个 affected case 的 120-tick Chrome smoke 全部达到
-CU。9D 已在显式 local bundle 内关闭 external cart-data 与 guest load 缺口：空 `load("")` 是 no-op，
-missing/denied ref 仍失败关闭；2 个 affected case 均达到 CU。9E 的 10 个 representative 已在同一
-production Chrome 环境达到 10/10 CU、0 failure cluster。9F 的首次 requalification attempt 在 175 cases
-后停止，9R 随后用三个项目原创复现和显式 local bundle 关闭 4 个 affected case。9F 唯一一次完整
-4×50 已在单一 clean production commit 上完成，聚合为 199 CU、1 个 language failure。9S 用一个项目原创
-real-WASM 复现修正 `menuitem()` 16-character display bound，唯一 affected external case 已在 clean
-production Chrome 达到 CU。9G 的 Phase 9 owner gate、release artifact 与短 Chrome lifecycle 均已通过，
-且没有读取 external corpus 或运行 historical/soak。当前唯一授权工作为 9H：只归档 aggregate-only
-exit evidence、关闭机器合同并清理 active phase 文档；不进行第二次 full supplemental sweep。
+Phase 9A–9H 已关闭：Phase 8 supplemental quick smoke 暴露的 51 个失败已按 15 个匿名 root cause
+完成通用修复和 bounded Chrome validation，known failure disposition 为 `51 resolved / 0 remaining`。
+唯一完整 4×50 的同环境结果是 `199 CU / 1 failure`，最后一个 case 只做 focused delta；两者没有被
+合并成单环境兼容率。第三方 bytes、截图、路径、hash 与逐-cart 结果保持仓库外。
+
+当前没有 active phase。生产代码变更必须先激活新的 phase 文档与机器合同。
 
 日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

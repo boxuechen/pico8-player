@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "phase": "9",
   "name": "Supplemental Compatibility Remediation",
-  "status": "active",
+  "status": "complete",
   "target": "turn the 51 supplemental Top200 Chrome quick-smoke failures into generic PICO-8 v0.2.7 compatibility fixes and reach 200 CU",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
@@ -64,6 +64,14 @@
   "phaseExitGate": {
     "supplementalCases": 200,
     "targetCU": 200,
+    "singleEnvironmentFullRequalification": { "CU": 199, "fails": 1 },
+    "finalFocusedDelta": { "cases": 1, "CU": 1, "fails": 0 },
+    "knownFailureDisposition": {
+      "baselineFailures": 51,
+      "resolved": 51,
+      "remaining": 0,
+      "singleEnvironmentAggregate": false
+    },
     "remainingFails": 0,
     "remainingFailureClusters": 0,
     "openP0": 0,
@@ -75,9 +83,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F", "9S", "9G"],
-  "activeWorkUnit": "9H",
-  "nextWorkUnit": "9H",
+  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F", "9S", "9G", "9H"],
+  "activeWorkUnit": null,
+  "nextWorkUnit": null,
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -577,7 +585,7 @@
     },
     "9H": {
       "name": "Aggregate Exit",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "docs/evidence/phase-9/",
         "docs/README.md",
@@ -604,7 +612,24 @@
       "exit": [
         "aggregate evidence records the 199-case single-environment result plus the one-case focused delta without merging them into a compatibility rate",
         "the machine contract closes, the phase document is removed and the worktree is clean"
-      ]
+      ],
+      "result": {
+        "exitEvidence": "docs/evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md",
+        "exitManifest": "tests/conformance/manifests/phase-9h-exit.json",
+        "baselineFailures": 51,
+        "resolvedKnownFailures": 51,
+        "remainingKnownFailures": 0,
+        "singleEnvironmentFullRequalificationCU": 199,
+        "finalFocusedDeltaCU": 1,
+        "singleEnvironmentAggregate": false,
+        "supplementalFullReruns": 0,
+        "historicalVerificationRuns": 0,
+        "longSoakRuns": 0,
+        "externalCorpusCases": 0,
+        "productionSourceChanges": 0,
+        "trackedThirdPartyDetails": 0,
+        "publicCompatibilityRate": false
+      }
     }
   }
 }

@@ -215,6 +215,10 @@ Phase 9 的唯一一次完整 4×50 supplemental requalification 得到 199 CU�
 1 个 affected external case，不运行第二次 full sweep，也不把两个 commit 的 observation 合并成单环境
 aggregate。
 
+Phase 9 已以 `51 resolved / 0 remaining` 的 known-failure disposition 关闭；该表述不把跨 commit 的
+`199-case full aggregate + 1-case focused delta` 合并为兼容率。完整口径见
+[`Phase 9 exit evidence`](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：

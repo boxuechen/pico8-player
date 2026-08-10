@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "phase": "9H",
+  "target": "generic remediation of the 51 known supplemental Chrome quick-smoke failures for the PICO-8 v0.2.7 player profile",
+  "sourceRevision": "89d94aebc21b64b9904c540aa0ef1209d67dbf28",
+  "sourceLocks": {
+    "wasm/runtime-v1.manifest.lock.json": "121cbd92e7319582588b9b57885346c72b368351ab628526f3b00a0484f69c2c",
+    "wasm/bridge/p8w_pico8_compat.cpp": "8bfe1cef7d7163b686aae0a7ae171ab5d7c7534350e844eb75757dfbe8117a24",
+    "tests/runtime/phase-9b-language-compat.test.mjs": "98ce41b9aa0383176769efc903a72bcadd44ae020560728e5bc01853dc4fc65f",
+    "tests/runtime/phase-9c-timing-compat.test.mjs": "5f77d500d4b557fa56817e0e3e28ba6bc269959f49bb0dbf2f4e6afa5e437dc4",
+    "tests/runtime/phase-9d-host-feature-compat.test.mjs": "e3dd6e166bc0d7c090bd0023df763c7260f2999bc9f7726c93c0f320262b36eb",
+    "tests/runtime/phase-9r-requalification-remediation.test.mjs": "7ca4ffb2305a794b14acf74ac0c7ba5cdeebdd6cee9fb54e43c3609ddee34b75",
+    "tests/runtime/phase-9s-final-requalification-remediation.test.mjs": "ad59aacdac946fdea9861f49f7deacb81f38fb4d2a90e0decd27e8a6d7b82251",
+    "spec/pico-api-inventory.yaml": "81ea4f390f7addcb42b70fc5d25c816d1e1d0009b8bdd8660da344c1f0d1ed02",
+    "spec/compat/phase-9-root-cause-contract-v1.json": "453958ca908cb0a6b4d96696d0fc877938c05800e8d2e51c39d94d2b0526dec2"
+  },
+  "remediation": {
+    "baseline": {
+      "cases": 200,
+      "failures": 51,
+      "failureClusters": { "language": 45, "timing": 5, "unsupported-host-feature": 1 },
+      "rootCauseCandidates": 15,
+      "unclassifiedFailures": 0
+    },
+    "projectAuthoredFixtures": 21,
+    "productionCartSpecificBranches": 0,
+    "networkAuthorityExpansion": false,
+    "hostFilesystemAuthorityExpansion": false
+  },
+  "qualification": {
+    "abortedAttempt": {
+      "observedCases": 175,
+      "CU": 171,
+      "failures": 4,
+      "completedBatches": 3,
+      "partialFourthBatchCases": 25,
+      "abortedOnFailure": true
+    },
+    "fullRequalification": {
+      "runs": 1,
+      "batches": 4,
+      "cases": 200,
+      "logicalTicksPerCase": 120,
+      "CU": 199,
+      "failures": 1,
+      "failureClusters": { "language": 1 },
+      "samePlayerCommit": true,
+      "sameRuntimeWasm": true,
+      "sameChromeBuild": true,
+      "productionWorkerPath": true,
+      "screenshotsCapturedLocally": 200
+    },
+    "finalFocusedDelta": {
+      "cases": 1,
+      "logicalTicksPerCase": 120,
+      "CU": 1,
+      "failures": 0,
+      "cleanProductionCommit": true,
+      "productionWorkerPath": true
+    },
+    "knownFailureDisposition": {
+      "baselineFailures": 51,
+      "resolved": 51,
+      "remaining": 0,
+      "singleEnvironmentAggregate": false,
+      "publicCompatibilityRatePublished": false
+    },
+    "completedFullRequalificationRuns": 1,
+    "secondCompletedFullRequalificationRuns": 0,
+    "historicalVerificationRuns": 0,
+    "longSoakRuns": 0
+  },
+  "releaseRegression": {
+    "chromeVersion": "Google Chrome 151.0.7922.76",
+    "runtimeWasmBytes": 197591,
+    "runtimeWasmSha256": "5550c3c18a689d326a7a108f49e7299c2925937a0b12ab1f92f05b367bdcd46d",
+    "releaseArtifactFiles": 12,
+    "releaseArtifactVerified": true,
+    "phaseVerification": "pass",
+    "focusedReleaseVerification": "pass",
+    "shortChromeLifecycle": "pass",
+    "workersReleased": true,
+    "audioContextClosed": true,
+    "externalCorpusRead": false
+  },
+  "claims": {
+    "knownSupplementalFailuresResolved": 51,
+    "remainingKnownFailures": 0,
+    "singleCommitTwoHundredCaseCompatibilityClaimed": false,
+    "thirdPartyOrBbsCompatibilityRateClaimed": false,
+    "officialBitExactClaimed": false,
+    "networkAccess": false
+  },
+  "privacy": {
+    "repositoryThirdPartyCartBytes": 0,
+    "repositoryThirdPartyScreenshots": 0,
+    "thirdPartyCartIdentitiesPublished": false,
+    "thirdPartyCartHashesPublished": false,
+    "thirdPartyPathsPublished": false,
+    "thirdPartyPerCartResultsPublished": false
+  }
+}

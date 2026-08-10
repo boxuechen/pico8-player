@@ -24,7 +24,7 @@
 | 6 Real-cart Qualification（6A–6H） | Complete | [Phase 6 exit](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
 | 7 Web Player Release Candidate（7A–7H） | Complete | [Phase 7 exit](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) / [contract](../spec/phase-7-web-player-release-candidate-contract.json) |
 | 8 Expanded Real-cart Qualification（8A–8H） | Complete | [Phase 8 exit](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
-| 9 Supplemental Compatibility Remediation（9A–9H） | Active | [Phase 9](./phases/9-supplemental-compatibility-remediation.md) / [contract](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
+| 9 Supplemental Compatibility Remediation（9A–9H） | Complete | [Phase 9 exit](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md) / [contract](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
 
 Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
 corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
@@ -32,13 +32,12 @@ corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence �
 
 ## 3. 当前阶段边界
 
-Phase 9 已激活，9A 已把 Phase 8 supplemental quick smoke 暴露的 51 个失败冻结为 15 个匿名候选，
-exact coverage 为 language 45、timing 5、unsupported-host-feature 1，且没有未分类项。唯一 active
-work unit 为 9B，由项目原创 real-WASM 最小复现处理 13 个 language candidate；不重跑 200-cart Chrome
-全量。
+当前没有 active phase，production implementation 尚未授权。Phase 9 已把 51 个 supplemental
+quick-smoke failure 全部完成通用修复与 bounded disposition；唯一完整同环境 requalification 为
+`199 CU / 1 failure`，最终一个 case 的 focused delta 为 `1 CU`，二者不合并成公开兼容率。完整结论见
+[Phase 9 exit](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
 
-执行细节、允许文件和短验证边界只见 active phase 文档。第三方内容与逐-cart evidence 不进入 tracked
-repository；阶段目标是 200 CU，不发布第三方兼容率。
+后续工作必须先创建 phase 文档和机器合同，冻结范围、non-goals、单一 active work unit 与验证预算。
 
 ## 4. 当前声明之外
 
