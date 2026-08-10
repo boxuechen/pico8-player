@@ -14,7 +14,7 @@ test("Phase 8D closes an aggregate-only 100-CU result at its implementation comm
   const result = unit.result;
 
   assert.ok(contract.completedWorkUnits.includes("8D"));
-  assert.match(contract.activeWorkUnit, /^8[E-H]$/u);
+  assert.equal(contract.activeWorkUnit, null);
   assert.equal(unit.status, "complete");
   assert.equal(result.caseCount, 100);
   assert.equal(result.completedCaseCount, 100);
@@ -38,18 +38,20 @@ test("Phase 8D closes an aggregate-only 100-CU result at its implementation comm
   assert.match(packageJson.scripts.verify, /test:phase-8d/u);
 });
 
-test("Phase 8D remains closed under its active successor", async () => {
-  const [contract, readme, phase, testing] = await Promise.all([
+test("Phase 8D remains closed under immutable exit evidence", async () => {
+  const [contract, readme, evidence, testing] = await Promise.all([
     readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
     readFile(new URL("docs/README.md", root), "utf8"),
-    readFile(new URL("docs/phases/8-expanded-real-cart-qualification.md", root), "utf8"),
+    readFile(new URL(
+      "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
+      root,
+    ), "utf8"),
     readFile(new URL("docs/06-testing-compatibility.md", root), "utf8"),
   ]);
-  assert.equal(contract.nextWorkUnit, contract.activeWorkUnit);
-  assert.match(contract.activeWorkUnit, /^8[E-H]$/u);
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
-  assert.match(readme, /Active work unit \| 8[E-H]/u);
-  assert.match(phase, /Active work unit：8[E-H]/u);
-  assert.match(phase, /99 boots/u);
+  assert.equal(contract.nextWorkUnit, null);
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.status, "complete");
+  assert.match(readme, /Active work unit \| 无/u);
+  assert.match(evidence, /99 boots/u);
   assert.match(testing, /99 boots/u);
 });

@@ -7,16 +7,15 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 7；[Web Player Release Candidate exit evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
-| 当前阶段 | Phase 8；[Expanded Real-cart Qualification](./phases/8-expanded-real-cart-qualification.md) |
-| Active work unit | 8G — Release Regression Requalification |
-| 当前机器合同 | [`spec/phase-8-expanded-real-cart-qualification-contract.json`](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
+| 最近完成 | Phase 8；[Expanded Real-cart Qualification exit evidence](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) |
+| 当前阶段 | 无 |
+| Active work unit | 无 |
+| 当前机器合同 | 无 |
 
-Phase 7A–7H 已关闭。Phase 8 只把 caller-authorized external corpus qualification 扩展到 100 个
-canonical logical cart 和 65 个格式 pair；第三方 bytes、截图、路径、hash 与逐-cart 结果保持本地，
-不成为 CI、release artifact 或公开兼容率。8D 已用通用修复把 100-case fixed smoke 收敛为
-100 CU，8E 已完成 65 组格式配对，8F 已完成 supplemental 200-cart quick smoke 和 10-case C2；
-当前唯一授权工作是 8G 的 release regression requalification，不重复整批外部 cart 长测。
+Phase 8A–8H 已关闭：100 个 canonical cart 完成 fixed smoke，65 个格式 pair 完成定性，10 个代表
+case 达到 C2；supplemental 200-cart quick smoke 暴露的 51 个失败已经作为后续兼容修复 backlog 归档。
+第三方 bytes、截图、路径、hash 与逐-cart 结果保持本地，不成为 CI、release artifact 或公开兼容率。
+当前没有 active phase，因此 production implementation 暂未授权。
 
 日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

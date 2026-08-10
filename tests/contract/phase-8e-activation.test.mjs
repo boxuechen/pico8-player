@@ -7,19 +7,18 @@ const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), 
 
 test("Phase 8E remains complete after its successors advance", async () => {
   const contract = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
-  assert.deepEqual(contract.completedWorkUnits, ["8A", "8B", "8C", "8D", "8E", "8F"]);
+  assert.deepEqual(contract.completedWorkUnits,
+    ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"]);
   assert.equal(contract.workUnits["8D"].status, "complete");
   assert.equal(contract.workUnits["8D"].result.implementationCommit,
     "c9a0d0237b418a711a912cf9bd83a75cd0e5e7c6");
-  assert.equal(contract.activeWorkUnit, "8G");
-  assert.equal(contract.nextWorkUnit, "8G");
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.nextWorkUnit, null);
   assert.equal(contract.workUnits["8E"].status, "complete");
   assert.equal(contract.workUnits["8F"].status, "complete");
-  assert.equal(contract.workUnits["8G"].status, "active");
-  assert.equal(
-    Object.values(contract.workUnits).filter(({ status }) => status === "active").length,
-    1,
-  );
+  assert.equal(contract.workUnits["8G"].status, "complete");
+  assert.equal(contract.workUnits["8H"].status, "complete");
+  assert.ok(Object.values(contract.workUnits).every(({ status }) => status === "complete"));
 });
 
 test("Phase 8E fixes pair, privacy, browser and capability boundaries before execution", async () => {
@@ -55,15 +54,18 @@ test("Phase 8E fixes pair, privacy, browser and capability boundaries before exe
   assert.equal(unit.result.qualificationComplete, true);
 });
 
-test("Phase 8E routing and living compatibility counts match the machine inventory", async () => {
-  const [contract, inventory, packageJson, docsReadme, scope, phase, testing] =
+test("Phase 8E history and living compatibility counts match the machine inventory", async () => {
+  const [contract, inventory, packageJson, docsReadme, scope, evidence, testing] =
     await Promise.all([
       readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
       readJson("spec/pico-api-inventory.yaml"),
       readJson("package.json"),
       readFile(new URL("docs/README.md", root), "utf8"),
       readFile(new URL("docs/01-scope-and-success-criteria.md", root), "utf8"),
-      readFile(new URL("docs/phases/8-expanded-real-cart-qualification.md", root), "utf8"),
+      readFile(new URL(
+        "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
+        root,
+      ), "utf8"),
       readFile(new URL("docs/06-testing-compatibility.md", root), "utf8"),
     ]);
   const count = (status) => inventory.apis.filter(
@@ -76,8 +78,9 @@ test("Phase 8E routing and living compatibility counts match the machine invento
     ({ mvpDisposition, conformanceStatus }) =>
       mvpDisposition === "required" && conformanceStatus === "unknown",
   ).length, 0);
-  assert.match(docsReadme, /Active work unit \| 8G/u);
-  assert.match(phase, /Active work unit：8G/u);
+  assert.match(docsReadme, /最近完成 \| Phase 8/u);
+  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.ok(evidence.includes("65 个 source/export format pair"));
   assert.match(scope, /101 compatible、4 partial、\s*8 unsupported/u);
   assert.match(testing, /101 compatible`、`4 partial/u);
   assert.equal(packageJson.scripts["test:phase-8e"],
@@ -87,5 +90,5 @@ test("Phase 8E routing and living compatibility counts match the machine invento
   assert.match(packageJson.scripts.test, /test:phase-8e/u);
   assert.match(packageJson.scripts.verify, /test:phase-8e/u);
   assert.equal(contract.workUnits["8F"].status, "complete");
-  assert.equal(contract.workUnits["8G"].status, "active");
+  assert.equal(contract.workUnits["8G"].status, "complete");
 });

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "phase": "8",
   "name": "Expanded Real-cart Qualification",
-  "status": "active",
+  "status": "complete",
   "target": "expanded local real-cart qualification for the PICO-8 v0.2.7 RC profile on Chrome/Chromium desktop",
   "browserGate": ["chrome", "chromium"],
   "baseline": {
@@ -107,9 +107,9 @@
     "testRelease": "pass",
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["8A", "8B", "8C", "8D", "8E", "8F"],
-  "activeWorkUnit": "8G",
-  "nextWorkUnit": "8G",
+  "completedWorkUnits": ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"],
+  "activeWorkUnit": null,
+  "nextWorkUnit": null,
   "nextPhase": "deferred",
   "workUnits": {
     "8A": {
@@ -553,7 +553,7 @@
     },
     "8G": {
       "name": "Release Regression Requalification",
-      "status": "active",
+      "status": "complete",
       "execution": {
         "externalCorpusDependency": false,
         "repeatLongRealCartQualification": false,
@@ -581,16 +581,88 @@
         "all generic fixes pass affected conformance plus release artifact and Chrome lifecycle gates",
         "test:release and full verify pass without external corpus or ref dependency",
         "open P0 and P1 are zero and 8H becomes active"
-      ]
+      ],
+      "result": {
+        "sourceRevision": "3c932fe0068b517e629817e9dfc5c641071e37b7",
+        "chromeVersion": "Google Chrome 151.0.7922.76",
+        "runtimeWasmSha256": "608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700",
+        "releaseArtifactFiles": 12,
+        "releaseArtifactVerified": true,
+        "fullChromeGate": {
+          "sourceRevision": "3c932fe0068b517e629817e9dfc5c641071e37b7",
+          "desktopSoakSeconds": 600,
+          "profilesHz": [30, 60],
+          "droppedTicks": 0,
+          "audioUnderruns": 0,
+          "audioOverruns": 0,
+          "audioDiscontinuities": 0,
+          "allWorkersReleased": true,
+          "fullVerify": "pass"
+        },
+        "boundedRequalification": [
+          "pnpm run test:phase-8f",
+          "pnpm run build:release",
+          "pnpm run build:player-worker",
+          "node tools/release/verify-release.mjs",
+          "pnpm run test:phase-7h",
+          "pnpm run test:architecture"
+        ],
+        "externalCorpusRead": false,
+        "longRealCartRerun": false,
+        "openP0": 0,
+        "openP1": 0,
+        "productionChanged": false,
+        "networkSurfaceChanged": false,
+        "thirdPartyArtifactsTracked": false,
+        "verification": [
+          "pnpm run test:phase-8f",
+          "release command components plus the full Chrome gate already passed at the same source revision",
+          "pnpm run test:phase-7h",
+          "pnpm run test:architecture",
+          "pnpm run verify"
+        ]
+      }
     },
     "8H": {
       "name": "Aggregate Exit",
-      "status": "pending",
+      "status": "complete",
+      "allowedPaths": [
+        "docs/README.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/evidence/phase-8/",
+        "docs/phases/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "tests/contract/phase-8a-activation.test.mjs",
+        "tests/contract/phase-8e-activation.test.mjs",
+        "tests/contract/phase-8f-activation.test.mjs",
+        "tests/contract/phase-8g-activation.test.mjs",
+        "tests/conformance/manifests/phase-8h-exit.json",
+        "tests/conformance/phase-8h-exit.test.mjs",
+        "package.json"
+      ],
       "exit": [
         "aggregate evidence binds project source and local report hashes without cart identity, path or hash",
         "compatibility claims distinguish smoke, C2 and Known Differences without publishing a third-party rate",
         "the contract closes, the active phase document is removed and the repository is clean"
-      ]
+      ],
+      "result": {
+        "exitManifest": "tests/conformance/manifests/phase-8h-exit.json",
+        "evidence": "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
+        "canonicalCases": 100,
+        "formatPairs": 65,
+        "representativeC2Cases": 10,
+        "supplementalCases": 200,
+        "supplementalFailureBacklog": 51,
+        "openP0": 0,
+        "openP1": 0,
+        "publicCompatibilityRateClaimed": false,
+        "thirdPartyPerCartDataTracked": false,
+        "productionChanged": false,
+        "networkSurfaceChanged": false,
+        "verification": ["pnpm run test:phase-8h", "pnpm run verify"]
+      }
     }
   }
 }

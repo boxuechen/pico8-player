@@ -188,6 +188,12 @@ CU 仍不进入可玩分母，`fails` 也仍保留在本地 observation，不会
 100 张本地 Canvas screenshot 已生成，其中 4 个代表状态已人工抽查；第三方 bytes、截图、路径和
 逐 cart 结果仍为仓库内 `0`。
 
+Phase 8 最终以 10 个代表 case 全部达到 C2、65/65 format pair 完成定性、P0/P1 为 `0/0` 关闭。
+supplemental 200-cart snapshot 的 120-tick quick smoke 为 `149 boots / 51 fails`，失败簇仅以 aggregate
+记录为 language `45`、timing `5`、unsupported-host-feature `1`。它是后续兼容修复 backlog，不改变
+正式 denominator，也不构成第三方兼容率。完整结论见
+[`Phase 8 exit evidence`](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md)。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：

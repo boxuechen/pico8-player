@@ -131,18 +131,19 @@ test("Phase 8C rejects cross-batch environment drift and incomplete coverage", a
   });
 });
 
-test("Phase 8C remains closed with aggregate-only evidence under its active successor", async () => {
-  const [contract, packageJson, docsReadme, phase, schema] = await Promise.all([
+test("Phase 8C remains closed with aggregate-only exit evidence", async () => {
+  const [contract, packageJson, docsReadme, evidence, schema] = await Promise.all([
     readFile(new URL("../../spec/phase-8-expanded-real-cart-qualification-contract.json", import.meta.url), "utf8").then(JSON.parse),
     readFile(new URL("../../package.json", import.meta.url), "utf8").then(JSON.parse),
     readFile(new URL("../../docs/README.md", import.meta.url), "utf8"),
-    readFile(new URL("../../docs/phases/8-expanded-real-cart-qualification.md", import.meta.url), "utf8"),
+    readFile(new URL("../../docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md", import.meta.url), "utf8"),
     readFile(new URL("../../spec/compat/expanded-smoke-aggregate-v1.schema.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
   assert.deepEqual(contract.completedWorkUnits.slice(0, 3), ["8A", "8B", "8C"]);
   assert.equal(contract.workUnits["8C"].status, "complete");
-  assert.match(contract.activeWorkUnit, /^8[D-H]$/u);
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.nextWorkUnit, null);
+  assert.equal(contract.status, "complete");
   assert.deepEqual(contract.workUnits["8C"].result.smokeOutcomes,
     { boots: 52, fails: 48, notRun: 0 });
   assert.deepEqual(contract.workUnits["8C"].result.failureClusters,
@@ -163,6 +164,6 @@ test("Phase 8C remains closed with aggregate-only evidence under its active succ
   assert.match(packageJson.scripts.test, /test:phase-8c/u);
   assert.match(packageJson.scripts.verify, /test:phase-8c/u);
   assert.equal(schema.properties.runner.const, "phase-8-expanded-smoke-v1");
-  assert.match(docsReadme, /Active work unit \| 8[D-H]/u);
-  assert.match(phase, /Active work unit：8[D-H]/u);
+  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.ok(evidence.includes("100-cart canonical corpus"));
 });

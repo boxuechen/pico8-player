@@ -129,7 +129,7 @@ test("Phase 5A activation history routes to closed Phase 5 evidence", async () =
   );
   const packageJson = await readJson("package.json");
 
-  assert.match(docsReadme, /最近完成 \| Phase 7/u);
+  assert.match(docsReadme, /最近完成 \| Phase 8/u);
   assert.doesNotMatch(phaseIndex, /5-l3-local-multicart\.md/u);
   assert.equal(phase7.status, "complete");
   assert.doesNotMatch(phaseIndex, /7-web-player-release-candidate\.md/u);
@@ -138,6 +138,7 @@ test("Phase 5A activation history routes to closed Phase 5 evidence", async () =
     assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
     assert.match(phaseIndex, /8-expanded-real-cart-qualification\.md/u);
   } else {
+    assert.match(docsReadme, /最近完成 \| Phase 8/u);
     assert.match(docsReadme, /当前阶段 \| 无/u);
     assert.match(docsReadme, /Active work unit \| 无/u);
   }

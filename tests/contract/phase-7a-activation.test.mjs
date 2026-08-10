@@ -119,13 +119,13 @@ test("Phase 7A routes Codex to one active unit or the closed Phase 7 evidence", 
     assert.ok(phase.includes("不新增网络、BBS、任意 URL"));
   } else {
     const phase8 = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
-    assert.match(docsReadme, /最近完成 \| Phase 7/u);
     assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
     if (phase8.status === "active") {
       assert.match(docsReadme, /当前阶段 \| Phase 8/u);
       assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
       assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
     } else {
+      assert.match(docsReadme, /最近完成 \| Phase 8/u);
       assert.match(docsReadme, /当前阶段 \| 无/u);
       assert.match(docsReadme, /Active work unit \| 无/u);
     }

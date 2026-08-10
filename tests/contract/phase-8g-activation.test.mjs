@@ -5,18 +5,16 @@ import test from "node:test";
 const root = new URL("../../", import.meta.url);
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), "utf8"));
 
-test("Phase 8G is the only active unit after representative C2 qualification", async () => {
+test("Phase 8G remains complete after release regression requalification", async () => {
   const contract = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
-  assert.deepEqual(contract.completedWorkUnits, ["8A", "8B", "8C", "8D", "8E", "8F"]);
-  assert.equal(contract.activeWorkUnit, "8G");
-  assert.equal(contract.nextWorkUnit, "8G");
+  assert.deepEqual(contract.completedWorkUnits,
+    ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"]);
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.nextWorkUnit, null);
   assert.equal(contract.workUnits["8F"].status, "complete");
-  assert.equal(contract.workUnits["8G"].status, "active");
-  assert.equal(contract.workUnits["8H"].status, "pending");
-  assert.equal(
-    Object.values(contract.workUnits).filter(({ status }) => status === "active").length,
-    1,
-  );
+  assert.equal(contract.workUnits["8G"].status, "complete");
+  assert.equal(contract.workUnits["8H"].status, "complete");
+  assert.ok(Object.values(contract.workUnits).every(({ status }) => status === "complete"));
 });
 
 test("Phase 8G requalifies release behavior without repeating external long runs", async () => {
@@ -39,18 +37,28 @@ test("Phase 8G requalifies release behavior without repeating external long runs
   assert.equal(unit.allowedPaths.some((path) => path.startsWith("ref/")), false);
   assert.equal(unit.allowedPaths.some((path) => path.startsWith("packages/")), false);
   assert.equal(unit.allowedPaths.some((path) => path.startsWith("apps/")), false);
+  assert.equal(unit.result.externalCorpusRead, false);
+  assert.equal(unit.result.longRealCartRerun, false);
+  assert.equal(unit.result.releaseArtifactVerified, true);
+  assert.equal(unit.result.fullChromeGate.desktopSoakSeconds, 600);
+  assert.equal(unit.result.fullChromeGate.droppedTicks, 0);
+  assert.equal(unit.result.openP0, 0);
+  assert.equal(unit.result.openP1, 0);
 });
 
-test("Phase 8G routing documents the bounded verification strategy", async () => {
-  const [packageJson, docsReadme, phase] = await Promise.all([
+test("Phase 8G history documents the bounded verification strategy", async () => {
+  const [packageJson, docsReadme, evidence] = await Promise.all([
     readJson("package.json"),
     readFile(new URL("docs/README.md", root), "utf8"),
-    readFile(new URL("docs/phases/8-expanded-real-cart-qualification.md", root), "utf8"),
+    readFile(new URL(
+      "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
+      root,
+    ), "utf8"),
   ]);
-  assert.match(docsReadme, /Active work unit \| 8G/u);
-  assert.match(phase, /Active work unit：8G/u);
-  assert.match(phase, /默认不重跑 Top200/u);
-  assert.match(phase, /只运行一次完整 `pnpm run verify`/u);
+  assert.match(docsReadme, /最近完成 \| Phase 8/u);
+  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.match(evidence, /bounded requalification/u);
+  assert.match(evidence, /没有重复读取外部 corpus/u);
   assert.match(packageJson.scripts["test:phase-8g"], /phase-8g-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["test:phase-8f"], /phase-8g-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["test:phase-8e"], /pnpm run test:phase-8f/u);

@@ -178,15 +178,16 @@ test("Phase 8B keeps Phase 6 at exactly 12 cases and exposes a separate expanded
   assert.equal(JSON.parse(schema).properties.runner.const, "phase-8-expanded-corpus-v1");
 });
 
-test("Phase 8B remains closed under its active successor", async () => {
+test("Phase 8B remains closed after Phase 8 aggregate exit", async () => {
   const [contract, packageJson] = await Promise.all([
     readFile(new URL("../../spec/phase-8-expanded-real-cart-qualification-contract.json", import.meta.url), "utf8").then(JSON.parse),
     readFile(new URL("../../package.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
   assert.ok(contract.completedWorkUnits.includes("8B"));
   assert.equal(contract.workUnits["8B"].status, "complete");
-  assert.match(contract.activeWorkUnit, /^8[C-H]$/u);
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.nextWorkUnit, null);
+  assert.equal(contract.status, "complete");
   assert.equal(contract.workUnits["8B"].result.corpusFingerprint,
     "941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c");
   assert.deepEqual(contract.workUnits["8B"].result.canonicalBatchCases, [50, 50]);

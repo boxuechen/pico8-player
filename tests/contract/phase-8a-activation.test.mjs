@@ -14,19 +14,16 @@ const sha256AtCommit = (commit, path) => createHash("sha256")
   .digest("hex");
 const contract = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
 
-test("Phase 8A freezes the completed Phase 7 release baseline", async () => {
+test("Phase 8A history freezes the completed Phase 7 release baseline", async () => {
   assert.equal(contract.phase, "8");
-  assert.equal(contract.status, "active");
+  assert.equal(contract.status, "complete");
   assert.deepEqual(contract.browserGate, ["chrome", "chromium"]);
-  assert.ok(contract.completedWorkUnits.includes("8A"));
-  assert.match(contract.activeWorkUnit, /^8[B-H]$/u);
-  assert.equal(contract.nextWorkUnit, contract.activeWorkUnit);
+  assert.deepEqual(contract.completedWorkUnits,
+    ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"]);
+  assert.equal(contract.activeWorkUnit, null);
+  assert.equal(contract.nextWorkUnit, null);
   assert.equal(contract.workUnits["8A"].status, "complete");
-  assert.equal(contract.workUnits[contract.activeWorkUnit].status, "active");
-  assert.equal(
-    Object.values(contract.workUnits).filter(({ status }) => status === "active").length,
-    1,
-  );
+  assert.ok(Object.values(contract.workUnits).every(({ status }) => status === "complete"));
   for (const [pathKey, hashKey] of [
     ["phase7Contract", "phase7ContractSha256"],
     ["phase7Evidence", "phase7EvidenceSha256"],
@@ -75,21 +72,24 @@ test("Phase 8A preserves local-only privacy and measurable Chrome exits", () => 
   assert.ok(contract.capabilityDelta.excluded.includes("non-chrome-browser-gate"));
 });
 
-test("Phase 8A routes one active phase and tracks no third-party artifacts", async () => {
-  const [docsReadme, phaseIndex, phase, roadmap, references, packageJson] = await Promise.all([
+test("Phase 8A history routes to immutable exit evidence and tracks no third-party artifacts", async () => {
+  const [docsReadme, phaseIndex, roadmap, references, evidence, packageJson] = await Promise.all([
     readFile(new URL("docs/README.md", root), "utf8"),
     readFile(new URL("docs/phases/README.md", root), "utf8"),
-    readFile(new URL("docs/phases/8-expanded-real-cart-qualification.md", root), "utf8"),
     readFile(new URL("docs/05-delivery-plan.md", root), "utf8"),
     readFile(new URL("docs/10-reference-sources.md", root), "utf8"),
+    readFile(new URL(
+      "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
+      root,
+    ), "utf8"),
     readJson("package.json"),
   ]);
-  assert.match(docsReadme, /当前阶段 \| Phase 8/u);
-  assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
-  assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
-  assert.match(phase, /Active work unit：8[B-H]/u);
-  assert.match(phase, /100 个 canonical logical cart/u);
-  assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Active/u);
+  assert.match(docsReadme, /最近完成 \| Phase 8/u);
+  assert.match(docsReadme, /当前阶段 \| 无/u);
+  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.ok(!phaseIndex.includes("8-expanded-real-cart-qualification.md"));
+  assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Complete/u);
+  assert.ok(evidence.includes("100-cart canonical corpus"));
   assert.ok(references.includes("MiniMechMedia/pico8-games"));
   assert.ok(references.includes(contract.externalSource.revision));
   assert.equal(packageJson.scripts["test:phase-8a"],
@@ -100,4 +100,8 @@ test("Phase 8A routes one active phase and tracks no third-party artifacts", asy
     .split("\0").filter(Boolean);
   assert.equal(tracked.some((path) => path.startsWith("ref/")), false);
   assert.equal(tracked.some((path) => /third-party-cart|screenshots?\//u.test(path)), false);
+  await assert.rejects(
+    readFile(new URL("docs/phases/8-expanded-real-cart-qualification.md", root)),
+    { code: "ENOENT" },
+  );
 });

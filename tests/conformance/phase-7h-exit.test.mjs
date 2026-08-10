@@ -165,13 +165,13 @@ test("Phase 7H documentation preserves immutable evidence under its successor ph
       readFile("docs/06-testing-compatibility.md", "utf8"),
       readFile(evidencePath, "utf8"),
     ]);
-  assert.ok(docsReadme.includes("81-phase-7-web-player-release-candidate-exit-evidence.md"));
   assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
   if (phase8.status === "active") {
     assert.match(docsReadme, /当前阶段 \| Phase 8/u);
     assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
     assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
   } else {
+    assert.match(docsReadme, /最近完成 \| Phase 8/u);
     assert.match(docsReadme, /当前阶段 \| 无/u);
     assert.match(docsReadme, /Active work unit \| 无/u);
   }
