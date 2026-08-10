@@ -75,14 +75,14 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": [],
-  "activeWorkUnit": "9A",
-  "nextWorkUnit": "9A",
+  "completedWorkUnits": ["9A"],
+  "activeWorkUnit": "9B",
+  "nextWorkUnit": "9B",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
       "name": "Failure-set Freeze / Root-cause Contract",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         ".gitignore",
         ".github/workflows/verify.yml",
@@ -115,11 +115,30 @@
         "language, timing and host-feature observations are reduced to shared root-cause candidates",
         "each candidate has a project-authored minimal reproducer or an explicit evidence gap",
         "no production source changes and 9B becomes the only active work unit"
-      ]
+      ],
+      "result": {
+        "rootCauseContract": "spec/compat/phase-9-root-cause-contract-v1.json",
+        "rootCauseContractSha256": "453958ca908cb0a6b4d96696d0fc877938c05800e8d2e51c39d94d2b0526dec2",
+        "rootCauseSchema": "spec/compat/phase-9-root-cause-contract-v1.schema.json",
+        "rootCauseSchemaSha256": "e37fd1c2fffff6c59d7532895f25d1af5177dbfe5b3667cbae40173b1d93e420",
+        "failureFreezeTool": "tools/compat/phase-9-failure-freeze-v1.mjs",
+        "failureFreezeToolSha256": "bcb1a9a1dd157a996950e6f511a9a91c762d5268fca8818d5564efa5dc52ee10",
+        "sourceAggregateSha256": "54c352ff737973e944a773afe8396e30b012915ac40d5c3a0252932553505a7b",
+        "observedCases": 200,
+        "failureCases": 51,
+        "candidateCases": 51,
+        "unclassifiedCases": 0,
+        "rootCauseCandidates": 15,
+        "ownerCases": { "9B": 45, "9C": 5, "9D": 1 },
+        "productionSourceChanges": 0,
+        "chromeRuns": 0,
+        "supplementalReruns": 0,
+        "trackedPerCartDetails": 0
+      }
     },
     "9B": {
       "name": "Language Compatibility Remediation",
-      "status": "pending",
+      "status": "active",
       "allowedPaths": [
         "wasm/bridge/",
         "wasm/patches/",
@@ -132,7 +151,9 @@
         "tests/runtime/",
         "tests/wasm/",
         "tests/compat/",
+        "tests/contract/",
         "tests/fixtures/phase-9/",
+        "spec/pico-api-inventory.yaml",
         "docs/adr/",
         "docs/03-z8lua-wasm-bridge.md",
         "docs/04-typescript-runtime.md",

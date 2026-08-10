@@ -32,9 +32,10 @@ corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence �
 
 ## 3. 当前阶段边界
 
-Phase 9 已激活，唯一 active work unit 为 9A。它先冻结 Phase 8 supplemental quick smoke 暴露的 51 个
-失败及其共享根因契约；language 45、timing 5、unsupported-host-feature 1 将分别由后续 9B/9C/9D
-处理。当前不授权 production source 修改，也不重跑 200-cart Chrome 全量。
+Phase 9 已激活，9A 已把 Phase 8 supplemental quick smoke 暴露的 51 个失败冻结为 15 个匿名候选，
+exact coverage 为 language 45、timing 5、unsupported-host-feature 1，且没有未分类项。唯一 active
+work unit 为 9B，由项目原创 real-WASM 最小复现处理 13 个 language candidate；不重跑 200-cart Chrome
+全量。
 
 执行细节、允许文件和短验证边界只见 active phase 文档。第三方内容与逐-cart evidence 不进入 tracked
 repository；阶段目标是 200 CU，不发布第三方兼容率。

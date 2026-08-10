@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.invalid/spec/compat/phase-9-root-cause-contract-v1.schema.json",
+  "title": "Anonymous Phase 9 supplemental failure root-cause contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runner",
+    "targetRuntime",
+    "sourceAggregateSha256",
+    "summary",
+    "privacy",
+    "candidates"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "runner": { "const": "phase-9a-failure-freeze-v1" },
+    "targetRuntime": { "const": "PICO-8 v0.2.7" },
+    "sourceAggregateSha256": {
+      "const": "54c352ff737973e944a773afe8396e30b012915ac40d5c3a0252932553505a7b"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observedCases",
+        "bootCases",
+        "failureCases",
+        "candidateCases",
+        "unclassifiedCases",
+        "rootCauseCandidates",
+        "clusters"
+      ],
+      "properties": {
+        "observedCases": { "const": 200 },
+        "bootCases": { "const": 149 },
+        "failureCases": { "const": 51 },
+        "candidateCases": { "const": 51 },
+        "unclassifiedCases": { "const": 0 },
+        "rootCauseCandidates": { "const": 15 },
+        "clusters": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["language", "timing", "unsupported-host-feature"],
+          "properties": {
+            "language": { "const": 45 },
+            "timing": { "const": 5 },
+            "unsupported-host-feature": { "const": 1 }
+          }
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "localObservationsOnly",
+        "refInputAllowed",
+        "cartIdentitiesTracked",
+        "sourcePathsTracked",
+        "cartHashesTracked",
+        "screenHashesTracked",
+        "faultMessagesTracked",
+        "screenshotsTracked",
+        "thirdPartyCodeTracked"
+      ],
+      "properties": {
+        "localObservationsOnly": { "const": true },
+        "refInputAllowed": { "const": false },
+        "cartIdentitiesTracked": { "const": false },
+        "sourcePathsTracked": { "const": false },
+        "cartHashesTracked": { "const": false },
+        "screenHashesTracked": { "const": false },
+        "faultMessagesTracked": { "const": false },
+        "screenshotsTracked": { "const": false },
+        "thirdPartyCodeTracked": { "const": false }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/candidate" }
+    }
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ownerPhase",
+        "cluster",
+        "cases",
+        "faultCodes",
+        "stage",
+        "signals",
+        "completedTickRange",
+        "ownerBoundary",
+        "hypothesis",
+        "reproducerPlan",
+        "evidenceGap"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{2,95}$" },
+        "ownerPhase": { "enum": ["9B", "9C", "9D"] },
+        "cluster": { "enum": ["language", "timing", "unsupported-host-feature"] },
+        "cases": { "type": "integer", "minimum": 1, "maximum": 51 },
+        "faultCodes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^E_[A-Z0-9_]{2,64}$" }
+        },
+        "stage": {
+          "enum": [
+            "parser-dialect",
+            "vm-value-semantics",
+            "vm-library-surface",
+            "vm-memory",
+            "runtime-bootstrap",
+            "host-api-dispatch",
+            "scheduler-instruction-budget",
+            "host-request-boundary"
+          ]
+        },
+        "signals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pre-first-frame", "post-black-frame", "post-visible-frame"],
+          "properties": {
+            "pre-first-frame": { "type": "integer", "minimum": 0, "maximum": 51 },
+            "post-black-frame": { "type": "integer", "minimum": 0, "maximum": 51 },
+            "post-visible-frame": { "type": "integer", "minimum": 0, "maximum": 51 }
+          }
+        },
+        "completedTickRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimum", "maximum"],
+          "properties": {
+            "minimum": { "type": "integer", "minimum": 0, "maximum": 120 },
+            "maximum": { "type": "integer", "minimum": 0, "maximum": 120 }
+          }
+        },
+        "ownerBoundary": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "hypothesis": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "reproducerPlan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fixture", "purpose", "expectedBehavior", "command"],
+          "properties": {
+            "fixture": {
+              "type": "string",
+              "pattern": "^tests/fixtures/phase-9/[a-z0-9-]+\\.p8$"
+            },
+            "purpose": { "type": "string", "minLength": 1, "maxLength": 512 },
+            "expectedBehavior": { "type": "string", "minLength": 1, "maxLength": 512 },
+            "command": { "enum": [
+              "pnpm run test:phase-9b",
+              "pnpm run test:phase-9c",
+              "pnpm run test:phase-9d"
+            ] }
+          }
+        },
+        "evidenceGap": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    }
+  }
+}

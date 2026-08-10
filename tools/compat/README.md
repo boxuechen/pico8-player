@@ -75,3 +75,16 @@ emitting no per-cart detail. Cases selected for the audio risk also require a sh
 device frames are folded into the local evidence digest before an audio `pass` is accepted. Audio
 probes use real-time 30 Hz pacing and should stay short; they are separate from accelerated logical
 duration gates.
+
+## Phase 9A anonymous failure freeze
+
+`qualification:phase-9a:freeze` consumes the frozen Phase 8F aggregate plus exactly four external
+observation files. It rejects repository/`ref/` inputs, symlinks, aggregate hash drift, environment drift,
+duplicate coverage, unknown diagnostics and tracked output paths. The emitted contract contains only
+cluster/candidate counts, fault codes, parser/VM stage, lifecycle-signal counts, owner boundaries,
+project-authored reproducer plans and explicit evidence gaps. It never emits per-cart identity, source
+path, cart/screen hash, raw fault message, screenshot or third-party code.
+
+The reviewed tracked result is `spec/compat/phase-9-root-cause-contract-v1.json`. Normal tests generate
+their own 200-case fixture outside the repository; CI and release builds do not read the local Top200
+snapshot or observations.

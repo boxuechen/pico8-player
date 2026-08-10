@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9A — Failure-set Freeze / Root-cause Contract
+> Active work unit：9B — Language Compatibility Remediation
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -37,8 +37,8 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 
 | Unit | 状态 | 可观察结果 |
 | --- | --- | --- |
-| 9A Failure-set Freeze / Root-cause Contract | **Active** | 51-case ignored failure set 可复现、聚类为共享根因候选并生成原创最小复现计划 |
-| 9B Language Compatibility Remediation | Pending | 45 个 language failure 的共享根因由通用 real-WASM 修复关闭 |
+| 9A Failure-set Freeze / Root-cause Contract | Complete | 51-case failure set 冻结为 15 个匿名候选，exact coverage 51、unclassified 0 |
+| 9B Language Compatibility Remediation | **Active** | 45 个 language failure 的共享根因由通用 real-WASM 修复关闭 |
 | 9C Timing Compatibility Remediation | Pending | 5 个 timing failure 的 scheduler/frame/CPU 根因关闭 |
 | 9D Host-feature Compatibility Remediation | Pending | 1 个 host-feature failure 在不扩大 authority 的前提下达到 CU |
 | 9E Focused Chrome Regression | Pending | 小范围 production Chrome 代表回归覆盖所有修复根因 |
@@ -46,44 +46,64 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
-## 4. 当前工作：9A Failure-set Freeze / Root-cause Contract
+## 4. 已完成：9A Failure-set Freeze / Root-cause Contract
 
-### 4.1 输入与输出
+Phase 8 仓库外 aggregate 的 SHA-256 已验证为
+`54c352ff737973e944a773afe8396e30b012915ac40d5c3a0252932553505a7b`。四个本地 observation batch
+exact 覆盖 200 cases / 51 failures，并归并为 15 个候选：9B language 13 个/45 cases、9C timing
+1 个/5 cases、9D host-feature 1 个/1 case；unclassified 为 0。
 
-9A 只使用 Phase 8 已生成的仓库外 supplemental observation。它必须校验 200-case aggregate SHA-256
-`54c352ff737973e944a773afe8396e30b012915ac40d5c3a0252932553505a7b`，再从本地 51 个失败生成：
+机器结果为
+[`phase-9-root-cause-contract-v1.json`](../../spec/compat/phase-9-root-cause-contract-v1.json)，schema、
+deterministic grouping、redaction、hash、exact coverage、repository/ref quarantine 与 evidence-gap
+fail-closed 由 `pnpm run test:phase-9a` 验证。9A 没有修改 production source、启动 Chrome 或重跑
+supplemental corpus。
 
-- exact `45 / 5 / 1` 的匿名 cluster inventory；
-- 按相同 error signature、parser/VM stage、frame/lifecycle signal 合并的 root-cause candidates；
-- 每个 candidate 的项目原创最小复现计划、owner boundary 和短验证命令；
-- 明确的 evidence gap。未知原因不能通过改标签假装关闭。
+## 5. 当前工作：9B Language Compatibility Remediation
 
-tracked 输出不得包含 identity、源路径、cart/screen hash、fault message 原文、截图或第三方代码。
+### 5.1 输入与可观察结果
 
-### 4.2 允许修改
+9B 只处理 root-cause contract 中 ownerPhase 为 `9B` 的 13 个 language root-cause candidate / 45 cases。
+按先根因、后代表 external case 的顺序推进：
 
-机器权威 allowlist 位于当前 phase contract 的 `workUnits.9A.allowedPaths`。9A 不授权修改 production
-source；若 triage 需要实现兼容行为，必须先完成 9A 并激活对应的 9B/9C/9D。
+- 每个 candidate 先建立项目原创 `.p8` 最小复现和 real-WASM regression；不得把第三方源码、身份或
+  diagnostic 原文复制到 fixture。
+- 预期行为必须来自官方 v0.2.7 手册或可审阅的官方 observation；若最小复现不能确认根因，保留
+  evidence gap，不通过放宽类型、内存或安全预算假装关闭。
+- 修复单位是 parser/dialect、value semantics、library surface、host argument contract、allocator 或
+  typed fault translation 的通用行为；production 中 cart identity branch 必须为 0。
+- owner tests 全部通过后，只选最多 10 个覆盖已修根因的 external case 做 120-tick Chrome quick smoke；
+  不运行 4×50 全量、长 playability 或 historical sweep。
 
-### 4.3 路由 owner
+### 5.2 允许修改
 
-- 外部 corpus、聚类、redaction 与 deterministic runner：
+机器权威 allowlist 位于当前 phase contract 的 `workUnits.9B.allowedPaths`。Language 行为优先落在
+z8lua/prelude/WASM bridge；只有 host API 参数或 browser-neutral persistence contract 确实拥有行为时，
+才修改 RuntimeCore。Canvas、DOM、AudioContext、network、任意 URL 和 host filesystem 均不在 9B 范围。
+
+### 5.3 路由 owner
+
+- VM 初始化、库白名单与错误：
+  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#3-vm-初始化与库白名单)、
+  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#9-yieldhostrequest-与错误)
+- host-call/value ABI：
+  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#7-wasm-import-与-host-call-frame)、
+  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#8-值编解码)
+- RuntimeCore API/persistence/error ownership：
+  [`04-typescript-runtime.md`](../04-typescript-runtime.md#11-persistence)、
+  [`04-typescript-runtime.md`](../04-typescript-runtime.md#15-错误模型)
+- 原创 conformance 与短 external gate：
+  [`06-testing-compatibility.md`](../06-testing-compatibility.md#6-conformance-carts)、
   [`06-testing-compatibility.md`](../06-testing-compatibility.md#35-expanded-local-real-cart-gate)
-- package、execution-domain 与 `ref/` quarantine：
-  [`08-source-layout-and-boundaries.md`](../08-source-layout-and-boundaries.md#1-canonical-workspace)
-- z8lua/WASM ownership：
-  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md)
-- scheduler、frame 与 host API ownership：
-  [`04-typescript-runtime.md`](../04-typescript-runtime.md)
 
-### 4.4 验证与退出
+### 5.4 验证与退出
 
-- 项目原创 schema/tool tests 证明 51-case exact coverage、aggregate hash、redaction、repository/ref
-  quarantine 和 root-cause grouping determinism。
-- 9A 不启动 Chrome、不修改 production、不重跑 200 carts。
-- worktree clean，随后 9B 成为唯一 active work unit。
+- 13 个 candidate 都有项目原创 real-WASM regression；45 cases 对应的共享根因均有明确 disposition。
+- `pnpm run test:phase-9b` 和 `pnpm run verify:phase-9` 通过。
+- 最多 10 个 external representative cases 的 120-tick Chrome quick smoke 通过；无全量 supplemental rerun。
+- production cart-specific branch 为 0，worktree clean，随后 9C 成为唯一 active work unit。
 
-## 5. Phase exit gate
+## 6. Phase exit gate
 
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。
