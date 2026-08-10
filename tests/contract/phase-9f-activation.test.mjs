@@ -10,11 +10,11 @@ const [contract, packageJson] = await Promise.all([
   readJson("package.json"),
 ]);
 
-test("Phase 9F is active again after bounded remediation", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C", "9D", "9E", "9R"]);
-  assert.equal(contract.activeWorkUnit, "9F");
-  assert.equal(contract.nextWorkUnit, "9F");
-  assert.equal(contract.workUnits["9F"].status, "active");
+test("Phase 9F is complete after its single full requalification", () => {
+  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C", "9D", "9E", "9R", "9F"]);
+  assert.equal(contract.activeWorkUnit, "9S");
+  assert.equal(contract.nextWorkUnit, "9S");
+  assert.equal(contract.workUnits["9F"].status, "complete");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -44,18 +44,38 @@ test("Phase 9F remains verification-only and does not expand authority", () => {
   assert.equal(qualificationAuthority("hostFilesystemAuthorityExpansion"), false);
 });
 
-test("Phase 9F is the documented and executable route", async () => {
+test("Phase 9F remains documented and executable after routing its final failure", async () => {
   const [readme, phase, index] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9F/u);
-  assert.match(phase, /Active work unit：9F/u);
-  assert.match(phase, /唯一一次完整 4×50/u);
-  assert.match(index, /active\s+work unit 为 9F/u);
+  assert.match(readme, /Active work unit \| 9S/u);
+  assert.match(phase, /199 CU、1 个 language failure/u);
+  assert.match(phase, /不会运行第二次 200-cart sweep/u);
+  assert.match(index, /active\s+work unit 为 9S/u);
   assert.match(packageJson.scripts["test:phase-9f"], /phase-9f-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9f/u);
+});
+
+test("Phase 9F records its complete aggregate without hiding the remaining failure", () => {
+  const result = contract.workUnits["9F"].result;
+  assert.equal(result.qualificationAttempts, 2);
+  assert.equal(result.completedRequalificationRuns, 1);
+  assert.equal(result.completedObservationBatches, 4);
+  assert.equal(result.observedCases, 200);
+  assert.equal(result.observedCu, 199);
+  assert.equal(result.observedFailures, 1);
+  assert.deepEqual(result.observedFailureClusters, { language: 1 });
+  assert.equal(result.logicalTicksPerCase, 120);
+  assert.equal(result.explicitLocalBundleCases, 3);
+  assert.equal(result.screenshotsCaptured, 200);
+  assert.equal(result.samePlayerCommit, true);
+  assert.equal(result.sameRuntimeWasm, true);
+  assert.equal(result.sameChromeBuild, true);
+  assert.equal(result.productionWorkerPath, true);
+  assert.equal(result.secondFullRerunAllowed, false);
+  assert.equal(result.trackedThirdPartyDetails, 0);
 });
 
 test("Phase 9F records the aborted attempt as aggregate-only evidence", () => {

@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9F — Single Supplemental Requalification
+> Active work unit：9S — Final Requalification Remediation
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -42,8 +42,9 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9C Timing Compatibility Remediation | Complete | 固定 32M safety cap 与 numeric-for boundary 修复使 5 个 timing case 全部达到 CU |
 | 9D Host-feature Compatibility Remediation | Complete | 显式 local bundle 与 empty-load no-op 使 2 个 host case 达到 CU，missing/denied 仍失败关闭 |
 | 9E Focused Chrome Regression | Complete | 10 个 production Chrome representative 交叉覆盖所有修复机制，10/10 CU |
-| 9F Single Supplemental Requalification | **Active** | 首次 attempt 已停止；等待唯一一次完整 4×50 quick smoke |
+| 9F Single Supplemental Requalification | Complete | 唯一一次完整 4×50 得到 199 CU、1 个 language failure |
 | 9R Requalification Failure Remediation | Complete | 3 个原创语言复现与显式 local bundle 使 4 个 affected case 全部达到 CU |
+| 9S Final Requalification Remediation | **Active** | 修正单一 `menuitem()` display-bound 差异并做 1-case focused rerun |
 | 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
@@ -122,44 +123,56 @@ runtime WASM 固定为 197,646 bytes，SHA-256
 full supplemental rerun、长 playability、historical/soak、cart-specific branch、authority expansion 与
 tracked third-party detail 均为 0。决定见 [ADR-029](../adr/029-phase-9-requalification-remediation-boundary.md)。
 
-## 10. 当前工作：9F Single Supplemental Requalification
+## 10. 已完成：9F Single Supplemental Requalification
 
-### 10.1 输入与可观察结果
+Phase 9 唯一一次完整 supplemental requalification 已在同一 clean player commit、WASM hash、Chrome build
+和 production Worker path 上完成 4×50、每 case 120 logical ticks；3 个已知 local dependency 仅通过仓库外
+显式 bundle 注入。200 个 case 均 complete 并捕获本地截图，聚合为 199 CU、1 个 language failure，其他
+failure cluster 为 0。第三方 identity、path、hash、截图和逐-case observation 均未进入仓库。
 
-9F 现在进行 Phase 9 唯一一次**完整** supplemental requalification：在一个 clean player commit 上按
-4 个固定 batch 顺序各运行 50 个 case，每个配置 120 logical-tick 上限，总计恰好 200 个。四批必须锁定
-同一 player commit、WASM hash、Chrome build 和 production Worker path；所有已知 multicart/data 依赖只能
-通过 caller-authorized 仓库外 manifest 中的显式 local bundle 注入。
+该结果把剩余差异收敛为 `menuitem()` 对超过 16-character display bound 的 label 直接抛错。按照失败即
+bounded remediation 和不重复全量验证的策略，9F 到此结束；不会运行第二次 200-cart sweep，也不会把
+不同 player commit 的 observation 伪装成单环境 aggregate。
 
-第一次 attempt 是失败后中止的诊断，不计作 complete requalification run，也不得重复其中的通过结果来
-拼接最终证据。最终 aggregate 必须来自本次单一 clean commit 的完整 4×50；如仍出现 failure，立即停止并
-回到 bounded remediation，不盲目重跑整套集合。
+## 11. 当前工作：9S Final Requalification Remediation
 
-### 10.2 允许修改
+### 11.1 输入与可观察结果
 
-机器权威 allowlist 位于 `workUnits.9F.allowedPaths`。9F 是 verification-only；`packages/**`、`wasm/**`、
-production app source 和 `ref/**` 均不授权。
+官方 v0.2.7 手册把 `menuitem()` label 定义为最多 16 characters；当前 bridge 却把超过 16 bytes 的输入
+升级为 cart-fatal runtime error。9S 只修正这一个通用差异：固定 snapshot/UI 仍只携带 16 个 P8SCII
+character，但超长 label 不得中止 cart，callback ownership、五槽 registry 和 generation 边界保持不变。
 
-### 10.3 路由 owner
+必须先增加一个项目原创 real-WASM 最小复现，再修改 bridge。生产实现不得读取第三方 identity，也不得按
+cart 分支。修复后只在 clean commit 上对唯一 affected external case 运行一次 120-tick production Chrome
+focused smoke；9F 的其他 199 个通过结果不重跑。
 
-- bounded external gate、local bundle 与 aggregate privacy：
+### 11.2 允许修改
+
+机器权威 allowlist 位于 `workUnits.9S.allowedPaths`。授权范围只包含 VM-local bridge、对应 regression、
+WASM manifest 和边界文档；`packages/**`、production app source 与 `ref/**` 均不授权。
+
+### 11.3 路由 owner
+
+- VM-local helper、snapshot 和 callback ownership：
+  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#3-vm-初始化与库白名单)
+- bounded external regression 与 privacy：
   [`06-testing-compatibility.md`](../06-testing-compatibility.md#35-expanded-local-real-cart-gate)
-- Chrome-only matrix 与 production path：
-  [`06-testing-compatibility.md`](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
+- bridge source placement：
+  [`08-source-layout-and-boundaries.md`](../08-source-layout-and-boundaries.md#packagesz8lua-bridge)
 
-### 10.4 验证与退出
+### 11.4 验证与退出
 
-- `pnpm run test:phase-9f` 通过。
-- 恰好一次完整 4×50 production Chrome requalification 达到 200/200 CU、0 remaining failure cluster。
-- 同一 player/WASM/Chrome/production path 约束通过；production changes、额外 complete full run、长
-  playability、historical/soak 均为 0。
-- tracked third-party detail 为 0，worktree clean，随后 9G 成为唯一 active unit。
+- `pnpm run test:phase-9s` 与 WASM reproducibility 通过。
+- 项目原创 fixture 证明超长 label 不会使 cart fault，copy-out label 仍受 16-byte fixed codec 限制。
+- 唯一 affected external case 的 120-tick production Chrome focused smoke 达到 CU。
+- 第二次 full sweep、cart-specific branch、authority expansion、长 playability、historical/soak 与 tracked
+  third-party detail 均为 0；worktree clean，随后 9G 成为唯一 active unit。
 
-## 11. Phase exit gate
+## 12. Phase exit gate
 
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。
 - open P0/P1 为 `0`；第三方 tracked artifact 与公开兼容率为 `0`。
-- 9F 只进行一次 4×50 quick smoke；9G 不重跑历史阶段全集或 600 秒 soak。
+- 9F 只进行一次 4×50 quick smoke；9S 只复测剩余 1 case；9G 不重跑历史阶段全集或 600 秒 soak。
 - `pnpm run verify:phase-9`、`pnpm run verify:release`、Phase 9 aggregate exit test 与 clean worktree
   gate 通过。

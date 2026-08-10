@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R"],
-  "activeWorkUnit": "9F",
-  "nextWorkUnit": "9F",
+  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F"],
+  "activeWorkUnit": "9S",
+  "nextWorkUnit": "9S",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -339,7 +339,7 @@
     },
     "9F": {
       "name": "Single Supplemental Requalification",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tools/compat/",
         "tools/browser/",
@@ -379,9 +379,28 @@
       },
       "exit": [
         "one and only one four-by-fifty 120-tick supplemental Chrome rerun completes",
-        "the aggregate reaches 200 CU with zero remaining failure clusters",
-        "all third-party detail remains local-only and 9G becomes active"
-      ]
+        "any remaining generic failure is routed to bounded focused remediation without a second full rerun",
+        "all third-party detail remains local-only"
+      ],
+      "result": {
+        "qualificationAttempts": 2,
+        "completedRequalificationRuns": 1,
+        "completedObservationBatches": 4,
+        "observedCases": 200,
+        "observedCu": 199,
+        "observedFailures": 1,
+        "observedFailureClusters": { "language": 1 },
+        "logicalTicksPerCase": 120,
+        "explicitLocalBundleCases": 3,
+        "screenshotsCaptured": 200,
+        "samePlayerCommit": true,
+        "sameRuntimeWasm": true,
+        "sameChromeBuild": true,
+        "productionWorkerPath": true,
+        "productionSourceChanges": 0,
+        "secondFullRerunAllowed": false,
+        "trackedThirdPartyDetails": 0
+      }
     },
     "9R": {
       "name": "Requalification Failure Remediation",
@@ -445,6 +464,46 @@
         "runtimeWasmBytes": 197646,
         "runtimeWasmSha256": "5f5082a42e7b81a9f7d8a0844b6349ad3bb81f1b33603b404b080f3c42bce247"
       }
+    },
+    "9S": {
+      "name": "Final Requalification Remediation",
+      "status": "active",
+      "allowedPaths": [
+        "wasm/bridge/",
+        "wasm/runtime-v1.manifest.lock.json",
+        "tools/wasm/",
+        "tests/runtime/",
+        "tests/contract/",
+        "tests/fixtures/phase-9/",
+        "spec/pico-api-inventory.yaml",
+        "docs/adr/",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "scope": {
+        "observedFailures": 1,
+        "languageFailures": 1,
+        "genericRootCauses": 1,
+        "projectAuthoredReproducersRequired": 1,
+        "focusedExternalUniqueCasesMaximum": 1,
+        "logicalTicksPerCase": 120,
+        "fullSupplementalRerunsAllowed": 0,
+        "cartSpecificBranchesAllowed": false,
+        "networkAuthorityExpansion": false,
+        "hostFilesystemAuthorityExpansion": false
+      },
+      "exit": [
+        "menuitem labels beyond the documented 16-character display bound do not abort cart execution and have a project-authored real-WASM regression",
+        "the one affected external case reaches CU in a focused Chrome rerun",
+        "no second supplemental sweep occurs and 9G becomes active"
+      ]
     },
     "9G": {
       "name": "Release Regression",

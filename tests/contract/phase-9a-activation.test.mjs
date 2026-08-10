@@ -114,9 +114,9 @@ test("Phase 9A keeps the single documented Codex route inside Phase 9", async ()
     read(".github/workflows/verify.yml"),
   ]);
   assert.match(docsReadme, /当前阶段 \| Phase 9/u);
-  assert.match(docsReadme, /Active work unit \| 9[A-H]/u);
+  assert.match(docsReadme, /Active work unit \| 9[A-Z]/u);
   assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
-  assert.match(phase, /Active work unit：9[A-H]/u);
+  assert.match(phase, /Active work unit：9[A-Z]/u);
   assert.match(phase, /language `45`、timing `5`/u);
   assert.match(roadmap, /9 Supplemental Compatibility Remediation（9A–9H） \| Active/u);
   assert.match(packageJson.scripts["test:phase-9a"], /phase-9a-activation\.test\.mjs/u);
