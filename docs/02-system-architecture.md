@@ -275,7 +275,8 @@ containment，不恢复已被 `load()` 放弃的执行路径。
    root-safe implicit-frame boundary。
 4. 累计 deterministic z8lua instruction cost，处理 VM error、safety hard cap、host request 和
    queued cart change；普通 CPU 超预算 transaction 继续原子完成，并在公开 frame 上标记
-   `slowFrame`，不会冒充 VM fault。
+   `slowFrame`，不会冒充 VM fault。默认 hard cap 是固定 32M instructions 的 Worker-side transaction
+   guard；它不依据 wall-clock 或 cart identity 改变。
 5. 根据 logical simulation clock 生成该 slice 对应的 PCM。
 6. 若本次是 visible draw/flip，读取 screen + palette/draw mode 生成 frame output。
 7. 提交 diagnostics、heartbeat 和 persistence dirty state。

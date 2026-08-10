@@ -10,13 +10,14 @@ const [contract, causes] = await Promise.all([
   readJson("spec/compat/phase-9-root-cause-contract-v1.json"),
 ]);
 
-test("Phase 9B is complete and activates only 9C", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B"]);
-  assert.equal(contract.activeWorkUnit, "9C");
-  assert.equal(contract.nextWorkUnit, "9C");
+test("Phase 9B remains complete while 9D is the only active work unit", () => {
+  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C"]);
+  assert.equal(contract.activeWorkUnit, "9D");
+  assert.equal(contract.nextWorkUnit, "9D");
   assert.equal(contract.workUnits["9A"].status, "complete");
   assert.equal(contract.workUnits["9B"].status, "complete");
-  assert.equal(contract.workUnits["9C"].status, "active");
+  assert.equal(contract.workUnits["9C"].status, "complete");
+  assert.equal(contract.workUnits["9D"].status, "active");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -65,14 +66,14 @@ test("Phase 9B records aggregate-only completion evidence", () => {
   assert.equal(result.trackedThirdPartyDetails, 0);
 });
 
-test("Phase 9B hands the documented route to 9C", async () => {
+test("Phase 9B remains summarized after the route advances to 9D", async () => {
   const [readme, phase, index] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9C/u);
-  assert.match(phase, /Active work unit：9C/u);
+  assert.match(readme, /Active work unit \| 9D/u);
+  assert.match(phase, /Active work unit：9D/u);
   assert.match(phase, /13 个 language candidate/u);
-  assert.match(index, /active\s+work unit 为 9C/u);
+  assert.match(index, /active\s+work unit 为 9D/u);
 });

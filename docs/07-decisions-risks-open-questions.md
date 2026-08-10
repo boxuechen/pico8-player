@@ -64,7 +64,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | Q-09 | z8lua pin/patch、upper RAM mapper 和 benchmark boundary 已锁定 | [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
 | Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
-| Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，hard cap 独立负责安全 | [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) / `pnpm run test:phase-4f:chrome` |
+| Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，固定 32M hard cap 独立负责安全 | [ADR-027](./adr/027-phase-9-timing-safety-boundary.md) / [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) |
 | Q-02 | production 固定为 16 MiB WASM / 2 MiB Lua heap；受限 diagnostic profile 验证 structured OOM/recovery，不开启 memory growth 或 adaptive sizing | [ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) / [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json) |
 | Q-10 | plain guest yield 只返回直接 `coresume()`；L3 接受 root-only，nested host suspension 统一不可捕获 structured fault | [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) / [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 
@@ -82,7 +82,7 @@ evidence，不在本表复制测试步骤。
 | R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue；Phase 4G 双速率 1800 秒 steady counters 全零 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
-| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | Phase 4F/ADR-022/ADR-025 分离 4M/s cost、133333 top-level frame quantum 与 2M safety cap；Node/Chrome controls 锁定 |
+| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | Phase 4F/ADR-022/ADR-027 分离 4M/s cost、133333 top-level frame quantum 与固定 32M safety cap；finite-heavy/runaway controls 锁定 |
 | R-09 | multi-cart 同步 API 需要 async host data | caller-authorized local repository + root HostRequest + atomic swap；Phase 5 100-swap/soak gate |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | ADR-020 Deferred；无 production adapter、endpoint、network access 或 corpus bytes |

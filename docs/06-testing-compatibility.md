@@ -271,6 +271,7 @@ explicit/implicit continuation resume 到下一个受控 boundary，不伪造 `_
 ### 5.2 z8lua/WASM 专项
 
 - 运行 z8lua 上游可用的 parser/VM 测试，并增加 P8 Lua 方言回归：short-if、`?`、复合赋值、位操作、table、coroutine、multiple return 和 16.16 数值行为。
+- numeric `for` 必须覆盖接近 Q16.16 正负边界的有限循环，证明 next index 不依赖 C/C++ signed overflow，也不会回绕成 runaway。
 - 对每个 import/export 校验参数个数、类型、nil/default、错误传播和多返回值。
 - 对 `@/%/$` 覆盖 `0x0000..0xffff`、负值/地址 wrap、`0xffff` 附近的 multi-byte read，以及 `0x5f54/0x5f55` GFX/SCREEN remap；结果必须与 `peek/peek2/peek4` 和 RAM golden 一致。
 - 以随机 raw `int32` 做至少 10,000 组 Q16.16 ABI 往返属性测试。
@@ -514,6 +515,9 @@ Phase 0C 原始 contract 或结果。
 - 浏览器主线程在加载完成后不得因 runtime 产生超过 50 ms 的 long task；cart 代码运行在 Worker。
 
 PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必须另外建立 CPU-budget conformance cart，验证 `stat(1)`、30/60 Hz 和超预算行为；宿主机器更快不能使 cart 获得无限制的逻辑 CPU。
+default 32M transaction safety cap 另以 finite-heavy 和 explicit-runaway 两个项目原创 cart 成对验证：
+前者必须原子提交并标记 `slowFrame`，后者必须稳定 fault。该 safety gate 使用 deterministic instruction
+count，不使用 wall-clock；外部兼容回归只选受影响的 bounded case，不因此重跑整个 corpus。
 
 ## 11. Chrome/Chromium 支持矩阵
 

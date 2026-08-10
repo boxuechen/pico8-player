@@ -23,6 +23,10 @@
       {
         "path": "wasm/patches/0003-pico8-language-compat.patch",
         "sha256": "f60323ef922b4aea93a59aba1ef264c3ac27767865a01954065f50ab4e49d35e"
+      },
+      {
+        "path": "wasm/patches/0004-pico8-numeric-for-boundary.patch",
+        "sha256": "fe209b58ca396401ef0a2e3e1f2b2038e67b14dc33b1cd8c04424c8daf29a508"
       }
     ]
   },
@@ -233,8 +237,8 @@
       },
       {
         "path": "z8lua-phase-0c.wasm",
-        "bytes": 184029,
-        "sha256": "15292cf2c7efa1da2610d0c9358ba019a76ae830e62f52128b8bd4f032af8dda"
+        "bytes": 184051,
+        "sha256": "0d74032cc2ddd0160ac03468583f0dea42b7293023b5ce10209bcec7b5579f80"
       }
     ],
     "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."

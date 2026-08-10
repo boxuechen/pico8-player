@@ -9,7 +9,7 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | --- | --- |
 | 最近完成 | Phase 8；[Expanded Real-cart Qualification exit evidence](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) |
 | 当前阶段 | Phase 9；[Supplemental Compatibility Remediation](./phases/9-supplemental-compatibility-remediation.md) |
-| Active work unit | 9C — Timing Compatibility Remediation |
+| Active work unit | 9D — Host-feature Compatibility Remediation |
 | 当前机器合同 | [`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
 
 Phase 8A–8H 已关闭：100 个 canonical cart 完成 fixed smoke，65 个格式 pair 完成定性，10 个代表
@@ -19,8 +19,11 @@ unsupported-host-feature 1，目标是用通用修复收敛到 200 CU。
 9A 已把 51 个失败冻结为 15 个匿名 root-cause candidate，exact coverage 为 45/5/1 且无未分类项。
 9B 已用 13 个项目原创 real-WASM 最小复现关闭全部 language candidate；10 个 external
 representative 的短 Chrome gate 全部越过对应语言根因，其中 9 个达到 CU，另 1 个继续暴露为既有
-local `load()` host-feature 边界并转交 9D。当前唯一授权工作是 9C：区分有限重计算与真正 runaway，关闭 5 个
-`E_VM_INSTRUCTION_BUDGET` timing failure；仍禁止 cart-specific branch 与全量 supplemental 重跑。
+local `load()` host-feature 边界并转交 9D。9C 已用固定 32M deterministic safety cap 和 Q16.16
+numeric-for termination 修复关闭 5 个 timing failure；5 个 affected case 的 120-tick Chrome smoke 全部达到
+CU。当前唯一授权工作是 9D：在既有 caller-authorized local bundle 内关闭 baseline external cart-data
+request 与 9B 暴露的 local `load()` target 缺口；仍禁止网络/filesystem authority、cart-specific branch
+与全量 supplemental 重跑。
 
 日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

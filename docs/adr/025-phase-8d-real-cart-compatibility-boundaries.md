@@ -2,7 +2,7 @@
 
 - 状态：Accepted（Phase 8D）
 - 日期：2026-08-08
-- 部分取代：ADR-022 的默认 hard safety cap 数值；其余 CPU slicing 决策不变
+- 部分取代：ADR-022 的默认 hard safety cap 数值；该数值随后由 ADR-027 取代，其余 CPU slicing 决策不变
 
 ## Context
 

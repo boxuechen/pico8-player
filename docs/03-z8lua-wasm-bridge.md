@@ -430,8 +430,13 @@ transaction 与 control matrix 由 [ADR-022](./adr/022-cpu-slicing-decision.md) 
 
 implicit quantum、safety cap 与 compatibility CPU cost 是三个不同概念。Phase 4F 已锁定每条 count hook
 instruction 作为 deterministic accounting unit，由 Runtime 以 4M/s 和 logical target FPS 换算
-Q16.16；默认 2M instruction cap 仍只负责安全。`p8w_consumed_instructions()` 返回当前 resume
-segment，bridge 内的 `stat(1)` 另行累计同一 transaction 的先前 HostRequest segments。
+Q16.16；[ADR-027](./adr/027-phase-9-timing-safety-boundary.md) 将默认 safety cap 固定为 32M
+instructions，它仍只负责 containment，不把普通 callback 拆帧。`p8w_consumed_instructions()` 返回当前
+resume segment，bridge 内的 `stat(1)` 另行累计同一 transaction 的先前 HostRequest segments。
+
+z8lua numeric `for` 的 next index 必须先在扩大到 `int64` 的 raw Q16.16 域中计算；若下一步超出
+signed `int32` 可表示范围则结束循环。不得先执行 signed C++ overflow，再用已经回绕的值判断方向；
+否则接近 `0x7fff` / `-0x8000` 的有限循环可能退化成 runaway。
 
 Window watchdog 是第二层：若 Worker 在 wall-clock deadline 内没有回复，Window 终止整个 Worker 并重建 session。它覆盖 C parser、host import、WASM trap 或 hook 无法中断的情况；它不能替代 instruction hook。deadline 必须考虑后台暂停和移动设备抖动，并在 browser test 后确定。
 

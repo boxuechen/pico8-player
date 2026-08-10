@@ -545,11 +545,12 @@ type StepResult = Readonly<{
   都是 0 instruction。
 - 30 Hz implicit-frame quantum 固定使用 `floor(4,000,000 / 30) = 133,333`，只负责让 top-level
   custom loop 形成官方 back-buffer copy boundary；它与普通 frame 的 soft `slowFrame` 分类、默认
-  `2,000,000` hard safety cap 分别计数。floor quantum 的 Q16.16 fraction 是 `0xffff`。
+  `32,000,000` hard safety cap 分别计数。floor quantum 的 Q16.16 fraction 是 `0xffff`。
 - raw `0x00010000` 仍属预算内；只有量化结果大于它才标记 `slowFrame=true`。ordinary slow frame
   不降频、不跳 draw，也不拆成部分提交，而是完成一个原子 logical frame。默认
-  `2,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
-  `E_VM_INSTRUCTION_BUDGET`，与 soft classification 分离。
+  `32,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
+  `E_VM_INSTRUCTION_BUDGET`，与 soft classification 分离。这个值是固定 Chrome desktop project
+  profile，不得按 cart identity、host speed、wall-clock 或先前 frame 自适应。
 - `stat(0)` 返回当前 Lua allocator live KiB；`stat(1)` 报告当前 transaction 到调用点为止的 CPU fraction，并跨 root HostRequest continuation
   累计；因此它可略小于 frame 完成后的诊断值。`stat(7)` 返回 logical target FPS。两者都不读取
   浏览器刷新率或 host wall-clock；`stat(8/9)` 返回同一个 deterministic target FPS。

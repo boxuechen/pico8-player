@@ -11,11 +11,12 @@ const [contract, causes, packageJson] = await Promise.all([
   readJson("package.json"),
 ]);
 
-test("Phase 9C is the only active work unit", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B"]);
-  assert.equal(contract.activeWorkUnit, "9C");
-  assert.equal(contract.nextWorkUnit, "9C");
-  assert.equal(contract.workUnits["9C"].status, "active");
+test("Phase 9C is complete and activates only 9D", () => {
+  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C"]);
+  assert.equal(contract.activeWorkUnit, "9D");
+  assert.equal(contract.nextWorkUnit, "9D");
+  assert.equal(contract.workUnits["9C"].status, "complete");
+  assert.equal(contract.workUnits["9D"].status, "active");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -47,16 +48,35 @@ test("Phase 9C authorizes deterministic scheduler owners without expanding autho
   assert.equal(contract.remediationPolicy.hostFilesystemAuthorityExpansion, false);
 });
 
-test("Phase 9C is the documented and executable route", async () => {
+test("Phase 9C records aggregate-only completion evidence", () => {
+  const result = contract.workUnits["9C"].result;
+  assert.equal(result.candidateBuckets, 1);
+  assert.equal(result.baselineTimingCases, 5);
+  assert.equal(result.projectAuthoredFixtures, 2);
+  assert.equal(result.ownerRegressionsPassed, 2);
+  assert.equal(result.measuredFiniteMaximumInstructions, 21_623_599);
+  assert.equal(result.defaultSafetyInstructionLimit, 32_000_000);
+  assert.equal(result.deterministicInstructionAccounting, true);
+  assert.equal(result.adaptiveBudget, false);
+  assert.equal(result.numericForBoundaryFix, true);
+  assert.equal(result.chromeSelectedCases, 5);
+  assert.equal(result.chromeCuPasses, 5);
+  assert.equal(result.remainingTimingFailures, 0);
+  assert.equal(result.productionCartSpecificBranches, 0);
+  assert.equal(result.supplementalFullReruns, 0);
+  assert.equal(result.trackedThirdPartyDetails, 0);
+});
+
+test("Phase 9C hands the documented route to 9D", async () => {
   const [readme, phase, index] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9C/u);
-  assert.match(phase, /Active work unit：9C/u);
+  assert.match(readme, /Active work unit \| 9D/u);
+  assert.match(phase, /Active work unit：9D/u);
   assert.match(phase, /timing-instruction-budget-boundary/u);
-  assert.match(index, /active\s+work unit 为 9C/u);
+  assert.match(index, /active\s+work unit 为 9D/u);
   assert.match(packageJson.scripts["test:phase-9c"], /phase-9c-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9c/u);
 });

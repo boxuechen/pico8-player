@@ -43,6 +43,18 @@
         "tests/runtime/phase-9b-language-compat.test.mjs: parser dialect and local environment regressions"
       ],
       "upstreamStatus": "project compatibility patch; not submitted"
+    },
+    {
+      "order": 4,
+      "file": "0004-pico8-numeric-for-boundary.patch",
+      "sha256": "fe209b58ca396401ef0a2e3e1f2b2038e67b14dc33b1cd8c04424c8daf29a508",
+      "target": "lvm.c",
+      "purpose": "Compute the next Q16.16 numeric-for index without signed C++ overflow and terminate at either representable numeric boundary instead of wrapping indefinitely.",
+      "enabledBy": "Phase 9C timing compatibility",
+      "tests": [
+        "tests/runtime/phase-9c-timing-compat.test.mjs: finite heavy work and Q16.16 boundary loop"
+      ],
+      "upstreamStatus": "project compatibility patch; not submitted"
     }
   ],
   "policy": "Ordered patches are applied to the vendored snapshot and must remain minimal, reviewable, and covered by named conformance tests."

@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B"],
-  "activeWorkUnit": "9C",
-  "nextWorkUnit": "9C",
+  "completedWorkUnits": ["9A", "9B", "9C"],
+  "activeWorkUnit": "9D",
+  "nextWorkUnit": "9D",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -194,20 +194,29 @@
     },
     "9C": {
       "name": "Timing Compatibility Remediation",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "packages/runtime-core/src/",
         "packages/z8lua-bridge/src/",
         "wasm/bridge/",
+        "wasm/patches/",
+        "wasm/z8lua/",
+        "wasm/source.lock.json",
+        "wasm/manifest.lock.json",
         "wasm/runtime-v1.manifest.lock.json",
+        "tools/wasm/",
         "apps/web-player/src/worker/",
         "tests/runtime/",
+        "tests/wasm/",
         "tests/compat/",
         "tests/contract/",
         "tests/fixtures/phase-9/",
         "docs/adr/",
         "docs/02-system-architecture.md",
+        "docs/03-z8lua-wasm-bridge.md",
         "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
         "docs/README.md",
         "docs/phases/README.md",
         "docs/phases/9-supplemental-compatibility-remediation.md",
@@ -218,11 +227,28 @@
         "the five timing failures are reduced to generic scheduler, frame or CPU-boundary causes",
         "project-authored deterministic-clock regressions prove each fix",
         "the five affected external cases pass short Chrome smoke and 9D becomes active"
-      ]
+      ],
+      "result": {
+        "candidateBuckets": 1,
+        "baselineTimingCases": 5,
+        "projectAuthoredFixtures": 2,
+        "ownerRegressionsPassed": 2,
+        "measuredFiniteMaximumInstructions": 21623599,
+        "defaultSafetyInstructionLimit": 32000000,
+        "deterministicInstructionAccounting": true,
+        "adaptiveBudget": false,
+        "numericForBoundaryFix": true,
+        "chromeSelectedCases": 5,
+        "chromeCuPasses": 5,
+        "remainingTimingFailures": 0,
+        "productionCartSpecificBranches": 0,
+        "supplementalFullReruns": 0,
+        "trackedThirdPartyDetails": 0
+      }
     },
     "9D": {
       "name": "Host-feature Compatibility Remediation",
-      "status": "pending",
+      "status": "active",
       "allowedPaths": [
         "packages/contracts/src/",
         "packages/runtime-core/src/",
@@ -232,6 +258,7 @@
         "apps/web-player/src/worker/",
         "tests/runtime/",
         "tests/compat/",
+        "tests/contract/",
         "tests/fixtures/phase-9/",
         "docs/adr/",
         "docs/01-scope-and-success-criteria.md",

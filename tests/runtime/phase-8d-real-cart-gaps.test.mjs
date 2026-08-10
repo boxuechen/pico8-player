@@ -135,8 +135,8 @@ end`);
   runtime.dispose();
 });
 
-test("the default hard transaction guard leaves headroom above one million instructions", () => {
-  assert.equal(DEFAULT_SAFETY_INSTRUCTION_LIMIT, 2_000_000);
+test("the default hard transaction guard leaves fixed headroom for finite heavy frames", () => {
+  assert.equal(DEFAULT_SAFETY_INSTRUCTION_LIMIT, 32_000_000);
 });
 
 test("printh preserves value conversion without granting a cart filesystem sink", () => {
