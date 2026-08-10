@@ -719,7 +719,10 @@ int p8_load(lua_State *state) {
   const char *parameter = has_parameter
                               ? luaL_checklstring(state, 3, &parameter_length)
                               : nullptr;
-  if (ref_length == 0 || ref_length > kMaxRefBytes ||
+  // An empty launch parameter is commonly forwarded to load(stat(6)) by
+  // optional multicart helpers. PICO-8 leaves the current cart running.
+  if (ref_length == 0) return 0;
+  if (ref_length > kMaxRefBytes ||
       kHeaderBytes + ref_length + breadcrumb_length + parameter_length >
           kMaxHostBytes ||
       breadcrumb_length > UINT16_MAX || parameter_length > UINT16_MAX) {

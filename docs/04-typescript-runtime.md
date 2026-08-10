@@ -663,7 +663,9 @@ guest cart payload 由
 编码。它们是 Worker 内部边界，不是 Window transport DTO。
 
 - `load(ref, breadcrumb, param)`：root API 触发受控 HostRequest，停止旧 cart 的当前执行路径；
-  `CartLoader` 只接受 caller-authorized local bundle 中具有 `access.load` 的目标。
+  `CartLoader` 只接受 caller-authorized local bundle 中具有 `access.load` 的目标。空 `ref`（例如
+  `load(stat(6))` 且没有 launch parameter）是同步 no-op，不产生 HostRequest；非空但 missing、过长或
+  capability denied 的 ref 仍失败关闭。
 - `reload(dest=0, src=0, len=0x4300, ref?)`：无 ref 或当前 cart 可同步从 `CartSession.rom` 的 data region 复制；外部 ref 未缓存时必须产生可恢复 HostRequest，VM 停在该 API 调用点，资源返回后完成 copy，再从调用点之后继续。外部目标必须有 `access.reloadData`；当前 resolver 只接受 caller-authorized local bundle。
 - `cstore(dest=0, src=0, len=0x4300, ref?)`：先从 RAM 复制稳定 bytes，再写当前/目标 cart data overlay。异步目标解析/提交同样需要可恢复 HostRequest。目标必须有 `access.cstoreData`；每 execution 最多写入 64 个目标 cart。范围保护见 5.4，具体无效参数行为用 golden 校准。
 - Runtime 不得用“这一帧末尾再悄悄 reload”替代同步语义。当前只接受 root suspension；

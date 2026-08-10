@@ -10,14 +10,10 @@ const [contract, causes] = await Promise.all([
   readJson("spec/compat/phase-9-root-cause-contract-v1.json"),
 ]);
 
-test("Phase 9B remains complete while 9D is the only active work unit", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C"]);
-  assert.equal(contract.activeWorkUnit, "9D");
-  assert.equal(contract.nextWorkUnit, "9D");
+test("Phase 9B remains complete while one later work unit is active", () => {
+  assert.ok(contract.completedWorkUnits.includes("9B"));
   assert.equal(contract.workUnits["9A"].status, "complete");
   assert.equal(contract.workUnits["9B"].status, "complete");
-  assert.equal(contract.workUnits["9C"].status, "complete");
-  assert.equal(contract.workUnits["9D"].status, "active");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -66,14 +62,7 @@ test("Phase 9B records aggregate-only completion evidence", () => {
   assert.equal(result.trackedThirdPartyDetails, 0);
 });
 
-test("Phase 9B remains summarized after the route advances to 9D", async () => {
-  const [readme, phase, index] = await Promise.all([
-    read("docs/README.md"),
-    read("docs/phases/9-supplemental-compatibility-remediation.md"),
-    read("docs/phases/README.md"),
-  ]);
-  assert.match(readme, /Active work unit \| 9D/u);
-  assert.match(phase, /Active work unit：9D/u);
+test("Phase 9B remains summarized after the route advances", async () => {
+  const phase = await read("docs/phases/9-supplemental-compatibility-remediation.md");
   assert.match(phase, /13 个 language candidate/u);
-  assert.match(index, /active\s+work unit 为 9D/u);
 });

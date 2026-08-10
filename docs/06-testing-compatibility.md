@@ -204,6 +204,11 @@ supplemental 200-cart snapshot 的 120-tick quick smoke 为 `149 boots / 51 fail
 正式 denominator，也不构成第三方兼容率。完整结论见
 [`Phase 8 exit evidence`](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md)。
 
+multi-cart / external cart-data case 的 local manifest 必须显式列出每个 dependency ref、bytes 与
+`load/reloadData/cstoreData/include` capability；runner 不从 guest source 猜 URL，也不联网补依赖。
+项目原创 fixture 同时锁定 accepted target success、missing/denied fail-closed 和空 `load("")` no-op。
+第三方 dependency bytes、URL、hash 与逐-cart bundle 继续只位于仓库外。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：

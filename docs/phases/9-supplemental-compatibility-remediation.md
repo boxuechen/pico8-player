@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9D — Host-feature Compatibility Remediation
+> Active work unit：9E — Focused Chrome Regression
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -40,8 +40,8 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9A Failure-set Freeze / Root-cause Contract | Complete | 51-case failure set 冻结为 15 个匿名候选，exact coverage 51、unclassified 0 |
 | 9B Language Compatibility Remediation | Complete | 13 个 language candidate 均有通用 real-WASM fix；1 个 downstream host gap 转交 9D |
 | 9C Timing Compatibility Remediation | Complete | 固定 32M safety cap 与 numeric-for boundary 修复使 5 个 timing case 全部达到 CU |
-| 9D Host-feature Compatibility Remediation | **Active** | baseline 1 个 host-feature failure 加 1 个 downstream case 在不扩大 authority 的前提下达到 CU |
-| 9E Focused Chrome Regression | Pending | 小范围 production Chrome 代表回归覆盖所有修复根因 |
+| 9D Host-feature Compatibility Remediation | Complete | 显式 local bundle 与 empty-load no-op 使 2 个 host case 达到 CU，missing/denied 仍失败关闭 |
+| 9E Focused Chrome Regression | **Active** | 最多 10 个 production Chrome representative 交叉覆盖所有修复机制 |
 | 9F Single Supplemental Requalification | Pending | 唯一一次 4×50 quick smoke 达到 200 CU |
 | 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
@@ -85,46 +85,55 @@ finite-heavy 与 explicit-runaway 两个项目原创 real-WASM fixture 均通过
 各运行 120 ticks，全部达到 CU。9C 未运行 full supplemental sweep、长 playability、historical gate，
 也没有跟踪第三方身份、路径或逐-cart observation。
 
-## 7. 当前工作：9D Host-feature Compatibility Remediation
+## 7. 已完成：9D Host-feature Compatibility Remediation
 
-### 7.1 输入与可观察结果
+`host-external-cartdata-request` baseline case 与 9B downstream guest-load case 都属于既有 root
+HostRequest profile；原始 supplemental manifest 没有携带它们需要的 local dependency。仓库外 manifest
+补齐显式 ref/bytes/capability 后，进一步发现空 launch parameter 被 `load(stat(6))` 转交时不应产生
+HostRequest。bridge 现在把 `load("")` 处理为同步 no-op；所有非空 missing/denied ref 仍失败关闭。决定见
+[ADR-028](../adr/028-phase-9-local-host-feature-boundary.md)，owner gate 为 `pnpm run test:phase-9d`。
 
-9D 只处理 `host-external-cartdata-request` 这 1 个 anonymous baseline candidate / 1 case，以及 9B
-修复后暴露的 1 个 downstream local `load()` target case。两者只能使用现有 caller-authorized local
-bundle/repository；不得据第三方 identity 硬编码结果，也不得增加 BBS、network、任意 URL 或 host
-filesystem authority。
+两个项目原创 fixture 锁定 accepted `cstore→reload`、missing/denied fail-closed 与 empty-load no-op；
+2 个 affected external case 各运行 120 ticks，全部达到 CU。9D 没有网络/filesystem authority expansion、
+cart-specific branch、full sweep 或 tracked third-party dependency。
 
-- 建立项目原创 external cart-data request 与 local guest-load fixture，分别覆盖 capability success、
-  missing/unauthorized ref 和 atomic session behavior。
-- 先确认 failure 位于 request encoding、bundle ref normalization、capability、repository lookup、
-  response completion 还是 staged boot；generic fix 必须位于已有 owner，不能在 Chrome adapter 猜测。
-- Node owner test 通过后只对这 2 个 affected external case 各跑 120 ticks Chrome smoke；不运行 4×50
-  全量、长 playability、600 秒 soak 或 historical sweep。
+## 8. 当前工作：9E Focused Chrome Regression
 
-### 7.2 允许修改
+### 8.1 输入与可观察结果
 
-机器权威 allowlist 位于 `workUnits.9D.allowedPaths`。RuntimeCore 拥有 request codec、local
-resolver/repository、capability 与 atomic transaction；Worker composition 只注入当前 load command
-明确携带的 bundle。Window、Canvas、AudioContext、network fetch 与 host filesystem 都不是 resolver。
+9E 是 verification-only work unit，不授权 production 修改。仓库外从已修复 failure set 选择最多 10 个
+representative，每个只运行 120 logical ticks，并让一个 case 尽量交叉覆盖多个 mechanism：
 
-### 7.3 路由 owner
+- parser/lexical environment 与 VM helper；
+- typed host value、numeric coercion、bounded memory/persistence 与 fixed Lua heap；
+- finite-heavy safety headroom 与 Q16.16 numeric-for termination；
+- explicit local external data、guest load、empty-load no-op 与 atomic session lifecycle。
 
-- HostRequest、local resolver 与 atomic load：
-  [`04-typescript-runtime.md`](../04-typescript-runtime.md#132-hostrequest)、
-  [`04-typescript-runtime.md`](../04-typescript-runtime.md#133-原子-load-transaction)
-- Worker authority 和 transaction：
-  [`02-system-architecture.md`](../02-system-architecture.md#5-worker-协议)、
-  [`02-system-architecture.md`](../02-system-architecture.md#6-boot-transaction)
-- bounded external gate：
+所有 case 必须使用同一 player commit、WASM hash、Chrome build 和 production Worker path；记录 complete、
+CU/failure cluster、frame/lifecycle 与 dependency capability aggregate。第三方 identity、path、hash、截图和
+逐-case result 继续留在仓库外。若出现 failure，9E 停止并把它重新归给 9B–9D owner；不得在 9E 修改
+Runtime 或放宽 oracle。
+
+### 8.2 允许修改
+
+机器权威 allowlist 位于 `workUnits.9E.allowedPaths`，仅包含 browser/compat tooling、contract tests、
+phase route 与 package scripts；`packages/**`、`wasm/**`、production app source 和 `ref/**` 均不授权。
+
+### 8.3 路由 owner
+
+- bounded external gate 与 aggregate privacy：
   [`06-testing-compatibility.md`](../06-testing-compatibility.md#35-expanded-local-real-cart-gate)
+- Chrome-only matrix 与 production path：
+  [`06-testing-compatibility.md`](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
 
-### 7.4 验证与退出
+### 8.4 验证与退出
 
-- `pnpm run test:phase-9d` 和 `pnpm run verify:phase-9` 通过。
-- 2 个 affected external case 的 120-tick Chrome quick smoke 达到 CU；无 authority expansion 或 full rerun。
-- production cart-specific branch 为 0，worktree clean，随后 9E 成为唯一 active work unit。
+- `pnpm run test:phase-9e` 和 `pnpm run verify:phase-9` 通过。
+- 最多 10 个 representative 在 production Chrome 各完成 120 ticks，全部 CU、failure cluster 为 0。
+- production changes、full supplemental rerun、长 playability、historical/soak 均为 0；worktree clean，
+  随后 9F 成为唯一 active work unit。
 
-## 8. Phase exit gate
+## 9. Phase exit gate
 
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。
