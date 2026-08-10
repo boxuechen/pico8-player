@@ -209,6 +209,12 @@ multi-cart / external cart-data case 的 local manifest 必须显式列出每个
 项目原创 fixture 同时锁定 accepted target success、missing/denied fail-closed 和空 `load("")` no-op。
 第三方 dependency bytes、URL、hash 与逐-cart bundle 继续只位于仓库外。
 
+Phase 9 的唯一一次完整 4×50 supplemental requalification 得到 199 CU、1 个 language failure；它把
+剩余差异收敛为 `menuitem()` 超过 16-character display bound 时不应产生 cart-fatal error。ADR-030 与
+项目原创 real-WASM fixture 锁定 16-P8SCII-character copy-out 前缀和 callback 可调用性；最终只复测该
+1 个 affected external case，不运行第二次 full sweep，也不把两个 commit 的 observation 合并成单环境
+aggregate。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：

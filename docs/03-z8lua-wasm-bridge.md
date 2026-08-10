@@ -100,8 +100,9 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 2. 只打开实现 P8 Lua 所需的 base、PICO pure math/string、table 与 coroutine 子集；
    project-owned table/string/coroutine helpers 保持在 VM 内；`inext`、`pack`、`mapdraw`、string
    `all()` 与 `_set_fps` compatibility aliases 不穿越 host ABI。`rnd/srand` 直接使用 shared Pico
-   RAM `0x5f44..0x5f4b` 的 PRNG state；`menuitem()` 的五槽 registry、byte label 和 callback
-   strong reference 同样只属于当前 `lua_State`。ADR-023 只允许 104-byte fixed-codec copy-out
+   RAM `0x5f44..0x5f4b` 的 PRNG state；`menuitem()` 的五槽 registry、16-P8SCII-character display
+   label 和 callback strong reference 同样只属于当前 `lua_State`；更长输入按 ADR-030 截取显示前缀而不让
+   cart fault。ADR-023 只允许 104-byte fixed-codec copy-out
    snapshot 与 boundary-checked slot/button invoke；closure/ref/borrowed label pointer 均不跨 JS↔WASM。
 3. 删除或从不注册 `debug`、`io`、`os`、`package`、`require`、`dofile`、`loadfile` 和 native module 能力。
 4. 按目标 PICO-8 API inventory 删除多余 base globals，并注册 PICO aliases 与 generated host wrappers。

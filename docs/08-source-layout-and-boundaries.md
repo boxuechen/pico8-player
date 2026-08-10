@@ -240,8 +240,8 @@ Lua stack/presence/boolean/Q16/string lowering，不复制 graphics、audio、in
 Host bindings `1..41` 保持 append-only；`rrect/rrectfill` 为 `39..40`，system-register-only `reset`
 为 `41`。guest `run/stop` 使用 VM control outcome，不占 binding id。VM-local table/string/random
 helpers 位于 `p8w_pico8_compat.*`，table/function handle 不进入 TypeScript，PRNG state 位于 shared
-Pico RAM。`menuitem()` 的 bounded 五槽 registry、byte label 与 callback strong reference 也由当前
-`lua_State` 独占；ADR-023 的 fixed copy snapshot/root-safe invoke 由 bridge adapter 暴露给 RuntimeCore，
+Pico RAM。`menuitem()` 的 bounded 五槽 registry、16-P8SCII-character display label 与 callback strong
+reference 也由当前 `lua_State` 独占；更长输入只截取显示前缀。ADR-023 的 fixed copy snapshot/root-safe invoke 由 bridge adapter 暴露给 RuntimeCore，
 但任何 Lua handle 都不离开 VM。Worker 独占 menu-open/generation authority，Main 的 DOM dialog 只渲染
 copied slots；host lifecycle pause 不消费或伪装 guest callback。
 精确 operation 列表只以 `spec/abi/` 和生成 manifest 为准。

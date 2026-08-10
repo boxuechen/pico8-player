@@ -105,12 +105,11 @@ function _draw() end`);
   runtime.dispose();
 });
 
-test("menuitem rejects invalid index, label and callback arguments", () => {
+test("menuitem rejects invalid index and argument types", () => {
   const cases = [
     ["slot zero", "menuitem(0,\"x\",function() end)", /slot 1\.\.5/u],
     ["slot six", "menuitem(6,\"x\",function() end)", /slot 1\.\.5/u],
     ["fractional slot", "menuitem(1.5,\"x\",function() end)", /integer/u],
-    ["long label", "menuitem(1,\"12345678901234567\",function() end)", /16 bytes/u],
     ["non-string label", "menuitem(1,false,function() end)", /string/u],
     ["non-function callback", "menuitem(1,\"x\",42)", /function/u],
   ];

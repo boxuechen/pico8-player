@@ -19,7 +19,6 @@ constexpr uint32_t kSeedXor = 0xbead29bau;
 constexpr char kMenuitemRegistryKey[] = "p8w.menuitems";
 constexpr int kMenuitemMinimumSlot = 1;
 constexpr int kMenuitemMaximumSlot = 5;
-constexpr size_t kMenuitemMaximumLabelBytes = 16;
 constexpr int kMaximumChrValues = 8192;
 
 struct P8sciiGlobal {
@@ -532,15 +531,14 @@ int pico8_menuitem(lua_State *state) {
 
   size_t label_length = 0;
   const char *label = luaL_checklstring(state, 2, &label_length);
-  if (label_length > kMenuitemMaximumLabelBytes) {
-    return luaL_argerror(state, 2, "menuitem label exceeds 16 bytes");
-  }
   luaL_checktype(state, 3, LUA_TFUNCTION);
+  const size_t display_label_length =
+      std::min(label_length, static_cast<size_t>(kMenuitemLabelBytes));
 
   // The registry table is private to this lua_State. It owns the callback's
   // strong reference and is replaced/collected with the VM generation.
   lua_createtable(state, 3, 0);
-  lua_pushlstring(state, label, label_length);
+  lua_pushlstring(state, label, display_label_length);
   lua_rawseti(state, -2, 1);
   lua_pushvalue(state, 3);
   lua_rawseti(state, -2, 2);

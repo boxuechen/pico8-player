@@ -123,7 +123,7 @@
     "test:phase-9e": "node --test tests/contract/phase-9e-activation.test.mjs",
     "test:phase-9f": "node --test tests/contract/phase-9f-activation.test.mjs",
     "test:phase-9r": "pnpm run build && pnpm run build:wasm && node --test tests/contract/phase-9r-activation.test.mjs tests/runtime/phase-9r-requalification-remediation.test.mjs && node tools/wasm/verify-runtime-manifest.mjs",
-    "test:phase-9s": "node --test tests/contract/phase-9s-activation.test.mjs",
+    "test:phase-9s": "pnpm run build && pnpm run build:wasm && node --test tests/contract/phase-9s-activation.test.mjs tests/runtime/phase-9s-final-requalification-remediation.test.mjs && node tools/wasm/verify-runtime-manifest.mjs",
     "qualification:phase-9a:freeze": "node tools/compat/freeze-phase-9-failures.mjs",
     "prepare:phase-8:local": "node tools/compat/prepare-expanded-corpus.mjs",
     "qualification:phase-8:chrome": "pnpm run build && pnpm run build:wasm && pnpm run build:player-worker && node tools/compat/run-expanded-chrome-baseline.mjs",

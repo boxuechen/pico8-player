@@ -1,6 +1,6 @@
 # ADR-023: `menuitem()` snapshot 与同 generation invocation boundary
 
-状态：Accepted，替代 ADR-021 第 5、6 条
+状态：Partially superseded by ADR-030（只涉及 label admission），替代 ADR-021 第 5、6 条
 日期：2026-08-07
 
 ## Context
@@ -10,7 +10,7 @@ ADR-021 已把五槽 `menuitem()` registry、label byte string、button filter �
 Phase 7E 需要完成 cart-defined pause menu，但不能把 closure、registry ref、Lua stack address 或 WASM
 borrowed pointer 暴露给 TypeScript。
 
-PICO-8 v0.2.7 的 required behavior 是：slot 为 `1..5`，label 最多 16 bytes；选中条目时 callback
+PICO-8 v0.2.7 的 required behavior 是：slot 为 `1..5`，copy-out display label 最多 16 P8SCII characters；选中条目时 callback
 接收 L/R/X press bitfield；`index & 0xff00` 可屏蔽对应触发；callback 只有返回 boolean `true` 才保持
 菜单打开，其他正常返回关闭菜单；callback 内可更新、增加或删除条目。Web player 原有 `pause` 是 host
 lifecycle pause，不能承担这些 guest-menu 语义。

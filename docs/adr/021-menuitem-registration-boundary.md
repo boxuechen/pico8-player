@@ -1,12 +1,12 @@
 # ADR-021: `menuitem()` 保持 VM-local registration boundary
 
-状态：Accepted
+状态：Partially superseded by ADR-023 and ADR-030
 日期：2026-08-07
 
 ## Context
 
 PICO-8 v0.2.7 的 `menuitem(index, [label], [callback])` 允许 cart 在暂停菜单的 `1..5` 槽位
-注册、替换或移除 callback；label 最多 16 bytes，index 的 `0xff00` 位还可声明 callback 的
+注册、替换或移除 callback；label 的显示范围最多 16 characters，index 的 `0xff00` 位还可声明 callback 的
 button filter。完整行为同时需要一个 PICO-8 pause-menu UI、焦点/输入路由和在原 Lua generation 中
 调用 closure。
 
@@ -25,8 +25,8 @@ Phase 6 的本地真实卡带发现，有 cart 只在初始化时注册菜单项
 2. 每个 VM generation 创建一个 private registry table，固定只有五个槽位。槽位存放原始 byte label、
    Lua callback 强引用和 `0xff00` button filter；任何 Lua function pointer、registry ref 或 closure
    都不得离开 WASM VM。
-3. index 必须是整数；其低字节必须为 `1..5`，高字节保留为 button filter。label 必须为 string 且
-   byte length 不超过 16，callback 必须为 function。
+3. index 必须是整数；其低字节必须为 `1..5`，高字节保留为 button filter。label 必须为 string，callback
+   必须为 function。原先“超过 16 bytes 直接报错”的 admission 规则已由 ADR-030 替代。
 4. 同 slot 注册会原子替换旧 entry；省略/nil label 或 callback 会移除 entry。旧 callback 在没有其他
    强引用时可由 Lua GC 回收；销毁 VM 会连同整个 registry 一并释放。
 5. 当前 profile **不提供** PICO-8 pause-menu UI，也没有 guest/host 路径触发 callback。注册成功不是

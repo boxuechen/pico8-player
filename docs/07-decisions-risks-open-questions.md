@@ -31,12 +31,16 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-018 | [Accepted](./adr/018-caller-authorized-cart-resolution.md) | caller-authorized local bundle resolver；BBS 自动访问保持 Deferred |
 | ADR-019 | [Accepted](./adr/019-phase-5-coroutine-compatibility.md) | L3 host suspension 保持 root-only；nested surface 统一 structured fault |
 | ADR-020 | [Deferred](./adr/020-phase-5-bbs-adapter.md) | 不新增自动 BBS adapter、endpoint 或 production network capability |
-| ADR-021 | [Partially superseded by ADR-023](./adr/021-menuitem-registration-boundary.md) | 五槽 registry/callback VM ownership 继续有效；registration-only/UI Known Difference 已替代 |
+| ADR-021 | [Partially superseded by ADR-023/030](./adr/021-menuitem-registration-boundary.md) | 五槽 registry/callback VM ownership 继续有效；UI 与 label admission 已替代 |
 | ADR-022 | [Accepted](./adr/022-cpu-slicing-decision.md) | top-level custom loop 使用 root-safe 30 Hz implicit frame；hard cap 继续 poison |
-| ADR-023 | [Accepted](./adr/023-menuitem-invocation-boundary.md) | VM-local callback + copied snapshot + generation-bound root-safe pause-menu invocation；替代 ADR-021 registration-only 限制 |
+| ADR-023 | [Partially superseded by ADR-030](./adr/023-menuitem-invocation-boundary.md) | VM-local callback + copied snapshot + generation-bound root-safe pause-menu invocation；label admission 由 ADR-030 修正 |
 | ADR-024 | [Accepted](./adr/024-pico8-v027-cart-version-and-text-include.md) | v0.2.7 cart version 43、bounded compact text rows 与 caller-authorized non-recursive include |
 | ADR-025 | [Accepted](./adr/025-phase-8d-real-cart-compatibility-boundaries.md) | Phase 8D parser/VM/callback/API/performance 修复和 expected-fault qualification 边界 |
 | ADR-026 | [Accepted](./adr/026-phase-9-language-compatibility-boundary.md) | Phase 9 P8 Lua/host coercion/typed selector、safe helper 与固定 2 MiB Lua heap 边界 |
+| ADR-027 | [Accepted](./adr/027-phase-9-timing-safety-boundary.md) | fixed 32M hard safety cap 与 Q16.16 numeric-for termination |
+| ADR-028 | [Accepted](./adr/028-phase-9-local-host-feature-boundary.md) | explicit local bundle、empty `load("")` no-op 与 missing/denied fail-closed |
+| ADR-029 | [Accepted](./adr/029-phase-9-requalification-remediation-boundary.md) | `camera()` previous return、absent `all()`、bounded large `chr()` 与 local multicart composition |
+| ADR-030 | [Accepted](./adr/030-menuitem-display-label-boundary.md) | 16-character display prefix 保持有界，超长 label 不得使 cart fault |
 
 ## 2. 当前未决问题
 
