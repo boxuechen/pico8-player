@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B", "9C", "9D"],
-  "activeWorkUnit": "9E",
-  "nextWorkUnit": "9E",
+  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E"],
+  "activeWorkUnit": "9F",
+  "nextWorkUnit": "9F",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -298,7 +298,7 @@
     },
     "9E": {
       "name": "Focused Chrome Regression",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tools/compat/",
         "tools/browser/",
@@ -315,11 +315,54 @@
         "a bounded representative set covers every repaired root cause in production Chrome",
         "boot, framebuffer, input, audio and lifecycle signals are reviewed where relevant",
         "no long playability or full supplemental rerun occurs and 9F becomes active"
-      ]
+      ],
+      "result": {
+        "representativeCases": 10,
+        "languageRepresentatives": 6,
+        "timingRepresentatives": 2,
+        "hostRepresentatives": 2,
+        "logicalTicksPerCase": 120,
+        "completedCases": 10,
+        "chromeCuPasses": 10,
+        "remainingFailures": 0,
+        "failureClusters": 0,
+        "singlePlayerCommit": true,
+        "singleRuntimeWasm": true,
+        "singleChromeBuild": true,
+        "productionWorkerPath": true,
+        "productionSourceChanges": 0,
+        "supplementalFullReruns": 0,
+        "longPlayabilityRuns": 0,
+        "historicalVerificationRuns": 0,
+        "trackedThirdPartyDetails": 0
+      }
     },
     "9F": {
       "name": "Single Supplemental Requalification",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "tools/compat/",
+        "tools/browser/",
+        "tests/compat/",
+        "tests/contract/",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "qualification": {
+        "executionRuns": 1,
+        "batches": 4,
+        "casesPerBatch": 50,
+        "expectedCases": 200,
+        "logicalTicksPerCase": 120,
+        "requiresCleanPlayer": true,
+        "productionWorkerPath": true,
+        "explicitLocalBundlesRequired": true,
+        "networkAuthorityExpansion": false,
+        "hostFilesystemAuthorityExpansion": false
+      },
       "exit": [
         "one and only one four-by-fifty 120-tick supplemental Chrome rerun completes",
         "the aggregate reaches 200 CU with zero remaining failure clusters",

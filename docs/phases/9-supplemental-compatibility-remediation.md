@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9E — Focused Chrome Regression
+> Active work unit：9F — Single Supplemental Requalification
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -41,8 +41,8 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9B Language Compatibility Remediation | Complete | 13 个 language candidate 均有通用 real-WASM fix；1 个 downstream host gap 转交 9D |
 | 9C Timing Compatibility Remediation | Complete | 固定 32M safety cap 与 numeric-for boundary 修复使 5 个 timing case 全部达到 CU |
 | 9D Host-feature Compatibility Remediation | Complete | 显式 local bundle 与 empty-load no-op 使 2 个 host case 达到 CU，missing/denied 仍失败关闭 |
-| 9E Focused Chrome Regression | **Active** | 最多 10 个 production Chrome representative 交叉覆盖所有修复机制 |
-| 9F Single Supplemental Requalification | Pending | 唯一一次 4×50 quick smoke 达到 200 CU |
+| 9E Focused Chrome Regression | Complete | 10 个 production Chrome representative 交叉覆盖所有修复机制，10/10 CU |
+| 9F Single Supplemental Requalification | **Active** | 唯一一次 4×50 quick smoke 达到 200 CU |
 | 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
@@ -97,43 +97,52 @@ HostRequest。bridge 现在把 `load("")` 处理为同步 no-op；所有非空 m
 2 个 affected external case 各运行 120 ticks，全部达到 CU。9D 没有网络/filesystem authority expansion、
 cart-specific branch、full sweep 或 tracked third-party dependency。
 
-## 8. 当前工作：9E Focused Chrome Regression
+## 8. 已完成：9E Focused Chrome Regression
 
-### 8.1 输入与可观察结果
+从仓库外 failure set 选择了 6 个 language、2 个 timing、2 个 host representative，在同一 clean player
+commit、WASM hash、Chrome build 和 production Worker path 下均配置 120 logical-tick 上限。10 个 case 全部
+按各自 lifecycle oracle complete、全部达到 CU，remaining failure 与 failure cluster 均为 0；显式 local bundle 覆盖 external
+data/guest load，其他代表覆盖 parser/VM helper、typed host/coercion、bounded memory/persistence、finite-heavy
+safety headroom 与 Q16.16 numeric-for termination。
 
-9E 是 verification-only work unit，不授权 production 修改。仓库外从已修复 failure set 选择最多 10 个
-representative，每个只运行 120 logical ticks，并让一个 case 尽量交叉覆盖多个 mechanism：
+9E 没有 production 修改、full supplemental rerun、long playability、historical/soak，也没有跟踪第三方
+身份、路径、hash、截图或逐-case result。聚合结果与隐私约束由 `pnpm run test:phase-9e` 锁定。
 
-- parser/lexical environment 与 VM helper；
-- typed host value、numeric coercion、bounded memory/persistence 与 fixed Lua heap；
-- finite-heavy safety headroom 与 Q16.16 numeric-for termination；
-- explicit local external data、guest load、empty-load no-op 与 atomic session lifecycle。
+## 9. 当前工作：9F Single Supplemental Requalification
 
-所有 case 必须使用同一 player commit、WASM hash、Chrome build 和 production Worker path；记录 complete、
-CU/failure cluster、frame/lifecycle 与 dependency capability aggregate。第三方 identity、path、hash、截图和
-逐-case result 继续留在仓库外。若出现 failure，9E 停止并把它重新归给 9B–9D owner；不得在 9E 修改
-Runtime 或放宽 oracle。
+### 9.1 输入与可观察结果
 
-### 8.2 允许修改
+9F 是 Phase 9 唯一获准的 supplemental full requalification，也是 verification-only work unit：在一个
+clean player commit 上按 4 个固定 batch 顺序各运行 50 个 case，每个仅 120 logical ticks，总计恰好
+200 个。所有 batch 必须锁定同一 player commit、WASM hash、Chrome build 和 production Worker path；已知
+external data/guest load 依赖只能通过 caller-authorized 仓库外 manifest 中的显式 local bundle 注入。
 
-机器权威 allowlist 位于 `workUnits.9E.allowedPaths`，仅包含 browser/compat tooling、contract tests、
-phase route 与 package scripts；`packages/**`、`wasm/**`、production app source 和 `ref/**` 均不授权。
+输出只记录 aggregate：batch/case/complete/CU/failure cluster、运行环境一致性、bundle capability 与 full-run
+计数。第三方 identity、path、hash、bytes、截图和逐-case observation 保留在仓库外；不得发布兼容率。
+若出现 failure，停止全量执行并只做 bounded focused triage，把根因重新归给 9B–9D owner；不得为了获得
+绿色结果重复整套 4×50、放宽 oracle 或在 9F 修改 production source。
 
-### 8.3 路由 owner
+### 9.2 允许修改
+
+机器权威 allowlist 位于 `workUnits.9F.allowedPaths`，仅包含 compat/browser tooling、contract tests、phase
+route 与 package scripts；`packages/**`、`wasm/**`、production app source 和 `ref/**` 均不授权。
+
+### 9.3 路由 owner
 
 - bounded external gate 与 aggregate privacy：
   [`06-testing-compatibility.md`](../06-testing-compatibility.md#35-expanded-local-real-cart-gate)
 - Chrome-only matrix 与 production path：
   [`06-testing-compatibility.md`](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
 
-### 8.4 验证与退出
+### 9.4 验证与退出
 
-- `pnpm run test:phase-9e` 和 `pnpm run verify:phase-9` 通过。
-- 最多 10 个 representative 在 production Chrome 各完成 120 ticks，全部 CU、failure cluster 为 0。
-- production changes、full supplemental rerun、长 playability、historical/soak 均为 0；worktree clean，
-  随后 9F 成为唯一 active work unit。
+- `pnpm run test:phase-9f` 通过。
+- 恰好一次 4×50 production Chrome requalification 完成，200/200 CU、remaining failure cluster 为 0。
+- 同一 player/WASM/Chrome/production path 约束通过；production changes、额外 full rerun、长 playability、
+  historical/soak 均为 0。
+- tracked third-party detail 为 0，worktree clean，随后 9G 成为唯一 active work unit。
 
-## 9. Phase exit gate
+## 10. Phase exit gate
 
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。

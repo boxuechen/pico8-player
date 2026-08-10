@@ -10,11 +10,9 @@ const [contract, packageJson] = await Promise.all([
   readJson("package.json"),
 ]);
 
-test("Phase 9E is the only active work unit", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C", "9D"]);
-  assert.equal(contract.activeWorkUnit, "9E");
-  assert.equal(contract.nextWorkUnit, "9E");
-  assert.equal(contract.workUnits["9E"].status, "active");
+test("Phase 9E remains complete while one later work unit is active", () => {
+  assert.ok(contract.completedWorkUnits.includes("9E"));
+  assert.equal(contract.workUnits["9E"].status, "complete");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -30,16 +28,32 @@ test("Phase 9E is verification-only and bounded to ten external cases", () => {
   assert.equal(contract.remediationPolicy.dailyLogicalTicksPerCase, 120);
 });
 
-test("Phase 9E is the documented and executable route", async () => {
-  const [readme, phase, index] = await Promise.all([
-    read("docs/README.md"),
-    read("docs/phases/9-supplemental-compatibility-remediation.md"),
-    read("docs/phases/README.md"),
-  ]);
-  assert.match(readme, /Active work unit \| 9E/u);
-  assert.match(phase, /Active work unit：9E/u);
-  assert.match(phase, /最多 10/u);
-  assert.match(index, /active\s+work unit 为 9E/u);
+test("Phase 9E remains summarized and executable after the route advances", async () => {
+  const phase = await read("docs/phases/9-supplemental-compatibility-remediation.md");
+  assert.match(phase, /10\/10 CU/u);
   assert.match(packageJson.scripts["test:phase-9e"], /phase-9e-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9e/u);
+});
+
+test("Phase 9E records aggregate-only focused Chrome evidence", () => {
+  const result = contract.workUnits["9E"].result;
+  assert.deepEqual(
+    [result.languageRepresentatives, result.timingRepresentatives, result.hostRepresentatives],
+    [6, 2, 2],
+  );
+  assert.equal(result.representativeCases, 10);
+  assert.equal(result.logicalTicksPerCase, 120);
+  assert.equal(result.completedCases, 10);
+  assert.equal(result.chromeCuPasses, 10);
+  assert.equal(result.remainingFailures, 0);
+  assert.equal(result.failureClusters, 0);
+  assert.equal(result.singlePlayerCommit, true);
+  assert.equal(result.singleRuntimeWasm, true);
+  assert.equal(result.singleChromeBuild, true);
+  assert.equal(result.productionWorkerPath, true);
+  assert.equal(result.productionSourceChanges, 0);
+  assert.equal(result.supplementalFullReruns, 0);
+  assert.equal(result.longPlayabilityRuns, 0);
+  assert.equal(result.historicalVerificationRuns, 0);
+  assert.equal(result.trackedThirdPartyDetails, 0);
 });
