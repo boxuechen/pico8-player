@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "phase": "13",
+  "name": "mobile-host-ports",
+  "status": "active",
+  "browserGate": "Chrome/Chromium desktop only",
+  "downstreamGate": "pico8-mobile iOS Simulator",
+  "activeWorkUnit": "13A",
+  "completedWorkUnits": [],
+  "nextWorkUnit": "13B",
+  "publicApi": {
+    "currentVersion": 1,
+    "targetVersion": 2,
+    "defaultProfile": {
+      "shell": "full",
+      "persistence": "worker-indexeddb"
+    },
+    "hostedProfile": {
+      "shell": "hosted",
+      "externalInput": true,
+      "persistenceAdapter": ["hydrate", "write", "flush"],
+      "awaitableFlush": true,
+      "lifecycle": ["inactive", "background", "active"],
+      "persistenceEvents": ["saving", "saved", "failed"]
+    }
+  },
+  "ownership": {
+    "runtimeCoreBrowserNeutral": true,
+    "mainOwnsHostCallbacks": true,
+    "workerOwnsSimulationAndCartdataCommits": true,
+    "capacitorImportsAllowed": false,
+    "nativeFilesystemAccessAllowed": false
+  },
+  "contentBoundary": {
+    "projectOwnedFixturesOnly": true,
+    "externalCorpusRuns": 0,
+    "top200Runs": 0,
+    "thirdPartyCartBytesTracked": 0
+  },
+  "verificationBudget": {
+    "quickGate": true,
+    "focusedChromeRunsMaximum": 1,
+    "historicalMatrixRuns": 0,
+    "longSoakRuns": 0,
+    "FirefoxRuns": 0,
+    "WebKitRuns": 0
+  },
+  "nonGoals": [
+    "new PICO-8 runtime APIs or compatibility changes",
+    "full session Save State",
+    "Capacitor or native filesystem code in pico8-web-player",
+    "external corpus or Top 200 compatibility validation",
+    "Firefox, WebKit or mobile compatibility claims",
+    "remote publication, tag, npm package or GitHub Release"
+  ],
+  "workUnits": {
+    "13A": {
+      "name": "Contract Activation",
+      "status": "active",
+      "allowedPaths": [
+        "docs/README.md",
+        "docs/05-delivery-plan.md",
+        "docs/phases/README.md",
+        "docs/phases/13-mobile-host-ports.md",
+        "spec/phase-13-mobile-host-ports-contract.json",
+        "tests/contract/phase-13a-activation.test.mjs",
+        "package.json"
+      ],
+      "exit": [
+        "activation contract test passes",
+        "API v2 host boundaries are machine-locked",
+        "compatibility corpus and remote publication remain excluded"
+      ]
+    },
+    "13B": {
+      "name": "Hosted Shell and External Input",
+      "status": "pending"
+    },
+    "13C": {
+      "name": "Host Persistence and Lifecycle",
+      "status": "pending"
+    },
+    "13D": {
+      "name": "Focused Integration and Artifact Handoff",
+      "status": "pending"
+    },
+    "13E": {
+      "name": "Evidence and Close",
+      "status": "pending"
+    }
+  }
+}

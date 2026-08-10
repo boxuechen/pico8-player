@@ -132,6 +132,7 @@
     "test:phase-10c": "pnpm run build:release && node --test tests/artifact/phase-10c-release-package.test.mjs",
     "test:phase-10d": "pnpm run verify && pnpm run verify:release && node --test tests/contract/phase-10d-bounded-validation.test.mjs tests/conformance/phase-1f-l1-exit.test.mjs tests/runtime/phase-3a-sfx.test.mjs tests/runtime/phase-3c-controller-input.test.mjs tests/runtime/phase-3f-persistence.test.mjs tests/runtime/phase-5d-guest-load.test.mjs",
     "test:phase-10e": "pnpm run build:release && node tools/release/verify-release.mjs && node tools/release/verify-local-rc.mjs && node --test tests/artifact/phase-10e-local-rc.test.mjs",
+    "test:phase-13a": "node --test tests/contract/phase-13a-activation.test.mjs",
     "test:phase-10f": "node --test tests/conformance/phase-10f-exit.test.mjs",
     "qualification:phase-9a:freeze": "node tools/compat/freeze-phase-9-failures.mjs",
     "prepare:phase-8:local": "node tools/compat/prepare-expanded-corpus.mjs",

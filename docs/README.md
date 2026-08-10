@@ -8,11 +8,12 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 12；[`pal(table)` compatibility exit evidence](./evidence/phase-12/131-phase-12-pal-table-compatibility-exit-evidence.md) |
-| 当前阶段 | None；新的 production implementation 尚未授权 |
-| Active work unit | None |
+| 当前阶段 | Phase 13；[`Mobile Host Ports`](./phases/13-mobile-host-ports.md) |
+| Active work unit | 13A — Contract Activation |
 | 最近关闭的机器合同 | [`spec/phase-12-pal-table-compatibility-contract.json`](../spec/phase-12-pal-table-compatibility-contract.json) |
 
-Phase 12 已关闭：`pal(table)` 现在忽略 1..16 中的非数值 entry，并继续处理数值项；
+Phase 13 已激活，唯一实现入口是移动宿主所需的公开 Embed API v2 端口。Phase 12 已关闭：
+`pal(table)` 现在忽略 1..16 中的非数值 entry，并继续处理数值项；
 `pal(split(""))` 不再产生 VM runtime error。验收使用 project-owned 最小 regression、单次
 focused Chrome 和一次不入库的 caller-authorized 定向诊断，没有执行外部 corpus 全量回归。
 
