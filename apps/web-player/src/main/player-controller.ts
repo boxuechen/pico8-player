@@ -2,6 +2,7 @@ import type {
   PlayerMenuItemSnapshot,
   PlayerRuntimeToHost,
 } from "../transport/public.js";
+import type { PicoInputSnapshot } from "@pico8-web/contracts";
 import { RuntimeClientError } from "./runtime-client.js";
 import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
@@ -214,6 +215,11 @@ export class PlayerController {
 
   get muted(): boolean {
     return this.#muted;
+  }
+
+  setInput(snapshot: PicoInputSnapshot): void {
+    this.#assertActive();
+    this.#input.setHostInput(snapshot);
   }
 
   onStateChange(listener: PlayerShellStateListener): () => void {

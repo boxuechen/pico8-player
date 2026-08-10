@@ -34,7 +34,10 @@ export interface PlayerPauseMenuItem {
 export interface PlayerShellViewOptions {
   readonly window?: Window;
   readonly document?: Document;
+  readonly shell?: PlayerShellMode;
 }
+
+export type PlayerShellMode = "full" | "hosted";
 
 export interface PlayerShellRenderModel {
   readonly state: PlayerShellState;
@@ -109,6 +112,7 @@ export class PlayerShellView {
     shell.dataset.playerState = "idle";
     shell.dataset.scale = "1";
     shell.dataset.menuOpen = "false";
+    shell.dataset.shellMode = options.shell ?? "full";
 
     const chrome = document.createElement("header");
     chrome.className = "pico8-player__chrome";

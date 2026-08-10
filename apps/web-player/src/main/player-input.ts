@@ -19,6 +19,8 @@ export class PlayerInputFrontend {
   readonly gamepad: GamepadInputFrontend;
   readonly devkit: DevkitInputFrontend;
   readonly touch: TouchInputFrontend | undefined;
+  #hostInput: PicoInputSnapshot = emptyInput();
+  #hostInputEnabled = false;
   #disposed = false;
 
   constructor(focusTarget: HTMLCanvasElement, options: PlayerInputFrontendOptions = {}) {
@@ -49,12 +51,18 @@ export class PlayerInputFrontend {
     this.devkit.setFlags(flags);
   }
 
+  setHostInput(snapshot: PicoInputSnapshot): void {
+    this.#assertActive();
+    this.#hostInput = copyInput(snapshot);
+  }
+
   #snapshot(consumeDevkitEvents: boolean): PicoInputSnapshot {
     this.#assertActive();
     const sources = [
       this.keyboard.snapshot().controllers,
       this.gamepad.snapshot().controllers,
       this.touch?.snapshot().controllers,
+      this.#hostInputEnabled ? this.#hostInput.controllers : undefined,
     ];
     const controllers = new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0);
     for (const source of sources) {
@@ -63,18 +71,43 @@ export class PlayerInputFrontend {
         controllers[player] = controllers[player]! | source[player]!;
       }
     }
+    const localDevkit = consumeDevkitEvents ? this.devkit.takeBatch() : this.devkit.peekBatch();
+    const hostDevkit = this.#hostInput.devkit;
+    const devkit = !this.#hostInputEnabled ? localDevkit : {
+      mouseXRaw: hostDevkit.mouseXRaw,
+      mouseYRaw: hostDevkit.mouseYRaw,
+      mouseButtons: localDevkit.mouseButtons | hostDevkit.mouseButtons,
+      wheelRaw: saturatingInt32(localDevkit.wheelRaw + hostDevkit.wheelRaw),
+      movementXRaw: saturatingInt32(localDevkit.movementXRaw + hostDevkit.movementXRaw),
+      movementYRaw: saturatingInt32(localDevkit.movementYRaw + hostDevkit.movementYRaw),
+      keypresses: [...localDevkit.keypresses, ...hostDevkit.keypresses].slice(0, 64),
+    };
+    if (consumeDevkitEvents && this.#hostInputEnabled) {
+      this.#hostInput = {
+        controllers: this.#hostInput.controllers,
+        devkit: {
+          ...hostDevkit,
+          wheelRaw: 0,
+          movementXRaw: 0,
+          movementYRaw: 0,
+          keypresses: [],
+        },
+      };
+    }
     return {
       controllers,
-      devkit: consumeDevkitEvents ? this.devkit.takeBatch() : this.devkit.peekBatch(),
+      devkit,
     };
   }
 
   setEnabled(enabled: boolean): void {
     this.#assertActive();
+    if (!enabled) this.#hostInput = emptyInput();
     this.keyboard.setEnabled(enabled);
     this.gamepad.setEnabled(enabled);
     this.touch?.setEnabled(enabled);
     this.devkit.setEnabled(enabled);
+    this.#hostInputEnabled = enabled;
   }
 
   clear(): void {
@@ -83,6 +116,7 @@ export class PlayerInputFrontend {
     this.gamepad.clear();
     this.touch?.clear();
     this.devkit.clear();
+    this.#hostInput = emptyInput();
   }
 
   dispose(): void {
@@ -98,4 +132,56 @@ export class PlayerInputFrontend {
   #assertActive(): void {
     if (this.#disposed) throw new Error("PlayerInputFrontend is disposed");
   }
+}
+
+function saturatingInt32(value: number): number {
+  return Math.max(-0x8000_0000, Math.min(0x7fff_ffff, value)) | 0;
+}
+
+function emptyInput(): PicoInputSnapshot {
+  return {
+    controllers: new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0),
+    devkit: {
+      mouseXRaw: 0,
+      mouseYRaw: 0,
+      mouseButtons: 0,
+      wheelRaw: 0,
+      movementXRaw: 0,
+      movementYRaw: 0,
+      keypresses: [],
+    },
+  };
+}
+
+function copyInput(snapshot: PicoInputSnapshot): PicoInputSnapshot {
+  const devkit = snapshot?.devkit;
+  const int32 = (value: unknown): value is number => Number.isInteger(value) &&
+    Number(value) >= -0x8000_0000 && Number(value) <= 0x7fff_ffff;
+  if (
+    !Array.isArray(snapshot?.controllers) ||
+    snapshot.controllers.length !== PLAYER_CONTROLLER_COUNT ||
+    snapshot.controllers.some((buttons) =>
+      !Number.isSafeInteger(buttons) || buttons < 0 || buttons > 0x3f) ||
+    typeof devkit !== "object" || devkit === null ||
+    !int32(devkit.mouseXRaw) || !int32(devkit.mouseYRaw) ||
+    !Number.isInteger(devkit.mouseButtons) || devkit.mouseButtons < 0 ||
+    devkit.mouseButtons > 0x07 || !int32(devkit.wheelRaw) ||
+    !int32(devkit.movementXRaw) || !int32(devkit.movementYRaw) ||
+    !Array.isArray(devkit.keypresses) || devkit.keypresses.length > 64 ||
+    devkit.keypresses.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 0xff)
+  ) {
+    throw new RangeError("input must contain a fixed controller snapshot and devkit batch");
+  }
+  return {
+    controllers: snapshot.controllers.slice(),
+    devkit: {
+      mouseXRaw: devkit.mouseXRaw,
+      mouseYRaw: devkit.mouseYRaw,
+      mouseButtons: devkit.mouseButtons,
+      wheelRaw: devkit.wheelRaw,
+      movementXRaw: devkit.movementXRaw,
+      movementYRaw: devkit.movementYRaw,
+      keypresses: devkit.keypresses.slice(),
+    },
+  };
 }

@@ -9,6 +9,7 @@ import type { GamepadSource } from "./gamepad-input.js";
 import {
   PlayerShellView,
   type PlayerShellElements,
+  type PlayerShellMode,
 } from "./ui/player-shell-view.js";
 
 export interface MountPlayerOptions {
@@ -20,6 +21,7 @@ export interface MountPlayerOptions {
   readonly workletModuleUrl?: string | URL;
   readonly audio?: PlayerCompositionOptions["audio"];
   readonly gamepadSource?: GamepadSource;
+  readonly shell?: PlayerShellMode;
 }
 
 export interface MountedPlayer {
@@ -37,6 +39,7 @@ export async function mountPico8Player(
   const view = PlayerShellView.create(options.root, {
     window: document.defaultView ?? window,
     document,
+    ...(options.shell === undefined ? {} : { shell: options.shell }),
   });
   const { elements } = view;
 

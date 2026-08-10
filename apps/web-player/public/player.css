@@ -304,6 +304,31 @@ body {
   display: none;
 }
 
+.pico8-player[data-shell-mode="hosted"] {
+  block-size: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  box-shadow: none;
+}
+
+.pico8-player[data-shell-mode="hosted"] .pico8-player__chrome,
+.pico8-player[data-shell-mode="hosted"] .pico8-player__toolbar,
+.pico8-player[data-shell-mode="hosted"] .pico8-player__touch-controls,
+.pico8-player[data-shell-mode="hosted"] .pico8-player__diagnostic,
+.pico8-player[data-shell-mode="hosted"] .pico8-player__drop-hint {
+  display: none;
+}
+
+.pico8-player[data-shell-mode="hosted"] .pico8-player__stage {
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+  border-radius: 0;
+}
+
 .pico8-player[data-player-state="audio-blocked"] .pico8-player__status {
   color: var(--p8-focus);
 }

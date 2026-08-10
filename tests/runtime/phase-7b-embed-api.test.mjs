@@ -64,6 +64,7 @@ class FakeController {
   async resume() { this.operations.push({ type: "resume" }); }
   async reset() { this.operations.push({ type: "reset" }); }
   async stop() { this.operations.push({ type: "stop" }); }
+  setInput(snapshot) { this.operations.push({ type: "input", snapshot }); }
 
   async dispose() {
     this.disposeCount += 1;
@@ -87,10 +88,10 @@ function fakePlayer() {
 }
 
 test("the versioned package root is bytes-first and has no URL/fetch cart authority", async () => {
-  assert.equal(PICO8_WEB_PLAYER_API_VERSION, 1);
+  assert.equal(PICO8_WEB_PLAYER_API_VERSION, 2);
   assert.equal(typeof createPico8WebPlayer, "function");
   for (const method of [
-    "create", "loadCart", "start", "pause", "resume", "reset", "stop", "dispose",
+    "create", "loadCart", "start", "pause", "resume", "reset", "stop", "setInput", "dispose",
   ]) {
     assert.equal(typeof Pico8WebPlayer[method] === "function" ||
       typeof Pico8WebPlayer.prototype[method] === "function", true, method);
@@ -111,7 +112,7 @@ test("the versioned package root is bytes-first and has no URL/fetch cart author
     { cwd: "apps/web-player", encoding: "utf8" },
   );
   assert.equal(selfImport.status, 0, selfImport.stderr);
-  assert.equal(selfImport.stdout, "1");
+  assert.equal(selfImport.stdout, "2");
 });
 
 test("public lifecycle operations are deterministic and serialized", async () => {

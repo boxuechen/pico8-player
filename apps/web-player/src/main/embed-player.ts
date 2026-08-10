@@ -7,13 +7,16 @@ import {
   type MountedPlayer,
 } from "./main.js";
 import type { PlayerShellState } from "./player-controller.js";
+import type { PlayerShellMode } from "./ui/player-shell-view.js";
 
-export const PICO8_WEB_PLAYER_API_VERSION = 1 as const;
+export const PICO8_WEB_PLAYER_API_VERSION = 2 as const;
 
 export interface Pico8WebPlayerCreateOptions {
   readonly root: HTMLElement;
   readonly commandTimeoutMs?: number;
   readonly audio?: AudioFrontendOptions;
+  /** `hosted` leaves cart selection, controls and surrounding chrome to the caller. */
+  readonly shell?: PlayerShellMode;
 }
 
 export interface Pico8LocalCartSource {
@@ -107,6 +110,7 @@ export class Pico8WebPlayer {
         ? {}
         : { commandTimeoutMs: options.commandTimeoutMs }),
       ...(options.audio === undefined ? {} : { audio: options.audio }),
+      ...(options.shell === undefined ? {} : { shell: options.shell }),
     });
     return new Pico8WebPlayer(mounted);
   }
@@ -160,6 +164,12 @@ export class Pico8WebPlayer {
 
   stop(): Promise<void> {
     return this.#enqueue(() => this.#mounted.controller.stop());
+  }
+
+  /** Replaces the caller-owned input snapshot without entering the lifecycle queue. */
+  setInput(snapshot: import("@pico8-web/contracts").PicoInputSnapshot): void {
+    this.#assertActive();
+    this.#mounted.controller.setInput(snapshot);
   }
 
   dispose(): Promise<void> {

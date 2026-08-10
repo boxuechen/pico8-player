@@ -5,9 +5,9 @@
   "status": "active",
   "browserGate": "Chrome/Chromium desktop only",
   "downstreamGate": "pico8-mobile iOS Simulator",
-  "activeWorkUnit": "13A",
-  "completedWorkUnits": [],
-  "nextWorkUnit": "13B",
+  "activeWorkUnit": "13B",
+  "completedWorkUnits": ["13A"],
+  "nextWorkUnit": "13C",
   "publicApi": {
     "currentVersion": 1,
     "targetVersion": 2,
@@ -56,7 +56,7 @@
   "workUnits": {
     "13A": {
       "name": "Contract Activation",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "docs/README.md",
         "docs/05-delivery-plan.md",
@@ -70,11 +70,29 @@
         "activation contract test passes",
         "API v2 host boundaries are machine-locked",
         "compatibility corpus and remote publication remain excluded"
-      ]
+      ],
+      "result": {
+        "activationTests": 2
+      }
     },
     "13B": {
       "name": "Hosted Shell and External Input",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "docs/phases/13-mobile-host-ports.md",
+        "spec/phase-13-mobile-host-ports-contract.json",
+        "apps/web-player/src/main/",
+        "apps/web-player/public/player.css",
+        "tests/runtime/phase-13b-hosted-input.test.mjs",
+        "tests/runtime/phase-7b-embed-api.test.mjs",
+        "package.json"
+      ],
+      "exit": [
+        "hosted shell hides app-owned selection and input chrome",
+        "external snapshots are copied, validated and merged once per frame",
+        "input is cleared across non-running lifecycle boundaries",
+        "legacy default shell and bytes-first authority remain intact"
+      ]
     },
     "13C": {
       "name": "Host Persistence and Lifecycle",

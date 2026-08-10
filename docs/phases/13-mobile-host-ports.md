@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：13A — Contract Activation
+> Active work unit：13B — Hosted Shell and External Input
 >
 > 机器合同：[`spec/phase-13-mobile-host-ports-contract.json`](../../spec/phase-13-mobile-host-ports-contract.json)
 >
@@ -28,37 +28,38 @@
 
 | Unit | 内容 | 状态 |
 | --- | --- | --- |
-| 13A | Active phase 与 API v2 机器合同 | **Active** |
-| 13B | Hosted shell 与外部标准化输入 | Pending |
+| 13A | Active phase 与 API v2 机器合同 | Complete（`pnpm run test:phase-13a`） |
+| 13B | Hosted shell 与外部标准化输入 | **Active** |
 | 13C | 宿主持久化、可等待 flush 与 lifecycle | Pending |
 | 13D | Focused Chrome、release artifact 与本地下游交接 | Pending |
 | 13E | Evidence 与阶段关闭 | Pending |
 
-## Active work unit：13A
+## Active work unit：13B
 
 ### Observable
 
-- API v2 的输入、持久化、生命周期、事件和 hosted shell 边界由机器合同锁定。
-- 默认 Web profile 继续使用完整 shell 与 Worker IndexedDB。
-- 测试预算明确排除兼容性语料、historical matrix、长 soak 和非 Chrome 浏览器。
+- `createPico8WebPlayer({ shell: "hosted" })` 只呈现 playfield 与 runtime pause menu；完整 shell 仍是默认值。
+- `setInput(snapshot)` 接受 copy-owned、固定 8 controller 的标准化快照，并与 DOM input 逐玩家按位合并。
+- pause、stop、cart load、lifecycle clear 和 dispose 不保留宿主按键，避免 stuck input。
+- Embed API 版本升级为 2；bytes-first cart authority 与默认完整 shell 不变。
 
 ### 允许文件
 
-- `docs/README.md`
-- `docs/05-delivery-plan.md`
-- `docs/phases/README.md`
 - `docs/phases/13-mobile-host-ports.md`
 - `spec/phase-13-mobile-host-ports-contract.json`
-- `tests/contract/phase-13a-activation.test.mjs`
+- `apps/web-player/src/main/`
+- `apps/web-player/public/player.css`
+- `tests/runtime/phase-13b-hosted-input.test.mjs`
+- `tests/runtime/phase-7b-embed-api.test.mjs`
 - `package.json`
 
 ### Tests / Exit
 
 ```sh
-pnpm run test:phase-13a
+pnpm run test:phase-13b
 ```
 
-通过后 13B 成为唯一 active work unit。
+通过后 13C 成为唯一 active work unit。
 
 ## Phase exit gate
 
