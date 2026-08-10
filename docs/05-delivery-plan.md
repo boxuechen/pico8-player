@@ -5,11 +5,11 @@
 
 ## 当前状态
 
-- 当前 active phase：[**Phase 13 — Mobile Host Ports**](./phases/13-mobile-host-ports.md)。
-- 当前 work unit：**13A — Contract Activation**；production implementation 只按该 phase 允许文件推进。
-- 最近完成：[Phase 12 — `pal(table)` compatibility](./evidence/phase-12/131-phase-12-pal-table-compatibility-exit-evidence.md)。
+- 当前 active phase：**None**。
+- 当前 work unit：**None**；新的 production implementation 需先激活独立 phase。
+- 最近完成：[Phase 13 — Mobile Host Ports](./evidence/phase-13/141-phase-13-mobile-host-ports-exit-evidence.md)。
 - 最近关闭的机器合同：
-  [`phase-12-pal-table-compatibility-contract.json`](../spec/phase-12-pal-table-compatibility-contract.json)。
+  [`phase-13-mobile-host-ports-contract.json`](../spec/phase-13-mobile-host-ports-contract.json)。
 - 当前发布口径、Known Differences 与默认验证入口由
   [`06-testing-compatibility.md`](./06-testing-compatibility.md) 维护。
 

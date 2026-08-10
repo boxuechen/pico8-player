@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "phase": "13",
   "name": "mobile-host-ports",
-  "status": "active",
+  "status": "complete",
   "browserGate": "Chrome/Chromium desktop only",
   "downstreamGate": "pico8-mobile iOS Simulator",
-  "activeWorkUnit": "13D",
-  "completedWorkUnits": ["13A", "13B", "13C"],
-  "nextWorkUnit": "13E",
+  "activeWorkUnit": null,
+  "completedWorkUnits": ["13A", "13B", "13C", "13D", "13E"],
+  "nextWorkUnit": null,
   "publicApi": {
-    "currentVersion": 1,
+    "currentVersion": 2,
     "targetVersion": 2,
     "defaultProfile": {
       "shell": "full",
@@ -124,7 +124,7 @@
     },
     "13D": {
       "name": "Focused Integration and Artifact Handoff",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "docs/phases/13-mobile-host-ports.md",
         "spec/phase-13-mobile-host-ports-contract.json",
@@ -150,11 +150,29 @@
         "one project-owned focused Chrome host-port flow passes",
         "artifact contains no cart, native code or expanded network authority",
         "no publication, external corpus, historical matrix or long soak occurs"
-      ]
+      ],
+      "result": {
+        "artifactTests": 2,
+        "focusedChromeRuns": 1,
+        "releasePackageFiles": 16,
+        "releasePackageSha256": "70868ea0414ca365d911f61619bfe7a6abe2dc1fd09c53705169cf9f1ea4b154",
+        "externalCorpusRuns": 0,
+        "historicalMatrixRuns": 0,
+        "longSoakRuns": 0,
+        "publicationPerformed": false
+      }
     },
     "13E": {
       "name": "Evidence and Close",
-      "status": "pending"
+      "status": "complete",
+      "result": {
+        "downstreamNodeTests": 20,
+        "downstreamFocusedChromeTests": 3,
+        "downstreamCapacitorSync": "passed",
+        "downstreamIosSimulatorBuild": "passed",
+        "downstreamPhysicalDeviceRuns": 0,
+        "evidence": "docs/evidence/phase-13/141-phase-13-mobile-host-ports-exit-evidence.md"
+      }
     }
   }
 }

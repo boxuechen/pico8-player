@@ -1,9 +1,9 @@
 # Phase documents
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
-phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前唯一 active phase 是
-[Phase 13 — Mobile Host Ports](./13-mobile-host-ports.md)，当前 work unit 为 13A。最近完成结果见
-[Phase 12 evidence](../evidence/phase-12/131-phase-12-pal-table-compatibility-exit-evidence.md)。
+phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前没有 active phase，
+当前 work unit 为 **None**。最近完成结果见
+[Phase 13 evidence](../evidence/phase-13/141-phase-13-mobile-host-ports-exit-evidence.md)。
 
 ## Activation contract
 
