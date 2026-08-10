@@ -122,18 +122,14 @@ test("Phase 6H binds every closed compatibility cluster and its exit runtime", a
   ]);
 });
 
-test("Phase 6 contract, evidence, roadmap and active route are closed", async () => {
+test("Phase 6 contract, evidence and active route remain closed", async () => {
   const contract = await readJson("spec/phase-6-real-cart-qualification-contract.json");
   const phase7 = await readJson("spec/phase-7-web-player-release-candidate-contract.json");
-  const phase8 = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
   const packageJson = await readJson("package.json");
   const evidence = await read(
     "docs/evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md",
   );
-  const docsReadme = await read("docs/README.md");
   const phaseIndex = await read("docs/phases/README.md");
-  const roadmap = await read("docs/05-delivery-plan.md");
-  const compatibility = await read("docs/06-testing-compatibility.md");
   const exitManifestSha256 = await sha256(
     "tests/conformance/manifests/phase-6h-exit.json",
   );
@@ -159,20 +155,6 @@ test("Phase 6 contract, evidence, roadmap and active route are closed", async ()
   assert.ok(!phaseIndex.includes("6-real-cart-qualification.md"));
   assert.equal(phase7.status, "complete");
   assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
-  if (phase8.status === "active") {
-    assert.match(docsReadme, /当前阶段 \| Phase 8/u);
-    assert.match(docsReadme, /Active work unit \| 8[B-H]/u);
-    assert.ok(docsReadme.includes("81-phase-7-web-player-release-candidate-exit-evidence.md"));
-    assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
-  } else {
-    assert.match(docsReadme, /最近完成 \| Phase 8/u);
-    assert.match(docsReadme, /当前阶段 \| Phase 9/u);
-    assert.match(docsReadme, /Active work unit \| 9A/u);
-    assert.ok(docsReadme.includes("91-phase-8-expanded-real-cart-qualification-exit-evidence.md"));
-    assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
-  }
-  assert.ok(roadmap.includes("Phase 6 exit"));
-  assert.ok(compatibility.includes(exit.target));
   assert.ok(packageJson.scripts["test:historical"].includes("test:phase-6h"));
   assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-6h"));
   await assert.rejects(

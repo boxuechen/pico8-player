@@ -1,7 +1,7 @@
 # 系统架构
 
-> 文档角色：稳定的系统边界与目标拓扑。当前实现状态以机器契约、源码、自动测试和
-> [最近关闭的机器合同](../spec/phase-5-l3-multicart-contract.json)为准。
+> 文档角色：稳定的系统边界与 production 拓扑。当前实现状态以源码、public contracts、自动测试和
+> [当前发布口径](./06-testing-compatibility.md#1-当前发布口径)为准。
 
 ## 状态路由
 
@@ -12,11 +12,9 @@
 | **Deferred** | general nested-coroutine HostRequest、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
 
 第 4–11 节只维护稳定架构约束，不复制容易漂移的 DTO 和 error union。当前 production player
-协议由 [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；最近关闭
-能力由 [`phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) 及其
-前置合同锁定。早期 `worker-protocol.ts` 只保留为兼容 probe。已实现的 browser boundary 由
-[`phase-0f-browser-boundary.json`](../spec/phase-0f-browser-boundary.json)、ADR-009 和 ADR-010
-定义。
+协议由 [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；ABI、runtime、
+release artifact 与 API surface 由 `spec/` 中各自机器合同定义。早期 `worker-protocol.ts` 只保留为
+兼容 probe；历史 capability closure 按需从 evidence/ADR 追溯。
 
 ## 1. 架构总览
 

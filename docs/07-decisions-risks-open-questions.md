@@ -35,8 +35,8 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-022 | [Accepted](./adr/022-cpu-slicing-decision.md) | top-level custom loop 使用 root-safe 30 Hz implicit frame；hard cap 继续 poison |
 | ADR-023 | [Partially superseded by ADR-030](./adr/023-menuitem-invocation-boundary.md) | VM-local callback + copied snapshot + generation-bound root-safe pause-menu invocation；label admission 由 ADR-030 修正 |
 | ADR-024 | [Accepted](./adr/024-pico8-v027-cart-version-and-text-include.md) | v0.2.7 cart version 43、bounded compact text rows 与 caller-authorized non-recursive include |
-| ADR-025 | [Accepted](./adr/025-phase-8d-real-cart-compatibility-boundaries.md) | Phase 8D parser/VM/callback/API/performance 修复和 expected-fault qualification 边界 |
-| ADR-026 | [Accepted](./adr/026-phase-9-language-compatibility-boundary.md) | Phase 9 P8 Lua/host coercion/typed selector、safe helper 与固定 2 MiB Lua heap 边界 |
+| ADR-025 | [Accepted](./adr/025-phase-8d-real-cart-compatibility-boundaries.md) | parser/VM/callback/API/performance 修复和 expected-fault qualification 边界 |
+| ADR-026 | [Accepted](./adr/026-phase-9-language-compatibility-boundary.md) | P8 Lua/host coercion/typed selector、safe helper 与固定 2 MiB Lua heap 边界 |
 | ADR-027 | [Accepted](./adr/027-phase-9-timing-safety-boundary.md) | fixed 32M hard safety cap 与 Q16.16 numeric-for termination |
 | ADR-028 | [Accepted](./adr/028-phase-9-local-host-feature-boundary.md) | explicit local bundle、empty `load("")` no-op 与 missing/denied fail-closed |
 | ADR-029 | [Accepted](./adr/029-phase-9-requalification-remediation-boundary.md) | `camera()` previous return、absent `all()`、bounded large `chr()` 与 local multicart composition |
@@ -46,31 +46,14 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 
 ### Active blockers
 
-当前没有已登记 blocker。最后关闭阶段的发布边界、Known Differences 与未验证覆盖面见
-[L3 exit evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)；候选下一阶段尚未激活的
-设计问题不登记为 blocker。
+当前没有已登记 blocker。发布边界、Known Differences 与未验证覆盖面见
+[`06-testing-compatibility.md`](./06-testing-compatibility.md)；未激活阶段的想法不登记为 blocker。
 
 ### Deferred open questions
 
-| ID | 问题 | 何时回答 |
-| --- | --- | --- |
 当前没有已经分配给 active phase 的 deferred question；新增问题必须同时写明触发条件和 owner。
 
-### Closed questions
-
-| ID | 结论 | Evidence |
-| --- | --- | --- |
-| Q-01 | Chrome/Chromium interop boundary 为 Go；未触发 full-core WASM | [ADR-006](./adr/006-interop-hot-path-boundary.md) / [0C evidence](./evidence/phase-0/14-phase-0c-evidence.md) |
-| Q-03 | P8 number 过 ABI 使用 signed Q16.16 raw `int32` | `spec/abi/p8w-v1.json` / [0E evidence](./evidence/phase-0/16-phase-0e-evidence.md) |
-| Q-05 | 使用项目自有 bounded TS PNG/zlib/DEFLATE decoder | [ADR-005](./adr/005-lossless-p8png.md) / [0D evidence](./evidence/phase-0/15-phase-0d-evidence.md) |
-| Q-06 | Canvas2D 通过 pixel/resize/DPR/p95 门禁；不实现 WebGL fallback | [ADR-009](./adr/009-canvas2d-frame-presenter.md) |
-| Q-07 | dedicated MessagePort 双速率 10 分钟 soak 通过；不需要 SAB/relay | [ADR-010](./adr/010-dedicated-messageport-audio-transport.md) |
-| Q-09 | z8lua pin/patch、upper RAM mapper 和 benchmark boundary 已锁定 | [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) / [ADR-013](./adr/013-shared-pico-ram-boundary.md) |
-| Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
-| Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
-| Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，固定 32M hard cap 独立负责安全 | [ADR-027](./adr/027-phase-9-timing-safety-boundary.md) / [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) |
-| Q-02 | production 固定为 16 MiB WASM / 2 MiB Lua heap；受限 diagnostic profile 验证 structured OOM/recovery，不开启 memory growth 或 adaptive sizing | [ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) / [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json) |
-| Q-10 | plain guest yield 只返回直接 `coresume()`；L3 接受 root-only，nested host suspension 统一不可捕获 structured fault | [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) / [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
+已关闭问题不在 living index 重复；其决定由 ADR、machine contract 和 immutable evidence 保存。
 
 ## 3. Risk register
 
@@ -79,22 +62,22 @@ evidence，不在本表复制测试步骤。
 
 | ID | 风险 | 当前控制 / 下一 owner |
 | --- | --- | --- |
-| R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 ladder；Phase 2 exit 与 Phase 4 CPU/corpus calibration 均通过 |
+| R-01 | WASM↔JS 高频调用耗尽预算 | ADR-006 fallback ladder + benchmark gate |
 | R-02 | z8lua 与 PICO-8 0.2.7 语义差异 | pinned patches + conformance |
-| R-03 | memory growth 使 typed views stale | ADR-013 固定 memory；Phase 4G growth rejection/view identity/long-run gate |
+| R-03 | memory growth 使 typed views stale | ADR-013 fixed memory + lease/view identity tests |
 | R-04 | PNG low-bit corruption / decompression bomb | ADR-005 limits、property/malformed tests |
-| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue；Phase 4G 双速率 1800 秒 steady counters 全零 |
+| R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue + affected Chrome/resource gate |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
-| R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
-| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | Phase 4F/ADR-022/ADR-027 分离 4M/s cost、133333 top-level frame quantum 与固定 32M safety cap；finite-heavy/runaway controls 锁定 |
-| R-09 | multi-cart 同步 API 需要 async host data | caller-authorized local repository + root HostRequest + atomic swap；Phase 5 100-swap/soak gate |
+| R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented renderer + pointer/length conformance |
+| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | ADR-022/027 分离 compatibility cost、implicit quantum 与 fixed 32M safety cap |
+| R-09 | multi-cart 同步 API 需要 async host data | caller-authorized repository + root HostRequest + atomic swap |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | ADR-020 Deferred；无 production adapter、endpoint、network access 或 corpus bytes |
 | R-12 | refresh/hidden policy 改变 simulation | logical scheduler；ADR-011 hidden/blur pause + re-anchor |
-| R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset；Phase 0F–3 recovery gates 已通过 |
+| R-13 | fault/reload 后 stale frame/audio | generation + sequence + queue reset/recovery gates |
 | R-14 | API 广而不准、stub 堆积 | vertical slice + conformance gate |
 | R-15 | upper RAM/remap 语义回归 | ADR-013 canonical mapper tests |
-| R-16 | nested coroutine 吞掉 host suspension | ADR-019 root-only + uncatchable structured fault；Phase 5 28-case Node/Chrome matrix |
+| R-16 | nested coroutine 吞掉 host suspension | ADR-019 root-only + uncatchable structured fault |
 | R-17 | package/execution-domain 边界退化 | ADR-015 + architecture negative fixtures |
 
 ## 4. Fallback ladder

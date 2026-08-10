@@ -14,12 +14,10 @@
 | --- | --- |
 | **Implemented** | browser-neutral CartSession/RuntimeCore；canonical RAM/graphics/audio/input/persistence；CartLoader/local resolver/repository 与 caller-authorized text include；root controls 与 root HostRequest；atomic guest `load`、external `reload/cstore`；deterministic scheduler/CPU accounting；Worker/Canvas/AudioWorklet/IndexedDB adapters；bounded resource lifecycle |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | label presentation、advanced Graphics、general nested-coroutine HostRequest、BBS/network resolver 与未激活 capability |
+| **Deferred** | advanced Graphics、general nested-coroutine HostRequest、BBS/network resolver 与未激活 capability |
 
-当前 L3 local/multicart profile 以
-[`phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) 为准；早期
-control 与 browser boundary 分别由 `phase-0e-runtime-contract.json` 和
-`phase-0f-browser-boundary.json` 保留。本文不得被用来提前实现未激活 phase 范围。
+当前 L3 local/multicart profile 以 public exports、`spec/` 机器合同、API inventory 与自动测试的交集
+为准；已关闭阶段的实施顺序只从 evidence 按需追溯。本文不得被用来提前实现未激活 phase 范围。
 
 ## 1. 文档目的与规范用语
 
@@ -39,7 +37,9 @@ control 与 browser boundary 分别由 `phase-0e-runtime-contract.json` 和
 3. [fake-08](https://github.com/jtothebell/fake-08) 与 [zepto8](https://github.com/samhocevar/zepto8) 的行为参考；
 4. 本项目的明确兼容策略。
 
-fake-08 不是规范。本文调研时参考提交 `814991a2571ad3970e386cef48f3b148aa1c27b9`，重点参考其 [`cart.cpp`](https://github.com/jtothebell/fake-08/blob/814991a2571ad3970e386cef48f3b148aa1c27b9/source/cart.cpp)、[`PicoRam.h`](https://github.com/jtothebell/fake-08/blob/814991a2571ad3970e386cef48f3b148aa1c27b9/source/PicoRam.h)、[`Audio.cpp`](https://github.com/jtothebell/fake-08/blob/814991a2571ad3970e386cef48f3b148aa1c27b9/source/Audio.cpp) 和 [`vm.cpp`](https://github.com/jtothebell/fake-08/blob/814991a2571ad3970e386cef48f3b148aa1c27b9/source/vm.cpp)。若参考实现与官方/金标冲突，必须以官方/金标为准并加入回归测试。
+参考实现不是规范。锁定 checkout、用途与许可边界只在
+[`10-reference-sources.md`](./10-reference-sources.md) 登记；与官方/机器 contract 冲突时，以官方行为和
+项目回归测试为准。
 
 ## 2. 核心决策
 
@@ -340,7 +340,7 @@ interface PicoRam {
 ```
 
 `@pico8-web/contracts` 提供 `PICO_RAM_SIZE` / `PicoMemoryLease`；隔离 probe 的
-`Phase0BMemoryBinding` 只用于历史 boundary 验证。该 binding
+`Phase0BMemoryBinding` 只用于隔离 boundary 验证。该 binding
 只证明 adapter 内 zero-copy views、lease freshness 与 canonical mapper，不是完整
 `PicoRam`、`VmPort` 或 production `p8w_*` lifecycle。
 
@@ -495,9 +495,9 @@ pointer lock 和 event normalization 仍由 app 拥有。
 > re-anchor，以及 deterministic 单 transaction CPU classification；不会按宿主性能自动
 > 合并 update、跳过 draw 或降频。
 
-production Worker 已用 fixed synthetic pulses 重放 30/60/custom carts；历史设备测量只保存在
-[Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md)。下方 `stepExact` API 仍是
-Target，不得从已实现 interactive scheduler 推导为 production API。
+production Worker 已用 fixed synthetic pulses 重放 30/60/custom carts；当前行为由 scheduler owner
+tests 锁定，历史设备测量不在本文重复。下方 `stepExact` API 仍是 Target，不得从已实现 interactive
+scheduler 推导为 production API。
 
 ### 10.1 双模式
 
@@ -557,7 +557,7 @@ type StepResult = Readonly<{
 - audio selectors `16..26` 与 `46..57` 从 authoritative AudioSynth/music state 返回 typed number 或
   boolean；它们不读取 AudioContext、device mixer、output queue 或 host wall clock。platform/string/nil
   selector 由 bridge 在 VM 内直接产生，避免 TS numeric ABI 抹掉结果类型；其精确集合由 API inventory
-  与 Phase 9B regression 共同锁定。
+  与当前 compatibility regression 共同锁定。
 - CPU policy 不得改变 logical `time()`、canonical audio、input edge、draw/persistence transaction，
   也不得根据当前机器性能自适应改变 guest 结果。
 
@@ -754,7 +754,7 @@ code、stage 或 severity union。
 - 实施顺序、允许文件和 observable exit：只由当前
   [active phase](./phases/README.md) 定义。
 - 单功能、MVP 与 release 门禁：只由
-  [测试兼容契约](./06-testing-compatibility.md#16-definition-of-done) 定义。
+  [测试兼容契约](./06-testing-compatibility.md#8-definition-of-done) 定义。
 - package owner、import edge、composition root 与 public export：只由
   [源码边界契约](./08-source-layout-and-boundaries.md) 定义。
 - 产品 non-goals、浏览器和兼容等级：只由

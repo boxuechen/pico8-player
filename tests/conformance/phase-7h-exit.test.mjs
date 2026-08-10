@@ -156,11 +156,10 @@ test("Phase 7H documentation preserves immutable evidence under its successor ph
     "spec/phase-8-expanded-real-cart-qualification-contract.json",
     "utf8",
   ));
-  const [docsReadme, phaseIndex, roadmap, scope, compatibility, evidence] =
+  const [docsReadme, phaseIndex, scope, compatibility, evidence] =
     await Promise.all([
       readFile("docs/README.md", "utf8"),
       readFile("docs/phases/README.md", "utf8"),
-      readFile("docs/05-delivery-plan.md", "utf8"),
       readFile("docs/01-scope-and-success-criteria.md", "utf8"),
       readFile("docs/06-testing-compatibility.md", "utf8"),
       readFile(evidencePath, "utf8"),
@@ -168,7 +167,6 @@ test("Phase 7H documentation preserves immutable evidence under its successor ph
   assert.ok(!phaseIndex.includes("7-web-player-release-candidate.md"));
   assert.equal(phase8.status, "complete");
   assert.ok(!docsReadme.includes("7-web-player-release-candidate.md"));
-  assert.match(roadmap, /7 Web Player Release Candidate（7A–7H） \| Complete/u);
   assert.match(scope, /101 compatible/u);
   assert.match(compatibility, /101 compatible/u);
   assert.match(compatibility, /required unknown=0/u);

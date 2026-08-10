@@ -1,933 +1,193 @@
 # 测试、兼容性与发布门禁
 
-> 状态：执行规范（living document）
-> 适用架构：z8lua WASM + TypeScript Runtime
-> 基准版本：PICO-8 0.2.7
-> 最近核验：2026-08-10
+本文只维护当前质量口径、默认验证入口和仍然有效的 Known Differences。已完成阶段的执行日志、
+环境 hash、逐阶段数字与长测结果只保存在 [`docs/evidence/`](./evidence/) 和对应 exit manifest 中。
 
-## 状态路由
+## 1. 当前发布口径
 
-本文是长期质量契约，不表示所有命令、fixture 和 CI lane 已经存在。
+当前产品是 **PICO-8 v0.2.7 L3 local/multicart Web Player on Chrome/Chromium desktop**：
 
-| 状态 | 对应范围 |
-| --- | --- |
-| **Implemented baseline** | `package.json` 中实际存在的 architecture、codec、WASM、runtime、conformance、release artifact、`test:release` 与 Chrome scripts；Phase 7 RC exit 已关闭 |
-| **Current compatibility claim** | PICO-8 v0.2.7、Chrome/Chromium desktop、101 compatible / 4 partial / 8 unsupported、required unknown=0；精确 Known Differences/coverage limitation 见第 15 节 |
-| **Historical results** | Phase 0–7 的环境、hash、测量和逐 work-unit 结论只在 [evidence](./evidence/README.md) 与关闭机器合同中保存 |
-| **Target** | 第 3 节其余测试资产布局、尚未落地的 differential/nightly 命令与未来 activation contract |
-| **Deferred** | 官方 golden corpus、移动 Chrome、非 Chrome 浏览器和任何外部 publication |
+- 接受 caller-provided `.p8` / `.p8.png` bytes，以及 caller-authorized local bundle。
+- cart code 运行在可终止的 production Worker；Canvas、AudioContext 和 DOM 只存在于 app adapter。
+- 支持 root `load/run/stop`、local multicart、external local `reload/cstore`、cart-defined pause menu、
+  keyboard/touch/gamepad、audio、persistence 与 structured recovery。
+- 不自动访问 BBS，不解析任意 URL 或宿主文件系统，不发布第三方 cart 内容。
+- Chrome/Chromium desktop 是唯一浏览器 gate。
 
-执行时先检查 `package.json`，不得把本文示例命令当成已存在脚本。第 15 节维护当前
-compatibility/known-difference 结论和必要摘要；原始环境记录与完整历史测量只在
-[`evidence/`](./evidence/README.md) 中陈述。
+当前机器 inventory 共 113 项：`101 compatible`、`5 partial`、`7 unsupported`、
+`required unknown=0`。唯一权威数据源是
+[`spec/pico-api-inventory.yaml`](../spec/pico-api-inventory.yaml)；文档不维护第二份 API 清单。
 
-本文定义 pico8-web-player 的测试策略、兼容性口径、性能预算和发布门禁。它是后续 Codex 开发时的执行契约，不是测试愿望清单。任何运行时行为变更都必须能回答三个问题：
+当前真实 cart 证据支持以下有界结论：
 
-1. 它对应哪条 PICO-8 行为或项目明确声明的扩展？
-2. 哪个自动化测试能阻止它以后回归？
-3. 与官方 PICO-8 不一致时，差异是否已记录、分级并对用户可见？
+- canonical fixed smoke：`100/100` 完成，playability disposition 为 `100 CU`。
+- representative playability：`10/10 C2`。
+- supplemental known-failure disposition：`51 resolved / 0 remaining`。
+- 唯一完整 supplemental 同环境运行是 `199 CU / 1 failure`；最终差异另以 `1/1 CU` focused delta
+  关闭，二者不合并为单环境兼容率。
 
-规范性来源按以下优先级排序：
-
-1. [PICO-8 官方手册（当前为 v0.2.7）](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)。
-2. 在合法安装的同版本官方 PICO-8 中观察到的可重复行为。
-3. 官方更新说明和 Lexaloffle 对具体行为的说明。
-4. z8lua 上游测试，用于验证语言实现自身。
-5. fake-08 等开源实现，只用于交叉定位，不作为规范性 oracle。
-
-如果手册与官方运行结果冲突，先保留最小复现、记录 PICO-8 精确版本和平台，再创建“规范歧义”问题；不要静默选择更容易实现的一边。
-
-## 1. Codex 执行规则
-
-Codex 在实现或修复任何功能时，必须遵守以下规则：
-
-- 开工前先定位对应的手册章节、兼容性用例和已知差异；不存在时先补测试设计。
-- 每个新 API 至少包含正常路径、边界值、状态交互各一个测试。涉及 P8 Lua 语义时，还必须有 z8lua/WASM 层测试。
-- 修复 bug 时，先提交能稳定复现的最小测试，再修改实现。无法先写测试时，PR/变更说明必须解释原因。
-- 不以“能启动某个游戏”替代 API conformance，不以代码覆盖率替代行为覆盖率。
-- 不从当前实现自动生成结果后直接“批准” golden。Golden 必须来自官方参考结果，或来自经人工按规范审阅的项目自有测试向量。
-- 不为了让测试通过而扩大误差容限、删除输入帧、忽略失败或批量更新快照；这类变更需要单独解释并审阅。
-- 不把 fake-08 的结果当作官方结果。它与本项目一致、但与官方 PICO-8 不一致时，本项目仍判失败。
-- 不在 CI、测试脚本、fixture 更新器或开发工具中访问 Lexaloffle BBS。详见第 13 节。
-- 无法运行真实 Chrome/Chromium 或官方 PICO-8 时，明确标记“未运行”，不得用
-  其他引擎、模拟器或 fake-08 冒充已验证。Firefox、Safari/WebKit 不属于当前
-  支持矩阵，不要求维护其 `not-run` 状态。
-- 修改 package、public export、import 或 entrypoint 时必须运行 architecture boundary tests；code review 不能代替机器门禁。
-- 变更结束前运行与影响面相称的测试层级，并在交付说明中列出实际执行的命令、结果及未执行项。
-
-本文中的 `MUST`/“必须”是合并或发布门禁；`SHOULD`/“应”是默认要求，偏离时需要记录理由。
-
-## 2. 测试目标与非目标
-
-测试要证明的是：对于给定 cart、初始状态和逐帧输入，播放器能在正确时间产生兼容的 P8 Lua 行为、RAM、屏幕、音频和宿主事件，并且恶意或损坏输入不能拖死网页。
-
-测试不试图证明：
-
-- 编辑器、命令行、SPLORE 等完整 PICO-8 Console 功能；本项目只实现 Player。
-- 未公开内部实现逐位等同；除非该行为可由 cart 观察到。
-- 所有历史或未来版本 cart 自动兼容。兼容范围必须绑定 cart version 和本项目支持矩阵。
-- 第三方 BBS cart 的版权状态或授权范围。
-
-## 3. 建议的测试资产布局
-
-后续实现测试基础设施时使用以下约定。目录名可以通过 ADR 调整，但语义和资产隔离不得丢失。
-
-```text
-tests/
-  architecture/                 # package DAG、exports、platform globals、negative import fixtures
-  unit/
-    contracts/                  # stable value/error encoding 与 public export compile tests
-    cart-codec/                 # parser/decompressor 纯单元测试
-    runtime-core/               # RAM/graphics/audio/input/scheduler 纯单元测试
-    z8lua-bridge/               # binding、stack、pointer lifetime 测试
-  contract/
-    wasm-abi/                   # C ABI ↔ TS consumer contract
-    worker-protocol/            # Window/Worker/Worklet schema、transfer、version contract
-  conformance/
-    carts/                      # 项目原创、单特性、可分发的 .p8 测试 cart
-    manifests/                  # 帧、输入、观察点和预期结果
-    traces/                     # 逐帧输入 trace
-  golden/
-    pico8-0.2.7/                # 与参考 PICO-8 版本绑定
-      <case-id>/
-        manifest.json
-        screen-<frame>.bin
-        screen-<frame>.png      # 仅供审阅，不能作为唯一 oracle
-        ram-<frame>.bin
-        audio.pcm
-  differential/                 # 官方参考捕获和二级实现适配器
-  integration/                  # RuntimeCore + adapters；Worker/storage/audio transaction
-  fuzz/
-    corpus/                     # 最小、可分发种子；不放第三方 BBS cart
-    regressions/                # 每个已修复崩溃的最小输入
-  browser/                      # Playwright 和浏览器端集成测试
-  performance/                  # microbench、场景 benchmark、基线
-  fixtures/                     # 合法、注明来源的非 cart 通用 fixture
-  external-corpus.example.json  # 本地外部语料格式，不含实际 cart
-```
-
-测试命令形成稳定接口，供开发者和 CI 使用：
-
-```text
-pnpm run test:architecture
-pnpm run test:unit
-pnpm run test:conformance
-pnpm run test:browser
-pnpm run test:fuzz
-pnpm run test:performance
-pnpm run test:differential
-pnpm run verify
-pnpm run verify:phase-9
-pnpm run verify:release
-pnpm run test:historical
-pnpm run verify:historical
-```
-
-这些命令在脚本尚未建立时是目标契约。落地后不得无迁移说明地改名。
-
-### 3.1 Release artifact gate
-
-`pnpm run test:phase-7c` 是当前已实现的 artifact gate：先从 pinned source/toolchain 构建 ignored
-release output，再校验 [`spec/release-artifact-contract.json`](../spec/release-artifact-contract.json)
-中的精确 allowlist、stable keys、SHA-256、byte length、MIME、CSP、provenance 和排除路径。测试还在
-两个全新临时 output root 构建并逐文件比较 bytes，任何额外文件或 mutation 都必须失败关闭。
-
-Chrome gate 从 nested same-origin base 运行同一 local-bytes demo；`application/wasm` 必须只请求一次，
-错误 MIME 必须经 Emscripten ArrayBuffer fallback 成功启动。两条路径都必须在严格 CSP（仅允许
-`'wasm-unsafe-eval'`，禁止 `'unsafe-eval'`/inline script）和非 cross-origin-isolated 环境进入
-`running`。该门禁不授权网络 cart、第三方 cart、截图或 artifact publication。
-
-### 3.2 Production DOM shell gate
-
-`pnpm run test:phase-7d` 是已实现的 shell gate。Node policy tests 固定 state→controls/ARIA mapping、单文件
-suffix/size preflight、audio-blocked recovery 和 128×128 整数 scale；Chrome 从同一 nested release
-artifact 验证 local choose/drop、host lifecycle controls、mute/fullscreen、keyboard/touch/pointer、200%
-窄视口、reduced motion、fault 后重选，以及 pagehide/dispose 后 Worker、AudioContext 和 RAF 全部释放。
-
-该 gate 使用 DOM role/name/live/pressed/disabled、hit target 和实际 resource state 作为 oracle，不用截图
-代替语义断言。Chrome autoplay gate 必须先证明无用户激活的 resume 留在 suspended，再证明命中可见
-control 的 trusted click 进入 running；测试不得把 CDP 对视口外 `<html>` 的点击误当作用户操作。
-
-### 3.3 Cart pause-menu gate
-
-`pnpm run test:phase-7e` 是已实现的 `menuitem()` completion gate。real-WASM Node 覆盖 copy-owned
-104-byte snapshot、slot/filter/argument/return、callback 内 replace/remove、instruction budget、fault、
-custom-loop boundary 与 20-generation 零泄漏；Worker contract 覆盖 generation、exactly-once、host
-pause/menu pause 分离、timeout recovery 和 stale/dispose fail-closed。Chrome 从 release artifact 验证
-P8SCII label、Continue、keyboard/pointer/touch、44 CSS px target、filter、keep-open refresh、focus return、
-simulation/audio pause、blur、cart replacement 和 callback fault recovery。该 gate 只实现
-cart-defined items，不包含 PICO-8 system settings 或完整 console menu。
-
-### 3.4 Release candidate gate
-
-`pnpm run verify:release` 是当前 focused RC gate：从 tracked source 重建并校验 release artifact，
-运行 7D production shell 的 Chrome 玩家路径和 7H artifact/aggregate contract。它不重新运行 Phase 0–8
-全集，也不默认执行长 soak。
-
-`pnpm run test:release`、`pnpm run test:historical` 和 `pnpm run verify:historical` 保留已关闭阶段的
-完整历史门禁语义，其中 release/historical verify 包含
-600 秒 30/60 Hz desktop soak；这些历史命令只供手动诊断已观察到的跨阶段回归。只有改动触及 audio、scheduler、
-Worker lifecycle 或 resource ownership，且 active phase 明确要求时，才运行相关长门禁。
-
-focused release gate 固定 Chrome/Chromium desktop、caller-provided bytes 和 zero network cart authority，并验证
-shell 语义、local load、keyboard/touch、audio-blocked recovery、fault recovery 以及 Worker/RAF/AudioContext
-teardown。它不访问 BBS、不读取 `ref/`/local corpus、不提交 ignored build output，也不执行 registry、网站
-或 GitHub Release publication。
-
-### 3.5 Expanded local real-cart gate
-
-Phase 8 使用 `prepare:phase-8:local` 从**仓库外**的 caller-authorized checkout 生成 deterministic local
-index、两个 50-case canonical batch 和三个 44/44/42-case format-pair batch。工具拒绝 URL、repository/
-`ref/` path、symlink escape、revision/inventory drift 和超过 64 cases 的 runner batch；Phase 6 的旧入口
-继续严格要求 12 cases。
-
-`qualification:phase-8:chrome` 对单个 local batch 运行 production Chrome fixed-tick smoke，并把 screenshot
-与 observation 写到仓库外；`qualification:phase-8:aggregate` 再验证 exact 100-case coverage、source revision、
-manifest hash、同一 player/WASM/Chrome 环境和 screenshot coverage。aggregate 输出只有分类、失败簇、
-framebuffer 和资源计数，不含 cart identity、path、cart/screen hash、fault message 或截图。
-
-初始 canonical baseline 已在 Chrome 151 完成 100/100 observation 和 100 张本地截图：52 boots、48 fails，
-失败簇为 parse 34、language 11、timing 3。这里只是 120-tick 的故障发现计数，不是最终兼容率，也不替代
-C2 playability。65-pair parity 和 C2 review 仍只能从 local artifacts 生成；`pnpm run verify`、CI 和 release
-artifact 不读取它们。tracked test 仅使用运行时生成的项目原创 fixture 验证 discovery、selection、
-dedupe、batch、hash、environment drift、exact coverage、redaction 和 path quarantine。
-
-Phase 8D 通用修复 candidate 在同一 corpus fingerprint 上得到 `100 CU`：`99 boots` 和 `1`
-个由仓库外 manifest 声明、fault code 精确匹配的开发者自测终止；所有 failure cluster 为 `0`。
-CU 仍不进入可玩分母，`fails` 也仍保留在本地 observation，不会因预期标注被伪造成 boot。
-100 张本地 Canvas screenshot 已生成，其中 4 个代表状态已人工抽查；第三方 bytes、截图、路径和
-逐 cart 结果仍为仓库内 `0`。
-
-Phase 8 最终以 10 个代表 case 全部达到 C2、65/65 format pair 完成定性、P0/P1 为 `0/0` 关闭。
-supplemental 200-cart snapshot 的 120-tick quick smoke 为 `149 boots / 51 fails`，失败簇仅以 aggregate
-记录为 language `45`、timing `5`、unsupported-host-feature `1`。它是后续兼容修复 backlog，不改变
-正式 denominator，也不构成第三方兼容率。完整结论见
-[`Phase 8 exit evidence`](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md)。
-
-multi-cart / external cart-data case 的 local manifest 必须显式列出每个 dependency ref、bytes 与
-`load/reloadData/cstoreData/include` capability；runner 不从 guest source 猜 URL，也不联网补依赖。
-项目原创 fixture 同时锁定 accepted target success、missing/denied fail-closed 和空 `load("")` no-op。
-第三方 dependency bytes、URL、hash 与逐-cart bundle 继续只位于仓库外。
-
-Phase 9 的唯一一次完整 4×50 supplemental requalification 得到 199 CU、1 个 language failure；它把
-剩余差异收敛为 `menuitem()` 超过 16-character display bound 时不应产生 cart-fatal error。ADR-030 与
-项目原创 real-WASM fixture 锁定 16-P8SCII-character copy-out 前缀和 callback 可调用性；最终只复测该
-1 个 affected external case，不运行第二次 full sweep，也不把两个 commit 的 observation 合并成单环境
-aggregate。
-
-Phase 9 已以 `51 resolved / 0 remaining` 的 known-failure disposition 关闭；该表述不把跨 commit 的
-`199-case full aggregate + 1-case focused delta` 合并为兼容率。完整口径见
+这些结果表明绝大多数主流 cart 可以启动和运行，但不构成 official bit-exact、完整通关率、BBS 成功率
+或任意第三方 corpus 的公开兼容率。当前结论见
 [`Phase 9 exit evidence`](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
 
-## 4. 确定性执行模型
+## 2. 兼容语义
 
-Golden 和差分测试必须运行在 deterministic host 中：
+### 2.1 API 状态
 
-- 固定 cart bytes、cart version、z8lua/WASM build ID 和 runtime commit。
-- 每个 case 显式设置随机种子；禁止依赖测试进程启动时的随机状态。
-- 使用虚拟时钟。`time()/t()` 由 deterministic simulation clock 按下述统一帧定义推进；日期、locale、timezone 和高分辨率宿主时间固定。专门的时间 API case 可以声明不同但仍可复现的 clock trace。
-- `stat()` 中依赖浏览器、设备、剪贴板、网络或电量的项目由 manifest 固定或明确标为不可比。
-- 持久化存储每个 case 使用全新 namespace；需要验证 `cartdata()` 的 case 自己声明预置值。
-- devicePixelRatio、Canvas 尺寸、音频上下文采样率和输入设备状态显式设置。
-- 禁止测试顺序共享 VM、RAM、palette、clip、camera、音频 channel、按键 repeat 或持久化状态，除非 case 专门测试跨帧/跨启动行为。
+- `compatible`：在当前 profile 内有行为证据，可计入支持。
+- `partial`：只支持参数、selector 或宿主效果子集，不计入完全支持。
+- `unsupported`：明确不实现或属于 Player 范围外。
+- `unknown`：证据不足；required 项不得以 unknown 发布。
 
-统一帧定义如下：
+实现存在不等于兼容。只有机器 inventory 中的 conformance status 可以形成 API 覆盖声明。
 
-1. `boot` 检查点：callback cart 位于 cart 解码、RAM 初始化和 `_init()` 返回后、第一次 update 前；
-   custom-loop cart 位于 top-level 的第一个 root `flip()` 或 root-safe implicit boundary。有限
-   top-level 只有在后续最终返回时才调用一次 `_init()` 并切换 callback mode。
-2. host `frame 0` 的输入先写入 runtime，再执行 `_update60()`；若不存在则按 30 Hz 计划执行 `_update()`，随后执行 `_draw()` 并 yield。其 logical slice ordinal 在 30 Hz 为 2、60 Hz 为 3，因为 startup epoch 已 commit。
-3. 帧检查点在 draw/yield 返回后、下一帧输入写入前采集。
-4. 该帧产生的音频样本归属于同一帧区间。
+### 2.2 Cart disposition
 
-custom-loop manifest 必须显式声明 lifecycle；其 host `frame 0` 在锁存输入后从 startup
-explicit/implicit continuation resume 到下一个受控 boundary，不伪造 `_update/_draw` callback。
-
-官方 Web Player capture 已对比 custom 首八次 `flip()`、callback 30/60 Hz 的 top-level、`_init` 和 update clock：startup 固定为 `1/30s`，首次 startup `flip()` commit 1 个 30 Hz slice。结构化证据见 [`phase-0e-official-clock.json`](./evidence/phase-0e-official-clock.json)；golden 必须同时断言 guest clock、`completedSlices` 与独立 `frameId`，禁止只偏移截图编号。
-
-输入 trace 记录“状态变化”，而不是依赖浏览器事件时间戳。例如：
-
-```json
-{
-  "schema": 1,
-  "fps": 60,
-  "events": [
-    { "frame": 0, "player": 0, "button": "left", "down": true },
-    { "frame": 4, "player": 0, "button": "left", "down": false },
-    { "frame": 8, "player": 0, "button": "x", "down": true },
-    { "frame": 9, "player": 0, "button": "x", "down": false }
-  ]
-}
-```
-
-`btnp()` 的首次按下、repeat 延迟、30/60 Hz 差异以及 focus 丢失后的清键必须分别测试。
-
-## 5. 单元测试与属性测试
-
-单元测试应尽可能不启动浏览器；涉及 WASM ABI 的测试使用真实编译产物，而不是 mock。
-
-### 5.1 必测模块
-
-| 模块 | 必测行为 |
+| 等级 | 含义 |
 | --- | --- |
-| `.p8` parser | section 顺序、缺失/重复 section、换行格式、Unicode/原始 byte 边界、版本行、最大尺寸、错误位置 |
-| `.p8.png` parser | PNG signature/IHDR、scanline filter 0–4、IDAT 拆分、CRC、截断、非法尺寸/色型、最低位 cart 数据提取、两类代码压缩、解压上限 |
-| P8 fixed-point ABI | Q16.16 正负值、溢出、移位、除零、`-0`、raw `int32` 往返，JS 不得提前转浮点 |
-| P8SCII/string ABI | pointer + byte length、内嵌 NUL、非 UTF-8 byte、空串、生命周期、固定 WASM memory 压力下 view identity 不变 |
-| Pico RAM | 64 KiB 边界、little-endian、nibble pixel、gfx/map/screen remap、`memcpy` 重叠、`reload`/`cstore` 范围 |
-| Graphics | clip、camera、palette、transparency、draw state、坐标截断、翻转、sprite/map/tline、屏幕 remap、自定义字体 |
-| Audio | note 解码、4 channel 分配、SFX loop、music pattern、effect、停止/切换、逐帧调度、重采样 |
-| Input | 8 players 位图、`btn`/`btnp`、键盘映射、Gamepad、mouse、touch、blur/visibility 清理 |
-| Scheduler | `_update` 30 Hz、`_update60` 60 Hz、`flip()`、长帧追赶上限、暂停/恢复、无 update/draw 的 cart |
-| Persistence | `cartdata` namespace、256 bytes、首次读取、写入失败、并发实例隔离、重启恢复 |
-| Worker protocol | 消息版本、非法消息、重复响应、加载/运行/暂停/销毁状态机、崩溃与重建 |
-| Renderer | 4-bit framebuffer 到 RGBA、默认/扩展 palette、nearest-neighbor、整数缩放、DPR 和 resize |
-
-### 5.2 z8lua/WASM 专项
-
-- 运行 z8lua 上游可用的 parser/VM 测试，并增加 P8 Lua 方言回归：short-if、`?`、复合赋值、位操作、table、coroutine、multiple return 和 16.16 数值行为。
-- numeric `for` 必须覆盖接近 Q16.16 正负边界的有限循环，证明 next index 不依赖 C/C++ signed overflow，也不会回绕成 runaway。
-- 对每个 import/export 校验参数个数、类型、nil/default、错误传播和多返回值。
-- 对 `@/%/$` 覆盖 `0x0000..0xffff`、负值/地址 wrap、`0xffff` 附近的 multi-byte read，以及 `0x5f54/0x5f55` GFX/SCREEN remap；结果必须与 `peek/peek2/peek4` 和 RAM golden 一致。
-- 以随机 raw `int32` 做至少 10,000 组 Q16.16 ABI 往返属性测试。
-- 以随机 byte array 做至少 10,000 组 P8SCII 往返属性测试；不得把 JS Unicode equality 当作 byte equality。
-- native z8lua harness 在 nightly 使用 ASan + UBSan；WASM build 另做越界和 trap 映射测试。
-
-### 5.3 覆盖率门禁
-
-- 整体语句覆盖率不低于 90%，分支覆盖率不低于 85%。
-- cart parser、decompressor、RAM、fixed-point bridge、Worker state machine 等关键模块：语句不低于 95%，分支不低于 90%。
-- 覆盖率下降超过 0.5 个百分点时 PR 失败，除非同时删除不可达代码且给出说明。
-- API 行为覆盖率独立统计：每个标为 `implemented` 的 PICO-8 API 必须映射到至少一个 conformance case。代码覆盖率不能豁免此项。
-
-## 6. Conformance carts
-
-Conformance cart 是兼容性工作的最小事实单元。每个 cart 应只验证一个主要行为，通常在 1–120 帧内完成，不依赖网络、真实时间或第三方素材。
-
-### 6.1 设计要求
-
-- case ID 使用 `<area>/<feature>-<variant>`，例如 `gfx/pal-transparent`、`memory/screen-remap`、`input/btnp-repeat-30`、`lua/fix16-overflow`。
-- cart 源码和素材由项目原创，并随仓库许可证明确授权。
-- 测试必须初始化自己读取的 RAM/draw/audio 状态，避免依赖官方或本实现的未初始化字节。
-- 一个 case 同时发现多个差异时，应继续拆小，直到失败能指向一个 API 或一组不可分行为。
-- 每个 case manifest 链接官方手册章节；测试未公开行为时，记录参考 PICO-8 版本、平台和复现实验。
-- 无效输入行为若官方未保证，不得擅自断言；可以只测试“不崩溃、不越界”。
-
-建议 manifest：
-
-```json
-{
-  "schema": 1,
-  "id": "gfx/pal-transparent",
-  "spec": "PICO-8 0.2.7 manual §6.2",
-  "cart": "../carts/gfx/pal-transparent.p8",
-  "runtime": { "fps": 60, "seedRaw": 305419896 },
-  "inputTrace": null,
-  "checkpoints": [
-    {
-      "phase": "boot",
-      "ramRanges": [{ "start": 24320, "length": 128 }]
-    },
-    {
-      "frame": 0,
-      "screen": true,
-      "ramRanges": [{ "start": 24320, "length": 8320 }]
-    }
-  ],
-  "reference": {
-    "implementation": "PICO-8",
-    "version": "0.2.7",
-    "capturedOn": "macOS",
-    "capturedAt": "YYYY-MM-DD"
-  }
-}
-```
-
-十进制地址用于保持 JSON 有效；审阅 UI 应同时显示十六进制地址。
-
-### 6.2 最低 conformance 面
-
-在宣称 Player MVP 前，至少覆盖：
-
-- cart：`.p8`、`.p8.png`、旧/新压缩格式、cart version。
-- program lifecycle：`_init`、`_update`、`_update60`、`_draw`、`flip`、error。
-- P8 Lua：数值、table、string/P8SCII、coroutine、random、主要语法扩展。
-- memory：`peek/poke` 各宽度、`memcpy/memset`、base RAM layout、gfx/map/screen remap。
-- graphics：所有已标记 implemented 的绘图 API、draw state、palette、clip/camera、text/custom font。
-- map/sprite：shared region、flags、flip、scaling、边界裁剪。
-- input：2 个以上 player、`btnp` repeat、键盘/Gamepad/touch 状态。
-- audio：SFX、music、四声道、loop、effects、stop/fade、浏览器重采样。
-- persistence：`cartdata/dget/dset` 的生命周期和隔离。
-- host behavior：pause/resume、visibility、cart reload、Worker crash/hang recovery。
-
-## 7. Golden：framebuffer、RAM 与 audio
-
-### 7.1 通用规则
-
-- 所有二进制 golden 使用 SHA-256，并在 manifest 中记录长度和 hash。
-- Golden 路径绑定参考 PICO-8 版本；升级参考版本必须新建目录并生成差异报告，不能覆盖旧目录。
-- PR 不允许自动执行 `--update` 后直接合并。每次更新必须说明规范依据、展示前后差异，并由非作者审阅。
-- Golden 生成器输出必须稳定：相同输入重复 20 次，hash 必须完全一致。
-- 预览 PNG、波形图或日志只服务人工审阅，binary/index data 才是自动化 oracle。
-
-### 7.2 Framebuffer
-
-逻辑 framebuffer oracle 是 128×128、每像素 4-bit palette index，而不是浏览器最终 RGBA 截图。
-
-- 首选保存屏幕 RAM 对应的 8192 bytes packed indices；比较必须逐 byte 精确。
-- 同时生成 128×128 无缩放 PNG 供审阅，解码后比较 palette index，忽略 PNG metadata 和编码差异。
-- renderer 集成测试另外比较 RGBA；默认 palette 下必须逐像素精确。
-- CSS scaling、DPR、letterbox 和 nearest-neighbor 使用浏览器截图测试，不与 VM framebuffer golden 混在一起。
-- 失败报告必须生成 expected、actual 和 diff 三张图，并给出首个差异坐标、差异像素数和 bounding box。
-
-### 7.3 RAM
-
-- 本 runtime 可直接抓取完整 65,536-byte base RAM，但 case manifest 应声明有意义的 range 和 mask，避免把明确的宿主/易变寄存器误当规范。
-- screen、gfx、map、draw state、hardware state、persistent data 分区分别报告 hash；不能只给一个全 RAM hash。
-- 比较前不能“标准化”掉未预期的变化。只有 manifest 明确列出的 mask 才可忽略 byte。
-- 官方 PICO-8 不暴露宿主内存时，由 conformance cart 使用文档化 API 对指定 range 计算/输出 digest；不要通过修改官方二进制或读取其进程内存制作基准。
-- RAM 失败报告给出首个差异地址、连续差异区间和 hex diff。
-
-### 7.4 Audio
-
-音频分两层验证：
-
-1. 内部确定性回归：项目固定 `22,050 Hz`、mono、signed 16-bit little-endian 作为 canonical test PCM。这是本项目的测试格式，不宣称为官方公开硬件规格。结果必须与受审 golden sample-exact、SHA-256 完全一致；相同 build 和输入重复运行也必须完全一致。
-2. 官方差分：官方输出可能受平台音频链和重采样影响，因此不要求文件 hash 相同；比较 note/event 时序、基频、包络、RMS、频谱和 loop 点。
-
-官方差分默认容限：
-
-- note onset/stop：canonical rate 下误差不超过 1 sample；若参考捕获经过系统 mixer，则不超过 2 ms。
-- 稳态基频：误差不超过 1 cent。
-- SFX/music 总时长与 loop point：误差不超过 1 sample 或 0.1%，取较大者；系统捕获不超过 2 ms。
-- 数字直出且已对齐时，归一化 RMS error 不高于 -40 dB；系统捕获只作趋势检查，容限必须在 case 中显式记录。
-- 不得用较宽的全局容限掩盖单个 effect 的已知错误。需要放宽时只作用于该 case，并登记已知差异。
-
-浏览器输出另测 44.1 kHz、48 kHz AudioContext 重采样、AudioWorklet chunk 边界、mute/resume 和 underrun；这些结果不改变 canonical PCM。
-
-## 8. 参考实现差分
-
-### 8.1 Oracle 规则
-
-官方 PICO-8 是唯一规范性运行 oracle。使用时记录：
-
-- 精确版本和 build（至少主版本字符串）。
-- OS/CPU；音频差分还要记录设备采样率和捕获路径。
-- cart SHA-256、输入 trace SHA-256、随机种子和捕获工具版本。
-- 重复运行次数及是否完全稳定。
-
-官方可执行文件是用户本地、合法安装的外部依赖：
-
-- 不提交到仓库、不放 CI artifact、不打进 Docker image。
-- 差分命令仅在显式提供 `PICO8_BIN`（或项目最终采用的等价配置）时启用。
-- CI 使用经过审阅且可分发的结果 golden，不下载官方程序。
-
-fake-08 可以作为第二参考，定位结果采用三方表：
-
-| 官方 PICO-8 | 本项目 | fake-08 | 结论 |
-| --- | --- | --- | --- |
-| A | A | A | 通过 |
-| A | B | A | 本项目 bug |
-| A | A | B | fake-08 差异，不影响本项目 |
-| A | B | B | 两个开源实现可能共享差异，仍是本项目 bug |
-| 不稳定/未知 | A | B | 规范歧义，先最小化并补证据 |
-
-### 8.2 差分工作流
-
-1. 在项目原创的最小 cart 上固定种子和输入 trace。
-2. 官方参考至少重复 3 次；任何不稳定 byte 先查时钟、未初始化 RAM 和平台状态。
-3. 捕获 palette indices、指定 RAM digest、事件日志和必要时的音频。
-4. 在本项目运行同一 cart；首个差异帧即停止，并输出前一帧与当前帧状态。
-5. 可选运行 fake-08，帮助判断是 parser、VM、API 还是测试假设问题。
-6. 修复后把最小复现留作 regression，不以大型游戏代替。
-
-不得仅靠肉眼观看最终画面认定差分通过。
-
-## 9. Fuzz、恶意输入与资源上限
-
-Fuzz 的目标不是“接受一切”，而是保证 parser/VM 有清晰上限：合法输入正确，非法输入快速、可解释地失败，不崩溃、不越界、不永久占用 Worker。
-
-### 9.1 Fuzz targets
-
-- `.p8` section parser 和代码提取。
-- PNG chunk/IHDR/IDAT/filter parser。
-- cart data LSB 提取及旧、新代码 decompressor。
-- z8lua lexer/parser/bytecode loader。
-- P8SCII decoder、control code parser 和 custom font。
-- JS↔WASM 数值、string、table/multi-return ABI。
-- memory API 的随机地址、长度、overlap 和 remap 组合。
-- graphics/audio API 的随机但类型合法参数。
-- Worker 消息协议、乱序、重复、截断消息。
-
-### 9.2 默认安全界限
-
-- Worker protocol 的 cart 输入上限固定为 1 MiB；产品若调整必须先更新公共合同、资源评估和测试。
-- `.p8.png` 必须先验证预期尺寸和可支持的 PNG 格式，再解压；根据 IHDR 预计算最大输出，禁止无界 inflate 和无界 ancillary chunk 累积。
-- cart 解码结果不得超过格式允许的 cart 大小；代码 decompressor 在写入前检查目标上限。
-- parser 单 case 在参考 CI 机器上 100 ms 内完成；超时按失败处理。
-- 单帧 fuzz 执行 250 ms 未返回时由宿主终止 Worker；不得依赖 VM 自己有机会抛异常。
-- production WASM linear memory 固定为 16 MiB，growth off，并在 manifest/build config 中可见；
-  调整容量需要专门 ADR、artifact hash 更新和 OOM/resource 测试。
-
-### 9.3 运行量和回归
-
-- PR：每个纯 parser target 至少 60 秒或 10,000 cases，先到者为准；固定 regression corpus 全量运行。
-- Nightly：每个 target 至少 30 分钟，native z8lua build 同时启用 ASan/UBSan。
-- Release candidate：累计至少 10^7 个新增 cases，且最近 7 天无未归档 crash/hang。
-- 每个独立 crash/hang/OOB 都要最小化；修复后输入进入 `tests/fuzz/regressions/`，文件名包含 issue ID 和 SHA-256 前缀。
-- Fuzz 失败 artifact 只能包含项目可分发输入。若来自本地第三方 cart，只提交项目原创的最小复现，不上传原 cart 或变异副本。
-
-## 10. JS↔WASM microbench 与性能门禁
-
-性能测试必须使用 production build、固定浏览器版本和固定 runner。共享云 runner 的绝对时间只做告警；硬门禁运行在项目登记的固定性能 runner，并同时比较同机 main 分支。
-
-### 10.1 Microbench 项目
-
-至少测量：
-
-- WASM export no-op 和 WASM import no-op。
-- 单个 raw Q16.16 参数和多参数 API 往返。
-- pointer + length 的 P8SCII 读取，长度 0/8/64/1024。
-- `peek/poke`、`pset/pget` 的逐调用路径。
-- `spr/sspr/map` 的粗粒度路径。
-- 固定 WASM memory 在 heap/OOM stress 前后保持同一 buffer/view identity，失败分配受控返回而不 detach view。
-- 每帧 framebuffer copy；目标架构为共享 view 时应证明没有多余 copy。
-
-每项先 warm-up 100 轮，再测至少 30 轮，报告 median、p95、p99、calls/s 和 allocation。单次样本短于 100 ms 时在内部循环放大，避免计时器噪声。
-
-Phase 0C 已把 bridge-only 子集锁定在
-`benchmarks/interop/case-manifest.json`：四路径必须先通过 result checksum、完整
-64 KiB RAM hash 与 fixed-buffer identity，再允许 timing；统计使用 R-7 quantile。
-Chrome DedicatedWorker 不暴露 `performance.memory` 时 allocation 必须记为
-`unavailable`，不能填 0。实测与浏览器缺失状态见
-[Phase 0C 证据](./evidence/phase-0/14-phase-0c-evidence.md)。后续 framebuffer copy、完整
-`pget/sspr/map`、audio 和 representative cart benchmark 是增量场景，不得改写
-Phase 0C 原始 contract 或结果。
-
-### 10.2 场景预算
-
-固定桌面性能 runner 上的初始门禁：
-
-| 场景 | 工作量 | p95 预算 |
-| --- | ---: | ---: |
-| pixel stress | 单帧 16,384 次 `pset` | runtime + draw ≤ 5 ms |
-| memory bridge | 65,536 组 `peek` + `poke` | ≤ 4 ms |
-| sprite stress | 4,096 个 8×8 `spr`，含裁剪 | ≤ 8 ms |
-| ordinary 60 Hz cart | VM + APIs + audio generation | ≤ 8 ms/frame |
-| ordinary 30 Hz cart | VM + APIs + audio generation | ≤ 12 ms/update |
-
-这些绝对值在首个固定 runner 建立时校准一次；若硬件证明不适合，可以通过 ADR 修改，但不能在性能回归 PR 中顺手放宽。
-
-所有 benchmark 还必须满足：
-
-- 相对 main 的 median 或 p95 退化超过 10%，并且重复测量仍出现时，PR 失败。
-- 单项退化 5%–10% 产生告警并要求说明。
-- desktop 基准环境中主线程 frame present 的 p95 不超过 4 ms。
-- input snapshot 到对应 logical update 的延迟不超过 1 logical frame；浏览器 compositor/display 延迟单独报告。
-- Runtime 到 renderer 每帧不得复制超过必要的一份 128×128 RGBA payload；共享 screen view 路径还要单独报告实际 copy bytes。
-- steady-state hot path warm-up 后不应产生逐 API 调用对象；10,000 帧运行的 live heap 增长不超过 1 MiB（不含明确缓存）。
-- AudioContext 解锁并完成 case manifest 规定的 prebuffer 后才开始 60 Hz 10 分钟 soak 计量；窗口内 missed frame 不超过 0.1%，audio underrun 为 0。启动前事件必须单独记录，不能拿来豁免稳态失败。
-- 浏览器主线程在加载完成后不得因 runtime 产生超过 50 ms 的 long task；cart 代码运行在 Worker。
-
-PICO-8 手册描述了约 4M VM instructions/s 的虚拟 CPU 口径。项目必须另外建立 CPU-budget conformance cart，验证 `stat(1)`、30/60 Hz 和超预算行为；宿主机器更快不能使 cart 获得无限制的逻辑 CPU。
-default 32M transaction safety cap 另以 finite-heavy 和 explicit-runaway 两个项目原创 cart 成对验证：
-前者必须原子提交并标记 `slowFrame`，后者必须稳定 fault。该 safety gate 使用 deterministic instruction
-count，不使用 wall-clock；外部兼容回归只选受影响的 bounded case，不因此重跑整个 corpus。
-
-## 11. Chrome/Chromium 支持矩阵
-
-### 11.1 支持层级
-
-| 层级 | 平台 | 合并/发布要求 |
-| --- | --- | --- |
-| Tier A | Google Chrome stable，桌面 | 发布阻断；核心播放、输入、音频、存储全部通过 |
-| Tier B | Chromium stable/headless，桌面或固定 CI image | PR/发布阻断；与 Tier A 使用同一行为 contract |
-| Tier M | Android Chrome stable（仅当该 release 声明移动支持） | 移动 release 阻断；至少一台中端 Android 真机 |
-
-Firefox、Safari/WebKit、iOS Safari 及其他引擎明确不在当前支持、测试或发布承诺
-内。新增引擎属于产品范围变更，必须先更新本文、CI 与用户文档，不能仅增加一个
-偶发 smoke 后宣称支持。
-
-### 11.2 浏览器用例
-
-Chrome/Chromium 至少覆盖：
-
-- `WebAssembly.instantiateStreaming` 及 MIME 不正确时的 ArrayBuffer fallback。
-- module Worker 创建、加载、销毁、异常映射和 CSP 场景。
-- 非 cross-origin-isolated 环境可播放；当前 baseline 不得把 SharedArrayBuffer 当作必要条件。
-- Canvas2D production presenter 的 128×128 palette、nearest-neighbor、resize、fullscreen、DPR 1/2/非整数。
-- Keyboard `code` 映射、阻止页面滚动、focus/blur 清键、Gamepad connect/disconnect。
-- AudioContext 用户手势解锁、44.1/48 kHz、suspend/resume、设备切换后恢复、静音。
-- Window 创建并转交专用 audio `MessagePort`；旧 `sessionGeneration` PCM、reset/underrun/overrun 与 dispose 路径按 ADR 验证，控制协议不得意外携带 PCM。
-- IndexedDB 可用、被拒绝、quota/error 和 private mode 下的降级。
-- 页面 visibility、后台节流、前进后退缓存和 tab 恢复。
-- 正常 HTTP header 与 COOP/COEP 环境各一次，避免可选优化改变行为。
-
-### 11.3 Android Chrome 真机门禁（仅移动 release）
-
-- Android：真实 Chrome stable，至少一台 4–6 GiB RAM 的中端设备；不能只用桌面 DevTools throttling。
-- AudioContext 解锁/prebuffer 后连续播放 30 分钟：无 crash、无可感知音画漂移、audio underrun 为 0、输入不粘键；启动前事件单独记录。
-- 60 Hz 标准 cart：p95 runtime frame ≤ 12 ms，p99 ≤ 16.7 ms，missed frame ≤ 0.5%。
-- 触控到下一可见响应 p95 ≤ 100 ms；旋转/resize 后 500 ms 内恢复正确画面与输入坐标。
-- 用户首次手势后 500 ms 内开始音频；后台返回后 1 s 内恢复，或展示明确的“点击恢复音频”状态。
-- 10 次装载/退出不同 cart 后，活动 Worker、AudioWorklet、RAF 和事件监听器数量回到基线；live heap 增长不超过 8 MiB。
-
-## 12. Worker hang、crash 与恢复
-
-必须提供专门的恶意/故障 carts：
-
-- `_init()` 中 `while true do end`。
-- update 中无限循环。
-- 无界递归/stack overflow。
-- 持续 table/string 分配直至 VM memory limit。
-- WASM trap、JS import throw、非法 Worker response。
-- 每帧刚好低于和刚好高于 CPU budget 的 busy loop。
-
-前台恢复门禁：
-
-1. Host 发送 frame 命令时启动 watchdog；250 ms 未收到完成/heartbeat，判定 hung。
-2. 判定后 100 ms 内停止/淡出该实例音频并终止 Worker。
-3. 总计 750 ms 内 UI 显示可操作错误状态，主线程仍能响应按钮。
-4. 用户选择重试时创建全新 Worker/VM；不复用可能污染的 linear memory。
-5. 20 次连续 hang→recover 后，活动 Worker 恰为 1、音频节点不累积、事件监听器不累积，live heap 增长不超过 8 MiB。
-
-页面处于 hidden 状态时浏览器会节流 timer，因此不能直接把超时当 hang：
-
-- hidden 前暂停提交新帧并挂起严格 watchdog。
-- visible 后给予 1 s heartbeat grace；失败再终止重建。
-- 恢复时不做无限 catch-up，最多按 scheduler 规定的有限帧追赶，其余时间丢弃。
-- hang/cart error 不得清除已提交的持久化数据，但未完成事务不得被当作成功。
-
-错误 UI 和日志必须区分：cart Lua error、instruction/CPU budget、memory limit、WASM trap、worker protocol error、host timeout。
-
-## 13. 测试数据版权与 BBS 访问限制
-
-这一节是工程门禁，不是法律意见。发布前仍应由项目负责人核验最新条款。
-
-截至 2026-08-06，[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 页面标注更新于 2026-06-22，并明确说明：
-
-- BBS 上的 cart 和其他作品默认仍属于各自作者；没有作者许可或适用许可证时，不应分发或 remix。
-- Lexaloffle 网站和在线服务原则上只供人通过浏览器或 Lexaloffle 软件使用；未经 Lexaloffle 及相关作者许可，不应由自动脚本、第三方客户端、crawler 或其他自动系统访问（条款列出的搜索索引/归档例外不适用于本项目测试）。
-
-因此必须执行：
-
-Phase 5G 同日复核 [PICO-8 v0.2.7 手册](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
-和官方 [resources 页面](https://www.lexaloffle.com/pico-8.php?page=resources)，未发现面向第三方 Web
-Player 的稳定公共 cart-download API。ADR-020 因此将自动 BBS adapter 标为 Deferred；production
-network surface 保持不变。
-
-- CI、fuzzer、benchmark、crawler、BBS URL resolver 测试均不得访问 `lexaloffle.com` 或其 cart endpoint。
-- 不自动抓取、镜像、缓存、批量枚举 BBS cart；不要用 CORS proxy 绕过限制。
-- 仓库和 CI artifact 只包含项目原创 test cart，或有明确、兼容且已履行归属要求的资产。默认选择项目原创。
-- 官方 demo cart、BBS cart、商业 cart 和 PICO-8 可执行文件均不得因为“网上可下载”而提交。
-- 外部兼容 corpus 只允许由开发者在本地显式配置。仓库仅保存 schema；默认 gitignore/测试工具应防止把实际 cart 上传（相关 ignore 规则在基础设施落地时添加）。
-- 即使开发者通过正常人工渠道取得 cart，也要确认其许可是否允许复制到测试仓库或 artifact。没有分发许可时，只能本地临时运行，不上传原文件、截图、音频或变异副本。
-- Bug 报告默认记录 cart 自述名称/版本、SHA-256 和授权状态；附件必须是项目原创最小复现。仅有 BBS cart 才能复现时，先请求作者许可或由有权访问者本地诊断。
-- CC4-BY-NC-SA 等有条件许可的 cart 必须隔离记录作者、来源、许可证版本、attribution、非商业和 ShareAlike 义务；不能因为可搜索到 CC 标记就自动下载。
-- 每次 release candidate 重新核验官方 Terms 更新时间。条款变化时先暂停相关流程，再更新本文和产品设计。
-
-允许且推荐的核心兼容 corpus 是：项目成员专门编写、只使用原创代码/像素/音频、明确随仓库许可发布的 conformance carts。测试第三方真实游戏是补充证据，不能成为可复现 CI 的必要条件。
-
-## 14. CI 分层
-
-### 14.1 PR fast gate（每个 PR，目标 ≤ 10 分钟）
-
-- build、typecheck、lint、license/fixture provenance 检查。
-- 全量 unit/property tests 和关键模块覆盖率。
-- `tier: core` conformance carts，全量 binary golden。
-- Chrome/Chromium 一个核心 smoke。
-- parser fuzz 每 target 60 秒或 10,000 cases。
-- Worker hang/recovery 基础用例。
-- microbench 相对 main 的快速回归；共享 runner 只告警，固定 runner 才阻断。
-
-### 14.2 Nightly gate（每日）
-
-- 全量 conformance、所有输入 traces 和所有 golden。
-- 全量 Chrome/Chromium 版本矩阵。
-- 每个 fuzz target 30 分钟；native z8lua ASan/UBSan。
-- 固定 runner 完整 performance suite。
-- 30 分钟运行时和音频 soak；20 次 hang/crash/reload 循环。
-- 与已提交官方 golden 的差分；有本地官方依赖的受控 runner 可额外重放，但不得联网 BBS。
-
-### 14.3 Weekly/device gate（每周）
-
-- Chrome stable 桌面；声明移动支持时再加入 Android Chrome 真机。
-- 键盘、Gamepad、touch、音频 unlock、后台恢复、方向变化。
-- 30 分钟真机 soak、内存和温度/降频后的性能记录。
-- 本地外部授权 corpus 可以在私有 runner 上运行，但结果不得携带未授权 cart/artifact。
-
-### 14.4 Release candidate gate
-
-- 第 16 节 DoD 全部满足。
-- Tier A/B 无遗漏；声明移动支持时 Tier M 也必须无遗漏。支持范围内的“未运行”项
-  有明确阻断或经负责人书面接受。
-- 重放全部历史 regression 和最新 fuzz corpus。
-- 核验官方手册版本、Terms 更新时间、第三方依赖许可证和测试资产清单。
-- 对 reference golden 更新逐项人工审阅，不允许大批量无解释变化。
-- 生成兼容性报告、已知差异和性能报告，并与 release artifact 的 commit/build ID 绑定。
-
-## 15. 兼容等级、已知差异与质量口径
-
-### 15.1 功能状态
-
-每个 API/行为使用以下状态之一：
-
-- `exact`：项目 conformance 与官方参考在声明的精确/tolerance 范围内通过。
-- `compatible`：行为可用，存在不影响典型 cart 的已记录平台差异。
-- `partial`：只支持参数/模式子集，用户可能遇到明显问题。
-- `unsupported`：明确未实现或 Player 范围外。
-- `unknown`：尚无足够测试，不能视为支持。
-
-只有 `exact` 和 `compatible` 可以计入“已支持”。`implemented` 但没有 conformance case 时必须标为 `unknown`。
-
-### 15.2 Cart 结果
-
-以下 `C*` 是单个 cart/revision 的实测结果，不替代 [范围文档](./01-scope-and-success-criteria.md) 中描述发布能力的 `L0`–`L3` 等级。
-
-| 等级 | 定义 |
-| --- | --- |
-| C3 Verified | 固定 trace 下 framebuffer/RAM 精确，audio 在容限内；关键流程由官方参考验证 |
-| C2 Playable | 至少 15 分钟或完整关键流程可玩，无 crash、软锁、输入/存档丢失；仅有已知轻微视听差异 |
-| C1 Boots | 能加载并进入交互，但存在影响玩法、画面、音频或进度的差异 |
-| C0 Fails | 无法解析/启动，崩溃、挂死、主要输入失效或核心流程不可达 |
-| CU Untested | 没有足够、合法且可重复的证据 |
-
-等级必须绑定 player build、cart SHA-256、测试时长/trace 和浏览器；不能把一个版本的结果永久继承到新 revision。
-
-本地 external corpus 的 `C2` observation 还必须携带 machine-validated `playability` attestation：
-选择 `duration >= 900s` 或 `critical-flow completed` gate，列出 main verbs，并分别记录 input、visual、
-audio、persistence、crash/soft-lock 结论。attestation 只引用 gitignored local evidence 的 SHA-256，
-不得写入 cart/screenshot 路径；缺失或把 attestation 附到非 C2 项时 runner fail closed。
-
-兼容率只在明确、合法的 corpus 内计算：
+| C3 Verified | 固定 trace 下 framebuffer/RAM 精确、audio 在容限内，关键流程有官方参考 |
+| C2 Playable | 至少 15 分钟或完整关键流程可玩，无 crash、软锁或关键输入/存档丢失 |
+| C1 Boots | 能进入交互，但存在影响玩法、视听或进度的已知差异 |
+| C0 Fails | 无法解析/启动、崩溃、挂死、主要输入失效或核心流程不可达 |
+| CU | fixed smoke 已完成，但没有足够 playability evidence 升级到 C1–C3 |
+
+CU 可以证明 bounded smoke 未暴露故障，但不能当作 C2、通关或可玩率。只有明确、合法且同环境的
+corpus 才能计算：
 
 ```text
 playable_rate = (C2 + C3) / (C0 + C1 + C2 + C3)
 ```
 
-`CU` 不进入分母，也不能当通过。报告必须同时给出 corpus 大小，禁止只报百分比。
+CU 不进入分母。报告必须给出 corpus、revision、player/WASM/Chrome 环境和验证时长，禁止只报百分比。
 
-### 15.3 已知差异登记
+## 3. 默认验证入口
 
-每个未修复差异至少记录：
-
-- issue ID、标题、首次发现/最后验证日期。
-- 对应手册/API、最小原创复现 case。
-- 官方结果、本项目结果、首个差异帧和 artifact hash。
-- 影响的浏览器、cart version、功能状态和 cart 等级。
-- 严重度、用户可见症状、workaround。
-- 技术原因、owner、目标 milestone；无计划修复时说明原因。
-- 是否需要对用户文档、兼容性声明或 golden tolerance 做调整。
-
-严重度：
-
-- P0：安全边界突破、宿主页崩溃/不可恢复卡死、持久化数据损坏。
-- P1：合法 core cart 无法启动/继续，广泛错误的 VM/RAM/输入/音频时序，Worker 无法恢复。
-- P2：特定 API/模式明显不兼容但有规避方式，或部分 cart 的可玩性受损。
-- P3：轻微视觉/听觉/性能差异，不影响核心玩法。
-
-### 15.4 当前发布 profile
-
-当前可发布口径严格为 **PICO-8 v0.2.7 Web Player Release Candidate / L3 local-multicart project profile
-on Chrome/Chromium desktop**。它绑定项目原创 corpus、受审 build、caller-provided bytes 与 Chrome
-production path，不是 official bit-exact 或第三方/BBS cart 成功率，也不授权外部 publication。
-
-Phase 5 关闭时的历史 target 仍精确保留为
-**PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop**；当前 RC 是该
-profile 的产品化发布候选，不改写历史 claim。
-
-API inventory 共 `113` 项：`101 compatible`、`5 partial`（`flip`、`printh`、`stat`、`print`、`extcmd`）、`7 unsupported`，
-required unknown release mode 为 `0`。只有 compatible 计入支持；partial 的精确 mode 与 workaround 仍由
-下节 Known Differences 约束。
-
-Phase 6 另已关闭 **local real-cart qualification for the PICO-8 v0.2.7 L3 project profile on Chrome/Chromium desktop**：
-12 个 caller-supplied local case 全部有 aggregate C* disposition，11/11
-in-profile case 完成 fixed smoke，3 个代表 case 完成 C2。该补充只证明本地 qualification 执行，
-不改变上述 project-profile 发布分母，也不发布第三方 cart 身份、hash、逐-cart 结果或兼容率。
-
-| 指标 | 当前结论 | 权威来源 |
+| 场景 | 命令 | 预算与用途 |
 | --- | --- | --- |
-| Project L3 corpus | `C3=6/6`，playable `100%`，开放 P0/P1=`0/0`，Node/Chrome cross-oracle 一致 | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
-| Local multicart | caller-authorized bundle、root `load()`、atomic swap、external local `reload/cstore` | [ADR-018](./adr/018-caller-authorized-cart-resolution.md) / Phase 5 evidence |
-| Replacement gate | `100/100` swaps，generation `1→101`，stale commit `0` | Phase 5 evidence |
-| Resource gate | fixed 16 MiB WASM、2 MiB default Lua heap；历史 1 MiB soak 仍作 Phase 5 evidence | [ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) / Phase 5 evidence |
-| Aggregate claim | profile、inputs、scope 与 artifact hash machine-checked | [`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) |
-| Local real-cart qualification | `12/12` classified aggregate、`11/11` in-profile smoke、3 个 C2、公开分母贡献 `0` | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [`phase-6h-exit.json`](../tests/conformance/manifests/phase-6h-exit.json) |
-| RC artifact | 12-file allowlist、6 stable keys、reproducible build、strict CSP/MIME/relative-base Chrome gate | [Phase 7 evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
-| RC hardening | Chrome 30/60 Hz 600 秒 soak、zero steady underrun/stale output、20 recovery cycles、完整 teardown | [`phase-7h-exit.json`](../tests/conformance/manifests/phase-7h-exit.json) |
+| 日常改动 | `pnpm run verify` | 默认 quick gate；architecture、codec 与最新 exit integrity |
+| 当前测试别名 | `pnpm test` | 与 quick gate 相同 |
+| Phase 9 owner integrity | `pnpm run verify:phase-9` | 已关闭阶段的快速完整性入口，不读外部 corpus |
+| Focused release | `pnpm run verify:release` | release artifact + 短 Chrome player lifecycle |
+| 完整 release 诊断 | `pnpm run test:release` | 含历史 600 秒 30/60 Hz Chrome gate；仅按需手动运行 |
+| 历史全集 | `pnpm run test:historical` / `pnpm run verify:historical` | 仅诊断已观察到的跨阶段回归 |
 
-### 15.5 Published Known Differences
+验证必须与改动风险成比例：
 
-| ID | API / 模式 | 用户可见影响 | Workaround / scope |
-| --- | --- | --- | --- |
-| `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | Phase 9B 已扩展 deterministic memory/CPU/FPS、audio/music、input 与 platform typed selector；精确集合见 API inventory |
-| `P4-KD-03` | timed P8SCII | delay control 不暂停 guest | 用 logical frame 驱动文字时间 |
-| `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
-| `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
-| `P5-KD-01` | guest-created coroutine 中的 `flip/run/stop/load`、external `reload/cstore` 或 HostRequest | single/multi-level nested suspension 统一为 `E_FEATURE_UNSUPPORTED` / `nested-host-suspend`，不产生外部副作用 | 只从 root callback 或 root custom loop 调用；见 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) |
-| `P6-KD-02` | top-level custom loop 在 guest-created coroutine 内耗尽 implicit quantum | nested work 会计入 CPU，但画面提交延迟到控制返回 Runtime-owned root；永不返回则命中 hard cap | 将长循环留在 root 或从 root 调用 `flip()`；见 [ADR-022](./adr/022-cpu-slicing-decision.md) |
+- 文档/机器合同：owner test + `pnpm run verify`。
+- browser-neutral RuntimeCore：最小原创 regression + affected package/owner tests。
+- WASM/ABI：real-WASM regression、manifest/reproducibility，再运行 quick gate。
+- Canvas/Audio/Worker/lifecycle：affected Chrome gate + focused release。
+- scheduler、audio transport 或资源 ownership：只有 active phase 明确要求时才运行长 soak。
+- external cart：只运行受影响的少量 case；不得把完整 corpus 当作每次修改的回归套件。
 
-### 15.6 Coverage limitation 与范围排除
+失败必须先最小化成项目原创 fixture。生产修复不得按 cart identity、路径、hash 或标题分支。
 
-`P5-KD-01` 取代历史 L2 `P4-KD-01`，把相同 ownership 边界扩展并验证到全部 L3 suspension
-surface。`P4-KD-04` 的“external ref 不可用”也只属于历史 L2 profile；Phase 5E
-已在 caller-authorized local bundle 中实现 root external `reload/cstore`，但不包含 URL、filesystem
-或 BBS fallback。
+## 4. 测试边界
 
-历史 `P4-CL-01` 已由 Phase 7F 关闭：28 个 required VM builtin 均有 project-owned、manual-linked、
-real-WASM Node/Chrome 行为向量，required unknown 为 0。Q16.16 raw oracle、类型/多返回、错误、reset 与
-fresh-generation recovery 由
-[`phase-7f-required-api.json`](../tests/conformance/manifests/phase-7f-required-api.json) 锁定；这不是
-official bit-exact 或第三方 cart 成功率声明。
+### 4.1 分层
 
-- Partial：`printh` 已实现 browser-safe diagnostic null sink，但不授予 filename、desktop、clipboard 或
-  filesystem side effect；`extcmd` 同样只实现 bounded null sink，不授予 process、recording、window、network
-  或 filesystem authority。`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
-  Phase 7E Node/Worker/Chrome gate 完成，历史 `P6-KD-01` 已关闭。PICO-8 system menu 仍属于 player scope
-  exclusion，不计作 `menuitem()` API 差异。
-- Excluded platform API：`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；guest root
-  `load` 已进入当前 local L3 profile。
-- External/local corpus、BBS bytes 和第三方结果对公开分母贡献为 `0`。
-- caller-authorized local guest `load`、external resolver 和 multicart 已进入 Phase 5 profile；BBS access
-  仍按 ADR-020 Deferred，nested async suspension 按 ADR-019 保持 root-only。两者不能从 local 成功率
-  推断为受支持。
+- `tests/architecture/`：package、execution domain、exports、generated-source 与 `ref/` quarantine。
+- `tests/cart-codec/`：`.p8` / `.p8.png`、compression、limits、byte ownership。
+- `tests/runtime/`：RuntimeCore、z8lua bridge、host API、scheduler 与 resource regression。
+- `tests/conformance/`：project-authored carts、exit manifests 和跨模块行为。
+- `tests/browser/` / `tools/browser/`：Chrome production path、DOM、Canvas、audio 和 lifecycle。
+- `tests/artifact/` / `tools/release/`：release allowlist、MIME/CSP、stable keys 与 reproducibility。
 
-### 15.7 历史结果路由
+`spec/` 拥有机器契约，`docs/adr/` 拥有 accepted decisions，`docs/evidence/` 只保存不可变历史结果。
+测试不得从 `ref/`、tracked third-party cart 或 ignored local observation 读取默认输入。
 
-逐阶段矩阵、环境版本、性能数字、artifact hash 和执行过程已从 living contract 移除：
+### 4.2 确定性
 
-| 完成范围 | 历史事实入口 |
-| --- | --- |
-| Phase 0 architecture / browser boundary | [`evidence/phase-0/`](./evidence/phase-0/) |
-| Phase 1 L1 bounded profile | [Phase 1 evidence](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
-| Phase 2 graphics/memory/text | [Phase 2 evidence](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
-| Phase 3 audio/input/persistence | [Phase 3 evidence](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| Phase 4 L2/MVP hardening | [Phase 4 evidence](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) |
-| Phase 5 L3 local/multicart | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
-| Phase 6 real-cart qualification | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) |
-| Phase 7 Web Player Release Candidate | [Phase 7 evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
+行为测试固定以下输入：
 
-新回归只更新当前 compatibility entry、机器 inventory/issue registry 和新 phase evidence；不得把
-旧 work-unit 表重新复制回本文件。
+- cart bytes/version、player revision、runtime WASM 和 Chrome build。
+- logical clock、FPS profile、PRNG seed、input trace 与 persistence namespace。
+- AudioContext sample rate、Canvas backing size、DPR 和 capability policy。
+- 每个 case 使用 fresh VM/session；除专门测试 replacement 外，不跨 case 共享 RAM、palette、input、
+  audio queue 或 IndexedDB state。
 
-## 16. Definition of Done
+逻辑时间来自 committed simulation slices，不能用宿主 wall clock 替代。浏览器刷新率不得直接改变
+游戏速度；Worker、frame、audio 和 host request 的 stale generation 必须失败关闭。
 
-### 16.1 单个功能或 bugfix
+### 4.3 Oracle
 
-功能只有同时满足以下条件才算完成：
+优先级为：官方手册 → 合法 official observation/golden → project machine contract → 带 provenance 的
+参考实现。参考实现不是规范。行为差异必须有最小输入、精确 observable 和稳定 tolerance；不能只断言
+“没有抛异常”，也不能通过放宽全局 tolerance 掩盖回归。
 
-- 有对应规范链接或明确的 Player 范围决策。
-- 单元测试覆盖正常、边界和错误路径，关键模块覆盖率未下降。
-- 至少一个最小 conformance cart；bugfix 保留 regression。
-- framebuffer/RAM/audio 中所有受影响观察面都有 assertion，不只检查“未抛异常”。
-- 若行为来自官方观察，记录 PICO-8 版本、平台、cart/input hash 和重复性。
-- 相关 Chrome/Chromium 测试通过；声明移动支持时按 Tier M 执行。
-- 性能场景无超过门限的退化，Worker/内存资源能够释放。
-- 兼容矩阵和已知差异已更新；没有通过放宽全局 tolerance 掩盖问题。
-- 测试数据来源与许可证清楚，不包含未授权第三方 cart/artifact。
+## 5. Chrome 与 release gate
 
-### 16.2 MVP Player
+当前只支持 Google Chrome stable 和 Chromium/headless desktop。Firefox、Safari/WebKit、iOS Safari、
+Android release 与其他引擎不在承诺内；增加浏览器属于产品范围变更。
 
-- 所有 `tier: core` conformance cases 100% 通过，无 skip。
-- 所有标记 `implemented` 的 API 都有行为映射；`exact + compatible` 覆盖 MVP 清单的 100%。
-- `.p8`/`.p8.png` parser、decompressor、fixed-point ABI、RAM 和 Worker state machine 达到关键模块覆盖率门禁。
-- Tier A/B 桌面核心矩阵通过；声明移动支持时 Tier M 也通过。
-- 固定性能 runner 和移动性能满足第 10、11 节预算。
-- 恶意 parser/VM 输入不能逃逸 Worker；hang 在规定时间内恢复。
-- 0 个开放 P0/P1；P2 必须登记并体现在兼容性声明。
-- 项目原创代表 corpus 的 C2+C3 比例至少 95%，并同时报告总数；第三方 cart 不用于凑指标。
-- 最近 7 天 nightly flake rate 低于 0.5%，不得通过自动 rerun 隐藏首轮失败。
+Focused release gate 至少覆盖：
 
-### 16.3 Release
+- 从 tracked source 重建并验证 12-file release artifact、stable keys、MIME、CSP 和 nested base path。
+- local file choose/drop、player state/ARIA、keyboard/touch、mute/fullscreen 与 audio unlock。
+- fault 后重新加载、pagehide/dispose、Worker/RAF/AudioContext teardown。
+- production Worker path、128×128 Canvas backing 与非 cross-origin-isolated 环境。
+- zero network cart authority；不得读取 BBS、`ref/` 或 external corpus。
 
-- MVP DoD 持续满足，release commit 的全部 PR/nightly/device/release gates 为绿。
-- 最近 7 天无新增未解决 fuzz crash、hang、OOB 或 sanitizer finding。
-- 60 Hz 桌面 10 分钟和移动 30 分钟 soak 达标，audio underrun 为 0。
-- 所有 reference/golden 变化已经人工批准并绑定官方版本。
-- 已知差异、支持浏览器、兼容范围和 BBS 限制已对用户公开。
-- Terms、依赖许可证、test fixture 版权和 release artifact 清单已复核。
+完整 600 秒 gate 仅用于 scheduler/audio/resource ownership 的相关回归或 release 明确要求；短 diagnostic
+不能冒充完整 gate，完整 gate 也不应成为日常默认验证。
 
-## 17. Bug 报告模板
+## 6. Published Known Differences
 
-```markdown
-## 摘要
-一句话描述用户可见问题，不写“和 PICO-8 不一样”这种空泛结论。
+| ID | API / 模式 | 当前影响与边界 |
+| --- | --- | --- |
+| `P4-KD-02` | `stat()` selector subset | inventory 列出的 deterministic selector 有类型值；其他 selector 返回 false |
+| `P4-KD-03` | timed P8SCII | delay control 不暂停 guest；使用 logical frame 驱动文字时间 |
+| `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact |
+| `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile |
+| `P5-KD-01` | guest-created coroutine 内的 host suspension | `flip/run/stop/load`、external `reload/cstore` 与 HostRequest 仅 root 可恢复；nested 调用 fail-closed 且无外部副作用 |
+| `P6-KD-02` | nested custom-loop implicit quantum | CPU 会计继续，但 frame commit 等待 Runtime-owned root 返回；不返回则命中 hard cap |
 
-## 严重度 / 分类
-- Severity: P0 / P1 / P2 / P3
-- Area: cart | lua | memory | graphics | audio | input | scheduler | storage | worker | browser
-- Compatibility: exact / compatible / partial / unsupported / unknown
+当前 5 个 partial API 是 `flip`、`printh`、`stat`、`print`、`extcmd`。7 个 unsupported API 是
+`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；它们主要属于 console、文件系统或
+非 Player 平台能力。精确 mode、evidence 和 note 只见 machine inventory。
 
-## 环境
-- pico8-web-player commit/build:
-- z8lua/WASM build ID:
-- Browser + exact version:
-- OS / device / CPU:
-- AudioContext sample rate（如相关）:
-- DPR / Canvas renderer（如相关）:
+<a id="13-测试数据版权与-bbs-访问限制"></a>
 
-## Cart 与权限
-- Cart name/version:
-- Cart SHA-256:
-- Source: project-original / locally-supplied / licensed-third-party
-- License or permission evidence:
-- 是否允许把 cart、截图、音频附到 issue: yes / no / unknown
-- 注意：未确认权限时不要上传附件，只提供原创最小复现。
+## 7. 外部 cart、BBS 与隐私
 
-## 确定性输入
-- Test case / manifest ID:
-- Random seed raw int32:
-- Input trace SHA-256:
-- First divergent frame:
-- Persistent-data preset:
+- 默认入口只接受 caller-provided bytes 或 caller-authorized local bundle。
+- 不实现 BBS crawler、自动下载、任意 URL resolver、公共镜像或宿主文件系统 fallback。
+- `ref/` 只用于隔离阅读，不能成为 build/test input。
+- 第三方 cart bytes、身份、路径、cart/screenshot hash、截图和逐-case observation 不进入 tracked repo、
+  CI、release artifact 或公开报告。
+- tracked evidence 只能保存无法反推单个 cart 的 aggregate、环境事实和项目自有 fixture 结果。
+- 获得内容与服务访问授权之前，不得把本地研究转换成自动服务访问或再分发。
 
-## 复现步骤
-1.
-2.
-3.
+Terms 与来源登记见 [`10-reference-sources.md`](./10-reference-sources.md) 和
+[ADR-020](./adr/020-phase-5-bbs-adapter.md)。
 
-## 预期（官方参考）
-- PICO-8 exact version/platform:
-- Manual section or observed behavior:
-- Repeated runs:
-- Expected framebuffer/RAM/audio/event hashes:
+## 8. Definition of Done
 
-## 实际
-- Error/log:
-- Actual hashes:
-- First pixel/address/sample difference:
+### 8.1 功能或兼容 bug
 
-## Artifacts
-- Minimal project-owned .p8:
-- expected / actual / diff images:
-- RAM hex diff:
-- audio diff report:
-- Worker timeline / performance trace:
+- 有官方依据、accepted decision 或明确 profile 行为。
+- 先有项目原创最小复现，覆盖正常、边界、错误和 fresh-session recovery。
+- 更新唯一 owner 的 machine contract、inventory、ADR 或 living doc；不复制到多个入口。
+- 运行 affected owner tests；公共契约或 production behavior 改变后运行 `pnpm run verify`。
+- 浏览器 adapter 改动通过 affected Chrome gate；资源 ownership 改动证明 teardown。
+- 没有 cart-specific branch、authority expansion、未授权 fixture 或隐式兼容率变化。
 
-## 三方差分（可选）
-- Official PICO-8:
-- pico8-web-player:
-- fake-08:
+### 8.2 Release
 
-## 最小化与初步定位
-- Smallest reproducer:
-- Suspected API/module:
-- Last known good commit:
+- release artifact、focused Chrome lifecycle、current exit integrity 和 clean checkout 通过。
+- open P0/P1 为 0；P2/P3 均有 Known Difference 或明确 remediation plan。
+- API inventory、浏览器范围、内容边界和 release notes 一致。
+- 只在风险相关时执行完整 soak/historical gate，不用冗余运行掩盖验证策略。
+- 发布到 npm、网站、registry 或 GitHub Release 必须由用户另行明确授权。
 
-## 验收条件
-- 新增哪个 regression/conformance case:
-- 哪些 browsers/devices 必须通过:
-- 是否需要更新 known differences:
-```
+## 9. 兼容问题最小记录
 
-任何包含第三方 cart 的 issue 在公开前先移除文件和衍生 artifact。仅保留 hash 也不能替代最小原创复现，但可以帮助有权访问的开发者确认本地文件版本。
+新的兼容问题只需记录：
 
-## 18. 维护与审计
+1. player/WASM/Chrome revision 与 cart 输入来源权限。
+2. 最小项目原创复现和官方预期依据。
+3. 首个可观察差异：fault code、RAM/frame/audio/input/host request 或 resource state。
+4. 严重度 P0–P3、受影响 profile、workaround 与 owner。
+5. focused regression、是否需要更新 inventory/Known Differences，以及明确的验证预算。
 
-- 每次 PICO-8 官方版本升级，先冻结当前基线，新建版本化 golden，并生成 API/行为变更清单。
-- 每季度审阅 performance runner、浏览器支持矩阵、设备档位、fuzz 上限和 flake rate。
-- 每次 release 核验 [PICO-8 官方手册](https://www.lexaloffle.com/dl/docs/pico-8_manual.html) 与 [Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 的版本/更新时间。
-- 测试工具升级后先在同一 commit 上比较旧/新 runner，确认没有因为 PNG、audio、timer 或浏览器实现变化误改 golden。
-- 废弃 test 必须说明它覆盖的行为由哪个新 test 接替；禁止通过删除失败 test 关闭兼容性问题。
-
-最终发布判断应基于证据链：规范或官方观察 → 最小 conformance cart → 确定输入 → 可审阅 golden/diff → 浏览器与设备门禁 → 已知差异声明。链条中任何一环未知，就应诚实标记为 `unknown`，而不是推断兼容。
+原始第三方 cart、截图和逐-case日志始终保存在仓库外。

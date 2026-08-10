@@ -12,8 +12,7 @@
 bindings `1..41`、frame stepping、root HostRequest、VM-local P8 helpers/`menuitem` registration 与 root-safe invocation、instruction accounting、
 fixed memory/Lua heap 和 structured errors。`p8w0a_*`/`p8w0b_*` 仍是隔离 probe，不是产品 ABI。
 精确操作、版本和 artifact 只以 [`p8w-v1.json`](../spec/abi/p8w-v1.json)、runtime manifest、
-public adapter 与自动测试的交集为准；完成测量见
-[Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md)。
+public adapter 与自动测试的交集为准。历史测量只保存在 immutable evidence，本文不复制阶段执行记录。
 
 | 状态 | 本文内容 |
 | --- | --- |
@@ -42,13 +41,13 @@ TypeScript Runtime 负责：
 
 Bridge **MUST NOT** 依赖 DOM、Canvas、AudioContext、IndexedDB、`fetch()` 或 wall-clock scheduler。WASM import **MUST** 是同步函数；Promise 不得穿过正在执行的 Lua/WASM 栈。
 
-Bridge 可以为已测得的热点执行最小 RAM primitive，但这属于 [ADR-006 fallback ladder](./07-decisions-risks-open-questions.md#4-fallback-ladder)，必须先有基准、conformance 和 ADR，不能在当前架构中无证据扩张成 full-core WASM。
+Bridge 可以为已测得的热点执行最小 RAM primitive，但这属于 [ADR-006 fallback ladder](./adr/006-interop-hot-path-boundary.md)，必须先有基准、conformance 和 ADR，不能在当前架构中无证据扩张成 full-core WASM。
 
 ## 2. 已核验的 z8lua 上游基线
 
 ### 2.1 Pin 选择
 
-Phase 0A 已按 [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) 接受
+当前 production pin 按 [ADR-012](./adr/012-z8lua-source-and-phase-0a-wasm.md) 固定为
 z8lua 的 `pico8` feature branch，而不是默认 `zepto8` composite branch：
 
 - 上游 README 把 `pico8` 描述为只实现 PICO-8 syntax/type system、适合作为自有 emulator 起点的 clean branch；`zepto8` 还合并了 Eris snapshot 和实验性 Oua 功能。[上游分支说明](https://github.com/samhocevar/z8lua/blob/4a7089ea55556aef95a82a618d7bf19c1be1b568/README.md#branches)
@@ -76,7 +75,7 @@ hash；`ref/z8lua`、submodule 与 build-time fetch 均不是生产输入。
 
 - z8lua 不实现依赖 PICO-8 machine state 的绝大多数 API；这些属于本项目 TS Runtime。[上游限制说明](https://github.com/samhocevar/z8lua/blob/4a7089ea55556aef95a82a618d7bf19c1be1b568/README.md#limitations)
 - `^` 仍经 floating point 实现，上游明确说明结果不保证与 PICO-8 bit-for-bit 一致。初始兼容矩阵必须记录此差异；不能声称 fixed-point 全部 bit-exact。[上游 `^` 限制](https://github.com/samhocevar/z8lua/blob/4a7089ea55556aef95a82a618d7bf19c1be1b568/README.md#limitations)
-- 未 patch 的上游 `luaV_peek()` 把地址做 `int(a) & 0x7fff`，且 flat `PEEK` 只接受 `< 0x8000`；multi-byte 值直接从相邻 flat bytes 拼装。[源码](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lvm.c#L221-L241) Phase 0B 已用 ordered patch 0002 让 direct operators 调 project-owned mapper；不得把这一项目 patch 误写成上游能力。
+- 未 patch 的上游 `luaV_peek()` 把地址做 `int(a) & 0x7fff`，且 flat `PEEK` 只接受 `< 0x8000`；multi-byte 值直接从相邻 flat bytes 拼装。[源码](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/lvm.c#L221-L241) production ordered patch 0002 让 direct operators 调 project-owned mapper；不得把这一项目 patch 误写成上游能力。
 - `lua_setpico8memory()` 只有 flat pointer，没有 graphics/screen remap callback。由于 `@/%/$` 是 `peek/peek2/peek4` shorthand，不能在未测试时假设它们已符合 remapped memory access。
 - `pico8` branch 的 `luaL_openlibs()` 默认仍开放 base、PICO-8、coroutine、table、string 和 `debug`。[library 列表](https://github.com/samhocevar/z8lua/blob/8575dfbc524003c869c0aa05e109819302c576f9/linit.c#L29-L36) 这不是官方 PICO-8 sandbox；特别是 `debug.sethook` 会威胁 CPU budget。
 
@@ -111,7 +110,7 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 
 `pcall`、`xpcall`、dynamic `load`、`collectgarbage` 等是否暴露，必须由官方行为和 conformance 决定。无论最终兼容选择如何，guest **MUST NOT** 获得修改/关闭 bridge hook 的途径。
 
-Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_STATUS_OUT_OF_MEMORY`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。当前 production 默认 cap 为固定 `2 MiB`；Phase 9B 还以 `64 KiB` workload 验证 protected bootstrap OOM 与 fresh recovery。host 不得按 cart 或宿主压力自适应扩大它；[ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) 取代历史 1 MiB 发布值，但不改变 fixed 16 MiB WASM memory。
+Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_STATUS_OUT_OF_MEMORY`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。当前 production 默认 cap 为固定 `2 MiB`；受限 `64 KiB` diagnostic workload 验证 protected bootstrap OOM 与 fresh recovery。host 不得按 cart 或宿主压力自适应扩大它；[ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) 不改变 fixed 16 MiB WASM memory。
 
 ## 4. 生命周期与控制流
 
@@ -192,7 +191,7 @@ back buffer 会自动复制到 screen。[官方 `flip()` 语义](https://www.lex
 因此：
 
 - host request **MUST** 带 out-of-band `pendingRequest` 状态；不能仅靠 Lua yield return values 猜测。
-- Phase 5F 已由 [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) 接受 root-only：仅 root HostRequest
+- [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) 接受 root-only：仅 root HostRequest
   可恢复；guest-created single/multi-level coroutine 中的 `flip/run/stop/load`、external
   `reload/cstore` 与 diagnostic HostRequest 统一返回 `E_FEATURE_UNSUPPORTED`，并在结构化 details
   中标记 `reason: "nested-host-suspend"`。
@@ -225,7 +224,7 @@ v1 production **MUST** 禁止 WASM memory growth，并令 `initial === maximum`�
 
 ### 5.2 `@/%/$` 与 remap gap
 
-flat `lua_setpico8memory()` 不能单独作为 v0.2.7 兼容完成条件。Phase 0B 已覆盖：
+flat `lua_setpico8memory()` 不能单独作为 v0.2.7 兼容完成条件。当前 mapper/test 覆盖：
 
 - lower RAM 与 upper RAM 读。
 - negative/fixed-point address 到 16-bit address 的规则。
@@ -233,7 +232,7 @@ flat `lua_setpico8memory()` 不能单独作为 v0.2.7 兼容完成条件。Phase
 - `%` / `$` 在 `0x7fff`、`0xffff` 和 remap 边界上的逐 byte 行为。
 - GFX/SCREEN remap 后，`@/%/$` 与 `peek/peek2/peek4` 的一致性。官方手册明确说明 GFX/SCREEN remap 在低层影响 `peek/poke/memcpy`，并把 `@/%/$` 定义为 peek shorthand。[官方 Memory/Remapping 章节](https://www.lexaloffle.com/dl/docs/pico-8_manual.html)
 
-Pinned z8lua 确认失败后，Phase 0B 的最小本地 patch 已按以下契约落地：
+Pinned z8lua 的最小本地 memory patch 按以下契约落地：
 
 1. 把 direct operator 地址规范化为 `uint16_t`，不要硬编码 `& 0x7fff`。
 2. 为 global state 增加 `readByte(ud, uint16_t address)` callback，或等价的受控 address translator。
@@ -258,7 +257,7 @@ arity，再接受最多 65536 个 value，并按 16-bit guest address wrap 写�
 
 ### 5.3 隔离的 bounded memory probe
 
-`p8w0b_*` 是历史 Phase 0B probe：context create/destroy/run/result、RAM
+`p8w0b_*` 是隔离的 memory probe：context create/destroy/run/result、RAM
 pointer/size/reset、canonical map/read/write 和 source alloc/free。ABI version 为
 `0x00020000`。它用于锁定 RAM boundary 与测试，不含 compile/resume/frame/request
 state machine，不得被 RuntimeCore 当作 production `VmPort`。
@@ -385,7 +384,7 @@ Lua string 是带显式长度的 byte sequence，允许内嵌 `\0`：
 - cart source 也以原始 bytes + length 进入 `p8w_compile()`，禁止先 JS decode 再 `TextEncoder` round-trip。
 - P8SCII `0x80..0x99` 的六个 button-name globals 与二十个 fill-pattern globals 在 `_G` 中以
   单个 raw-byte key 注册；值直接使用已锁定的 signed Q16.16 bit pattern，禁止把名称先转为
-  UTF-8/Unicode。完整 26 项由 Phase 6G real-WASM test 固定。
+  UTF-8/Unicode。完整集合由 real-WASM owner tests 固定。
 
 ### 8.3 Table、function 与 multi-return
 
@@ -426,10 +425,10 @@ hard-cap 实现：
 
 implicit-frame yield 使用 z8lua `traceexec()` 的 `CIST_HOOKYIELD` resume path 保存 PC/stack；在
 guest-created coroutine 内只递减 counter，不直接 yield，直到 root safe point。它的完整 continuation、
-transaction 与 control matrix 由 [ADR-022](./adr/022-cpu-slicing-decision.md) 和 Phase 6F regression
+transaction 与 control matrix 由 [ADR-022](./adr/022-cpu-slicing-decision.md) 和 owner regression
 锁定。
 
-implicit quantum、safety cap 与 compatibility CPU cost 是三个不同概念。Phase 4F 已锁定每条 count hook
+implicit quantum、safety cap 与 compatibility CPU cost 是三个不同概念。owner tests 锁定每条 count hook
 instruction 作为 deterministic accounting unit，由 Runtime 以 4M/s 和 logical target FPS 换算
 Q16.16；[ADR-027](./adr/027-phase-9-timing-safety-boundary.md) 将默认 safety cap 固定为 32M
 instructions，它仍只负责 containment，不把普通 callback 拆帧。`p8w_consumed_instructions()` 返回当前
@@ -490,7 +489,7 @@ z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try
 
 - ABI operation、binding ID、artifact hash 与资源常量：以 `spec/abi/`、runtime manifest 和生成验证为准。
 - 当前兼容范围、Known Differences 与 coverage limitation：见
-  [测试兼容契约](./06-testing-compatibility.md#15-兼容等级已知差异与质量口径)。
+  [测试兼容契约](./06-testing-compatibility.md#2-兼容语义)。
 - z8lua pin、patch、许可证、interop 与历史 Chrome 数据：从
   [ADR registry](./07-decisions-risks-open-questions.md#1-adr-registry) 和
   [evidence index](./evidence/) 按需追溯。

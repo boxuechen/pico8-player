@@ -19,7 +19,7 @@ Phase 9A–9H 已关闭：Phase 8 supplemental quick smoke 暴露的 51 个失�
 
 当前没有 active phase。生产代码变更必须先激活新的 phase 文档与机器合同。
 
-日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
+日常实现入口：本页 → active phase（若存在）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。
 
 根目录 [`AGENTS.md`](../AGENTS.md) 只保留这条入口和不可破坏的仓库规则。阶段任务
@@ -34,7 +34,7 @@ Phase 9A–9H 已关闭：Phase 8 supplemental quick smoke 暴露的 51 个失�
 | 运行拓扑、状态和 transaction 语义 | [`02-system-architecture.md`](./02-system-architecture.md) |
 | z8lua/WASM bridge 契约 | [`03-z8lua-wasm-bridge.md`](./03-z8lua-wasm-bridge.md) |
 | TypeScript Runtime 模块目标契约 | [`04-typescript-runtime.md`](./04-typescript-runtime.md) |
-| 跨阶段 roadmap | [`05-delivery-plan.md`](./05-delivery-plan.md) |
+| 当前交付状态与下一阶段激活边界 | [`05-delivery-plan.md`](./05-delivery-plan.md) |
 | 测试策略、兼容矩阵和发布门禁 | [`06-testing-compatibility.md`](./06-testing-compatibility.md) |
 | ADR 索引、风险和真正未决问题 | [`07-decisions-risks-open-questions.md`](./07-decisions-risks-open-questions.md) |
 | 源码目录、依赖和 composition roots | [`08-source-layout-and-boundaries.md`](./08-source-layout-and-boundaries.md) |
@@ -50,7 +50,7 @@ Phase 9A–9H 已关闭：Phase 8 supplemental quick smoke 暴露的 51 个失�
 - `docs/adr/` 决定默认路径；普通任务不能静默改变 Accepted ADR。
 - `docs/evidence/` 是历史审计资料，不是当前实现状态入口。
 - 02 只定义运行时行为，08 只定义代码放置和依赖；不得互相复制目录树或协议。
-- 05 只维护 roadmap 状态，09 只维护通用工作流；当前任务只属于 phase 文档。
+- 05 只维护当前交付/激活状态，09 只维护通用工作流；当前任务只属于 phase 文档。
 
 ## 实现状态标签
 
@@ -96,8 +96,8 @@ Phase 9A–9H 已关闭：Phase 8 supplemental quick smoke 暴露的 51 个失�
 - package、execution domain、exports 或 dependency edge 改变时，更新 08 和
   architecture tests；其他文档只链接。
 - 一个 Proposed 项只有获得测试、benchmark 或官方依据后才能改为 Accepted/Rejected。
-- 阶段开始时创建/启用 phase 文档；阶段结束后把证据归档到 `docs/evidence/`，并把
-  roadmap 状态压缩为一行，再删除已完成的 phase 执行文档。
+- 阶段开始时创建/启用 phase 文档；阶段结束后把证据归档到 `docs/evidence/`，更新当前交付状态，
+  再删除已完成的 phase 执行文档。
 - phase 文档只展开当前 work unit；完成 unit 折叠为结果、机器合同和 evidence 链接，禁止
   累积复制稳定 owner 文档的历史正文。
 - 已知差异进入 06 的兼容矩阵，不只留在聊天或代码注释。

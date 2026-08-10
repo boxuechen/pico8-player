@@ -54,13 +54,12 @@ test("Phase 8E fixes pair, privacy, browser and capability boundaries before exe
   assert.equal(unit.result.qualificationComplete, true);
 });
 
-test("Phase 8E history and living compatibility counts match the machine inventory", async () => {
-  const [contract, inventory, packageJson, docsReadme, scope, evidence, testing] =
+test("current compatibility counts match the machine inventory after Phase 8E", async () => {
+  const [contract, inventory, packageJson, scope, evidence, testing] =
     await Promise.all([
       readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
       readJson("spec/pico-api-inventory.yaml"),
       readJson("package.json"),
-      readFile(new URL("docs/README.md", root), "utf8"),
       readFile(new URL("docs/01-scope-and-success-criteria.md", root), "utf8"),
       readFile(new URL(
         "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
@@ -72,17 +71,15 @@ test("Phase 8E history and living compatibility counts match the machine invento
     ({ conformanceStatus }) => conformanceStatus === status,
   ).length;
   assert.equal(count("compatible"), 101);
-  assert.equal(count("partial"), 4);
-  assert.equal(count("unsupported"), 8);
+  assert.equal(count("partial"), 5);
+  assert.equal(count("unsupported"), 7);
   assert.equal(inventory.apis.filter(
     ({ mvpDisposition, conformanceStatus }) =>
       mvpDisposition === "required" && conformanceStatus === "unknown",
   ).length, 0);
-  assert.match(docsReadme, /最近完成 \| Phase 8/u);
-  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.ok(evidence.includes("65 个 source/export format pair"));
-  assert.match(scope, /101 compatible、4 partial、\s*8 unsupported/u);
-  assert.match(testing, /101 compatible`、`4 partial/u);
+  assert.match(scope, /101 compatible、5 partial、\s*7 unsupported/u);
+  assert.match(testing, /`101 compatible`、`5 partial`、`7 unsupported`/u);
   assert.equal(packageJson.scripts["test:phase-8e"],
     "pnpm run build && node --test tests/contract/phase-8e-activation.test.mjs tests/compat/phase-8e-format-pairs.test.mjs && pnpm run test:phase-8f");
   assert.match(packageJson.scripts["qualification:phase-8:pairs"],

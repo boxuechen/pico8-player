@@ -13,11 +13,10 @@
 | **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
 目录树是归属契约，不是“文件全部存在”的清单。当前 source truth 是实际文件、package exports、
-TypeScript project references 和 architecture tests；阶段完成历史只在
-[`evidence/`](./evidence/) 与机器合同中保存。Phase 5 已关闭 guest root `load`、caller-authorized
-local resolver 和 multicart；不得因为 scaffold 或 Target 路径存在就接入任意 URL、文件系统、BBS
-或新的 host authority。AudioContext、IndexedDB、Canvas 和 browser input 始终属于 app adapters，
-RuntimeCore 保持 browser-neutral。
+TypeScript project references 和 architecture tests；阶段完成历史只在 [`evidence/`](./evidence/) 与
+机器合同中保存。不得因为 scaffold 或 Target 路径存在就接入任意 URL、文件系统、BBS 或新的 host
+authority。AudioContext、IndexedDB、Canvas 和 browser input 始终属于 app adapters，RuntimeCore
+保持 browser-neutral。
 
 本文是源码归属和 import 方向的唯一事实来源。概念架构以 [02-system-architecture.md](./02-system-architecture.md) 为准，模块行为以 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 和 [04-typescript-runtime.md](./04-typescript-runtime.md) 为准；本文件决定这些概念在仓库中放在哪里，以及哪些依赖在代码层合法。
 
@@ -246,7 +245,7 @@ reference 也由当前 `lua_State` 独占；更长输入只截取显示前缀。
 copied slots；host lifecycle pause 不消费或伪装 guest callback。
 精确 operation 列表只以 `spec/abi/` 和生成 manifest 为准。
 
-明确命名的 Phase 0 memory bindings 和 `p8w0c_bench_*` 只属于隔离 probe；不得进入
+明确命名的 `p8w0*` memory bindings 和 `p8w0c_bench_*` 只属于隔离 probe；不得进入
 `z8lua-runtime-v1` artifact、production adapter interface 或 RuntimeCore。
 
 RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
@@ -448,10 +447,3 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 - 改变 `spec -> generated -> adapter` 的生成方向。
 
 普通功能任务可以在既有目录内部增加文件，但必须能明确回答：state owner 是谁、consumer port 在哪里、concrete adapter 在哪里、由哪个 composition root 注入、由哪层测试验证。
-
-## 10. 历史验证路由
-
-Scaffold exit 已关闭，不再作为 living checklist。workspace/package/execution-domain 的当前约束由
-`test:architecture`、package manifests 和本文件第 1–9 节持续执行；原始 Phase 0S 结果见
-[`11-phase-0s-evidence.md`](./evidence/phase-0/11-phase-0s-evidence.md)。未来阶段只补充受影响边界的
-测试，不复制旧 scaffold exit gate。

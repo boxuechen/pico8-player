@@ -79,11 +79,10 @@ test("Phase 8H publishes no third-party identity, path, hash, screenshot or rate
 });
 
 test("Phase 8 contract and its active phase route remain closed", async () => {
-  const [contract, docsReadme, phaseIndex, roadmap, evidence, packageJson] = await Promise.all([
+  const [contract, docsReadme, phaseIndex, evidence, packageJson] = await Promise.all([
     readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
     read("docs/README.md"),
     read("docs/phases/README.md"),
-    read("docs/05-delivery-plan.md"),
     read("docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md"),
     readJson("package.json"),
   ]);
@@ -97,7 +96,6 @@ test("Phase 8 contract and its active phase route remain closed", async () => {
     "tests/conformance/manifests/phase-8h-exit.json");
   assert.ok(!docsReadme.includes("8-expanded-real-cart-qualification.md"));
   assert.doesNotMatch(phaseIndex, /8-expanded-real-cart-qualification\.md/u);
-  assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Complete/u);
   assert.ok(evidence.includes("51 个失败"));
   assert.match(packageJson.scripts["test:phase-8h"], /phase-8h-exit\.test\.mjs/u);
   assert.match(packageJson.scripts["test:historical"], /test:phase-8h/u);

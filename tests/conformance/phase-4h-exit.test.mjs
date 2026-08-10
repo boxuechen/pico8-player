@@ -184,10 +184,6 @@ test("Phase 4 contract and published evidence are closed", async () => {
     new URL("docs/evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md", projectRoot),
     "utf8",
   );
-  const compatibility = await readFile(
-    new URL("docs/06-testing-compatibility.md", projectRoot),
-    "utf8",
-  );
 
   assert.equal(contract.status, "complete");
   assert.deepEqual(contract.completedWorkUnits, ["4A", "4B", "4C", "4D", "4E", "4F", "4G", "4H"]);
@@ -203,7 +199,6 @@ test("Phase 4 contract and published evidence are closed", async () => {
   for (const hash of Object.values(exit.inputs)) assert.ok(evidence.includes(hash));
   for (const id of ["P4-KD-01", "P4-KD-02", "P4-KD-03", "P4-KD-04", "P4-KD-05", "P4-KD-06", "P4-CL-01"]) {
     assert.ok(evidence.includes(id), id);
-    assert.ok(compatibility.includes(id), id);
   }
   assert.ok(evidence.includes(exit.target));
   assert.ok(packageJson.scripts["test:historical"].includes("test:phase-4h"));

@@ -73,10 +73,8 @@ test("Phase 8A preserves local-only privacy and measurable Chrome exits", () => 
 });
 
 test("Phase 8A history routes to immutable exit evidence and tracks no third-party artifacts", async () => {
-  const [docsReadme, phaseIndex, roadmap, references, evidence, packageJson] = await Promise.all([
-    readFile(new URL("docs/README.md", root), "utf8"),
+  const [phaseIndex, references, evidence, packageJson] = await Promise.all([
     readFile(new URL("docs/phases/README.md", root), "utf8"),
-    readFile(new URL("docs/05-delivery-plan.md", root), "utf8"),
     readFile(new URL("docs/10-reference-sources.md", root), "utf8"),
     readFile(new URL(
       "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
@@ -84,12 +82,7 @@ test("Phase 8A history routes to immutable exit evidence and tracks no third-par
     ), "utf8"),
     readJson("package.json"),
   ]);
-  assert.match(docsReadme, /最近完成 \| Phase 8/u);
-  assert.match(docsReadme, /当前阶段 \| Phase 9/u);
-  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.ok(!phaseIndex.includes("8-expanded-real-cart-qualification.md"));
-  assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
-  assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Complete/u);
   assert.ok(evidence.includes("100-cart canonical corpus"));
   assert.ok(references.includes("MiniMechMedia/pico8-games"));
   assert.ok(references.includes(contract.externalSource.revision));

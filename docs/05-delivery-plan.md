@@ -1,45 +1,34 @@
-# 可执行交付计划
+# 交付状态与下一阶段激活边界
 
-本文件只维护跨阶段 roadmap 状态和下一阶段的激活边界。当前 work unit、允许文件和精确验收只由
-[`docs/phases/`](./phases/) 定义；完成细节只存在于 [`docs/evidence/`](./evidence/) 和关闭的机器合同。
+本文件只回答两件事：当前是否存在 active phase，以及下一阶段开始前必须冻结什么。已完成阶段的
+过程、测量和结果不在这里重复，统一从 [`docs/evidence/`](./evidence/) 按需追溯。
 
-## 1. Roadmap 规则
+## 当前状态
 
-- 按可观察 vertical slice 推进，不按 API 清单顺序填 stub。
-- 新阶段必须先冻结输入、范围、non-goals、owner 章节、机器合同和单一 active work unit。
-- roadmap headline、Target interface 和历史 evidence 都不是 production implementation 授权。
-- 完成阶段只在本页保留一行状态；环境、测量、hash 和执行过程进入 immutable evidence。
-- 源码布局只由 [`08-source-layout-and-boundaries.md`](./08-source-layout-and-boundaries.md) 定义。
+- 当前 active phase：**None**。
+- production implementation：**未授权**；必须先激活新的 phase。
+- 最近完成：[Phase 9 — Supplemental Compatibility Remediation](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
+- 最近关闭的机器合同：
+  [`phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json)。
+- 当前发布口径、Known Differences 与默认验证入口由
+  [`06-testing-compatibility.md`](./06-testing-compatibility.md) 维护。
 
-## 2. 当前状态
+## 下一阶段激活条件
 
-| Phase | 状态 | 关闭证据或入口 |
-| --- | --- | --- |
-| 0 Architecture Validation（0S–0F） | Complete | [`evidence/phase-0/`](./evidence/phase-0/) |
-| 1 L1 最小可玩闭环（1A–1F） | Complete | [Phase 1 exit](./evidence/phase-1/21-phase-1-l1-exit-evidence.md) |
-| 2 Graphics / Memory / Text（2A–2F） | Complete | [Phase 2 exit](./evidence/phase-2/31-phase-2-graphics-memory-text-exit-evidence.md) |
-| 3 Audio / Input / Persistence（3A–3H） | Complete | [Phase 3 exit](./evidence/phase-3/41-phase-3-audio-input-persistence-exit-evidence.md) |
-| 4 L2 / MVP Compatibility（4A–4H） | Complete | [Phase 4 exit](./evidence/phase-4/51-phase-4-l2-mvp-exit-evidence.md) / [contract](../spec/phase-4-l2-mvp-contract.json) |
-| 5 L3 local/multicart | Complete | [Phase 5 exit](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) / [contract](../spec/phase-5-l3-multicart-contract.json) |
-| 6 Real-cart Qualification（6A–6H） | Complete | [Phase 6 exit](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
-| 7 Web Player Release Candidate（7A–7H） | Complete | [Phase 7 exit](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) / [contract](../spec/phase-7-web-player-release-candidate-contract.json) |
-| 8 Expanded Real-cart Qualification（8A–8H） | Complete | [Phase 8 exit](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
-| 9 Supplemental Compatibility Remediation（9A–9H） | Complete | [Phase 9 exit](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md) / [contract](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
+新阶段必须同时提交 phase 文档和机器合同，并冻结：
 
-Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
-corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
-[`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) 为准，不在 roadmap 重复。
+1. 可观察目标、non-goals 与 Chrome-only 浏览器范围。
+2. 单一 active work unit、允许文件和 owner contract 链接。
+3. 测试预算：默认 quick gate、必要的 focused Chrome case，以及明确禁止的全量/长时验证。
+4. 外部 cart 的 caller authorization、仓库隔离和 aggregate-only evidence 规则。
+5. production、网络、文件系统、发布或第三方内容权限是否发生变化。
+6. work-unit exit、phase exit 和 clean-worktree gate。
 
-## 3. 当前阶段边界
+激活和完成格式见 [`docs/phases/README.md`](./phases/README.md)。roadmap 想法、历史 evidence 和目标
+架构示例都不构成 production implementation 授权。
 
-当前没有 active phase，production implementation 尚未授权。Phase 9 已把 51 个 supplemental
-quick-smoke failure 全部完成通用修复与 bounded disposition；唯一完整同环境 requalification 为
-`199 CU / 1 failure`，最终一个 case 的 focused delta 为 `1 CU`，二者不合并成公开兼容率。完整结论见
-[Phase 9 exit](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
+## 当前声明之外
 
-后续工作必须先创建 phase 文档和机器合同，冻结范围、non-goals、单一 active work unit 与验证预算。
-
-## 4. 当前声明之外
-
-编辑器、命令行、SPLORE 替代、公共 cart 镜像、任意 URL/文件系统访问、非 Chrome 浏览器和
-未经授权的第三方内容分发不属于当前声明；如需评估，必须另立产品决策与 phase。
+编辑器、命令行、SPLORE 替代、公共 cart 镜像、任意 URL/宿主文件系统访问、非 Chrome 浏览器、
+未经授权的第三方内容分发，以及 official bit-exact 声明均不属于当前产品口径。扩展这些范围必须
+先形成产品决定和独立 phase。

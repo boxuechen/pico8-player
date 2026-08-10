@@ -39,19 +39,15 @@ test("Phase 8D closes an aggregate-only 100-CU result at its implementation comm
 });
 
 test("Phase 8D remains closed under immutable exit evidence", async () => {
-  const [contract, readme, evidence, testing] = await Promise.all([
+  const [contract, evidence] = await Promise.all([
     readJson("spec/phase-8-expanded-real-cart-qualification-contract.json"),
-    readFile(new URL("docs/README.md", root), "utf8"),
     readFile(new URL(
       "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
       root,
     ), "utf8"),
-    readFile(new URL("docs/06-testing-compatibility.md", root), "utf8"),
   ]);
   assert.equal(contract.nextWorkUnit, null);
   assert.equal(contract.activeWorkUnit, null);
   assert.equal(contract.status, "complete");
-  assert.match(readme, /Active work unit \| 9A/u);
   assert.match(evidence, /99 boots/u);
-  assert.match(testing, /99 boots/u);
 });

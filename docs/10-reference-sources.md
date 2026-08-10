@@ -1,104 +1,54 @@
 # 参考源码登记与隔离规则
 
-`ref/` 是被 Git 整体忽略的本地只读研究区，用于行为对照、算法调研和 provenance 查询。它不属于 pnpm workspace、production import graph、WASM build inputs、test fixtures 或 release artifacts。
+`ref/` 是被 Git 整体忽略的本地只读研究区，只用于行为对照、算法调研和 provenance 查询。它不属于
+workspace、production import graph、WASM build、test fixture、CI 或 release artifact。
 
-| 本地目录 | 仓库 | 已核验 checkout | 用途 |
+## 登记 checkout
+
+| 本地目录 | 仓库 | 锁定 checkout | 用途 |
 | --- | --- | --- | --- |
-| `ref/z8lua/` | <https://github.com/samhocevar/z8lua> | `8575dfbc524003c869c0aa05e109819302c576f9`（`origin/pico8`，detached） | P8 Lua 语法、fixed-point VM、direct memory operators 和 native build baseline |
-| `ref/fake-08/` | <https://github.com/jtothebell/fake-08> | `814991a2571ad3970e386cef48f3b148aa1c27b9`（`master`） | cart parsing、hardware behavior、graphics/audio 算法和 differential diagnosis |
-| `ref/zepto8/` | <https://github.com/samhocevar/zepto8> | `b2929a4fe31e5765ef66d7794edd11086b9638b4`（`master`，detached） | 独立 emulator 行为及 compression/runtime 交叉检查 |
-| `ref/tac08/` | <https://github.com/0xcafed00d/tac08> | `38c1f3bb2ae81c06983dc5132d45f0c8747dff95`（`master`） | Phase 2E 内建字体 provenance 与 MIT notice 交叉检查 |
-| `ref/emsdk/` | <https://github.com/emscripten-core/emsdk> | `17a714fde0f1aaac53d282efcc6093b377addc8d`（detached） | Emscripten release mapping 与安装器审计；实际 toolchain 安装在 repo 外且由 `wasm/toolchain.lock.json` 锁定 |
-| `ref/pico8-games/` | <https://github.com/MiniMechMedia/pico8-games> | `9c846040438bdc649b30c115c355c8864cbba06e` | Phase 8 caller-authorized local compatibility source inventory；测试只读取仓库外副本，不把 `ref/` 作为 input |
+| `ref/z8lua/` | <https://github.com/samhocevar/z8lua> | `8575dfbc524003c869c0aa05e109819302c576f9` | P8 Lua VM、fixed-point 与 memory behavior |
+| `ref/fake-08/` | <https://github.com/jtothebell/fake-08> | `814991a2571ad3970e386cef48f3b148aa1c27b9` | cart/hardware/graphics/audio 行为参考 |
+| `ref/zepto8/` | <https://github.com/samhocevar/zepto8> | `b2929a4fe31e5765ef66d7794edd11086b9638b4` | 独立 codec/runtime 交叉检查 |
+| `ref/tac08/` | <https://github.com/0xcafed00d/tac08> | `38c1f3bb2ae81c06983dc5132d45f0c8747dff95` | 内建字体 provenance 与 notice |
+| `ref/emsdk/` | <https://github.com/emscripten-core/emsdk> | `17a714fde0f1aaac53d282efcc6093b377addc8d` | Emscripten release mapping；production toolchain 另由 lockfile 固定 |
+| `ref/pico8-games/` | <https://github.com/MiniMechMedia/pico8-games> | `9c846040438bdc649b30c115c355c8864cbba06e` | caller-authorized local compatibility research only |
 
-默认不初始化 submodule。只有明确、有限的调研需要时才能初始化指定 submodule，并把仓库和 commit 补记在本页。
+默认不初始化 submodule。更新或增加参考源时，必须在本表记录仓库、精确 commit、用途和适用许可。
 
-## 边界规则
+## 不可破坏边界
 
-- 禁止把 `ref/**` 加入 `pnpm-workspace.yaml`、TypeScript project references、bundler inputs、CI build inputs 或 package `exports`。
-- production code 和 tests 禁止 import、include、symlink 或读取 `ref/**`。测试需要某个行为时，必须建立项目自有、已审查许可并独立记录 provenance 的 fixture/vector。
-- production z8lua pin 属于 `wasm/z8lua/`，由 `wasm/manifest.lock.json` 管理；`ref/z8lua/` 不是生产 pin。
-- 所有 clone 视为只读；不得在其中开发本项目 patch。
-- 复制或翻译前，必须记录 upstream repository、精确 commit、原路径、相关 license/notice、本地目标和语义改动。provenance 或许可边界不明确时，优先依据官方行为契约独立实现。
-- fake-08 包含多种许可证组件，必须按源码组件检查 `ref/fake-08/LICENSE.MD`。z8lua 和 zepto8 的 notice 也可能位于单个源码文件中，不能只做仓库级许可假设。
+- 禁止把 `ref/**` 加入 workspace glob、TypeScript project、bundler、WASM include、CI input 或 exports。
+- production 和 tests 禁止 import、include、symlink 或读取 `ref/**`。
+- 需要固化某个行为时，创建项目自有最小 fixture/vector，并单独记录官方依据或 provenance。
+- production z8lua pin 位于 `wasm/z8lua/`，由 lock manifest 管理；`ref/z8lua/` 不是生产 pin。
+- clone 只读；不得在其中开发项目 patch。
+- 复制或翻译材料前，记录 upstream、commit、原路径、license/notice、本地目标和语义改动。
+- provenance 或许可不明确时，依据官方行为契约独立实现，不复制参考实现。
 
-## 复现本地 checkout
+## 已进入 production 的第三方材料
 
-```sh
-git clone https://github.com/samhocevar/z8lua.git ref/z8lua
-git -C ref/z8lua checkout --detach 8575dfbc524003c869c0aa05e109819302c576f9
+项目内建 2048-byte P8SCII font 经过 fake-08/tac08 provenance 交叉检查，byte SHA-256 为
+`a36a2826466ec5e8834462d8d438ddffa617b7bf938b46260eb7f80dfa4c5ea6`。适用 notice 和改写说明只由
+[`packages/runtime-core/THIRD_PARTY_NOTICES.md`](../packages/runtime-core/THIRD_PARTY_NOTICES.md) 维护；
+build/test 不读取 `ref/`。
 
-git clone https://github.com/jtothebell/fake-08.git ref/fake-08
-git -C ref/fake-08 checkout 814991a2571ad3970e386cef48f3b148aa1c27b9
+cart codec、P8 Lua compatibility shim、PRNG 与 hardware behavior 均按项目机器契约和原创测试实现。
+参考 checkout 只用于发现分支或交叉检查，没有成为 production dependency。
 
-git clone https://github.com/samhocevar/zepto8.git ref/zepto8
-git -C ref/zepto8 checkout --detach b2929a4fe31e5765ef66d7794edd11086b9638b4
+## 外部 cart 与官方服务
 
-git clone https://github.com/0xcafed00d/tac08.git ref/tac08
-git -C ref/tac08 checkout --detach 38c1f3bb2ae81c06983dc5132d45f0c8747dff95
+`pico8-games` checkout 仅用于用户授权的本地研究。其 cart bytes、身份、路径、hash、截图和逐-case
+结果不得进入 tracked repo、CI 或 release artifact；来源登记不授予再分发权。
 
-git clone https://github.com/emscripten-core/emsdk.git ref/emsdk
-git -C ref/emsdk checkout --detach 17a714fde0f1aaac53d282efcc6093b377addc8d
+[PICO-8 manual](https://www.lexaloffle.com/dl/docs/pico-8_manual.html) 是行为规范；
+[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos) 没有自动授予第三方 player 一个
+稳定公开的 cart-download API。自动 BBS 访问继续由
+[ADR-020](./adr/020-phase-5-bbs-adapter.md) 设为 Deferred；任何变化必须在实施时重新核验当前条款和
+作者授权，不能沿用历史日期。
 
-git clone https://github.com/MiniMechMedia/pico8-games.git ref/pico8-games
-git -C ref/pico8-games checkout --detach 9c846040438bdc649b30c115c355c8864cbba06e
-```
+## 本地复现
 
-这些命令只复现研究输入，不是 production dependency 的安装流程。clone 更新后必须同步本页；本地 `ref/README.md` 不属于 tracked source of truth。
-
-## Phase 8 external compatibility source
-
-用户明确授权把 `MiniMechMedia/pico8-games` 用于本地兼容研究。锁定 checkout 的 `carts/` 含 71 个顶层
-项目、167 个 cart 文件（97 `.p8`、70 `.p8.png`）、166 份 byte-unique 输入、101 个
-`project + basename` identity；去掉一份 byte-identical template 后得到 100 个 canonical cart，其中
-65 个具有双格式 pair。仓库根部的 `untitled.p8` 是开发模板，不属于 `carts/`，不进入分母。
-
-该 upstream 没有 root license，只有 23 个顶层项目在各自 README 明确写出 CC BY-NC-SA 4.0；因此本
-登记只证明 caller-authorized local research，不授予再分发。Phase 8 实际 runner 只读取仓库外的临时
-checkout；`ref/pico8-games` 只用于 revision/provenance 盘点，cart bytes、截图、路径、hash 和逐-cart
-结果不进入 tracked source、CI 或 release artifact。
-
-## Phase 0D cart-codec 交叉检查记录
-
-Phase 0D 在设计 raw/legacy/PXA contract 时检查了以下锁定路径：
-
-- fake-08 `814991a…/source/cart.cpp`：PNG low-bit extraction、legacy/PXA header 与
-  decoder 行为；该 repository component 标为 MIT，但其 bundled/transitive 组件有
-  多种许可证，因此没有把文件或 dependency 引入项目。
-- zepto8 `b2929a4…/src/pico8/cart.cpp` 与 `src/pico8/code.cpp`：payload、legacy/PXA
-  decode 的独立交叉检查；所检查文件声明 WTFPL-2.0。
-
-交叉检查只用于发现格式分支和设计项目自有 tests。production codec、DEFLATE、
-fixtures 和 vectors 均独立编写，没有复制/翻译参考实现，也不在 build/test 时读取
-`ref/`。机器登记及 source/contract/fixture hashes 见
-`packages/cart-codec/manifest.lock.json`。
-
-## Phase 2E P8SCII 字体记录
-
-Phase 2E 检查了 fake-08 `814991a…/source/fontdata.cpp` 中的
-`defaultFontBinaryData`，并通过 tac08 `38c1f3b…/LICENSE` 核对其上游归属和 MIT
-notice。项目把固定 2048 bytes 转写为 RuntimeCore 内部 hex constant，保留 byte-for-byte
-SHA-256 `a36a2826466ec5e8834462d8d438ddffa617b7bf938b46260eb7f80dfa4c5ea6`；
-许可正文与改写说明位于 `packages/runtime-core/THIRD_PARTY_NOTICES.md`。production/test
-不会读取 `ref/`。
-
-## Phase 4C P8 Lua/PRNG 交叉检查记录
-
-4C 先按官方手册建立项目原创 table/string/coroutine/random carts，再用锁定的 zepto8
-`b2929a4…/src/pico8/bios.p8` 与 `src/pico8/vm.cpp`、fake-08
-`814991a…/source/p8GlobalLuaFunctions.h` 与 `source/vm.cpp` 交叉检查 table 删除中迭代和
-`0x5f44..0x5f4b` PRNG state transition。相关文件采用 WTFPL-2.0 或仓库登记的适用 notice；
-项目 bridge 是按行为合同独立编写的 C++，没有引入 reference build/test dependency。
-
-## Phase 5G 官方服务边界复核
-
-2026-08-06 只通过普通页面读取复核了
-[Lexaloffle Terms of Use](https://www.lexaloffle.com/info.php?page=tos)（页面更新于 2026-06-22）、
-[PICO-8 v0.2.7 manual](https://www.lexaloffle.com/dl/docs/pico-8_manual.html) 和
-[PICO-8 resources](https://www.lexaloffle.com/pico-8.php?page=resources)。本次没有调用、枚举或探测
-BBS/cart endpoint，没有下载第三方 cart，也没有把网页内容保存为 fixture。
-
-手册只作为 PICO-8 与 SPLORE 行为规范；它没有为第三方 Web Player 定义稳定公开的 cart-download
-接口。Terms 的自动访问和作者许可边界由 [ADR-020](./adr/020-phase-5-bbs-adapter.md) 固化为 Deferred。
-这项在线复核不是 `ref/` checkout，也不成为 production/test 网络依赖；后续 release candidate 必须
-重新核验，不能沿用本页日期推断当前许可。
+需要参考 checkout 时，使用登记 URL clone 到对应 `ref/<name>/`，再以
+`git -C ref/<name> checkout --detach <commit>` 固定到表中 revision。该过程只复现研究输入，不是依赖
+安装流程；`ref/README.md` 不是 tracked source of truth。
