@@ -9,7 +9,7 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | --- | --- |
 | 最近完成 | Phase 8；[Expanded Real-cart Qualification exit evidence](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) |
 | 当前阶段 | Phase 9；[Supplemental Compatibility Remediation](./phases/9-supplemental-compatibility-remediation.md) |
-| Active work unit | 9R — Requalification Failure Remediation |
+| Active work unit | 9F — Single Supplemental Requalification |
 | 当前机器合同 | [`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
 
 Phase 8A–8H 已关闭：100 个 canonical cart 完成 fixed smoke，65 个格式 pair 完成定性，10 个代表
@@ -25,8 +25,10 @@ CU。9D 已在显式 local bundle 内关闭 external cart-data 与 guest load �
 missing/denied ref 仍失败关闭；2 个 affected case 均达到 CU。9E 的 10 个 representative 已在同一
 production Chrome 环境达到 10/10 CU、0 failure cluster。9F 的首次 requalification attempt 在 175 cases
 后停止，聚合为 171 CU、3 个 language failure、1 个 host-feature failure，完整 run 仍为 0。当前唯一
-授权工作是 9R：用项目原创复现关闭 `camera()` previous-state return、absent-value `all()` 与 bounded
-large-`chr()`，并在仓库外为 host case 补齐显式 local bundle；不授权其他 production 修改或 full sweep。
+9R 已用三个项目原创复现关闭 `camera()` previous-state return、absent-value `all()` 与 bounded
+large-`chr()`，并在显式 local bundle 下使 4 个 affected case 全部达到 CU。当前唯一授权工作恢复为
+9F：在一个 clean production commit 上完成唯一一次完整 4×50 requalification；不授权 production 修改、
+长 playability、historical gate 或额外 complete full run。
 
 日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

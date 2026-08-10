@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9R — Requalification Failure Remediation
+> Active work unit：9F — Single Supplemental Requalification
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -42,8 +42,8 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9C Timing Compatibility Remediation | Complete | 固定 32M safety cap 与 numeric-for boundary 修复使 5 个 timing case 全部达到 CU |
 | 9D Host-feature Compatibility Remediation | Complete | 显式 local bundle 与 empty-load no-op 使 2 个 host case 达到 CU，missing/denied 仍失败关闭 |
 | 9E Focused Chrome Regression | Complete | 10 个 production Chrome representative 交叉覆盖所有修复机制，10/10 CU |
-| 9F Single Supplemental Requalification | Paused | 首次 attempt 在 175 cases 后停止：171 CU、4 个新 failure；complete run 仍为 0 |
-| 9R Requalification Failure Remediation | **Active** | 以 3 个原创语言复现和 1 个显式 local bundle 关闭 4 个新 failure |
+| 9F Single Supplemental Requalification | **Active** | 首次 attempt 已停止；等待唯一一次完整 4×50 quick smoke |
+| 9R Requalification Failure Remediation | Complete | 3 个原创语言复现与显式 local bundle 使 4 个 affected case 全部达到 CU |
 | 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
@@ -109,50 +109,51 @@ safety headroom 与 Q16.16 numeric-for termination。
 9E 没有 production 修改、full supplemental rerun、long playability、historical/soak，也没有跟踪第三方
 身份、路径、hash、截图或逐-case result。聚合结果与隐私约束由 `pnpm run test:phase-9e` 锁定。
 
-## 9. 暂停：9F Single Supplemental Requalification
+## 9. 已完成：9R Requalification Failure Remediation
 
-第一次 requalification attempt 完成了 3 个 observation batch，并在第 4 批出现 failure 后停止；总共
-观察 175 个 case，其中 171 CU、3 个 language failure、1 个 unsupported-host-feature failure。完整
-requalification run 仍为 0，没有 production 修改、第二次 full sweep 或 tracked third-party detail。
+第一次 9F attempt 的 4 个 failure 已收敛为 3 个通用 language root cause 和 1 个 local composition gap。
+bridge 现在让 `camera()` 返回调用前的 signed x/y、让 absent-value `all()` 成为空迭代器，并让 `chr()`
+接受与 memory-vector profile 一致的最多 8,192 个 byte value。三个项目原创 real-WASM fixture 全部通过；
+runtime WASM 固定为 197,646 bytes，SHA-256
+`5f5082a42e7b81a9f7d8a0844b6349ad3bb81f1b33603b404b080f3c42bce247`。
 
-只读 triage 把 language failure 收敛为两个共享缺口：`camera()` 未返回调用前的坐标，以及 `all()`
-没有把零返回值形成的 absent argument 视作 nil。host failure 是 caller-authorized local bundle 缺少
-companion cart，不需要扩大 Runtime authority。9F 在 9R 关闭这些缺口前保持 paused。
+仓库外 focused Chrome 共覆盖 4 个 unique affected case；第一次 4-case 运行关闭 3 个，companion cart
+解析后暴露的 downstream `chr()` fault 经单 case 复测关闭，最终 4/4 CU。总计 5 次 case execution，
+full supplemental rerun、长 playability、historical/soak、cart-specific branch、authority expansion 与
+tracked third-party detail 均为 0。决定见 [ADR-029](../adr/029-phase-9-requalification-remediation-boundary.md)。
 
-## 10. 当前工作：9R Requalification Failure Remediation
+## 10. 当前工作：9F Single Supplemental Requalification
 
 ### 10.1 输入与可观察结果
 
-9R 只修复本次 attempt 暴露的通用 language root cause，并用项目原创 `.p8` fixture 锁定：
+9F 现在进行 Phase 9 唯一一次**完整** supplemental requalification：在一个 clean player commit 上按
+4 个固定 batch 顺序各运行 50 个 case，每个配置 120 logical-tick 上限，总计恰好 200 个。四批必须锁定
+同一 player commit、WASM hash、Chrome build 和 production Worker path；所有已知 multicart/data 依赖只能
+通过 caller-authorized 仓库外 manifest 中的显式 local bundle 注入。
 
-- `camera([x,y])` 先返回调用前的 signed x/y，再执行既有 RAM-backed mutation；`camera()` 同时 reset 到
-  `0,0` 并返回旧值。
-- `all()` 对 explicit nil 与 absent argument 都返回 empty iterator；table/string 行为不变。
-- `chr()` 接受 memory-vector profile 产生的最多 8,192 个 bounded byte value，不再截断为 248。
-
-第 3 个 root cause 只在仓库外为 affected host case 补齐显式、caller-authorized、`access.load` local
-bundle；companion cart 启动后暴露的 large-`chr()` failure 归入上述通用语言修复。仍不进行网络发现、
-任意 URL 或 filesystem lookup。最多 4 个 affected case 各配置 120 logical-tick
-上限并在 production Chrome 聚焦复测；9R 不运行 full supplemental、长 playability 或 historical gate。
+第一次 attempt 是失败后中止的诊断，不计作 complete requalification run，也不得重复其中的通过结果来
+拼接最终证据。最终 aggregate 必须来自本次单一 clean commit 的完整 4×50；如仍出现 failure，立即停止并
+回到 bounded remediation，不盲目重跑整套集合。
 
 ### 10.2 允许修改
 
-机器权威 allowlist 位于 `workUnits.9R.allowedPaths`。production 只允许修改 WASM compatibility wrapper；
-RuntimeCore、browser app、resolver authority 与 `ref/**` 均不授权。
+机器权威 allowlist 位于 `workUnits.9F.allowedPaths`。9F 是 verification-only；`packages/**`、`wasm/**`、
+production app source 和 `ref/**` 均不授权。
 
 ### 10.3 路由 owner
 
-- bridge/Runtime 边界：
-  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#34-runtime-export-与生命周期)
 - bounded external gate、local bundle 与 aggregate privacy：
   [`06-testing-compatibility.md`](../06-testing-compatibility.md#35-expanded-local-real-cart-gate)
+- Chrome-only matrix 与 production path：
+  [`06-testing-compatibility.md`](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
 
 ### 10.4 验证与退出
 
-- `pnpm run test:phase-9r` 与 WASM reproducibility 通过。
-- 三个项目原创 real-WASM regression 通过；cart-specific branch 为 0。
-- 4 个 affected external case 在 production Chrome 全部 CU；full supplemental run 为 0。
-- tracked third-party detail 与 authority expansion 为 0，worktree clean，随后 9F 恢复为唯一 active unit。
+- `pnpm run test:phase-9f` 通过。
+- 恰好一次完整 4×50 production Chrome requalification 达到 200/200 CU、0 remaining failure cluster。
+- 同一 player/WASM/Chrome/production path 约束通过；production changes、额外 complete full run、长
+  playability、historical/soak 均为 0。
+- tracked third-party detail 为 0，worktree clean，随后 9G 成为唯一 active unit。
 
 ## 11. Phase exit gate
 

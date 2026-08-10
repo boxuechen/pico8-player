@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E"],
-  "activeWorkUnit": "9R",
-  "nextWorkUnit": "9R",
+  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R"],
+  "activeWorkUnit": "9F",
+  "nextWorkUnit": "9F",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -339,7 +339,7 @@
     },
     "9F": {
       "name": "Single Supplemental Requalification",
-      "status": "paused",
+      "status": "active",
       "allowedPaths": [
         "tools/compat/",
         "tools/browser/",
@@ -385,7 +385,7 @@
     },
     "9R": {
       "name": "Requalification Failure Remediation",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/",
         "wasm/runtime-v1.manifest.lock.json",
@@ -408,7 +408,7 @@
         "downstreamLanguageFailuresAfterBundleResolution": 1,
         "genericLanguageRootCauses": 3,
         "projectAuthoredReproducersRequired": 3,
-        "focusedExternalCasesMaximum": 4,
+        "focusedExternalUniqueCasesMaximum": 4,
         "logicalTicksPerCase": 120,
         "fullSupplementalRerunsAllowed": 0,
         "cartSpecificBranchesAllowed": false,
@@ -420,7 +420,31 @@
         "the companion cart is supplied only through an explicit caller-authorized local bundle",
         "the four affected external cases reach CU in a bounded Chrome rerun without a supplemental sweep",
         "9F is reactivated for the one complete four-by-fifty requalification"
-      ]
+      ],
+      "result": {
+        "initialObservedFailures": 4,
+        "genericLanguageRootCauses": 3,
+        "localCompositionGaps": 1,
+        "projectAuthoredFixtures": 3,
+        "ownerRegressionsPassed": 3,
+        "cameraPreviousStateReturn": true,
+        "absentValueAllIsEmpty": true,
+        "maximumChrValues": 8192,
+        "explicitLocalBundleRequired": true,
+        "externalUniqueCases": 4,
+        "externalChromeExecutions": 5,
+        "externalCasesAtCU": 4,
+        "remainingFocusedFailures": 0,
+        "productionCartSpecificBranches": 0,
+        "networkAuthorityExpansion": false,
+        "hostFilesystemAuthorityExpansion": false,
+        "supplementalFullReruns": 0,
+        "longPlayabilityRuns": 0,
+        "historicalVerificationRuns": 0,
+        "trackedThirdPartyDetails": 0,
+        "runtimeWasmBytes": 197646,
+        "runtimeWasmSha256": "5f5082a42e7b81a9f7d8a0844b6349ad3bb81f1b33603b404b080f3c42bce247"
+      }
     },
     "9G": {
       "name": "Release Regression",
