@@ -159,3 +159,13 @@ test("Phase 8F rejects weak gate distributions and open high-severity findings",
       && error.code === "E_GATE_DISTRIBUTION");
   });
 });
+
+test("Phase 8F Chrome harness preserves clean boot-stop as a cart outcome", async () => {
+  const [controller, harness] = await Promise.all([
+    readFile(new URL("../../apps/web-player/src/main/player-controller.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../tools/compat/browser/phase-6c.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(controller, /loaded\.state === "stopped"/u);
+  assert.match(controller, /#setState\("stopped", "Cartridge stopped"\)/u);
+  assert.match(harness, /const cleanStop = controller\.state === "stopped"/u);
+});

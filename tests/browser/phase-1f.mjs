@@ -53,6 +53,12 @@ function injectedP8Png() {
   return bytes;
 }
 
+function textCart(source) {
+  return encoder.encode(
+    `pico-8 cartridge // http://www.pico-8.com\nversion 43\n__lua__\n${source}\n`,
+  );
+}
+
 function inspectFrame(event) {
   return sha256(new Uint8Array(event.packedScreen)).then((screenSha256) => ({
     frameId: event.frameId,
@@ -340,6 +346,10 @@ async function run() {
     const sixty = raf.find(({ id }) => id === "l1/callback-60-p8png");
     check(thirty.medianIntervalMs >= sixty.medianIntervalMs * 1.5,
       `real rAF did not distinguish 30/60Hz: ${thirty.medianIntervalMs}/${sixty.medianIntervalMs}`);
+
+    document.body.dataset.progress = "clean boot stop";
+    await controller.loadCart(textCart("stop()"), "clean-boot-stop.p8");
+    check(controller.state === "stopped", "clean boot stop was incorrectly exposed as ready");
 
     document.body.dataset.progress = "fault UI and recovery";
     const faultCart = await fetchBytes(manifest.faultCase.source);

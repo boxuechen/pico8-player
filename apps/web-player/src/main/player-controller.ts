@@ -237,12 +237,18 @@ export class PlayerController {
     this.#setState("loading", `Loading ${displayName}…`);
     this.#view.clearDiagnostic();
     try {
-      await this.#composition.loadCart(
+      const loaded = await this.#composition.loadCart(
         source,
         normalized.instructionBudget,
         normalized.localCartBundle,
       );
       if (this.#disposed) return;
+      if (loaded.type === "state" && loaded.state === "stopped") {
+        await this.#composition.suspendAudio();
+        if (this.#disposed) return;
+        this.#setState("stopped", "Cartridge stopped");
+        return;
+      }
       this.#setState("ready", `${displayName} ready`);
     } catch (error) {
       this.#fail(error);
