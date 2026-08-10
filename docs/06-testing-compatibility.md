@@ -122,7 +122,8 @@ Android release 与其他引擎不在承诺内；增加浏览器属于产品范�
 
 Focused release gate 至少覆盖：
 
-- 从 tracked source 重建并验证 12-file release artifact、stable keys、MIME、CSP 和 nested base path。
+- 从 tracked source 重建并验证 15-file release artifact、6 个 stable runtime keys、MIME、CSP、
+  combined notices、deterministic archive/checksum 和 nested base path。
 - local file choose/drop、player state/ARIA、keyboard/touch、mute/fullscreen 与 audio unlock。
 - fault 后重新加载、pagehide/dispose、Worker/RAF/AudioContext teardown。
 - production Worker path、128×128 Canvas backing 与非 cross-origin-isolated 环境。

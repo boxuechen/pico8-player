@@ -71,7 +71,8 @@ package；package 只用于强制真正的架构边界。
 │       ├── public/
 │       │   ├── player.css
 │       │   └── demo/
-│       ├── dist/release/            # ignored, reproducible static release output
+│       ├── dist/release/            # ignored, reproducible static release directory
+│       ├── dist/package/            # ignored, deterministic archive + SHA256SUMS
 │       └── package.json
 ├── packages/
 │   ├── contracts/
@@ -263,7 +264,7 @@ RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worke
 
 `public/` 只保存 release-owned static source（stylesheet 与 local-bytes demo），不保存 cart、截图或
 runtime state。`tools/release/` 是唯一 packaging composition root：它从 tracked source、编译输出和
-锁定 WASM 输入生成 ignored `dist/release/`，并按
+锁定 WASM 输入生成 ignored `dist/release/` 与 `dist/package/`，并按
 [`spec/release-artifact-contract.json`](../spec/release-artifact-contract.json) 校验精确 allowlist、hash、
 length、MIME、CSP 与 provenance。release tool 可以组合 execution-domain artifacts，但不得成为任何
 production package 的 import dependency，也不得读取 `ref/`、local corpus 或网络 cart。

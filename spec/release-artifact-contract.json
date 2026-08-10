@@ -1,8 +1,16 @@
 {
-  "schemaVersion": 1,
-  "artifactId": "pico8-web-player-rc-v1",
+  "schemaVersion": 2,
+  "artifactId": "pico8-web-player",
+  "version": "0.1.0-rc.1",
+  "apiVersion": 1,
+  "channel": "release-candidate",
+  "projectLicense": "UNLICENSED",
   "target": "desktop Chrome/Chromium",
   "outputRoot": "apps/web-player/dist/release",
+  "packageOutputRoot": "apps/web-player/dist/package",
+  "archive": "pico8-web-player-0.1.0-rc.1.tar.gz",
+  "archiveRoot": "pico8-web-player-0.1.0-rc.1",
+  "checksums": "SHA256SUMS",
   "manifest": "manifest.json",
   "stableKeys": ["main", "worker", "worklet", "wasm", "styles", "demo"],
   "artifacts": {
@@ -22,6 +30,9 @@
     "player.css": "text/css; charset=utf-8",
     "demo/index.html": "text/html; charset=utf-8",
     "demo/demo.mjs": "text/javascript; charset=utf-8",
+    "verify.mjs": "text/javascript; charset=utf-8",
+    "LICENSE": "text/plain; charset=utf-8",
+    "RELEASE_NOTES.md": "text/markdown; charset=utf-8",
     "THIRD_PARTY_NOTICES.md": "text/markdown; charset=utf-8",
     "licenses/Emscripten.txt": "text/plain; charset=utf-8",
     "licenses/Lua-5.2.txt": "text/plain; charset=utf-8",
@@ -60,9 +71,14 @@
     "forbiddenJavaScriptPatterns": ["eval(", "new Function(", "//# sourceMappingURL="]
   },
   "provenance": {
-    "phaseContract": "spec/phase-7-web-player-release-candidate-contract.json",
+    "phaseContract": "spec/phase-10-release-readiness-contract.json",
+    "workspaceManifest": "package.json",
+    "projectLicense": "LICENSE",
+    "releaseNotes": "CHANGELOG.md",
+    "releaseVerifier": "tools/release/portable-verify.mjs",
+    "runtimeCoreNotices": "packages/runtime-core/THIRD_PARTY_NOTICES.md",
     "runtimeManifest": "wasm/runtime-v1.manifest.lock.json",
     "sourceLock": "wasm/source.lock.json",
-    "thirdPartyNotices": "wasm/THIRD_PARTY_NOTICES.md"
+    "wasmNotices": "wasm/THIRD_PARTY_NOTICES.md"
   }
 }

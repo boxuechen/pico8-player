@@ -8,16 +8,16 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 9；[Supplemental Compatibility Remediation exit evidence](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md) |
-| 当前阶段 | None；新的 production implementation 尚未授权 |
-| Active work unit | None |
-| 最近关闭的机器合同 | [`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
+| 当前阶段 | Phase 10；[Release Readiness](./phases/10-release-readiness.md) |
+| Active work unit | 10E — Local RC Assembly |
+| 当前机器合同 | [`spec/phase-10-release-readiness-contract.json`](../spec/phase-10-release-readiness-contract.json) |
 
 Phase 9A–9H 已关闭：Phase 8 supplemental quick smoke 暴露的 51 个失败已按 15 个匿名 root cause
 完成通用修复和 bounded Chrome validation，known failure disposition 为 `51 resolved / 0 remaining`。
 唯一完整 4×50 的同环境结果是 `199 CU / 1 failure`，最后一个 case 只做 focused delta；两者没有被
 合并成单环境兼容率。第三方 bytes、截图、路径、hash 与逐-cart 结果保持仓库外。
 
-当前没有 active phase。生产代码变更必须先激活新的 phase 文档与机器合同。
+Phase 10 已激活，当前只允许 local RC assembly、standalone verification 与对应 artifact tests。
 
 日常实现入口：本页 → active phase（若存在）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

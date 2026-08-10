@@ -130,11 +130,8 @@ test("Phase 9 contract and active phase route are closed", async () => {
   assert.equal(contract.workUnits["9H"].result.exitManifest,
     "tests/conformance/manifests/phase-9h-exit.json");
   assert.match(docsReadme, /最近完成 \| Phase 9/u);
-  assert.match(docsReadme, /当前阶段 \| None/u);
-  assert.match(docsReadme, /Active work unit \| None/u);
+  assert.doesNotMatch(docsReadme, /当前阶段 \| Phase 9/u);
   assert.doesNotMatch(phaseIndex, /9-supplemental-compatibility-remediation\.md/u);
-  assert.match(phaseIndex, /当前没有 active phase/u);
-  assert.match(roadmap, /当前 active phase：\*\*None\*\*/u);
   assert.match(roadmap, /101-phase-9-supplemental-compatibility-remediation-exit-evidence\.md/u);
   assert.match(compatibility, /Phase 9 exit evidence/u);
   assert.match(evidence, /51 resolved \/ 0 remaining/u);

@@ -49,6 +49,7 @@ async function walk(root, directory = root) {
 
 function provenanceFor(path) {
   if (path.startsWith("wasm/")) return "z8lua-runtime-lock";
+  if (path === "LICENSE") return "project-license";
   if (path === "THIRD_PARTY_NOTICES.md" || path.startsWith("licenses/")) {
     return "third-party-license";
   }
@@ -68,7 +69,34 @@ async function inputHashes() {
   return result;
 }
 
+async function combinedThirdPartyNotices() {
+  const [runtimeCore, wasm] = await Promise.all([
+    readFile(join(PROJECT_ROOT, CONTRACT.provenance.runtimeCoreNotices), "utf8"),
+    readFile(join(PROJECT_ROOT, CONTRACT.provenance.wasmNotices), "utf8"),
+  ]);
+  return [
+    `# Third-party notices: PICO-8 Web Player ${CONTRACT.version}`,
+    "",
+    "This generated notice combines the two tracked provenance owners used by the release artifact.",
+    "",
+    runtimeCore.trim(),
+    "",
+    wasm.trim(),
+    "",
+  ].join("\n");
+}
+
+async function assertReleaseMetadata() {
+  const workspace = JSON.parse(await readFile(
+    join(PROJECT_ROOT, CONTRACT.provenance.workspaceManifest),
+    "utf8",
+  ));
+  assert.equal(workspace.version, CONTRACT.version, "workspace/release version drift");
+  assert.equal(workspace.license, CONTRACT.projectLicense, "workspace/release license drift");
+}
+
 export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } = {}) {
+  await assertReleaseMetadata();
   const output = assertSafeOutputDirectory(outputDirectory);
   await rm(output, { recursive: true, force: true });
   await mkdir(output, { recursive: true });
@@ -122,13 +150,19 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
     ["apps/web-player/public/player.css", CONTRACT.artifacts.styles],
     ["apps/web-player/public/demo/index.html", CONTRACT.artifacts.demo],
     ["apps/web-player/public/demo/demo.mjs", "demo/demo.mjs"],
-    ["wasm/THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md"],
+    ["tools/release/portable-verify.mjs", "verify.mjs"],
+    ["LICENSE", "LICENSE"],
+    ["CHANGELOG.md", "RELEASE_NOTES.md"],
     ["wasm/licenses/Emscripten.txt", "licenses/Emscripten.txt"],
     ["wasm/licenses/Lua-5.2.txt", "licenses/Lua-5.2.txt"],
     ["wasm/licenses/WTFPL-2.txt", "licenses/WTFPL-2.txt"],
   ]) {
     await copy(join(PROJECT_ROOT, source), join(output, destination));
   }
+  await writeFile(
+    join(output, "THIRD_PARTY_NOTICES.md"),
+    await combinedThirdPartyNotices(),
+  );
 
   const emittedPaths = (await walk(output)).filter((path) => path !== CONTRACT.manifest);
   const files = [];
@@ -150,6 +184,10 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
   const manifest = {
     schemaVersion: CONTRACT.schemaVersion,
     artifactId: CONTRACT.artifactId,
+    version: CONTRACT.version,
+    apiVersion: CONTRACT.apiVersion,
+    channel: CONTRACT.channel,
+    projectLicense: CONTRACT.projectLicense,
     target: CONTRACT.target,
     base: "./",
     csp: CONTRACT.csp,
@@ -173,10 +211,15 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
 }
 
 export async function verifyReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } = {}) {
+  await assertReleaseMetadata();
   const output = assertSafeOutputDirectory(outputDirectory);
   const manifest = JSON.parse(await readFile(join(output, CONTRACT.manifest), "utf8"));
   assert.equal(manifest.schemaVersion, CONTRACT.schemaVersion);
   assert.equal(manifest.artifactId, CONTRACT.artifactId);
+  assert.equal(manifest.version, CONTRACT.version);
+  assert.equal(manifest.apiVersion, CONTRACT.apiVersion);
+  assert.equal(manifest.channel, CONTRACT.channel);
+  assert.equal(manifest.projectLicense, CONTRACT.projectLicense);
   assert.equal(manifest.target, CONTRACT.target);
   assert.equal(manifest.base, "./");
   assert.equal(manifest.csp, CONTRACT.csp);
@@ -242,6 +285,18 @@ export async function verifyReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT }
   const html = await readFile(join(output, CONTRACT.artifacts.demo), "utf8");
   assert.ok(html.includes(CONTRACT.csp));
   assert.equal(/<script(?![^>]*\bsrc=)[^>]*>/iu.test(html), false, "inline script is forbidden");
+  assert.equal(
+    await readFile(join(output, "LICENSE"), "utf8"),
+    await readFile(join(PROJECT_ROOT, CONTRACT.provenance.projectLicense), "utf8"),
+  );
+  assert.equal(
+    await readFile(join(output, "RELEASE_NOTES.md"), "utf8"),
+    await readFile(join(PROJECT_ROOT, CONTRACT.provenance.releaseNotes), "utf8"),
+  );
+  assert.equal(
+    await readFile(join(output, "THIRD_PARTY_NOTICES.md"), "utf8"),
+    await combinedThirdPartyNotices(),
+  );
 
   const runtimeManifest = JSON.parse(await readFile(
     join(PROJECT_ROOT, CONTRACT.runtime.manifest),
