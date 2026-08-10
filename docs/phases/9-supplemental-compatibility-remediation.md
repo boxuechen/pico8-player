@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9S — Final Requalification Remediation
+> Active work unit：9G — Release Regression
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -44,8 +44,8 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9E Focused Chrome Regression | Complete | 10 个 production Chrome representative 交叉覆盖所有修复机制，10/10 CU |
 | 9F Single Supplemental Requalification | Complete | 唯一一次完整 4×50 得到 199 CU、1 个 language failure |
 | 9R Requalification Failure Remediation | Complete | 3 个原创语言复现与显式 local bundle 使 4 个 affected case 全部达到 CU |
-| 9S Final Requalification Remediation | **Active** | 修正单一 `menuitem()` display-bound 差异并做 1-case focused rerun |
-| 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
+| 9S Final Requalification Remediation | Complete | bounded display prefix 修复使唯一 affected case 达到 CU |
+| 9G Release Regression | **Active** | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
 ## 4. 已完成：9A Failure-set Freeze / Root-cause Contract
@@ -134,41 +134,48 @@ failure cluster 为 0。第三方 identity、path、hash、截图和逐-case obs
 bounded remediation 和不重复全量验证的策略，9F 到此结束；不会运行第二次 200-cart sweep，也不会把
 不同 player commit 的 observation 伪装成单环境 aggregate。
 
-## 11. 当前工作：9S Final Requalification Remediation
+## 11. 已完成：9S Final Requalification Remediation
 
-### 11.1 输入与可观察结果
+bridge 现在把超长 `menuitem()` label 截取为 16-P8SCII-character display prefix，而不是把它升级为
+cart-fatal error；五槽 registry、callback/filter、104-byte snapshot、generation ownership 与 DOM boundary
+均未改变。项目原创 real-WASM fixture 覆盖 boot、copy-out prefix 与 callback invocation；原有 `menuitem`
+registration owner tests 和 WASM reproducibility 均通过。决定见
+[ADR-030](../adr/030-menuitem-display-label-boundary.md)。
 
-官方 v0.2.7 手册把 `menuitem()` label 定义为最多 16 characters；当前 bridge 却把超过 16 bytes 的输入
-升级为 cart-fatal runtime error。9S 只修正这一个通用差异：固定 snapshot/UI 仍只携带 16 个 P8SCII
-character，但超长 label 不得中止 cart，callback ownership、五槽 registry 和 generation 边界保持不变。
+唯一 affected external case 在 clean production commit、120 logical ticks、production Worker path 下达到
+CU，remaining focused failure 为 0。该验证只执行 1 case；第二次 full sweep、长 playability、historical/
+soak、cart-specific branch、authority expansion 与 tracked third-party detail 均为 0。
 
-必须先增加一个项目原创 real-WASM 最小复现，再修改 bridge。生产实现不得读取第三方 identity，也不得按
-cart 分支。修复后只在 clean commit 上对唯一 affected external case 运行一次 120-tick production Chrome
-focused smoke；9F 的其他 199 个通过结果不重跑。
+## 12. 当前工作：9G Release Regression
 
-### 11.2 允许修改
+### 12.1 输入与可观察结果
 
-机器权威 allowlist 位于 `workUnits.9S.allowedPaths`。授权范围只包含 VM-local bridge、对应 regression、
-WASM manifest 和边界文档；`packages/**`、production app source 与 `ref/**` 均不授权。
+9G 只验证 Phase 9 owner contracts、release artifact 与短 Chrome player lifecycle，没有新的 compatibility
+实现。先运行 `pnpm run verify:phase-9`，再运行 `pnpm run verify:release`；两者都不得依赖仓库外 corpus。
 
-### 11.3 路由 owner
+本 work unit 不重复 historical phase matrix、600 秒 soak、full supplemental、C2 或长 playability。若 gate
+暴露与本阶段修改直接相关的回归，只运行对应 owner test；否则不得扩大验证范围。
 
-- VM-local helper、snapshot 和 callback ownership：
-  [`03-z8lua-wasm-bridge.md`](../03-z8lua-wasm-bridge.md#3-vm-初始化与库白名单)
-- bounded external regression 与 privacy：
-  [`06-testing-compatibility.md`](../06-testing-compatibility.md#35-expanded-local-real-cart-gate)
-- bridge source placement：
-  [`08-source-layout-and-boundaries.md`](../08-source-layout-and-boundaries.md#packagesz8lua-bridge)
+### 12.2 允许修改
 
-### 11.4 验证与退出
+机器权威 allowlist 位于 `workUnits.9G.allowedPaths`。9G 是 verification-only；production source、WASM
+bridge、`ref/**` 与 external corpus 均不授权。
 
-- `pnpm run test:phase-9s` 与 WASM reproducibility 通过。
-- 项目原创 fixture 证明超长 label 不会使 cart fault，copy-out label 仍受 16-byte fixed codec 限制。
-- 唯一 affected external case 的 120-tick production Chrome focused smoke 达到 CU。
-- 第二次 full sweep、cart-specific branch、authority expansion、长 playability、historical/soak 与 tracked
-  third-party detail 均为 0；worktree clean，随后 9G 成为唯一 active unit。
+### 12.3 路由 owner
 
-## 12. Phase exit gate
+- focused release gate：
+  [`06-testing-compatibility.md`](../06-testing-compatibility.md#34-release-gate-与日常默认验证)
+- Chrome-only matrix：
+  [`06-testing-compatibility.md`](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
+
+### 12.4 验证与退出
+
+- `pnpm run verify:phase-9` 通过。
+- `pnpm run verify:release` 通过。
+- external corpus case、historical run、long soak 与 production source change 均为 0。
+- open P0/P1 为 0，worktree clean，随后 9H 成为唯一 active unit。
+
+## 13. Phase exit gate
 
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。

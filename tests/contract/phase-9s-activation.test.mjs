@@ -10,10 +10,11 @@ const [contract, packageJson] = await Promise.all([
   readJson("package.json"),
 ]);
 
-test("Phase 9S is the only active work unit", () => {
-  assert.equal(contract.activeWorkUnit, "9S");
-  assert.equal(contract.nextWorkUnit, "9S");
-  assert.equal(contract.workUnits["9S"].status, "active");
+test("Phase 9S remains complete while one later work unit is active", () => {
+  assert.ok(contract.completedWorkUnits.includes("9S"));
+  assert.equal(contract.activeWorkUnit, "9G");
+  assert.equal(contract.nextWorkUnit, "9G");
+  assert.equal(contract.workUnits["9S"].status, "complete");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -43,16 +44,36 @@ test("Phase 9S authorizes only VM-local bridge owners and focused evidence", () 
   assert.equal(unit.scope.hostFilesystemAuthorityExpansion, false);
 });
 
-test("Phase 9S is documented and executable without another full sweep", async () => {
+test("Phase 9S remains documented and executable without another full sweep", async () => {
   const [readme, phase, index] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9S/u);
-  assert.match(phase, /Active work unit：9S/u);
-  assert.match(phase, /只复测剩余 1 case/u);
-  assert.match(index, /active\s+work unit 为 9S/u);
+  assert.match(readme, /Active work unit \| 9G/u);
+  assert.match(phase, /唯一 affected external case/u);
+  assert.match(phase, /第二次 full sweep/u);
+  assert.match(index, /active\s+work unit 为 9G/u);
   assert.match(packageJson.scripts["test:phase-9s"], /phase-9s-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9s/u);
+});
+
+test("Phase 9S records aggregate-only completion evidence", () => {
+  const result = contract.workUnits["9S"].result;
+  assert.equal(result.initialObservedFailures, 1);
+  assert.equal(result.genericLanguageRootCauses, 1);
+  assert.equal(result.projectAuthoredFixtures, 1);
+  assert.equal(result.ownerRegressionsPassed, 1);
+  assert.equal(result.displayLabelP8sciiBytes, 16);
+  assert.equal(result.longerLabelIsNonFatal, true);
+  assert.equal(result.callbackRemainsInvokable, true);
+  assert.equal(result.externalUniqueCases, 1);
+  assert.equal(result.externalChromeExecutions, 1);
+  assert.equal(result.externalCasesAtCU, 1);
+  assert.equal(result.remainingFocusedFailures, 0);
+  assert.equal(result.supplementalFullReruns, 0);
+  assert.equal(result.historicalVerificationRuns, 0);
+  assert.equal(result.trackedThirdPartyDetails, 0);
+  assert.equal(result.runtimeWasmBytes, 197591);
+  assert.match(result.runtimeWasmSha256, /^[a-f0-9]{64}$/u);
 });

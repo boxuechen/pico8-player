@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F"],
-  "activeWorkUnit": "9S",
-  "nextWorkUnit": "9S",
+  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F", "9S"],
+  "activeWorkUnit": "9G",
+  "nextWorkUnit": "9G",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -467,7 +467,7 @@
     },
     "9S": {
       "name": "Final Requalification Remediation",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/",
         "wasm/runtime-v1.manifest.lock.json",
@@ -503,11 +503,55 @@
         "menuitem labels beyond the documented 16-character display bound do not abort cart execution and have a project-authored real-WASM regression",
         "the one affected external case reaches CU in a focused Chrome rerun",
         "no second supplemental sweep occurs and 9G becomes active"
-      ]
+      ],
+      "result": {
+        "initialObservedFailures": 1,
+        "genericLanguageRootCauses": 1,
+        "projectAuthoredFixtures": 1,
+        "ownerRegressionsPassed": 1,
+        "displayLabelP8sciiBytes": 16,
+        "longerLabelIsNonFatal": true,
+        "callbackRemainsInvokable": true,
+        "externalUniqueCases": 1,
+        "externalChromeExecutions": 1,
+        "externalCasesAtCU": 1,
+        "remainingFocusedFailures": 0,
+        "productionCartSpecificBranches": 0,
+        "networkAuthorityExpansion": false,
+        "hostFilesystemAuthorityExpansion": false,
+        "supplementalFullReruns": 0,
+        "longPlayabilityRuns": 0,
+        "historicalVerificationRuns": 0,
+        "trackedThirdPartyDetails": 0,
+        "runtimeWasmBytes": 197591,
+        "runtimeWasmSha256": "5550c3c18a689d326a7a108f49e7299c2925937a0b12ab1f92f05b367bdcd46d"
+      }
     },
     "9G": {
       "name": "Release Regression",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "tools/release/",
+        "tools/browser/",
+        "tests/artifact/",
+        "tests/contract/",
+        "tests/conformance/",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "scope": {
+        "phaseVerification": "pnpm run verify:phase-9",
+        "releaseVerification": "pnpm run verify:release",
+        "externalCorpusCases": 0,
+        "historicalVerificationRunsRequired": 0,
+        "longSoakRunsRequired": 0,
+        "productionSourceChangesAllowed": false,
+        "openP0Target": 0,
+        "openP1Target": 0
+      },
       "exit": [
         "affected owner tests, release artifact and short Chrome lifecycle gates pass",
         "pnpm run verify:phase-9 and pnpm run verify:release pass without external corpus dependency",

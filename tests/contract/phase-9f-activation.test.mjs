@@ -11,9 +11,9 @@ const [contract, packageJson] = await Promise.all([
 ]);
 
 test("Phase 9F is complete after its single full requalification", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C", "9D", "9E", "9R", "9F"]);
-  assert.equal(contract.activeWorkUnit, "9S");
-  assert.equal(contract.nextWorkUnit, "9S");
+  assert.ok(contract.completedWorkUnits.includes("9F"));
+  assert.equal(contract.activeWorkUnit, "9G");
+  assert.equal(contract.nextWorkUnit, "9G");
   assert.equal(contract.workUnits["9F"].status, "complete");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
@@ -50,10 +50,10 @@ test("Phase 9F remains documented and executable after routing its final failure
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9S/u);
+  assert.match(readme, /Active work unit \| 9G/u);
   assert.match(phase, /199 CU、1 个 language failure/u);
   assert.match(phase, /不会运行第二次 200-cart sweep/u);
-  assert.match(index, /active\s+work unit 为 9S/u);
+  assert.match(index, /active\s+work unit 为 9G/u);
   assert.match(packageJson.scripts["test:phase-9f"], /phase-9f-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9f/u);
 });

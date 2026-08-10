@@ -3,7 +3,7 @@
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
 phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前唯一入口是
 [Phase 9 — Supplemental Compatibility Remediation](./9-supplemental-compatibility-remediation.md)，唯一 active
-work unit 为 9S。最近完成结果见
+work unit 为 9G。最近完成结果见
 [Phase 8 evidence](../evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md)。
 
 ## Activation contract
