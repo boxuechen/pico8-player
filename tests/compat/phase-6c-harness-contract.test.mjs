@@ -29,6 +29,7 @@ test("6C browser harness uses the production worker and local-only evidence path
   assert.match(nodeHarness, /minimumCases: minimumCaseCount/u);
   assert.match(browserHarness, /__phase6cEnableAudio/u);
   assert.match(browserHarness, /audioDevice/u);
+  assert.match(browserHarness, /__phase6cRealTimePacing/u);
   const observationProperties = JSON.parse(schema).$defs.observation.properties;
   assert.ok(observationProperties.screenSha256);
   assert.ok(observationProperties.screenshotCaptured);

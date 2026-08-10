@@ -60,6 +60,7 @@ export async function runChromeBaseline({
   expectedCaseCount = 12,
   minimumCaseCount = 12,
   enableAudio = false,
+  realTimePacing = false,
   requireCleanPlayer = false,
 }) {
   const startingPlayerCommit = playerCommit(requireCleanPlayer);
@@ -90,9 +91,12 @@ export async function runChromeBaseline({
   const observations = [];
   let infrastructureError;
   try {
-    if (enableAudio) {
+    if (enableAudio || realTimePacing) {
       await chrome.cdp.command("Page.addScriptToEvaluateOnNewDocument", {
-        source: "globalThis.__phase6cEnableAudio=true;",
+        source: [
+          enableAudio ? "globalThis.__phase6cEnableAudio=true;" : "",
+          realTimePacing ? "globalThis.__phase6cRealTimePacing=true;" : "",
+        ].join(""),
       });
     }
     await chrome.cdp.command("Page.navigate", {

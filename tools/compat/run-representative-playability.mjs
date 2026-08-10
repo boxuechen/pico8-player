@@ -17,6 +17,7 @@ export async function main(argv = process.argv.slice(2)) {
     expectedCaseCount: 10,
     minimumCaseCount: 10,
     enableAudio: values.audio === true,
+    realTimePacing: values.audio === true,
     requireCleanPlayer: true,
   });
 }

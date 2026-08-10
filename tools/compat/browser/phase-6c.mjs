@@ -147,6 +147,9 @@ async function runCase(payloadBase64, trace, localCartBundle = [], expectedTermi
     }
     timestamp += trace.stepMilliseconds;
     await animationFrames.fire(timestamp, () => controller.state);
+    if (globalThis.__phase6cRealTimePacing === true) {
+      await new Promise((resolve) => setTimeout(resolve, trace.stepMilliseconds));
+    }
     pulseCount += 1;
   }
   if (controller.state === "running" && completedTicks < trace.ticks) {

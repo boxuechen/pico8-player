@@ -72,4 +72,6 @@ persistence, crash and soft-lock conclusions before
 `qualification:phase-8f:playability:aggregate` enforces risk/gate coverage and open P0/P1 = 0 while
 emitting no per-cart detail. Cases selected for the audio risk also require a short external
 `--audio-observations` run with the production AudioContext/AudioWorklet path; received and rendered
-device frames are folded into the local evidence digest before an audio `pass` is accepted.
+device frames are folded into the local evidence digest before an audio `pass` is accepted. Audio
+probes use real-time 30 Hz pacing and should stay short; they are separate from accelerated logical
+duration gates.
