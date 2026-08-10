@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "phase": "11",
+  "name": "local-cart-gallery",
+  "status": "complete",
+  "browserGate": "Chrome/Chromium desktop only",
+  "activeWorkUnit": null,
+  "completedWorkUnits": ["11A"],
+  "nextWorkUnit": null,
+  "runtimeBoundary": {
+    "productionRuntimeChangesAuthorized": false,
+    "releaseArtifactChangesAuthorized": false,
+    "embedApiChangesAuthorized": false,
+    "networkCartAuthorityExpansion": false,
+    "hostFilesystemAuthorityExpansionInPlayer": false,
+    "developerToolCallerAuthorizedReadOnlyDirectory": true,
+    "loopbackHost": "127.0.0.1"
+  },
+  "contentBoundary": {
+    "supportedExtensions": [".p8", ".p8.png"],
+    "cartRootFromCliOnly": true,
+    "hardcodedCorpusPath": false,
+    "thirdPartyCartBytesTracked": 0,
+    "thirdPartyCartScreenshotsTracked": 0,
+    "thirdPartyPerCartResultsTracked": 0,
+    "absolutePathsExposedToBrowser": false,
+    "externalCorpusAutomatedRuns": 0
+  },
+  "limits": {
+    "maximumCartFiles": 1000,
+    "maximumCartBytes": 2097152,
+    "maximumCatalogResponseBytes": 524288
+  },
+  "verificationBudget": {
+    "projectOwnedFixturesOnly": true,
+    "focusedChromeRuns": 1,
+    "historicalMatrixRuns": 0,
+    "longSoakRuns": 0
+  },
+  "nonGoals": [
+    "new PICO-8 compatibility behavior",
+    "BBS crawling, arbitrary URL loading or remote cart hosting",
+    "third-party cart redistribution or tracked catalog metadata",
+    "automated Top 200 qualification or long playability run",
+    "Firefox, WebKit or non-desktop release support"
+  ],
+  "workUnits": {
+    "11A": {
+      "name": "Loopback Gallery Experience",
+      "status": "complete",
+      "allowedPaths": [
+        "tools/local-gallery/",
+        "tools/browser/run-phase-11.mjs",
+        "tests/contract/phase-11-activation.test.mjs",
+        "tests/tools/phase-11-gallery-server.test.mjs",
+        "tests/conformance/phase-11-exit.test.mjs",
+        "tests/conformance/phase-10f-exit.test.mjs",
+        "docs/",
+        "spec/phase-11-local-cart-gallery-contract.json",
+        "package.json",
+        "README.md"
+      ],
+      "exit": [
+        "loopback-only bounded catalog and contained byte routes pass Node tests",
+        "gallery boots, filters, switches carts and renders first frame in focused Chrome",
+        "production Runtime and release artifact contracts remain unchanged",
+        "real local corpus is used only for manual experience startup"
+      ],
+      "result": {
+        "activationTests": 2,
+        "serverContractTests": 3,
+        "focusedChromeRuns": 1,
+        "projectOwnedChromeCarts": 2,
+        "externalCorpusAutomatedRuns": 0,
+        "historicalMatrixRuns": 0,
+        "longSoakRuns": 0,
+        "trackedThirdPartyBytes": 0,
+        "trackedThirdPartyScreenshots": 0,
+        "productionRuntimeSourceChanges": 0,
+        "packageJsonChanges": 0,
+        "releaseArchiveSha256": "674b7a1ba872f5171cb3e04764a1299495805d6d2cc67a474cb00049bba0115c",
+        "releaseManifestFiles": 15,
+        "historicalExitForwardCompatibilityFixes": 1,
+        "openP0": 0,
+        "openP1": 0,
+        "evidence": "docs/evidence/phase-11/121-phase-11-local-cart-gallery-exit-evidence.md"
+      }
+    }
+  }
+}

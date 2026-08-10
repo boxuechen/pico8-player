@@ -141,7 +141,8 @@ package；package 只用于强制真正的架构边界。
 │   └── external-corpus.example.json
 ├── tools/
 │   ├── release/                     # deterministic builder + fail-closed artifact verifier
-│   └── browser/                     # Chrome/Chromium gates; never a cart/network authority
+│   ├── browser/                     # Chrome/Chromium gates; never a cart/network authority
+│   └── local-gallery/               # loopback-only manual experience tool; explicit caller cart root
 ├── docs/
 ├── ref/                       # gitignored local reference clones; never a build input
 ├── pnpm-workspace.yaml
@@ -268,6 +269,14 @@ runtime state。`tools/release/` 是唯一 packaging composition root：它从 t
 [`spec/release-artifact-contract.json`](../spec/release-artifact-contract.json) 校验精确 allowlist、hash、
 length、MIME、CSP 与 provenance。release tool 可以组合 execution-domain artifacts，但不得成为任何
 production package 的 import dependency，也不得读取 `ref/`、local corpus 或网络 cart。
+
+`tools/local-gallery/` 是与 production/release 隔离的 developer-tool composition root。它只在调用者
+通过 CLI 显式给出 read-only cart directory 后绑定 `127.0.0.1`，建立 process-local opaque catalog，
+并把选择后的 bytes 交给未修改的 release embed API。该工具可以在人工体验时指向调用者授权的任意
+本地目录，但目录、cart bytes、身份、hash、截图和逐卡结果不得进入 build、automated tests、CI、
+release artifact 或 Git；源码和 package script 不得内置 `ref/`/corpus 路径。自动化只使用项目自有
+临时 fixture。此文件系统 authority 终止在 developer server，不进入 browser player、Worker、
+RuntimeCore 或 release artifact。
 
 `player-worker-entry.mjs` 是异步 WASM bootstrap/bundle entry：它必须先调用
 `installPlayerRuntimeWorker` 注册 message listener，再等待 WASM/controller promise；esbuild 只

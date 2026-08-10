@@ -325,7 +325,8 @@ byte-string view 只在同步调用期间有效；embedded NUL 不改变 `byte_b
 
 boolean 参数仍占一个 scalar slot，descriptor 的 boolean mask 决定 C 侧 Lua truthiness lowering；
 `q16.16-raw-i32` result 直接以 raw bits 返回。
-`pal(table,[p])` 是 bounded dedicated wrapper：最多读取 16 个 table entry，再同步复用 operation
+`pal(table,[p])` 是 bounded dedicated wrapper：最多读取 16 个 table entry，非数值 entry
+按 PICO-8 语义忽略（包括 `split("")` 产生的空字符串），numeric entry 同步复用 operation
 `13` 的 typed host method；它不在 bridge 实现 palette mapping。
 
 sprite/map/flags/tline operation `19..28` 最多使用 10 个 scalar，并复用既有 presence、boolean 与

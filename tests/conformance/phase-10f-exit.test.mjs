@@ -96,7 +96,6 @@ test("Phase 10 contract and active route are closed", async () => {
   assert.ok(Object.values(contract.workUnits).every(({ status }) => status === "complete"));
   assert.equal(contract.workUnits["10F"].result.exitManifest,
     "tests/conformance/manifests/phase-10f-exit.json");
-  assert.match(docsReadme, /最近完成 \| Phase 10/u);
   assert.match(docsReadme, /当前阶段 \| None/u);
   assert.match(docsReadme, /Active work unit \| None/u);
   assert.doesNotMatch(phaseIndex, /10-release-readiness\.md/u);

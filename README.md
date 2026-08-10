@@ -58,6 +58,19 @@ The manifest fetch above discovers release assets only; cart acquisition remains
 explicit responsibility. Use `pnpm run verify:release` for the bounded Chrome RC gate. No npm package,
 website, GitHub Release, or other external publication is performed by the build or test commands.
 
+## Local cart gallery
+
+The repository includes a loopback-only developer gallery for manually browsing a caller-authorized directory
+of `.p8` and `.p8.png` files. It is separate from the release artifact and never copies carts into the build:
+
+```sh
+pnpm run build:release
+node tools/local-gallery/server.mjs --cart-root /absolute/path/to/your/carts
+```
+
+Open the printed `http://127.0.0.1:4178/` URL in Chrome/Chromium. The CLI requires an explicit cart root;
+there is no built-in corpus path, remote fetcher, upload, or non-loopback bind option.
+
 ## Release and license status
 
 The local candidate is versioned `0.1.0-rc.1` and remains `UNLICENSED`. The project-owned source

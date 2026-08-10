@@ -7,17 +7,14 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 10；[Release Readiness exit evidence](./evidence/phase-10/111-phase-10-release-readiness-exit-evidence.md) |
+| 最近完成 | Phase 12；[`pal(table)` compatibility exit evidence](./evidence/phase-12/131-phase-12-pal-table-compatibility-exit-evidence.md) |
 | 当前阶段 | None；新的 production implementation 尚未授权 |
 | Active work unit | None |
-| 最近关闭的机器合同 | [`spec/phase-10-release-readiness-contract.json`](../spec/phase-10-release-readiness-contract.json) |
+| 最近关闭的机器合同 | [`spec/phase-12-pal-table-compatibility-contract.json`](../spec/phase-12-pal-table-compatibility-contract.json) |
 
-Phase 10A–10F 已关闭：`0.1.0-rc.1` 本地候选包含 15-file static directory、deterministic archive、
-SHA256SUMS、standalone verifier、项目 license、release notes 与完整 combined notices。quick、focused
-Chrome 和 bounded project fixtures 均通过；external corpus、historical matrix、long soak、remote、tag
-与外部 publication 均为 0。
-
-当前没有 active phase。生产代码变更必须先激活新的 phase 文档与机器合同。
+Phase 12 已关闭：`pal(table)` 现在忽略 1..16 中的非数值 entry，并继续处理数值项；
+`pal(split(""))` 不再产生 VM runtime error。验收使用 project-owned 最小 regression、单次
+focused Chrome 和一次不入库的 caller-authorized 定向诊断，没有执行外部 corpus 全量回归。
 
 日常实现入口：本页 → active phase（若存在）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

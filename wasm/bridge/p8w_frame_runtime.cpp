@@ -553,7 +553,10 @@ int p8_pal(lua_State *state) {
   context->phase = P8W_PHASE_HOST_CALL;
   for (int table_index = 1; table_index <= 16; ++table_index) {
     lua_rawgeti(state, 1, table_index);
-    if (!lua_isnil(state, -1)) {
+    // PICO-8 ignores non-numeric values in the table overload. This matters
+    // for idioms such as pal(split("")), whose sole element is an empty
+    // string. lua_isnumber deliberately still accepts numeric strings.
+    if (lua_isnumber(state, -1)) {
       const int source = table_index == 16 ? 0 : table_index;
       P8wHostCallFrame frame = {};
       frame.byte_size = sizeof(frame);

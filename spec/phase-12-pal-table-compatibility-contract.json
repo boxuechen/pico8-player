@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "phase": "12",
+  "name": "pal-table-compatibility",
+  "status": "complete",
+  "browserGate": "Chrome/Chromium desktop only",
+  "activeWorkUnit": null,
+  "completedWorkUnits": ["12A"],
+  "nextWorkUnit": null,
+  "runtimeBoundary": {
+    "productionRuntimeChangesAuthorized": true,
+    "allowedProductionFile": "wasm/bridge/p8w_frame_runtime.cpp",
+    "allowedArtifactLock": "wasm/runtime-v1.manifest.lock.json",
+    "allowedArtifactVerifier": "tools/wasm/verify-runtime-manifest.mjs",
+    "abiChangesAuthorized": false,
+    "hostApiInventoryChangesAuthorized": false,
+    "runtimeCoreChangesAuthorized": false,
+    "galleryChangesAuthorized": false
+  },
+  "behavior": {
+    "api": "pal(table[, p])",
+    "tableIndexMinimum": 1,
+    "tableIndexMaximum": 16,
+    "nonNumericEntry": "ignore",
+    "numericEntry": "dispatch",
+    "splitEmptyMustNotFault": true
+  },
+  "contentBoundary": {
+    "projectOwnedRegressionOnly": true,
+    "callerAuthorizedTargetDiagnostics": 1,
+    "thirdPartyCartBytesTracked": 0,
+    "thirdPartyCartScreenshotsTracked": 0,
+    "thirdPartyPerCartResultsTracked": 0
+  },
+  "verificationBudget": {
+    "focusedRealWasmNodeTests": 1,
+    "focusedChromeRunsMaximum": 1,
+    "externalCorpusAutomatedRuns": 0,
+    "historicalMatrixRuns": 0,
+    "longSoakRuns": 0
+  },
+  "nonGoals": [
+    "split semantics changes",
+    "palette architecture refactor",
+    "new PICO-8 APIs or ABI changes",
+    "third-party fixtures or per-cart evidence",
+    "Top 200 regression run",
+    "Firefox or WebKit support"
+  ],
+  "workUnits": {
+    "12A": {
+      "name": "Non-numeric table entry parity",
+      "status": "complete",
+      "result": {
+        "activationTests": 2,
+        "realWasmRegressionTests": 1,
+        "affectedPaletteTests": 5,
+        "focusedNodeTests": 8,
+        "focusedChromeRuns": 1,
+        "callerAuthorizedTargetDiagnostics": 1,
+        "targetDiagnosticTicks": 129,
+        "targetDiagnosticFaults": 0,
+        "externalCorpusAutomatedRuns": 0,
+        "historicalMatrixRuns": 0,
+        "longSoakRuns": 0,
+        "releaseFiles": 15,
+        "releasePackageFiles": 16,
+        "releasePackageSha256": "6e1b6809bf4e0d4f3c5d950b45974ba0876cca1f9371c90367e51b6061f96a61",
+        "runtimeWasmSha256": "c36199f46a906e37cc26db1aeac0fd34698737d902a7d9dcb4ed2303059e8253",
+        "evidence": "docs/evidence/phase-12/131-phase-12-pal-table-compatibility-exit-evidence.md"
+      }
+    }
+  }
+}

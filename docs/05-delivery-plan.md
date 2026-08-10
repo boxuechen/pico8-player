@@ -7,9 +7,9 @@
 
 - 当前 active phase：**None**。
 - production implementation：**未授权**；必须先激活新的 phase。
-- 最近完成：[Phase 10 — Release Readiness](./evidence/phase-10/111-phase-10-release-readiness-exit-evidence.md)。
+- 最近完成：[Phase 12 — `pal(table)` compatibility](./evidence/phase-12/131-phase-12-pal-table-compatibility-exit-evidence.md)。
 - 最近关闭的机器合同：
-  [`phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json)。
+  [`phase-12-pal-table-compatibility-contract.json`](../spec/phase-12-pal-table-compatibility-contract.json)。
 - 当前发布口径、Known Differences 与默认验证入口由
   [`06-testing-compatibility.md`](./06-testing-compatibility.md) 维护。
 
@@ -18,6 +18,13 @@
 `0.1.0-rc.1` 已完成静态目录、deterministic archive/checksum、standalone verification、公开口径与
 focused Chrome gate。项目仍为 `UNLICENSED`，且没有 remote、tag、npm、网站或外部 publication。
 后续若要公开发布，必须先独立决定许可与发布通道并激活新 phase。
+
+## 已交付本地体验工具
+
+Phase 11 已交付 `tools/local-gallery/`：本地 developer tool 在启动时读取调用者通过 CLI 显式授权的
+cart root，并通过 `127.0.0.1` 提供 ephemeral catalog。稳定边界由 08 维护，完成结果只在
+[exit evidence](./evidence/phase-11/121-phase-11-local-cart-gallery-exit-evidence.md) 中保存。第三方 cart
+不是 build/test/release input；自动化只使用 project-owned fixture。
 
 ## 后续阶段激活条件
 

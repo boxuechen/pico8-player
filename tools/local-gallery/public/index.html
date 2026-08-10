@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PICO-8 Local Cart Shelf</title>
+    <link rel="stylesheet" href="/gallery.css">
+  </head>
+  <body data-status="loading" data-progress="catalog">
+    <main class="gallery-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="PICO-8 Local Cart Shelf home">
+          <span class="brand__mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span><strong>LOCAL CART</strong><small>SHELF / CHROME</small></span>
+        </a>
+        <p class="topbar__note">Local bytes · loopback only · no upload</p>
+      </header>
+
+      <section class="workspace" aria-label="Local cartridge player">
+        <aside class="library" aria-labelledby="library-title">
+          <div class="library__heading">
+            <div>
+              <p class="eyebrow">CARTRIDGE LIBRARY</p>
+              <h1 id="library-title">Choose a game</h1>
+            </div>
+            <output id="cart-count" class="count-badge" aria-live="polite">—</output>
+          </div>
+
+          <div class="library__tools">
+            <label class="search">
+              <span class="visually-hidden">Search cartridges</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/></svg>
+              <input id="cart-search" type="search" autocomplete="off" placeholder="Search 200 carts…">
+              <kbd>/</kbd>
+            </label>
+            <button id="random-cart" class="icon-button" type="button" aria-label="Choose a random visible cartridge" title="Random cartridge">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3h4v4M3 17l5.5-5.5M21 17v4h-4M15 15l2 2 4 4M3 7h3l11 11M21 3l-6 6"/></svg>
+            </button>
+          </div>
+
+          <div id="cart-grid" class="cart-grid" role="list" aria-label="Cartridges"></div>
+          <p id="empty-state" class="empty-state" hidden>No cartridge matches that search.</p>
+        </aside>
+
+        <section class="playroom" aria-labelledby="now-playing-title">
+          <div class="playroom__ambient" aria-hidden="true"></div>
+          <header class="now-playing">
+            <div>
+              <p class="eyebrow">NOW PLAYING</p>
+              <h2 id="now-playing-title">Select a cartridge</h2>
+            </div>
+            <div class="runtime-light" data-runtime-light="idle">
+              <span aria-hidden="true"></span>
+              <output id="runtime-status" aria-live="polite">Player is warming up…</output>
+            </div>
+          </header>
+
+          <div class="console-frame">
+            <div class="console-frame__label" aria-hidden="true">
+              <span>PICO-8</span><span>128 × 128</span>
+            </div>
+            <div id="player" class="player-mount"></div>
+          </div>
+
+          <footer class="playroom__footer">
+            <p><kbd>←↑↓→</kbd> move <span aria-hidden="true">·</span> <kbd>Z</kbd>/<kbd>X</kbd> actions <span aria-hidden="true">·</span> <kbd>Enter</kbd> pause menu</p>
+            <p id="cart-meta">Choose any label from the shelf to load its local bytes.</p>
+          </footer>
+        </section>
+      </section>
+    </main>
+
+    <template id="cart-card-template">
+      <button class="cart-card" type="button" role="listitem">
+        <span class="cart-card__art">
+          <img alt="" loading="lazy" decoding="async">
+          <span class="cart-card__placeholder" aria-hidden="true"><i>★</i><b>P8</b></span>
+          <span class="cart-card__rank"></span>
+          <span class="cart-card__play" aria-hidden="true">▶</span>
+        </span>
+        <span class="cart-card__copy">
+          <strong></strong>
+          <small></small>
+        </span>
+      </button>
+    </template>
+
+    <script type="module" src="/gallery.mjs"></script>
+  </body>
+</html>
