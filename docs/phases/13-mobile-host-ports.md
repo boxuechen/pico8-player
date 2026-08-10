@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：13C — Host Persistence and Lifecycle
+> Active work unit：13D — Focused Integration and Artifact Handoff
 >
 > 机器合同：[`spec/phase-13-mobile-host-ports-contract.json`](../../spec/phase-13-mobile-host-ports-contract.json)
 >
@@ -30,38 +30,47 @@
 | --- | --- | --- |
 | 13A | Active phase 与 API v2 机器合同 | Complete（`pnpm run test:phase-13a`） |
 | 13B | Hosted shell 与外部标准化输入 | Complete（7 个 focused + 14 个 owner tests） |
-| 13C | 宿主持久化、可等待 flush 与 lifecycle | **Active** |
-| 13D | Focused Chrome、release artifact 与本地下游交接 | Pending |
+| 13C | 宿主持久化、可等待 flush 与 lifecycle | Complete（6 个 focused + 16 个 architecture tests） |
+| 13D | Focused Chrome、release artifact 与本地下游交接 | **Active** |
 | 13E | Evidence 与阶段关闭 | Pending |
 
-## Active work unit：13C
+## Active work unit：13D
 
 ### Observable
 
-- caller 提供 `hydrate/write/flush` adapter 与稳定 `contentId` 时，Worker 使用宿主 seeds 并回传 copy-owned commit。
-- caller 未提供 adapter 时，现有 Worker IndexedDB profile 不变。
-- `flushPersistence(reason)` 有 Worker request/ack，并等待主线程 write queue 与 adapter flush。
-- `inactive` 清输入并暂停；`background` 额外 flush；`active` 不自动 resume 或伪造音频手势。
-- persistence status 只发布 `saving/saved/failed` 结构化事件。
+- 生成 `0.2.0-alpha.1` / Embed API v2 自包含本地 integration artifact；manifest 明示 host ports。
+- 一个项目自有最小 cart 在 focused Chrome 中完成 hosted shell、input、hydrate、commit、flush、background。
+- artifact verifier 与 deterministic package 通过；不执行 external corpus、historical matrix 或长 soak。
+- 产物只供 `pico8-mobile` 本地 vendoring，不发布、不 push。
 
 ### 允许文件
 
 - `docs/phases/13-mobile-host-ports.md`
 - `spec/phase-13-mobile-host-ports-contract.json`
-- `apps/web-player/src/main/`
-- `apps/web-player/src/transport/`
-- `apps/web-player/src/worker/`
-- `tests/runtime/phase-13c-host-persistence.test.mjs`
-- `tests/runtime/phase-3f-persistence.test.mjs`
+- `spec/release-artifact-contract.json`
+- `package.json`
+- `apps/web-player/package.json`
+- `CHANGELOG.md`
+- `README.md`
+- `docs/05-delivery-plan.md`
+- `docs/06-testing-compatibility.md`
+- `tools/release/portable-verify.mjs`
+- `tools/release/release-artifact.mjs`
+- `tests/artifact/phase-13d-mobile-host-artifact.test.mjs`
+- `tests/browser/phase-13d.*`
+- `tools/browser/run-phase-13d.mjs`
+- `tools/benchmark/server.mjs`
+- `tests/browser/phase-7b.mjs`
+- `tools/browser/run-phase-7b.mjs`
 - `package.json`
 
 ### Tests / Exit
 
 ```sh
-pnpm run test:phase-13c
+pnpm run test:phase-13d
 ```
 
-通过后 13D 成为唯一 active work unit。
+通过后 13E 成为唯一 active work unit。
 
 ## Phase exit gate
 

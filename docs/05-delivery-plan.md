@@ -15,8 +15,9 @@
 
 ## 当前本地候选
 
-`0.1.0-rc.1` 已完成静态目录、deterministic archive/checksum、standalone verification、公开口径与
-focused Chrome gate。项目仍为 `UNLICENSED`，且没有 remote、tag、npm、网站或外部 publication。
+`0.2.0-alpha.1` 是当前本地 mobile-integration candidate；它在 `0.1.0-rc.1` 已完成的静态目录、
+deterministic archive/checksum 与 standalone verification 上增加 Embed API v2 host ports。项目仍为
+`UNLICENSED`，且没有 remote、tag、npm、网站或外部 publication。
 后续若要公开发布，必须先独立决定许可与发布通道并激活新 phase。
 
 ## 已交付本地体验工具

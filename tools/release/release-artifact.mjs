@@ -197,6 +197,10 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
       arbitraryUrlAccess: CONTRACT.policy.arbitraryUrlAccess,
       crossOriginIsolationRequired: CONTRACT.policy.crossOriginIsolationRequired,
       publicationPerformed: CONTRACT.policy.publicationPerformed,
+      hostedShell: CONTRACT.policy.hostedShell,
+      externalInput: CONTRACT.policy.externalInput,
+      hostPersistence: CONTRACT.policy.hostPersistence,
+      awaitablePersistenceFlush: CONTRACT.policy.awaitablePersistenceFlush,
     },
     toolchain: CONTRACT.toolchain,
     inputs: await inputHashes(),
@@ -232,6 +236,10 @@ export async function verifyReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT }
     arbitraryUrlAccess: false,
     crossOriginIsolationRequired: false,
     publicationPerformed: false,
+    hostedShell: true,
+    externalInput: true,
+    hostPersistence: true,
+    awaitablePersistenceFlush: true,
   });
 
   const emittedPaths = await walk(output);

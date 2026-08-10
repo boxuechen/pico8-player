@@ -5,9 +5,9 @@
   "status": "active",
   "browserGate": "Chrome/Chromium desktop only",
   "downstreamGate": "pico8-mobile iOS Simulator",
-  "activeWorkUnit": "13C",
-  "completedWorkUnits": ["13A", "13B"],
-  "nextWorkUnit": "13D",
+  "activeWorkUnit": "13D",
+  "completedWorkUnits": ["13A", "13B", "13C"],
+  "nextWorkUnit": "13E",
   "publicApi": {
     "currentVersion": 1,
     "targetVersion": 2,
@@ -100,7 +100,7 @@
     },
     "13C": {
       "name": "Host Persistence and Lifecycle",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "docs/phases/13-mobile-host-ports.md",
         "spec/phase-13-mobile-host-ports-contract.json",
@@ -116,11 +116,41 @@
         "flush waits for Worker acknowledgement, host writes and adapter flush",
         "default IndexedDB profile remains the no-adapter behavior",
         "inactive and background clear input and never auto-resume"
-      ]
+      ],
+      "result": {
+        "focusedTests": 6,
+        "architectureTests": 16
+      }
     },
     "13D": {
       "name": "Focused Integration and Artifact Handoff",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "docs/phases/13-mobile-host-ports.md",
+        "spec/phase-13-mobile-host-ports-contract.json",
+        "spec/release-artifact-contract.json",
+        "package.json",
+        "apps/web-player/package.json",
+        "CHANGELOG.md",
+        "README.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "tools/release/portable-verify.mjs",
+        "tools/release/release-artifact.mjs",
+        "tests/artifact/phase-13d-mobile-host-artifact.test.mjs",
+        "tests/browser/phase-13d.html",
+        "tests/browser/phase-13d.mjs",
+        "tools/browser/run-phase-13d.mjs",
+        "tools/benchmark/server.mjs",
+        "tests/browser/phase-7b.mjs",
+        "tools/browser/run-phase-7b.mjs"
+      ],
+      "exit": [
+        "self-contained API v2 artifact and deterministic package verify",
+        "one project-owned focused Chrome host-port flow passes",
+        "artifact contains no cart, native code or expanded network authority",
+        "no publication, external corpus, historical matrix or long soak occurs"
+      ]
     },
     "13E": {
       "name": "Evidence and Close",

@@ -1,6 +1,6 @@
 # PICO-8 Web Player
 
-A local `0.1.0-rc.1` PICO-8 v0.2.7 web player release candidate for desktop Chrome/Chromium, built with a z8lua
+A local `0.2.0-alpha.1` PICO-8 v0.2.7 mobile-integration candidate for desktop Chrome/Chromium, built with a z8lua
 WASM language core and a browser-neutral TypeScript RuntimeCore. It accepts caller-provided
 `.p8`/`.p8.png` bytes or a caller-authorized local multicart bundle; it has no BBS crawler,
 arbitrary-URL cart loader, host-filesystem resolver, or non-Chrome support claim.
@@ -26,7 +26,7 @@ Static HTTP is required: `file://` does not provide the Worker, module, MIME and
 by the release gate. Cart bytes remain in the browser; the demo does not upload them or resolve a
 cart URL.
 
-The same build writes `apps/web-player/dist/package/pico8-web-player-0.1.0-rc.1.tar.gz` and
+The same build writes `apps/web-player/dist/package/pico8-web-player-0.2.0-alpha.1.tar.gz` and
 `SHA256SUMS`. The archive contains one top-level directory. After checking the archive checksum,
 extract it and run `node verify.mjs` inside that directory to verify its embedded allowlist, lengths
 and hashes without repository-relative inputs.
@@ -73,7 +73,7 @@ there is no built-in corpus path, remote fetcher, upload, or non-loopback bind o
 
 ## Release and license status
 
-The local candidate is versioned `0.1.0-rc.1` and remains `UNLICENSED`. The project-owned source
+The local candidate is versioned `0.2.0-alpha.1` and remains `UNLICENSED`. The project-owned source
 and compiled artifacts are not granted redistribution rights; see [`LICENSE`](./LICENSE).
 Third-party components retain their own terms and are included in the generated release notices.
 [`CHANGELOG.md`](./CHANGELOG.md) records the user-visible candidate scope. Creating a remote, tag,

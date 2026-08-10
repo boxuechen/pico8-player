@@ -60,7 +60,7 @@ async function run() {
     createPico8WebPlayer({ root: document.querySelector("#first"), audio }),
     createPico8WebPlayer({ root: document.querySelector("#second"), audio }),
   ]);
-  check(PICO8_WEB_PLAYER_API_VERSION === 1, "unexpected public API version");
+  check(PICO8_WEB_PLAYER_API_VERSION === 2, "unexpected public API version");
   check(workers.length === 2, "create did not allocate one Worker per player");
   check(contexts.length === 2 && contexts[0] !== contexts[1],
     "create did not allocate independent audio contexts");

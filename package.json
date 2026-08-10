@@ -1,6 +1,6 @@
 {
   "name": "pico8-web-player-workspace",
-  "version": "0.1.0-rc.1",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -135,6 +135,7 @@
     "test:phase-13a": "node --test tests/contract/phase-13a-activation.test.mjs",
     "test:phase-13b": "pnpm run build && node --test tests/runtime/phase-13b-hosted-input.test.mjs tests/runtime/phase-7b-embed-api.test.mjs",
     "test:phase-13c": "pnpm run build && node --test tests/runtime/phase-13c-host-persistence.test.mjs tests/runtime/phase-3f-persistence.test.mjs",
+    "test:phase-13d": "pnpm run build:release && node tools/release/verify-release.mjs && node --test tests/artifact/phase-13d-mobile-host-artifact.test.mjs && node tools/browser/run-phase-13d.mjs",
     "test:phase-10f": "node --test tests/conformance/phase-10f-exit.test.mjs",
     "qualification:phase-9a:freeze": "node tools/compat/freeze-phase-9-failures.mjs",
     "prepare:phase-8:local": "node tools/compat/prepare-expanded-corpus.mjs",

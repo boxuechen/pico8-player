@@ -24,7 +24,7 @@ try {
     chrome.cdp,
     "document.querySelector('#result').textContent",
   ));
-  check(result.apiVersion === 1, "Chrome used the wrong Embed API version");
+  check(result.apiVersion === 2, "Chrome used the wrong Embed API version");
   check(result.workerCount === 3 && result.terminatedWorkers === 3,
     "Chrome did not isolate Worker lifecycles");
   check(result.audioContextCount === 3, "Chrome did not isolate audio lifecycles");

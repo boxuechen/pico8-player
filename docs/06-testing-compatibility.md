@@ -5,7 +5,7 @@
 
 ## 1. 当前发布口径
 
-当前产品是 **`0.1.0-rc.1` PICO-8 v0.2.7 L3 local/multicart Web Player on Chrome/Chromium desktop**：
+当前本地候选是 **`0.2.0-alpha.1` PICO-8 v0.2.7 L3 local/multicart Web Player on Chrome/Chromium desktop**：
 
 - 接受 caller-provided `.p8` / `.p8.png` bytes，以及 caller-authorized local bundle。
 - cart code 运行在可终止的 production Worker；Canvas、AudioContext 和 DOM 只存在于 app adapter。

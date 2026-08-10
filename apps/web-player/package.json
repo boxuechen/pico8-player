@@ -1,6 +1,6 @@
 {
   "name": "@pico8-web/web-player",
-  "version": "0.1.0-rc.1",
+  "version": "0.2.0-alpha.1",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",

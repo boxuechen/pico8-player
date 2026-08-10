@@ -5,8 +5,8 @@ import { dirname, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RELEASE_ROOT = dirname(fileURLToPath(import.meta.url));
-const EXPECTED_VERSION = "0.1.0-rc.1";
-const EXPECTED_API_VERSION = 1;
+const EXPECTED_VERSION = "0.2.0-alpha.1";
+const EXPECTED_API_VERSION = 2;
 const EXPECTED_LICENSE = "UNLICENSED";
 
 function sha256(bytes) {
@@ -38,6 +38,11 @@ assert.equal(manifest.version, EXPECTED_VERSION, "release version mismatch");
 assert.equal(manifest.apiVersion, EXPECTED_API_VERSION, "embed API version mismatch");
 assert.equal(manifest.projectLicense, EXPECTED_LICENSE, "project license mismatch");
 assert.equal(manifest.capabilities.publicationPerformed, false, "unexpected publication claim");
+assert.equal(manifest.capabilities.hostedShell, true, "hosted shell capability is missing");
+assert.equal(manifest.capabilities.externalInput, true, "external input capability is missing");
+assert.equal(manifest.capabilities.hostPersistence, true, "host persistence capability is missing");
+assert.equal(manifest.capabilities.awaitablePersistenceFlush, true,
+  "awaitable persistence flush capability is missing");
 const expected = ["manifest.json", ...manifest.files.map(({ path }) => path)].sort();
 assert.deepEqual(await walk(), expected, "release file allowlist drift");
 for (const entry of manifest.files) {
