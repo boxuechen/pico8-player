@@ -5,20 +5,19 @@
 
 ## 当前状态
 
-- 当前 active phase：**Phase 10**。
-- active work unit：**10E — Local RC Assembly**；production Runtime behavior 不在范围。
-- 当前入口：[`10-release-readiness.md`](./phases/10-release-readiness.md)。
-- 最近完成：[Phase 9 — Supplemental Compatibility Remediation](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
+- 当前 active phase：**None**。
+- production implementation：**未授权**；必须先激活新的 phase。
+- 最近完成：[Phase 10 — Release Readiness](./evidence/phase-10/111-phase-10-release-readiness-exit-evidence.md)。
 - 最近关闭的机器合同：
   [`phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json)。
 - 当前发布口径、Known Differences 与默认验证入口由
   [`06-testing-compatibility.md`](./06-testing-compatibility.md) 维护。
 
-## Phase 10 冻结范围
+## 当前本地候选
 
-Phase 10 只把当前实现收口为本地 `0.1.0-rc.1` 静态候选：修正公开口径、补全许可与 notices、
-生成确定性 archive/checksums，并执行 quick + focused Chrome release gate。它不扩展兼容面、不运行
-完整 external corpus/historical matrix，也不创建 remote、tag 或外部发布。
+`0.1.0-rc.1` 已完成静态目录、deterministic archive/checksum、standalone verification、公开口径与
+focused Chrome gate。项目仍为 `UNLICENSED`，且没有 remote、tag、npm、网站或外部 publication。
+后续若要公开发布，必须先独立决定许可与发布通道并激活新 phase。
 
 ## 后续阶段激活条件
 

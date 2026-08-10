@@ -6,25 +6,21 @@ const root = new URL("../../", import.meta.url);
 const read = (path) => readFile(new URL(path, root), "utf8");
 const readJson = async (path) => JSON.parse(await read(path));
 
-test("Phase 10A is the only active release-readiness work unit", async () => {
-  const [contract, phase, docsReadme, roadmap, phaseIndex] = await Promise.all([
+test("Phase 10A activation remains recorded after phase closure", async () => {
+  const [contract, docsReadme, roadmap, phaseIndex] = await Promise.all([
     readJson("spec/phase-10-release-readiness-contract.json"),
-    read("docs/phases/10-release-readiness.md"),
     read("docs/README.md"),
     read("docs/05-delivery-plan.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.equal(contract.status, "active");
-  assert.equal(contract.activeWorkUnit, "10A");
-  assert.equal(contract.workUnits["10A"].status, "active");
-  assert.ok(Object.entries(contract.workUnits)
-    .filter(([id]) => id !== "10A")
-    .every(([, unit]) => unit.status === "pending"));
-  assert.match(phase, /Active work unit：10A/u);
-  assert.match(docsReadme, /当前阶段 \| Phase 10/u);
-  assert.match(docsReadme, /Active work unit \| 10A/u);
-  assert.match(roadmap, /当前 active phase：\*\*Phase 10\*\*/u);
-  assert.match(phaseIndex, /10-release-readiness\.md/u);
+  assert.equal(contract.status, "complete");
+  assert.equal(contract.workUnits["10A"].status, "complete");
+  assert.ok(contract.completedWorkUnits.includes("10A"));
+  assert.match(docsReadme, /最近完成 \| Phase 10/u);
+  assert.match(docsReadme, /当前阶段 \| None/u);
+  assert.match(roadmap, /当前 active phase：\*\*None\*\*/u);
+  assert.doesNotMatch(phaseIndex, /10-release-readiness\.md/u);
+  await assert.rejects(read("docs/phases/10-release-readiness.md"), { code: "ENOENT" });
 });
 
 test("Phase 10A freezes a local-only unlicensed RC and bounded validation", async () => {

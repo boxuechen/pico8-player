@@ -5,7 +5,7 @@
 
 ## 1. 当前发布口径
 
-当前产品是 **PICO-8 v0.2.7 L3 local/multicart Web Player on Chrome/Chromium desktop**：
+当前产品是 **`0.1.0-rc.1` PICO-8 v0.2.7 L3 local/multicart Web Player on Chrome/Chromium desktop**：
 
 - 接受 caller-provided `.p8` / `.p8.png` bytes，以及 caller-authorized local bundle。
 - cart code 运行在可终止的 production Worker；Canvas、AudioContext 和 DOM 只存在于 app adapter。
@@ -29,6 +29,8 @@
 这些结果表明绝大多数主流 cart 可以启动和运行，但不构成 official bit-exact、完整通关率、BBS 成功率
 或任意第三方 corpus 的公开兼容率。当前结论见
 [`Phase 9 exit evidence`](./evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
+本地 release candidate 的 artifact 与 gate 结论见
+[`Phase 10 exit evidence`](./evidence/phase-10/111-phase-10-release-readiness-exit-evidence.md)。
 
 ## 2. 兼容语义
 

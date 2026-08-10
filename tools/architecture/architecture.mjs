@@ -759,12 +759,14 @@ function checkToolchainAndCi(repoRoot) {
         violation("ci-not-frozen", ".github/workflows/verify.yml", "CI must use the frozen lockfile"),
       );
     }
-    if (!workflow.includes("run: pnpm run verify:phase-9")) {
+    const phaseVerify = [...workflow.matchAll(/run:\s*pnpm run (verify:phase-\d+)/gu)]
+      .map((match) => match[1]);
+    if (phaseVerify.length !== 1 || !rootManifest.scripts?.[phaseVerify[0]]) {
       violations.push(
         violation(
           "ci-missing-verify",
           ".github/workflows/verify.yml",
-          "CI must run the active phase verify gate",
+          "CI must run exactly one declared phase verify gate",
         ),
       );
     }

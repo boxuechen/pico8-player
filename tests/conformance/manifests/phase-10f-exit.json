@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "phase": "10F",
+  "implementationRevision": "9e887180a3e325f52073e736889ed54daaeed10e",
+  "sourceLocks": {
+    "LICENSE": "fed850b437adbd185aef199a3952427c0b0fb0bc2ff82fce42c851572d5f6235",
+    "CHANGELOG.md": "7cce0b6fb6c2489df8c842d134330f5a07d226e4438fdd4d9dc265213dda8f02",
+    "README.md": "3eeb95db7adaa63fd1bedf1e405f05be4fd800f72686735f5dfb2d11e820c5e2",
+    "package.json": "f08eda1247c507aae8f5af974e16bcd9f1bb4c316a7e8dae71acf047d524494d",
+    "spec/release-artifact-contract.json": "8ab35633f5129df9670149a60bb6561020a3c4137cd6ce0a0e7735174e1d3ed4",
+    "tools/release/release-artifact.mjs": "2dc63b872e1269a64fcb2e48c44e9b81b2985fd03ac516eb98329288c9dc5aac",
+    "tools/release/release-package.mjs": "d7eabf40833d8f47dcdcd121f6064f183245d15f726d7e743e2a187ac584a478",
+    "tools/release/portable-verify.mjs": "4ec6d7490344ceabb5d2c8dc67bfc9594ad31a2c9dd3fa45c58411f0852f9e81",
+    "tools/release/verify-release.mjs": "a3c9f8d2d4076376c6b586321e6e75374416d682c20598bacc9d540bbdf3e811",
+    "tools/release/verify-local-rc.mjs": "4c15a969ca8eaaf36572508ddc0117867429d409270434d781e391c1e4ea8625",
+    "tests/artifact/phase-10c-release-package.test.mjs": "3acb5b7b8361da26efe7fd14f262367e22bbbde2da9491c3df2a1a823547381a",
+    "tests/artifact/phase-10e-local-rc.test.mjs": "94f23f5d81ebeef532fdf352492b2498cce6883ae18ba0883284e4c55e7954eb"
+  },
+  "release": {
+    "version": "0.1.0-rc.1",
+    "apiVersion": 1,
+    "channel": "release-candidate",
+    "projectLicense": "UNLICENSED",
+    "directoryFiles": 15,
+    "archivedFiles": 16,
+    "stableArtifactKeys": ["main", "worker", "worklet", "wasm", "styles", "demo"],
+    "archive": "pico8-web-player-0.1.0-rc.1.tar.gz",
+    "archiveBytes": 195086,
+    "archiveSha256": "674b7a1ba872f5171cb3e04764a1299495805d6d2cc67a474cb00049bba0115c",
+    "manifestSha256": "220d0bae48f7ed3e313afb28114c42e5fdb2d6f4e2a788c384a76ec08f8f4db1",
+    "portableVerification": "pass",
+    "repeatedBuildByteExact": true
+  },
+  "validation": {
+    "quickTests": 49,
+    "boundedProjectTests": 27,
+    "artifactTests": 4,
+    "localRcTests": 2,
+    "chromeVersion": "Google Chrome 151.0.7922.76",
+    "focusedChromeRelease": "pass",
+    "workersReleased": true,
+    "audioContextClosed": true,
+    "activeAnimationFrames": 0,
+    "externalCorpusRuns": 0,
+    "historicalMatrixRuns": 0,
+    "longSoakRuns": 0,
+    "openP0": 0,
+    "openP1": 0
+  },
+  "boundaries": {
+    "networkCartAuthority": false,
+    "thirdPartyCartBytesTracked": 0,
+    "thirdPartyScreenshotsTracked": 0,
+    "publicCompatibilityRatePublished": false,
+    "npmPublication": false,
+    "remotePublication": false,
+    "tagCreated": false
+  }
+}

@@ -1,10 +1,9 @@
 # Phase documents
 
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
-phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前入口是
-[`Phase 10 — Release Readiness`](./10-release-readiness.md)，active work unit 为 10E；它只处理
-local RC assembly、standalone verification 与对应 artifact tests。最近完成结果见
-[Phase 9 evidence](../evidence/phase-9/101-phase-9-supplemental-compatibility-remediation-exit-evidence.md)。
+phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前没有 active phase，
+production implementation 尚未授权。最近完成结果见
+[Phase 10 evidence](../evidence/phase-10/111-phase-10-release-readiness-exit-evidence.md)。
 
 ## Activation contract
 
