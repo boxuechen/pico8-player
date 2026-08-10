@@ -9,7 +9,8 @@
 ## Context
 
 Phase 9F 的第一次 supplemental requalification attempt 在 175 个 case 后停止，并把 4 个新 failure
-收敛为两个 language root cause 和一个 local composition gap。两个 graphics-heavy case 都先以无参数
+收敛为两个 language root cause 和一个 local composition gap。companion cart 成功解析后又暴露 bounded
+large-`chr()` root cause。两个 graphics-heavy case 都先以无参数
 `camera()` 读取并 reset 当前坐标；另一个 case 的 trailing empty split 最终把零返回值传给 `all()`。
 host case 则明确属于 multi-cart，需要 caller 提供 companion cart。
 
@@ -25,11 +26,13 @@ PICO-8 v0.2.7 手册定义了 `camera([x,y])` 的 set/reset、`split()` 保留 e
    并同样返回旧值。
 2. `all()` 对 absent argument 使用与 explicit nil 相同的 empty iterator。table、string、deletion 与
    invalid non-nil type 行为不变。
-3. 两个 language root cause 分别由项目原创 real-WASM fixture 锁定；不得复制第三方代码或按 cart
+3. `chr()` 接受至多 8,192 个 byte-coerced value，与既有 `peek()` memory-vector 上限一致；结果按显式
+   byte length 构造，保留 embedded NUL。超过边界时 fail closed，不静默截断。
+4. 三个 language root cause 分别由项目原创 real-WASM fixture 锁定；不得复制第三方代码或按 cart
    identity 分支。
-4. multi-cart dependency 只通过仓库外 caller-authorized local bundle 注入，并显式要求 `access.load`。
+5. multi-cart dependency 只通过仓库外 caller-authorized local bundle 注入，并显式要求 `access.load`。
    Runtime 不发现 BBS dependency、不访问任意 URL/filesystem，也不推断 capability。
-5. 9R 只聚焦复测 4 个 affected case；不运行 supplemental full sweep、long playability、historical 或
+6. 9R 只聚焦复测 4 个 affected case；不运行 supplemental full sweep、long playability、historical 或
    soak。全部 CU 后才恢复 9F。
 
 ## Consequences

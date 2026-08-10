@@ -20,6 +20,7 @@ constexpr char kMenuitemRegistryKey[] = "p8w.menuitems";
 constexpr int kMenuitemMinimumSlot = 1;
 constexpr int kMenuitemMaximumSlot = 5;
 constexpr size_t kMenuitemMaximumLabelBytes = 16;
+constexpr int kMaximumChrValues = 8192;
 
 struct P8sciiGlobal {
   uint8_t name;
@@ -471,6 +472,21 @@ int pico8_extcmd(lua_State *state) {
   return 0;
 }
 
+int pico8_chr(lua_State *state) {
+  const int count = lua_gettop(state);
+  if (count > kMaximumChrValues) {
+    return luaL_error(state, "chr accepts at most 8192 values");
+  }
+  luaL_Buffer buffer;
+  char *bytes = luaL_buffinitsize(state, &buffer, static_cast<size_t>(count));
+  for (int index = 0; index < count; ++index) {
+    bytes[index] = static_cast<char>(
+        static_cast<uint8_t>(lua_tonumber(state, index + 1)));
+  }
+  luaL_pushresultsize(&buffer, static_cast<size_t>(count));
+  return 1;
+}
+
 int pico8_set_fps(lua_State *) {
   // Callback discovery remains the only frame-rate authority. This private
   // compatibility entry is intentionally a deterministic no-op.
@@ -583,6 +599,7 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_function(state, "sub", pico8_sub);
   register_function(state, "tonum", pico8_tonum);
   register_function(state, "ord", pico8_ord);
+  register_function(state, "chr", pico8_chr);
   register_function(state, "extcmd", pico8_extcmd);
   register_function(state, "_set_fps", pico8_set_fps);
   register_function(state, "menuitem", pico8_menuitem);

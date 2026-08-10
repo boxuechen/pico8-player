@@ -43,7 +43,7 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9D Host-feature Compatibility Remediation | Complete | 显式 local bundle 与 empty-load no-op 使 2 个 host case 达到 CU，missing/denied 仍失败关闭 |
 | 9E Focused Chrome Regression | Complete | 10 个 production Chrome representative 交叉覆盖所有修复机制，10/10 CU |
 | 9F Single Supplemental Requalification | Paused | 首次 attempt 在 175 cases 后停止：171 CU、4 个新 failure；complete run 仍为 0 |
-| 9R Requalification Failure Remediation | **Active** | 以 2 个原创语言复现和 1 个显式 local bundle 关闭 4 个新 failure |
+| 9R Requalification Failure Remediation | **Active** | 以 3 个原创语言复现和 1 个显式 local bundle 关闭 4 个新 failure |
 | 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
@@ -123,14 +123,16 @@ companion cart，不需要扩大 Runtime authority。9F 在 9R 关闭这些缺�
 
 ### 10.1 输入与可观察结果
 
-9R 只修复本次 attempt 暴露的两个通用 language root cause，并用项目原创 `.p8` fixture 锁定：
+9R 只修复本次 attempt 暴露的通用 language root cause，并用项目原创 `.p8` fixture 锁定：
 
 - `camera([x,y])` 先返回调用前的 signed x/y，再执行既有 RAM-backed mutation；`camera()` 同时 reset 到
   `0,0` 并返回旧值。
 - `all()` 对 explicit nil 与 absent argument 都返回 empty iterator；table/string 行为不变。
+- `chr()` 接受 memory-vector profile 产生的最多 8,192 个 bounded byte value，不再截断为 248。
 
 第 3 个 root cause 只在仓库外为 affected host case 补齐显式、caller-authorized、`access.load` local
-bundle；仍不进行网络发现、任意 URL 或 filesystem lookup。最多 4 个 affected case 各配置 120 logical-tick
+bundle；companion cart 启动后暴露的 large-`chr()` failure 归入上述通用语言修复。仍不进行网络发现、
+任意 URL 或 filesystem lookup。最多 4 个 affected case 各配置 120 logical-tick
 上限并在 production Chrome 聚焦复测；9R 不运行 full supplemental、长 playability 或 historical gate。
 
 ### 10.2 允许修改
@@ -148,7 +150,7 @@ RuntimeCore、browser app、resolver authority 与 `ref/**` 均不授权。
 ### 10.4 验证与退出
 
 - `pnpm run test:phase-9r` 与 WASM reproducibility 通过。
-- 两个项目原创 real-WASM regression 通过；cart-specific branch 为 0。
+- 三个项目原创 real-WASM regression 通过；cart-specific branch 为 0。
 - 4 个 affected external case 在 production Chrome 全部 CU；full supplemental run 为 0。
 - tracked third-party detail 与 authority expansion 为 0，worktree clean，随后 9F 恢复为唯一 active unit。
 

@@ -40,3 +40,9 @@ test("all treats an absent argument as the same empty iterator as nil", async ()
   assert.deepEqual(runtime.copyRam(0x5000, 2), Uint8Array.of(1, 1));
   runtime.dispose();
 });
+
+test("chr preserves bounded large varargs returned by peek", async () => {
+  const runtime = await boot("language-chr-large-varargs");
+  assert.deepEqual(runtime.copyRam(0x5000, 4), Uint8Array.of(1, 1, 1, 1));
+  runtime.dispose();
+});

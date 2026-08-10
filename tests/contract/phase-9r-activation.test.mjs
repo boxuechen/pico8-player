@@ -18,14 +18,15 @@ test("Phase 9R is the only active work unit", () => {
     .filter(({ status }) => status === "active").length, 1);
 });
 
-test("Phase 9R is bounded to the four observed failures and two generic language roots", () => {
+test("Phase 9R is bounded to the four observed failures and three generic language roots", () => {
   const scope = contract.workUnits["9R"].scope;
   assert.deepEqual(
     [scope.observedFailures, scope.languageFailures, scope.hostFeatureFailures],
     [4, 3, 1],
   );
-  assert.equal(scope.genericLanguageRootCauses, 2);
-  assert.equal(scope.projectAuthoredReproducersRequired, 2);
+  assert.equal(scope.downstreamLanguageFailuresAfterBundleResolution, 1);
+  assert.equal(scope.genericLanguageRootCauses, 3);
+  assert.equal(scope.projectAuthoredReproducersRequired, 3);
   assert.equal(scope.focusedExternalCasesMaximum, 4);
   assert.equal(scope.logicalTicksPerCase, 120);
   assert.equal(scope.fullSupplementalRerunsAllowed, 0);

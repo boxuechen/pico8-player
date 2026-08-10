@@ -405,8 +405,9 @@
         "observedFailures": 4,
         "languageFailures": 3,
         "hostFeatureFailures": 1,
-        "genericLanguageRootCauses": 2,
-        "projectAuthoredReproducersRequired": 2,
+        "downstreamLanguageFailuresAfterBundleResolution": 1,
+        "genericLanguageRootCauses": 3,
+        "projectAuthoredReproducersRequired": 3,
         "focusedExternalCasesMaximum": 4,
         "logicalTicksPerCase": 120,
         "fullSupplementalRerunsAllowed": 0,
@@ -415,7 +416,7 @@
         "hostFilesystemAuthorityExpansion": false
       },
       "exit": [
-        "camera previous-state returns and absent-value all iteration have project-authored real-WASM regressions",
+        "camera previous-state returns, absent-value all iteration and bounded large chr varargs have project-authored real-WASM regressions",
         "the companion cart is supplied only through an explicit caller-authorized local bundle",
         "the four affected external cases reach CU in a bounded Chrome rerun without a supplemental sweep",
         "9F is reactivated for the one complete four-by-fifty requalification"
