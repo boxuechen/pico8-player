@@ -34,8 +34,8 @@ test("Phase 8D closes an aggregate-only 100-CU result at its implementation comm
   assert.doesNotMatch(JSON.stringify(result), /phase8\/|\.p8|cartSha256|screenSha256/u);
 
   assert.match(packageJson.scripts["test:phase-8d"], /phase-8d-real-cart-gaps\.test\.mjs/u);
-  assert.match(packageJson.scripts.test, /test:phase-8d/u);
-  assert.match(packageJson.scripts.verify, /test:phase-8d/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-8d/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-8d/u);
 });
 
 test("Phase 8D remains closed under immutable exit evidence", async () => {

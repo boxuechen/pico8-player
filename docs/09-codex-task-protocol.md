@@ -64,7 +64,11 @@
 5. golden framebuffer/RAM/audio。
 6. Worker/browser integration。
 7. performance 或 long-run gate。
-8. 全量验证。
+8. 当前 active phase 明确拥有的 release 或 long-run gate。
+
+默认 `pnpm test` 和 `pnpm run verify` 只执行快速基线。受影响模块、对应 conformance 和最多一个相关 Chrome
+玩家路径由当前 phase 补充；不得因为修改 production 或公共契约就自动运行历史阶段全集。
+`pnpm run test:historical` / `verify:historical` 只用于手动诊断已观察到的跨阶段回归，不是任务完成条件。
 
 若项目尚未建立某层测试，当前任务应建立最小真实测试设施，不能用“未来补测试”作为完成条件。
 

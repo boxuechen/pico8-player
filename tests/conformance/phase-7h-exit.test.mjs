@@ -124,8 +124,8 @@ test("Phase 7H release command cannot be replaced by the diagnostic gate", () =>
   assert.match(packageJson.scripts["test:release"], /phase-7g\/run-gate\.mjs/u);
   assert.match(packageJson.scripts["test:release"], /test:phase-7h/u);
   assert.doesNotMatch(packageJson.scripts["test:release"], /diagnostic/u);
-  assert.match(packageJson.scripts.test, /test:phase-7h/u);
-  assert.match(packageJson.scripts.verify, /test:phase-7h/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-7h/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-7h/u);
   assert.equal(exit.releaseGate.diagnosticMaySubstitute, false);
   assert.equal(exit.releaseGate.cleanCheckout.install, "pnpm install --offline --frozen-lockfile");
   assert.equal(exit.releaseGate.cleanCheckout.testRelease, "pass");

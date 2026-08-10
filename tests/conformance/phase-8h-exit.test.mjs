@@ -103,8 +103,8 @@ test("Phase 8 contract and active phase route are closed", async () => {
   assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Complete/u);
   assert.ok(evidence.includes("51 个失败"));
   assert.match(packageJson.scripts["test:phase-8h"], /phase-8h-exit\.test\.mjs/u);
-  assert.match(packageJson.scripts.test, /test:phase-8h/u);
-  assert.match(packageJson.scripts.verify, /test:phase-8h/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-8h/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-8h/u);
   await assert.rejects(read("docs/phases/8-expanded-real-cart-qualification.md"), {
     code: "ENOENT",
   });

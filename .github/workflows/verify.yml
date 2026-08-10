@@ -31,4 +31,4 @@ jobs:
       - run: echo "EMSDK=$GITHUB_WORKSPACE/.cache/emsdk" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       - run: google-chrome --version || chromium --version
-      - run: pnpm run verify
+      - run: pnpm run verify:phase-9

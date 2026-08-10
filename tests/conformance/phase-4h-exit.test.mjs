@@ -206,8 +206,8 @@ test("Phase 4 contract and published evidence are closed", async () => {
     assert.ok(compatibility.includes(id), id);
   }
   assert.ok(evidence.includes(exit.target));
-  assert.ok(packageJson.scripts.test.includes("test:phase-4h"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-4h"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-4h"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-4h"));
   assert.equal(
     packageJson.scripts["test:phase-4h"],
     "node --test tests/conformance/phase-4h-exit.test.mjs",

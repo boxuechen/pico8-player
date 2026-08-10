@@ -26,7 +26,10 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
   定义预期；禁止复制第三方代码或按 cart identity 分支。
 - 不新增 BBS crawler、网络 cart fetch、任意 URL 或 host-filesystem authority。
 - 日常 external regression 最多选 10 个代表 case，每个 120 logical ticks；不重复 200-cart 全量、900 秒
-  duration 或完整 C2。整套 4×50 只在 9F 跑一次，完整 `pnpm run verify` 只在 9G 跑一次。
+  duration、完整 C2 或历史阶段全集。整套 4×50 只在 9F 跑一次；9G 只运行 focused release gate。
+- 默认 `pnpm test` / `pnpm run verify` 是 quick baseline；`verify:phase-9` 叠加当前 work unit 的 owner tests，
+  `verify:release` 只覆盖 release artifact 与短 Chrome 玩家路径。`verify:historical` 与 600 秒 soak 仅供
+  相关跨阶段回归的手动诊断，不是 Phase 9 exit gate。
 - RuntimeCore 保持 browser-neutral；Canvas、AudioContext、Worker 与 screenshot automation 继续属于
   `apps/web-player` / browser tooling。
 
@@ -40,7 +43,7 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9D Host-feature Compatibility Remediation | Pending | 1 个 host-feature failure 在不扩大 authority 的前提下达到 CU |
 | 9E Focused Chrome Regression | Pending | 小范围 production Chrome 代表回归覆盖所有修复根因 |
 | 9F Single Supplemental Requalification | Pending | 唯一一次 4×50 quick smoke 达到 200 CU |
-| 9G Release Regression | Pending | release artifact、Chrome lifecycle 与一次最终 verify 通过 |
+| 9G Release Regression | Pending | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
 | 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
 
 ## 4. 当前工作：9A Failure-set Freeze / Root-cause Contract
@@ -85,5 +88,6 @@ source；若 triage 需要实现兼容行为，必须先完成 9A 并激活对�
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。
 - open P0/P1 为 `0`；第三方 tracked artifact 与公开兼容率为 `0`。
-- 9F 只进行一次 4×50 quick smoke；9G 只进行一次最终 `pnpm run verify`。
-- `pnpm run test:release`、Phase 9 aggregate exit test 与 clean worktree gate 通过。
+- 9F 只进行一次 4×50 quick smoke；9G 不重跑历史阶段全集或 600 秒 soak。
+- `pnpm run verify:phase-9`、`pnpm run verify:release`、Phase 9 aggregate exit test 与 clean worktree
+  gate 通过。

@@ -95,8 +95,8 @@ test("Phase 8A history routes to immutable exit evidence and tracks no third-par
   assert.ok(references.includes(contract.externalSource.revision));
   assert.equal(packageJson.scripts["test:phase-8a"],
     "node --test tests/contract/phase-8a-activation.test.mjs");
-  assert.ok(packageJson.scripts.test.includes("test:phase-8a"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-8a"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-8a"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-8a"));
   const tracked = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
     .split("\0").filter(Boolean);
   assert.equal(tracked.some((path) => path.startsWith("ref/")), false);

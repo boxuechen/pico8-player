@@ -173,8 +173,8 @@ test("Phase 6 contract, evidence, roadmap and active route are closed", async ()
   }
   assert.ok(roadmap.includes("Phase 6 exit"));
   assert.ok(compatibility.includes(exit.target));
-  assert.ok(packageJson.scripts.test.includes("test:phase-6h"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-6h"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-6h"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-6h"));
   await assert.rejects(
     readFile(new URL("docs/phases/6-real-cart-qualification.md", projectRoot)),
     { code: "ENOENT" },

@@ -150,8 +150,8 @@ test("Phase 5A activation history routes to closed Phase 5 evidence", async () =
     packageJson.scripts["test:phase-5a"],
     "pnpm run build && node --test tests/contract/phase-5a-activation.test.mjs",
   );
-  assert.ok(packageJson.scripts.test.includes("test:phase-5a"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-5a"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-5a"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-5a"));
   await assert.rejects(
     readFile(new URL("docs/phases/5-l3-local-multicart.md", projectRoot)),
     { code: "ENOENT" },

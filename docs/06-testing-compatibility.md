@@ -116,7 +116,11 @@ pnpm run test:browser
 pnpm run test:fuzz
 pnpm run test:performance
 pnpm run test:differential
-pnpm run test:release
+pnpm run verify
+pnpm run verify:phase-9
+pnpm run verify:release
+pnpm run test:historical
+pnpm run verify:historical
 ```
 
 这些命令在脚本尚未建立时是目标契约。落地后不得无迁移说明地改名。
@@ -156,13 +160,19 @@ cart-defined items，不包含 PICO-8 system settings 或完整 console menu。
 
 ### 3.4 Release candidate gate
 
-`pnpm run test:release` 是当前单一 RC gate：从 tracked source 重建并校验 release artifact，运行 7G
-完整 Chrome hardening（含 600 秒 30/60 Hz desktop soak），最后校验 7H aggregate exit、兼容口径、许可、
-provenance 与文档。`test:phase-7g:diagnostic` 的 10 秒 soak 只供定位，不能替代 release gate。
+`pnpm run verify:release` 是当前 focused RC gate：从 tracked source 重建并校验 release artifact，
+运行 7D production shell 的 Chrome 玩家路径和 7H artifact/aggregate contract。它不重新运行 Phase 0–8
+全集，也不默认执行长 soak。
 
-release gate 固定 Chrome/Chromium desktop、caller-provided bytes、zero network cart authority、zero steady
-audio underrun、zero stale output 和完整 Worker/RAF/listener/AudioContext teardown。它不访问 BBS、不读取
-`ref/`/local corpus、不提交 ignored build output，也不执行 registry、网站或 GitHub Release publication。
+`pnpm run test:release`、`pnpm run test:historical` 和 `pnpm run verify:historical` 保留已关闭阶段的
+完整历史门禁语义，其中 release/historical verify 包含
+600 秒 30/60 Hz desktop soak；这些历史命令只供手动诊断已观察到的跨阶段回归。只有改动触及 audio、scheduler、
+Worker lifecycle 或 resource ownership，且 active phase 明确要求时，才运行相关长门禁。
+
+focused release gate 固定 Chrome/Chromium desktop、caller-provided bytes 和 zero network cart authority，并验证
+shell 语义、local load、keyboard/touch、audio-blocked recovery、fault recovery 以及 Worker/RAF/AudioContext
+teardown。它不访问 BBS、不读取 `ref/`/local corpus、不提交 ignored build output，也不执行 registry、网站
+或 GitHub Release publication。
 
 ### 3.5 Expanded local real-cart gate
 

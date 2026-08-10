@@ -40,8 +40,17 @@ test("Phase 9A makes the 51-failure target and bounded verification strategy mea
   assert.equal(contract.remediationPolicy.dailyLogicalTicksPerCase, 120);
   assert.equal(contract.remediationPolicy.fullSupplementalReruns, 1);
   assert.equal(contract.remediationPolicy.longPlayabilityRerunRequired, false);
-  assert.equal(contract.remediationPolicy.fullVerifyRuns, 1);
-  assert.equal(contract.remediationPolicy.fullVerifyOwner, "9G");
+  assert.equal(contract.remediationPolicy.defaultVerification, "pnpm run verify");
+  assert.equal(contract.remediationPolicy.defaultTest, "pnpm test");
+  assert.equal(contract.remediationPolicy.phaseVerification, "pnpm run verify:phase-9");
+  assert.equal(contract.remediationPolicy.focusedReleaseVerification,
+    "pnpm run verify:release");
+  assert.equal(contract.remediationPolicy.historicalVerification,
+    "pnpm run verify:historical");
+  assert.equal(contract.remediationPolicy.historicalTest,
+    "pnpm run test:historical");
+  assert.equal(contract.remediationPolicy.historicalVerificationRunsRequired, 0);
+  assert.equal(contract.remediationPolicy.longSoakRunsRequired, 0);
   assert.equal(contract.remediationPolicy.cartSpecificBranchesAllowed, false);
 });
 
@@ -77,12 +86,14 @@ test("Phase 9A preserves local-only privacy and zero host-authority expansion", 
 });
 
 test("Phase 9A is the single documented Codex route and is continuously verified", async () => {
-  const [docsReadme, phaseIndex, phase, roadmap, packageJson] = await Promise.all([
+  const [docsReadme, phaseIndex, phase, roadmap, packageJson, agents, workflow] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/README.md"),
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/05-delivery-plan.md"),
     readJson("package.json"),
+    read("AGENTS.md"),
+    read(".github/workflows/verify.yml"),
   ]);
   assert.match(docsReadme, /当前阶段 \| Phase 9/u);
   assert.match(docsReadme, /Active work unit \| 9A/u);
@@ -91,6 +102,14 @@ test("Phase 9A is the single documented Codex route and is continuously verified
   assert.match(phase, /language `45`、timing `5`/u);
   assert.match(roadmap, /9 Supplemental Compatibility Remediation（9A–9H） \| Active/u);
   assert.match(packageJson.scripts["test:phase-9a"], /phase-9a-activation\.test\.mjs/u);
-  assert.match(packageJson.scripts.test, /test:phase-9a/u);
-  assert.match(packageJson.scripts.verify, /test:phase-9a/u);
+  assert.equal(packageJson.scripts.test, "pnpm run verify:quick");
+  assert.match(packageJson.scripts["test:historical"], /test:phase-9a/u);
+  assert.equal(packageJson.scripts.verify, "pnpm run verify:quick");
+  assert.match(packageJson.scripts["verify:quick"], /phase-9a-activation\.test\.mjs/u);
+  assert.equal(packageJson.scripts["verify:phase-9"], "pnpm run verify:quick");
+  assert.match(packageJson.scripts["verify:release"], /run-phase-7d\.mjs/u);
+  assert.doesNotMatch(packageJson.scripts["verify:release"], /phase-7g\/run-gate\.mjs/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-7g/u);
+  assert.match(agents, /do not run\s+`verify:historical`/u);
+  assert.match(workflow, /run: pnpm run verify:phase-9/u);
 });

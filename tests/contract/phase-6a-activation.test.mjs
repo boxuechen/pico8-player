@@ -126,6 +126,6 @@ test("Phase 6A routes Codex and keeps local corpus paths ignored", async () => {
     packageJson.scripts["test:phase-6a"],
     "node --test tests/contract/phase-6a-activation.test.mjs",
   );
-  assert.ok(packageJson.scripts.test.includes("test:phase-6a"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-6a"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-6a"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-6a"));
 });

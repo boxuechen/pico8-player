@@ -141,6 +141,6 @@ test("Phase 7A routes Codex to one active unit or the closed Phase 7 evidence", 
     packageJson.scripts["test:phase-7a"],
     "node --test tests/contract/phase-7a-activation.test.mjs",
   );
-  assert.ok(packageJson.scripts.test.includes("test:phase-7a"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-7a"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-7a"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-7a"));
 });

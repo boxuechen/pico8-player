@@ -196,8 +196,8 @@ test("Phase 8B remains closed after Phase 8 aggregate exit", async () => {
     "node --test tests/compat/phase-8b-expanded-corpus.test.mjs");
   assert.match(packageJson.scripts["prepare:phase-8:local"], /prepare-expanded-corpus\.mjs/u);
   assert.match(packageJson.scripts["qualification:phase-8:chrome"], /run-expanded-chrome-baseline\.mjs/u);
-  assert.match(packageJson.scripts.test, /test:phase-8b/u);
-  assert.match(packageJson.scripts.verify, /test:phase-8b/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-8b/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-8b/u);
 });
 
 test("Chrome smoke treats a fault-free cart stop as a completed boot", async () => {

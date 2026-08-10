@@ -21,8 +21,10 @@ Repository rules:
 - Do not infer implementation status from a target architecture example. Check
   the status labels and current source first.
 - Chrome/Chromium is the only browser gate. Do not add Firefox/WebKit scope.
-- Run verification proportional to the change and finish with `pnpm run verify`
-  when production behavior or a public contract changes.
+- Run verification proportional to the change and follow the active phase's
+  verification matrix. `pnpm test` and `pnpm run verify` are quick defaults; do not run
+  `verify:historical`, long soaks or an unrelated phase gate unless the active
+  phase explicitly owns it or a relevant regression is being diagnosed.
 
 Keep this file short. Detailed task requirements belong in the active phase
 document, not here.

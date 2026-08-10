@@ -87,8 +87,8 @@ test("Phase 8E history and living compatibility counts match the machine invento
     "pnpm run build && node --test tests/contract/phase-8e-activation.test.mjs tests/compat/phase-8e-format-pairs.test.mjs && pnpm run test:phase-8f");
   assert.match(packageJson.scripts["qualification:phase-8:pairs"],
     /aggregate-expanded-format-pairs\.mjs/u);
-  assert.match(packageJson.scripts.test, /test:phase-8e/u);
-  assert.match(packageJson.scripts.verify, /test:phase-8e/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-8e/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-8e/u);
   assert.equal(contract.workUnits["8F"].status, "complete");
   assert.equal(contract.workUnits["8G"].status, "complete");
 });

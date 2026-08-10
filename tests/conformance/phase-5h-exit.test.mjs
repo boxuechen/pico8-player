@@ -210,8 +210,8 @@ test("Phase 5 contract and published evidence are closed", async () => {
   assert.ok(evidence.includes(exit.target));
   assert.ok(compatibility.includes(exit.target));
   assert.ok(compatibility.includes("P5-KD-01"));
-  assert.ok(packageJson.scripts.test.includes("test:phase-5h"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-5h"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-5h"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-5h"));
   assert.ok(packageJson.scripts["evidence:phase-5h"].includes("--evidence"));
   await assert.rejects(
     readFile(new URL("docs/phases/5-l3-local-multicart.md", projectRoot)),

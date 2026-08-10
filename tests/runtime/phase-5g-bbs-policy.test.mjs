@@ -109,6 +109,6 @@ test("5G deferred policy remains closed after the independent 5H exit", async ()
     packageJson.scripts["test:phase-5g"],
     "pnpm run build && node --test tests/runtime/phase-5g-bbs-policy.test.mjs",
   );
-  assert.ok(packageJson.scripts.test.includes("test:phase-5g"));
-  assert.ok(packageJson.scripts.verify.includes("test:phase-5g"));
+  assert.ok(packageJson.scripts["test:historical"].includes("test:phase-5g"));
+  assert.ok(packageJson.scripts["verify:historical"].includes("test:phase-5g"));
 });

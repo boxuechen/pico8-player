@@ -102,8 +102,8 @@ test("Phase 7G has one full exit command and a clearly non-exit diagnostic comma
   assert.match(packageJson.scripts["test:phase-7g"], /run-gate\.mjs/u);
   assert.doesNotMatch(packageJson.scripts["test:phase-7g"], /diagnostic/u);
   assert.match(packageJson.scripts["test:phase-7g:diagnostic"], /--diagnostic/u);
-  assert.match(packageJson.scripts.test, /test:phase-7g/u);
-  assert.match(packageJson.scripts.verify, /test:phase-7g/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-7g/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-7g/u);
   assert.ok(
     phaseContract.completedWorkUnits.at(-1) === "7G" ||
     phaseContract.completedWorkUnits.at(-1) === "7H",

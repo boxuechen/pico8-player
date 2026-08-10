@@ -62,6 +62,6 @@ test("Phase 8G history documents the bounded verification strategy", async () =>
   assert.match(packageJson.scripts["test:phase-8g"], /phase-8g-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["test:phase-8f"], /phase-8g-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["test:phase-8e"], /pnpm run test:phase-8f/u);
-  assert.match(packageJson.scripts.test, /test:phase-8e/u);
-  assert.match(packageJson.scripts.verify, /test:phase-8e/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-8e/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-8e/u);
 });

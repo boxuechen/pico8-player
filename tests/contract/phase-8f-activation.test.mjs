@@ -87,6 +87,6 @@ test("Phase 8F history is documented and continuously verified", async () => {
   assert.match(packageJson.scripts["qualification:phase-8f:playability:finalize"],
     /finalize-representative-playability\.mjs/u);
   assert.match(packageJson.scripts["test:phase-8e"], /pnpm run test:phase-8f/u);
-  assert.match(packageJson.scripts.test, /test:phase-8e/u);
-  assert.match(packageJson.scripts.verify, /test:phase-8e/u);
+  assert.match(packageJson.scripts["test:historical"], /test:phase-8e/u);
+  assert.match(packageJson.scripts["verify:historical"], /test:phase-8e/u);
 });
