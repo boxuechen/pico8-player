@@ -8,14 +8,15 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | 项目状态 | 唯一入口 |
 | --- | --- |
 | 最近完成 | Phase 8；[Expanded Real-cart Qualification exit evidence](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) |
-| 当前阶段 | 无 |
-| Active work unit | 无 |
-| 当前机器合同 | 无 |
+| 当前阶段 | Phase 9；[Supplemental Compatibility Remediation](./phases/9-supplemental-compatibility-remediation.md) |
+| Active work unit | 9A — Failure-set Freeze / Root-cause Contract |
+| 当前机器合同 | [`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
 
 Phase 8A–8H 已关闭：100 个 canonical cart 完成 fixed smoke，65 个格式 pair 完成定性，10 个代表
-case 达到 C2；supplemental 200-cart quick smoke 暴露的 51 个失败已经作为后续兼容修复 backlog 归档。
+case 达到 C2；supplemental 200-cart quick smoke 暴露的 51 个失败已进入 Phase 9：language 45、timing 5、
+unsupported-host-feature 1，目标是用通用修复收敛到 200 CU。
 第三方 bytes、截图、路径、hash 与逐-cart 结果保持本地，不成为 CI、release artifact 或公开兼容率。
-当前没有 active phase，因此 production implementation 暂未授权。
+当前唯一授权工作是 9A 的失败集冻结和共享根因契约；9A 不授权修改 production source。
 
 日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

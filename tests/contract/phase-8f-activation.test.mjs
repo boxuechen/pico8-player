@@ -77,7 +77,7 @@ test("Phase 8F history is documented and continuously verified", async () => {
     ), "utf8"),
   ]);
   assert.match(docsReadme, /最近完成 \| Phase 8/u);
-  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.match(evidence, /10 个代表 case 全部达到 C2/u);
   assert.match(evidence, /没有重复读取外部 corpus/u);
   assert.match(packageJson.scripts["test:phase-8f"], /phase-8f-supplemental-top200\.test\.mjs/u);

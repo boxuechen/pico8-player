@@ -126,8 +126,9 @@ test("Phase 7A routes Codex to one active unit or the closed Phase 7 evidence", 
       assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
     } else {
       assert.match(docsReadme, /最近完成 \| Phase 8/u);
-      assert.match(docsReadme, /当前阶段 \| 无/u);
-      assert.match(docsReadme, /Active work unit \| 无/u);
+      assert.match(docsReadme, /当前阶段 \| Phase 9/u);
+      assert.match(docsReadme, /Active work unit \| 9A/u);
+      assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
     }
     await assert.rejects(
       readFile(new URL("docs/phases/7-web-player-release-candidate.md", projectRoot)),

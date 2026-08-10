@@ -96,7 +96,10 @@ test("Phase 8 contract and active phase route are closed", async () => {
   assert.equal(contract.workUnits["8H"].result.exitManifest,
     "tests/conformance/manifests/phase-8h-exit.json");
   assert.match(docsReadme, /最近完成 \| Phase 8/u);
+  assert.match(docsReadme, /当前阶段 \| Phase 9/u);
+  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.doesNotMatch(phaseIndex, /8-expanded-real-cart-qualification\.md/u);
+  assert.match(phaseIndex, /9-supplemental-compatibility-remediation\.md/u);
   assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Complete/u);
   assert.ok(evidence.includes("51 个失败"));
   assert.match(packageJson.scripts["test:phase-8h"], /phase-8h-exit\.test\.mjs/u);

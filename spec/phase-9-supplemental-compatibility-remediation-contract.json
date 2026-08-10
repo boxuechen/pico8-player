@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 1,
+  "phase": "9",
+  "name": "Supplemental Compatibility Remediation",
+  "status": "active",
+  "target": "turn the 51 supplemental Top200 Chrome quick-smoke failures into generic PICO-8 v0.2.7 compatibility fixes and reach 200 CU",
+  "browserGate": ["chrome", "chromium"],
+  "baseline": {
+    "phase8Contract": "spec/phase-8-expanded-real-cart-qualification-contract.json",
+    "phase8ContractSha256": "f8c64138482ca0e26738c881752fbd66f2d4b01f94929dfcc052e7167e2f2b4d",
+    "phase8Evidence": "docs/evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md",
+    "phase8EvidenceSha256": "8e75b5b33701556626175e422d59475a2669106ff5be5aef30e8bff9802c170f",
+    "phase8ExitManifest": "tests/conformance/manifests/phase-8h-exit.json",
+    "phase8ExitManifestSha256": "43c3685c2951af4eb8081c14d924a9a1fd2b58564e50d3a1eed6e9570295f24b",
+    "runtimeManifest": "wasm/runtime-v1.manifest.lock.json",
+    "runtimeManifestSha256": "e0d91e4cb4283081194e4821f3c304e9b75b2b71b7eab26a9079ebad739cf88e",
+    "baselineCommit": "6d61ba3a40d34ee06da915a2b2033ec5660d54fe"
+  },
+  "backlog": {
+    "corpus": "caller-authorized-local-supplemental-top200-snapshot",
+    "cases": 200,
+    "completedQuickSmoke": 200,
+    "logicalTicksPerCase": 120,
+    "smokeOutcomes": { "boots": 149, "fails": 51, "notRun": 0 },
+    "failureClusters": { "language": 45, "timing": 5, "unsupported-host-feature": 1 },
+    "localAggregateSha256": "54c352ff737973e944a773afe8396e30b012915ac40d5c3a0252932553505a7b",
+    "targetDisposition": { "CU": 200, "fails": 0, "notRun": 0 },
+    "formalPublicDenominator": false
+  },
+  "remediationPolicy": {
+    "fixUnit": "shared root cause backed by a project-authored minimal reproducer",
+    "cartSpecificBranchesAllowed": false,
+    "officialBehaviorPriority": "PICO-8 v0.2.7 manual or reviewable official observation",
+    "dailyExternalChromeCasesMaximum": 10,
+    "dailyLogicalTicksPerCase": 120,
+    "fullSupplementalReruns": 1,
+    "longPlayabilityRerunRequired": false,
+    "fullVerifyRuns": 1,
+    "fullVerifyOwner": "9G",
+    "networkAuthorityExpansion": false,
+    "hostFilesystemAuthorityExpansion": false
+  },
+  "privacy": {
+    "sourceRuntimePath": "outside repository",
+    "refPathMayBeTestInput": false,
+    "repositoryThirdPartyCartBytes": 0,
+    "repositoryThirdPartyScreenshots": 0,
+    "thirdPartyCartIdentitiesTracked": false,
+    "thirdPartyCartHashesTracked": false,
+    "thirdPartyPathsTracked": false,
+    "thirdPartyPerCartResultsTracked": false,
+    "publicCompatibilityRate": false,
+    "ciDependency": false,
+    "releaseArtifactDependency": false
+  },
+  "phaseExitGate": {
+    "supplementalCases": 200,
+    "targetCU": 200,
+    "remainingFails": 0,
+    "remainingFailureClusters": 0,
+    "openP0": 0,
+    "openP1": 0,
+    "productionCartSpecificBranches": 0,
+    "trackedThirdPartyArtifacts": 0,
+    "publicCompatibilityRate": false,
+    "testRelease": "pass",
+    "fullVerify": "pass"
+  },
+  "completedWorkUnits": [],
+  "activeWorkUnit": "9A",
+  "nextWorkUnit": "9A",
+  "nextPhase": "deferred",
+  "workUnits": {
+    "9A": {
+      "name": "Failure-set Freeze / Root-cause Contract",
+      "status": "active",
+      "allowedPaths": [
+        ".gitignore",
+        "docs/README.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/phases/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/compat/",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "tools/compat/",
+        "tests/compat/",
+        "tests/contract/",
+        "tests/conformance/phase-6h-exit.test.mjs",
+        "tests/conformance/phase-7h-exit.test.mjs",
+        "tests/conformance/phase-8h-exit.test.mjs",
+        "tests/fixtures/phase-9/",
+        "package.json"
+      ],
+      "exit": [
+        "the ignored local 51-case failure set is reproduced and its aggregate hash is locked without tracked per-cart data",
+        "language, timing and host-feature observations are reduced to shared root-cause candidates",
+        "each candidate has a project-authored minimal reproducer or an explicit evidence gap",
+        "no production source changes and 9B becomes the only active work unit"
+      ]
+    },
+    "9B": {
+      "name": "Language Compatibility Remediation",
+      "status": "pending",
+      "allowedPaths": [
+        "wasm/bridge/",
+        "wasm/patches/",
+        "wasm/z8lua/",
+        "wasm/manifest.lock.json",
+        "wasm/runtime-v1.manifest.lock.json",
+        "packages/z8lua-bridge/src/",
+        "packages/runtime-core/src/",
+        "apps/web-player/src/worker/",
+        "tests/runtime/",
+        "tests/wasm/",
+        "tests/compat/",
+        "tests/fixtures/phase-9/",
+        "docs/adr/",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/04-typescript-runtime.md",
+        "docs/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "all shared language root causes have project-authored real-WASM regressions",
+        "generic fixes contain no cart identity or copied third-party code",
+        "at most 10 representative external cases pass a 120-tick Chrome quick smoke and 9C becomes active"
+      ]
+    },
+    "9C": {
+      "name": "Timing Compatibility Remediation",
+      "status": "pending",
+      "allowedPaths": [
+        "packages/runtime-core/src/",
+        "packages/z8lua-bridge/src/",
+        "wasm/bridge/",
+        "wasm/runtime-v1.manifest.lock.json",
+        "apps/web-player/src/worker/",
+        "tests/runtime/",
+        "tests/compat/",
+        "tests/fixtures/phase-9/",
+        "docs/adr/",
+        "docs/02-system-architecture.md",
+        "docs/04-typescript-runtime.md",
+        "docs/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "the five timing failures are reduced to generic scheduler, frame or CPU-boundary causes",
+        "project-authored deterministic-clock regressions prove each fix",
+        "the five affected external cases pass short Chrome smoke and 9D becomes active"
+      ]
+    },
+    "9D": {
+      "name": "Host-feature Compatibility Remediation",
+      "status": "pending",
+      "allowedPaths": [
+        "packages/contracts/src/",
+        "packages/runtime-core/src/",
+        "packages/z8lua-bridge/src/",
+        "wasm/bridge/",
+        "wasm/runtime-v1.manifest.lock.json",
+        "apps/web-player/src/worker/",
+        "tests/runtime/",
+        "tests/compat/",
+        "tests/fixtures/phase-9/",
+        "docs/adr/",
+        "docs/01-scope-and-success-criteria.md",
+        "docs/02-system-architecture.md",
+        "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "exit": [
+        "the single host-feature failure reaches CU through an in-profile generic behavior",
+        "no network, BBS, arbitrary URL or host-filesystem authority is added",
+        "a project-authored regression proves the behavior and 9E becomes active"
+      ]
+    },
+    "9E": {
+      "name": "Focused Chrome Regression",
+      "status": "pending",
+      "exit": [
+        "a bounded representative set covers every repaired root cause in production Chrome",
+        "boot, framebuffer, input, audio and lifecycle signals are reviewed where relevant",
+        "no long playability or full supplemental rerun occurs and 9F becomes active"
+      ]
+    },
+    "9F": {
+      "name": "Single Supplemental Requalification",
+      "status": "pending",
+      "exit": [
+        "one and only one four-by-fifty 120-tick supplemental Chrome rerun completes",
+        "the aggregate reaches 200 CU with zero remaining failure clusters",
+        "all third-party detail remains local-only and 9G becomes active"
+      ]
+    },
+    "9G": {
+      "name": "Release Regression",
+      "status": "pending",
+      "exit": [
+        "affected owner tests, release artifact and Chrome lifecycle gates pass",
+        "the single final pnpm run verify passes without external corpus dependency",
+        "open P0 and P1 are zero and 9H becomes active"
+      ]
+    },
+    "9H": {
+      "name": "Aggregate Exit",
+      "status": "pending",
+      "exit": [
+        "aggregate evidence records 200 CU without publishing a third-party compatibility rate",
+        "the machine contract closes, the phase document is removed and the worktree is clean"
+      ]
+    }
+  }
+}

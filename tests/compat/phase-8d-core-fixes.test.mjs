@@ -51,7 +51,7 @@ test("Phase 8D remains closed under immutable exit evidence", async () => {
   assert.equal(contract.nextWorkUnit, null);
   assert.equal(contract.activeWorkUnit, null);
   assert.equal(contract.status, "complete");
-  assert.match(readme, /Active work unit \| 无/u);
+  assert.match(readme, /Active work unit \| 9A/u);
   assert.match(evidence, /99 boots/u);
   assert.match(testing, /99 boots/u);
 });

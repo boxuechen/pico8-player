@@ -172,8 +172,9 @@ test("Phase 7H documentation preserves immutable evidence under its successor ph
     assert.ok(phaseIndex.includes("8-expanded-real-cart-qualification.md"));
   } else {
     assert.match(docsReadme, /最近完成 \| Phase 8/u);
-    assert.match(docsReadme, /当前阶段 \| 无/u);
-    assert.match(docsReadme, /Active work unit \| 无/u);
+    assert.match(docsReadme, /当前阶段 \| Phase 9/u);
+    assert.match(docsReadme, /Active work unit \| 9A/u);
+    assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
   }
   assert.match(roadmap, /7 Web Player Release Candidate（7A–7H） \| Complete/u);
   assert.match(scope, /101 compatible/u);

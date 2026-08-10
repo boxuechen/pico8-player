@@ -24,6 +24,7 @@
 | 6 Real-cart Qualification（6A–6H） | Complete | [Phase 6 exit](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-6-real-cart-qualification-contract.json) |
 | 7 Web Player Release Candidate（7A–7H） | Complete | [Phase 7 exit](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) / [contract](../spec/phase-7-web-player-release-candidate-contract.json) |
 | 8 Expanded Real-cart Qualification（8A–8H） | Complete | [Phase 8 exit](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) / [contract](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
+| 9 Supplemental Compatibility Remediation（9A–9H） | Active | [Phase 9](./phases/9-supplemental-compatibility-remediation.md) / [contract](../spec/phase-9-supplemental-compatibility-remediation-contract.json) |
 
 Phase 5 的最后发布口径严格限于 PICO-8 v0.2.7、Chrome/Chromium desktop 和项目原创 local L3
 corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence 和
@@ -31,10 +32,12 @@ corpus。Known Differences、Deferred BBS 与范围排除以 Phase 5 evidence �
 
 ## 3. 当前阶段边界
 
-当前没有 active phase，production implementation 未授权。Phase 8 的正式 100-cart fixed smoke、65 个
-format pair、10-case C2，以及 supplemental 200-cart quick smoke 暴露的 51 个失败，只由关闭合同和
-[exit evidence](./evidence/phase-8/91-phase-8-expanded-real-cart-qualification-exit-evidence.md) 保存。
-第三方内容与逐-cart evidence 不进入 tracked repository；后续兼容修复必须先激活新阶段。
+Phase 9 已激活，唯一 active work unit 为 9A。它先冻结 Phase 8 supplemental quick smoke 暴露的 51 个
+失败及其共享根因契约；language 45、timing 5、unsupported-host-feature 1 将分别由后续 9B/9C/9D
+处理。当前不授权 production source 修改，也不重跑 200-cart Chrome 全量。
+
+执行细节、允许文件和短验证边界只见 active phase 文档。第三方内容与逐-cart evidence 不进入 tracked
+repository；阶段目标是 200 CU，不发布第三方兼容率。
 
 ## 4. 当前声明之外
 

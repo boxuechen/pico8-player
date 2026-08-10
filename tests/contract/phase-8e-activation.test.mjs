@@ -79,7 +79,7 @@ test("Phase 8E history and living compatibility counts match the machine invento
       mvpDisposition === "required" && conformanceStatus === "unknown",
   ).length, 0);
   assert.match(docsReadme, /最近完成 \| Phase 8/u);
-  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.ok(evidence.includes("65 个 source/export format pair"));
   assert.match(scope, /101 compatible、4 partial、\s*8 unsupported/u);
   assert.match(testing, /101 compatible`、`4 partial/u);

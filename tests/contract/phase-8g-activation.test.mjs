@@ -56,7 +56,7 @@ test("Phase 8G history documents the bounded verification strategy", async () =>
     ), "utf8"),
   ]);
   assert.match(docsReadme, /最近完成 \| Phase 8/u);
-  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.match(evidence, /bounded requalification/u);
   assert.match(evidence, /没有重复读取外部 corpus/u);
   assert.match(packageJson.scripts["test:phase-8g"], /phase-8g-activation\.test\.mjs/u);

@@ -85,9 +85,10 @@ test("Phase 8A history routes to immutable exit evidence and tracks no third-par
     readJson("package.json"),
   ]);
   assert.match(docsReadme, /最近完成 \| Phase 8/u);
-  assert.match(docsReadme, /当前阶段 \| 无/u);
-  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.match(docsReadme, /当前阶段 \| Phase 9/u);
+  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.ok(!phaseIndex.includes("8-expanded-real-cart-qualification.md"));
+  assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
   assert.match(roadmap, /8 Expanded Real-cart Qualification（8A–8H） \| Complete/u);
   assert.ok(evidence.includes("100-cart canonical corpus"));
   assert.ok(references.includes("MiniMechMedia/pico8-games"));

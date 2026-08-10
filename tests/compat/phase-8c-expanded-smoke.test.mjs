@@ -164,6 +164,6 @@ test("Phase 8C remains closed with aggregate-only exit evidence", async () => {
   assert.match(packageJson.scripts.test, /test:phase-8c/u);
   assert.match(packageJson.scripts.verify, /test:phase-8c/u);
   assert.equal(schema.properties.runner.const, "phase-8-expanded-smoke-v1");
-  assert.match(docsReadme, /Active work unit \| 无/u);
+  assert.match(docsReadme, /Active work unit \| 9A/u);
   assert.ok(evidence.includes("100-cart canonical corpus"));
 });
