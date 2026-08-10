@@ -78,7 +78,7 @@ assert.deepEqual(manifest.fixedMemory, {
   maximumPages: 256,
   bytes: 16_777_216,
   growth: false,
-  defaultLuaHeapLimitBytes: 1_048_576,
+  defaultLuaHeapLimitBytes: 2_097_152,
   minimumTestedLuaHeapLimitBytes: 32_768,
   ordinaryOomStatus: "P8W_OUT_OF_MEMORY",
 });

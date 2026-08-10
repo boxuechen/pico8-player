@@ -36,6 +36,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-023 | [Accepted](./adr/023-menuitem-invocation-boundary.md) | VM-local callback + copied snapshot + generation-bound root-safe pause-menu invocation；替代 ADR-021 registration-only 限制 |
 | ADR-024 | [Accepted](./adr/024-pico8-v027-cart-version-and-text-include.md) | v0.2.7 cart version 43、bounded compact text rows 与 caller-authorized non-recursive include |
 | ADR-025 | [Accepted](./adr/025-phase-8d-real-cart-compatibility-boundaries.md) | Phase 8D parser/VM/callback/API/performance 修复和 expected-fault qualification 边界 |
+| ADR-026 | [Accepted](./adr/026-phase-9-language-compatibility-boundary.md) | Phase 9 P8 Lua/host coercion/typed selector、safe helper 与固定 2 MiB Lua heap 边界 |
 
 ## 2. 当前未决问题
 
@@ -64,7 +65,7 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | Q-11 | package/execution-domain 边界由 architecture tests 机器执行 | [0S evidence](./evidence/phase-0/11-phase-0s-evidence.md) |
 | Q-04 | 采用 schema 单向生成；production 只列已实现 API，12-signature prototype 独立且不暴露 | [ADR-008](./adr/008-schema-generated-host-bindings.md) / `pnpm run test:phase-1a` |
 | Q-08 | 使用 deterministic z8lua instruction count；按 4M/s、target FPS 与 Q16.16 floor 换算；ordinary slow frame 原子提交，hard cap 独立负责安全 | [`phase-4f-cpu-scheduler.json`](../tests/conformance/manifests/phase-4f-cpu-scheduler.json) / `pnpm run test:phase-4f:chrome` |
-| Q-02 | production 固定为 16 MiB WASM / 1 MiB Lua heap；32 KiB diagnostic profile 验证 structured OOM/recovery，不开启 memory growth 或 adaptive sizing | [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json) / `pnpm run evidence:phase-4g` |
+| Q-02 | production 固定为 16 MiB WASM / 2 MiB Lua heap；受限 diagnostic profile 验证 structured OOM/recovery，不开启 memory growth 或 adaptive sizing | [ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) / [`phase-4g-resource-long-run.json`](../tests/conformance/manifests/phase-4g-resource-long-run.json) |
 | Q-10 | plain guest yield 只返回直接 `coresume()`；L3 接受 root-only，nested host suspension 统一不可捕获 structured fault | [ADR-019](./adr/019-phase-5-coroutine-compatibility.md) / [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 
 ## 3. Risk register

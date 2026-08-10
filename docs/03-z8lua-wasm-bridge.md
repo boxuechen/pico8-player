@@ -17,7 +17,7 @@ public adapter 与自动测试的交集为准；完成测量见
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/`menuitem` registration/snapshot/invocation/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors、PICO-8 parser/environment/argument compatibility shims |
+| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/`menuitem` registration/snapshot/invocation/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、2 MiB default Lua heap、instruction/resource diagnostics、structured errors、PICO-8 parser/environment/argument compatibility shims |
 | **Accepted invariant** | 同步且不可重入的 import、append-only binding IDs、同一 Pico RAM、root-only recoverable host suspension、host-owned capability policy |
 | **Deferred** | PICO-8 system settings/full console menu、general nested-coroutine HostRequest recovery、general host-facing result vectors 和未激活的 capability/API 扩展 |
 
@@ -98,7 +98,8 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 
 1. 创建 main state，安装受限 allocator。
 2. 只打开实现 P8 Lua 所需的 base、PICO pure math/string、table 与 coroutine 子集；
-   project-owned table/string/coroutine helpers 保持在 VM 内，`rnd/srand` 直接使用 shared Pico
+   project-owned table/string/coroutine helpers 保持在 VM 内；`inext`、`pack`、`mapdraw`、string
+   `all()` 与 `_set_fps` compatibility aliases 不穿越 host ABI。`rnd/srand` 直接使用 shared Pico
    RAM `0x5f44..0x5f4b` 的 PRNG state；`menuitem()` 的五槽 registry、byte label 和 callback
    strong reference 同样只属于当前 `lua_State`。ADR-023 只允许 104-byte fixed-codec copy-out
    snapshot 与 boundary-checked slot/button invoke；closure/ref/borrowed label pointer 均不跨 JS↔WASM。
@@ -109,7 +110,7 @@ Bridge **MUST NOT** 直接调用 `luaL_openlibs()`。初始化顺序应为：
 
 `pcall`、`xpcall`、dynamic `load`、`collectgarbage` 等是否暴露，必须由官方行为和 conformance 决定。无论最终兼容选择如何，guest **MUST NOT** 获得修改/关闭 bridge hook 的途径。
 
-Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_STATUS_OUT_OF_MEMORY`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。Phase 4G 已锁定 production 默认 cap 为 `1 MiB`，并用 `32 KiB` minimum diagnostic profile 验证 bounded OOM 与 fresh recovery；host 不得自适应扩大它。
+Lua heap cap 与 64 KiB Base RAM 是两个不同限制。allocator **MUST** 正确追踪 realloc delta、在超限时返回 null，并把 `LUA_ERRMEM` 转成 `P8W_STATUS_OUT_OF_MEMORY`；不得让 Emscripten `abort()` 成为普通 cart OOM 路径。当前 production 默认 cap 为固定 `2 MiB`；Phase 9B 还以 `64 KiB` workload 验证 protected bootstrap OOM 与 fresh recovery。host 不得按 cart 或宿主压力自适应扩大它；[ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) 取代历史 1 MiB 发布值，但不改变 fixed 16 MiB WASM memory。
 
 ## 4. 生命周期与控制流
 
@@ -247,7 +248,9 @@ memory probes 和 `Phase0BMemoryBinding` 都调用它；未来 graphics/memory f
 输入，其兼容状态保持 unknown。
 
 production `p8w_*` 已注册 `peek/peek2/peek4`、`poke/poke2/poke4`、
-`memcpy/memset`。只有 `peek/poke` 是最多 8192 项的 variadic API；width variants 为单值。
+`memcpy/memset`。`peek(addr,n)` 最多产生 8192 个返回值；`poke(addr,val...)` 先验证完整
+arity，再接受最多 65536 个 value，并按 16-bit guest address wrap 写完整 Pico RAM。无 value 的
+`poke` 是 no-op，nil value 按 numeric zero 写入；width variants 为单值。
 `memcpy` 先建立 source snapshot 以保持 remap 后的重叠复制语义。RuntimeCore 通过
 `PicoLogicalMemoryPort` 调 production `_p8w_map_address`，frame snapshot 和 software raster
 不再复制 video-base switch。
@@ -261,7 +264,7 @@ state machine，不得被 RuntimeCore 当作 production `VmPort`。
 
 ## 6. C ABI v1
 
-当前 public ABI version 为 `0x00010003`。唯一完整 symbol/status/state/yield 列表是
+当前 public ABI version 为 `0x00010004`。唯一完整 symbol/status/state/yield 列表是
 [`spec/abi/p8w-v1.json`](../spec/abi/p8w-v1.json)；public adapter 与 artifact tests 必须与其
 完全一致。本文不复制容易漂移的 C header。
 
@@ -339,8 +342,9 @@ IndexedDB 和 current-cart repository 语义均由 RuntimeCore/app adapter 拥�
 `poke(addr,val...)` 使用 dedicated C wrapper，因此不会穿过 host frame：
 
 - bridge 在 push 大量 Lua return values 前必须 `lua_checkstack()`，失败转 OOM/runtime error。
-- 超过 8192 或 Lua stack cap 时结构化失败；`poke` 在写入前验证总 arity，禁止部分 side effect。
-- 8192-result/value 路径必须进入 stack correctness 与 interop regression。
+- `peek` 超过 8192 或 Lua stack cap 时结构化失败；`poke` 超过 65536 values 时结构化失败，并在
+  写入前验证总 arity，禁止部分 side effect。
+- 8192-result 和 65536-value 边界必须进入 stack correctness 与 interop regression。
 - 未来 host-facing multi-return/result vector 仍需新 machine contract，不得借用 scalar slots 截断。
 
 Host adapter **MUST**：
@@ -459,7 +463,7 @@ imports 与 artifact hash 分别由 `wasm/toolchain.lock.json` 和
 `worker,node` ES module、Wasm EH、`SUPPORT_LONGJMP=wasm`、filesystem/dynamic
 execution/growth off。binary descriptor 已验证 `initial=maximum=256` pages，
 `grow(1)` 失败且 view identity 不变。`node` 只服务 CI Worker smoke；当前资源契约固定为
-16 MiB linear memory 与 1 MiB default Lua heap，变更必须先修改机器契约与资源测试。
+16 MiB linear memory 与 2 MiB default Lua heap，变更必须先修改机器契约与资源测试。
 
 z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try/throw`，
 因此不能使用 `-fno-exceptions`。工具链固定使用 native Wasm exceptions；正式浏览器

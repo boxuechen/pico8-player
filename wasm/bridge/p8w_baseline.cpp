@@ -23,7 +23,7 @@ constexpr uint32_t kMaxErrorLength = 1023;
 constexpr char kContextRegistryKey[] = "__p8w_baseline_context";
 constexpr char kBudgetError[] = "__p8w_instruction_budget_exceeded__";
 constexpr char kOutOfMemoryError[] = "__p8w_out_of_memory__";
-constexpr uint32_t kDefaultLuaHeapLimit = 1024u * 1024u;
+constexpr uint32_t kDefaultLuaHeapLimit = 2u * 1024u * 1024u;
 constexpr uint32_t kMinimumLuaHeapLimit = 32u * 1024u;
 
 struct AllocationStats {

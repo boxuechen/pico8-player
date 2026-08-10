@@ -717,7 +717,7 @@ Phase 5 关闭时的历史 target 仍精确保留为
 **PICO-8 v0.2.7 L3 local/multicart project profile on Chrome/Chromium desktop**；当前 RC 是该
 profile 的产品化发布候选，不改写历史 claim。
 
-API inventory 共 `113` 项：`101 compatible`、`4 partial`（`flip`、`printh`、`stat`、`print`）、`8 unsupported`，
+API inventory 共 `113` 项：`101 compatible`、`5 partial`（`flip`、`printh`、`stat`、`print`、`extcmd`）、`7 unsupported`，
 required unknown release mode 为 `0`。只有 compatible 计入支持；partial 的精确 mode 与 workaround 仍由
 下节 Known Differences 约束。
 
@@ -731,7 +731,7 @@ in-profile case 完成 fixed smoke，3 个代表 case 完成 C2。该补充只�
 | Project L3 corpus | `C3=6/6`，playable `100%`，开放 P0/P1=`0/0`，Node/Chrome cross-oracle 一致 | [Phase 5 evidence](./evidence/phase-5/61-phase-5-l3-local-multicart-exit-evidence.md) |
 | Local multicart | caller-authorized bundle、root `load()`、atomic swap、external local `reload/cstore` | [ADR-018](./adr/018-caller-authorized-cart-resolution.md) / Phase 5 evidence |
 | Replacement gate | `100/100` swaps，generation `1→101`，stale commit `0` | Phase 5 evidence |
-| Resource gate | fixed 16 MiB WASM、1 MiB default Lua heap、`1800.0644s` Chrome mixed soak | Phase 5 evidence |
+| Resource gate | fixed 16 MiB WASM、2 MiB default Lua heap；历史 1 MiB soak 仍作 Phase 5 evidence | [ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) / Phase 5 evidence |
 | Aggregate claim | profile、inputs、scope 与 artifact hash machine-checked | [`phase-5h-exit.json`](../tests/conformance/manifests/phase-5h-exit.json) |
 | Local real-cart qualification | `12/12` classified aggregate、`11/11` in-profile smoke、3 个 C2、公开分母贡献 `0` | [Phase 6 evidence](./evidence/phase-6/71-phase-6-real-cart-qualification-exit-evidence.md) / [`phase-6h-exit.json`](../tests/conformance/manifests/phase-6h-exit.json) |
 | RC artifact | 12-file allowlist、6 stable keys、reproducible build、strict CSP/MIME/relative-base Chrome gate | [Phase 7 evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
@@ -741,7 +741,7 @@ in-profile case 完成 fixed smoke，3 个代表 case 完成 C2。该补充只�
 
 | ID | API / 模式 | 用户可见影响 | Workaround / scope |
 | --- | --- | --- | --- |
-| `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | 使用 `1,6,7,20,30,31,32,33,34,36,38,39`；`20` 是 legacy channel-0 current note |
+| `P4-KD-02` | `stat()` selector subset | 未支持 selector 返回 false | Phase 9B 已扩展 deterministic memory/CPU/FPS、audio/music、input 与 platform typed selector；精确集合见 API inventory |
 | `P4-KD-03` | timed P8SCII | delay control 不暂停 guest | 用 logical frame 驱动文字时间 |
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact | 避免依赖该边界值 |
 | `P4-KD-06` | advanced screen/bitplane modes | 超出 standard packed 4bpp profile | 使用标准 screen mode |
@@ -762,7 +762,8 @@ fresh-generation recovery 由
 official bit-exact 或第三方 cart 成功率声明。
 
 - Partial：`printh` 已实现 browser-safe diagnostic null sink，但不授予 filename、desktop、clipboard 或
-  filesystem side effect；Conditional：`extcmd`。`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
+  filesystem side effect；`extcmd` 同样只实现 bounded null sink，不授予 process、recording、window、network
+  或 filesystem authority。`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
   Phase 7E Node/Worker/Chrome gate 完成，历史 `P6-KD-01` 已关闭。PICO-8 system menu 仍属于 player scope
   exclusion，不计作 `menuitem()` API 差异。
 - Excluded platform API：`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；guest root

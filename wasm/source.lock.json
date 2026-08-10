@@ -9,7 +9,7 @@
   },
   "snapshot": {
     "path": "wasm/z8lua",
-    "sha256Inventory": "4d371ec5d7fdd39dc25269f51aca556eea876bfd8159aa4cc09339224e71aba6",
+    "sha256Inventory": "b9d014495c8a7ba5adabf5d04bcf3dbd622e8b3916a39b84cac183b00497d6c8",
     "inventoryExcludes": ["README.md"]
   },
   "comparison": {

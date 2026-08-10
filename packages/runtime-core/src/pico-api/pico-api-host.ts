@@ -159,8 +159,8 @@ export interface PicoApiHost {
   ): void;
   /** Returns a held-button mask when omitted, otherwise a boolean encoded as 0/1. */
   btn(buttonRaw?: number, playerRaw?: number): number;
-  /** Returns the current tick's edge/repeat state as a boolean encoded as 0/1. */
-  btnp(buttonRaw: number, playerRaw?: number): number;
+  /** Returns an edge/repeat mask when omitted, otherwise a boolean encoded as 0/1. */
+  btnp(buttonRaw?: number, playerRaw?: number): number;
   stat(selectorRaw: number): number;
   cartdata(idBytes: Uint8Array): number;
   dget(indexRaw: number): number;
@@ -500,7 +500,7 @@ class RuntimePicoApiHost implements PicoApiHost {
     return this.#input.btn(buttonRaw, playerRaw);
   }
 
-  btnp(buttonRaw: number, playerRaw?: number): number {
+  btnp(buttonRaw?: number, playerRaw?: number): number {
     return this.#input.btnp(buttonRaw, playerRaw);
   }
 
@@ -518,8 +518,27 @@ class RuntimePicoApiHost implements PicoApiHost {
   }
 
   stat(selectorRaw: number): number {
-    if ((selectorRaw >> 16) === LEGACY_CHANNEL_ZERO_NOTE_SELECTOR) {
-      return this.#audio.snapshotChannels()[0]!.note * Q16_ONE;
+    const selector = selectorRaw >> 16;
+    const channels = this.#audio.snapshotChannels();
+    if (selector >= 16 && selector <= 19) {
+      return channels[selector - 16]!.sfx * Q16_ONE;
+    }
+    if (selector >= 20 && selector <= 23) {
+      return channels[selector - 20]!.note * Q16_ONE;
+    }
+    if (selector >= 46 && selector <= 49) {
+      return channels[selector - 46]!.sfx * Q16_ONE;
+    }
+    if (selector >= 50 && selector <= 53) {
+      return channels[selector - 50]!.note * Q16_ONE;
+    }
+    const music = this.#audio.snapshotMusic();
+    if (selector === 24 || selector === 54) return music.pattern * Q16_ONE;
+    if (selector === 25 || selector === 55) return music.patternsPlayed * Q16_ONE;
+    if (selector === 26 || selector === 56) return music.tick * Q16_ONE;
+    if (selector === 57) return music.playing ? 1 : 0;
+    if (selector === LEGACY_CHANNEL_ZERO_NOTE_SELECTOR) {
+      return channels[0]!.note * Q16_ONE;
     }
     return this.#input.stat(selectorRaw);
   }

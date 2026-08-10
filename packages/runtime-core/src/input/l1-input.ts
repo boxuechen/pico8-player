@@ -89,6 +89,7 @@ export class L1Input {
   #wheelRaw = 0;
   #movementXRaw = 0;
   #movementYRaw = 0;
+  #targetFps: 30 | 60 = 30;
 
   constructor(ram: Uint8Array) {
     this.#ram = ram;
@@ -102,6 +103,7 @@ export class L1Input {
     this.#ram[BTNP_REPEAT_INTERVAL] = 0;
     this.#ram[DEVKIT_MODE] = 0;
     this.#clearDevkitState();
+    this.#targetFps = 30;
   }
 
   beginTick(input: PicoInputSnapshot, targetFps: 30 | 60): void {
@@ -110,6 +112,7 @@ export class L1Input {
     if (targetFps !== 30 && targetFps !== 60) {
       throw new RangeError("input targetFps must be 30 or 60");
     }
+    this.#targetFps = targetFps;
 
     // Repeat registers are sampled once. Guest writes during update/draw affect
     // the next simulation tick, never the already-latched btnp result.
@@ -182,7 +185,11 @@ export class L1Input {
       (this.#ram[PLAYER_ZERO_BUTTONS + player]! & (1 << button)) !== 0 ? 1 : 0;
   }
 
-  btnp(buttonRaw: number, playerRaw?: number): number {
+  btnp(buttonRaw?: number, playerRaw?: number): number {
+    if (buttonRaw === undefined) {
+      return this.#pressedMasks[0]! |
+        ((this.#pressedMasks[1]! & PICO_CONTROLLER_BUTTON_MASK) << 8);
+    }
     const button = q16Integer(buttonRaw);
     const player = playerRaw === undefined ? 0 : q16Integer(playerRaw);
     return this.#validButton(button, player) &&
@@ -191,6 +198,7 @@ export class L1Input {
 
   stat(selectorRaw: number): number {
     const selector = q16Integer(selectorRaw);
+    if (selector === 8 || selector === 9) return this.#targetFps << 16;
     if ((this.#devkitFlags & DEVKIT_ENABLE) === 0) {
       return selector === 31 ? -1 : 0;
     }

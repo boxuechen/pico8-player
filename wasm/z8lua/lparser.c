@@ -1033,6 +1033,7 @@ static BinOpr getbinopr (int op) {
     case '\\': return OPR_IDIV;
     case '&': return OPR_BAND;
     case '|': return OPR_BOR;
+    case '~':
     case TK_BXOR: return OPR_BXOR;
     case TK_SHL: return OPR_SHL;
     case TK_SHR: return OPR_SHR;
@@ -1477,10 +1478,13 @@ static int test_then_block (LexState *ls, int *escapelist) {
   luaX_next(ls);  /* skip IF or ELSEIF */
   luaX_trackbraces(ls);  /* track braces for short IF */
   expr(ls, &v);  /* read condition */
-  short_if &= ls->t.token != TK_THEN && ls->t.token != TK_EOS
+  short_if &= ls->t.token != TK_THEN && ls->t.token != TK_DO &&
+           ls->t.token != TK_EOS
            && ls->braces == 0 && logicalline == ls->logicalline;
   if (short_if)
     ls->emiteol = 1;
+  else if (ls->t.token == TK_DO)
+    luaX_next(ls);
   else
     checknext(ls, TK_THEN);
   if (ls->t.token == TK_GOTO || ls->t.token == TK_BREAK) {
@@ -1616,6 +1620,44 @@ static void exprstat (LexState *ls) {
 }
 
 
+static void shortprintexp (LexState *ls, expdesc *f) {
+  int line = ls->linenumber;
+  FuncState *fs = ls->fs;
+
+  /* '?' is PICO-8's implicit print call. Although normally line-leading,
+  ** official carts also use it as the sole return expression. */
+  TString *n = luaS_new(ls->L, "print");
+  ls->t.seminfo.ts = n;
+  ls->t.token = TK_NAME;
+  singlevar(ls, f);
+  luaK_exp2nextreg(fs, f);
+
+  expdesc args;
+  if (ls->t.token == TK_EOL || ls->t.token == TK_EOS)
+    args.k = VVOID;
+  else {
+    explist(ls, &args);
+    luaK_setmultret(fs, &args);
+  }
+
+  if (!testnext(ls, TK_EOS))
+    check_match(ls, TK_EOL, '?', line);
+
+  int base, nparams;
+  lua_assert(f->k == VNONRELOC);
+  base = f->u.info;
+  if (hasmultret(args.k))
+    nparams = LUA_MULTRET;
+  else {
+    if (args.k != VVOID)
+      luaK_exp2nextreg(fs, &args);
+    nparams = fs->freereg - (base + 1);
+  }
+  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 2));
+  luaK_fixline(fs, line);
+}
+
+
 static void retstat (LexState *ls) {
   /* stat -> RETURN [explist] [';'] */
   FuncState *fs = ls->fs;
@@ -1624,7 +1666,12 @@ static void retstat (LexState *ls) {
   if (block_follow(ls, 1) || ls->t.token == ';')
     first = nret = 0;  /* return no values */
   else {
-    nret = explist(ls, &e);  /* optional return values */
+    if (ls->t.token == TK_PRINT) {
+      shortprintexp(ls, &e);
+      nret = 1;
+    }
+    else
+      nret = explist(ls, &e);  /* optional return values */
     if (hasmultret(e.k)) {
       luaK_setmultret(fs, &e);
       if (e.k == VCALL && nret == 1) {  /* tail call? */
@@ -1650,42 +1697,10 @@ static void retstat (LexState *ls) {
 
 
 static void shortprint (LexState *ls) {
-  int line = ls->linenumber;
   FuncState *fs = ls->fs;
-
-  /* same as suffixedexp() except we push "print" first */
   expdesc f;
-  TString *n = luaS_new(ls->L, "print");
-  ls->t.seminfo.ts = n;
-  ls->t.token = TK_NAME;
-  singlevar(ls, &f);
-  luaK_exp2nextreg(fs, &f);
-
-  /* now we do the same as funcargs() */
-  expdesc args;
-  if (ls->t.token == TK_EOL || ls->t.token == TK_EOS)  /* arg list is empty? */
-    args.k = VVOID;
-  else {
-    explist(ls, &args);
-    luaK_setmultret(fs, &args);
-  }
-
-  if (!testnext(ls, TK_EOS)) /* check that we are at EOL or EOS */
-    check_match(ls, TK_EOL, '?', line);
-
-  int base, nparams;
-  lua_assert(f.k == VNONRELOC);
-  base = f.u.info;  /* base register for call */
-  if (hasmultret(args.k))
-    nparams = LUA_MULTRET;  /* open call */
-  else {
-    if (args.k != VVOID)
-      luaK_exp2nextreg(fs, &args);  /* close last argument */
-    nparams = fs->freereg - (base+1);
-  }
-
-  init_exp(&f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
-  luaK_fixline(fs, line);
+  shortprintexp(ls, &f);
+  SETARG_C(getcode(fs, &f), 1);
   fs->freereg = fs->nactvar;
 }
 

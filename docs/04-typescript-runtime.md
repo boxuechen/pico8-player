@@ -353,9 +353,10 @@ packed-screen snapshot 与 `L1Graphics` pixel path 均使用这条路径。Emscr
 
 v1 构建 **MUST** 将 WASM memory 的 `initial` 与 `maximum` 固定为同值，并使用机器契约锁定的 z8lua heap 上限，避免 `memory.grow()` 使 JS typed views 失效。真实 `WebAssembly.Memory` 只由 z8lua bridge 持有；RuntimeCore 只接收 runtime-neutral `PicoMemoryLease`，验证固定长度、范围和 session-local `leaseId`。Bridge 可以在 debug/test build 比较 `memory.buffer` identity 并在变化时立即触发 `E_INVARIANT`，但不能把 view 重建当成 production growth 支持；不满足固定内存的 artifact 不得发布。
 
-production 数值固定为 16 MiB WASM / 1 MiB Lua heap；`luaHeapLimit` 只作为
-Worker diagnostic composition option，用于 32 KiB OOM/recovery gate，不是按 cart 或宿主压力调整的
-自适应策略。Worklet queue capacity/prebuffer/low/high water 常量由 `pcm-queue.ts` 唯一拥有并导出。
+production 数值固定为 16 MiB WASM / 2 MiB Lua heap；`luaHeapLimit` 只作为
+Worker diagnostic composition option，用于受限 OOM/recovery gate，不是按 cart 或宿主压力调整的
+自适应策略。[ADR-026](./adr/026-phase-9-language-compatibility-boundary.md) 只提高 fixed Lua cap，
+不授权 memory growth。Worklet queue capacity/prebuffer/low/high water 常量由 `pcm-queue.ts` 唯一拥有并导出。
 
 `PicoRam` 的 layout views 是物理 64KiB，不把 raw `DataView` 连续访问伪装成 guest 地址重映射。官方手册明确：GFX/SCREEN 两个 8KiB video block 的重映射会低层影响 `peek/poke/memcpy`；MAP base/width remap 则由 map/tline address resolver 解释，不能笼统套到全部 memory access。z8lua 的 `@/%/$` 还会绕过普通 JS imports。因此，guest memory API、direct operators、Graphics 与 Map 必须服从 [03-z8lua-wasm-bridge.md](./03-z8lua-wasm-bridge.md) 定义的同一个分层 mapping 契约。upper RAM、`0x5f54/0x5f55` 与 direct operators 已由共享 mapper 测试证明收敛；未来实现不得把 raw physical `PicoRam.readU8()` 直接注册为完整 guest `peek()`。
 
@@ -480,7 +481,7 @@ keypress FIFO、逐 slice delta latch 与 `stat()` consumption 由 RuntimeCore �
 pointer lock 和 event normalization 仍由 app 拥有。
 
 - **MUST** 在每个 simulation slice 开始锁存输入；常规 callback 模式在 `_update`/`_update60` 前可见，自定义 loop 则在 resume 后直至下一 `flip()` boundary 保持稳定。同一 slice 内多次 `btn()` 结果相同；慢帧多 update 的重锁存细节由 conformance 固定。
-- `btnp()` edge/repeat 由 Worker 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效。
+- `btnp()` edge/repeat 由 Worker 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效；省略 button 时返回 player 0/1 的当前 edge/repeat mask。
 - replay 记录每 tick 的 normalized input snapshot，不记录 DOM timestamp。相同 replay 必须产生相同状态 hash。
 - `blur`、visibility loss、设备断连和 cart swap 必须显式清 held 状态，防止 stuck key。
 - 主线程映射可配置，但 core 只接收 PICO button index；UI 快捷键不得泄漏为 cart 输入。
@@ -549,12 +550,13 @@ type StepResult = Readonly<{
   不降频、不跳 draw，也不拆成部分提交，而是完成一个原子 logical frame。默认
   `2,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
   `E_VM_INSTRUCTION_BUDGET`，与 soft classification 分离。
-- `stat(1)` 报告当前 transaction 到调用点为止的 CPU fraction，并跨 root HostRequest continuation
+- `stat(0)` 返回当前 Lua allocator live KiB；`stat(1)` 报告当前 transaction 到调用点为止的 CPU fraction，并跨 root HostRequest continuation
   累计；因此它可略小于 frame 完成后的诊断值。`stat(7)` 返回 logical target FPS。两者都不读取
-  浏览器刷新率或 host wall-clock；`stat(0)` 因缺少稳定 oracle 继续返回 false。
-- legacy `stat(20)` 返回 authoritative AudioSynth channel 0 的当前 note number；inactive 时为 `-1`。
-  该查询与 canonical audio 使用同一 deterministic state，不读取 AudioContext、device mixer、
-  output queue 或 host wall clock；它不代表 legacy selectors `16..26` 已整体实现。
+  浏览器刷新率或 host wall-clock；`stat(8/9)` 返回同一个 deterministic target FPS。
+- audio selectors `16..26` 与 `46..57` 从 authoritative AudioSynth/music state 返回 typed number 或
+  boolean；它们不读取 AudioContext、device mixer、output queue 或 host wall clock。platform/string/nil
+  selector 由 bridge 在 VM 内直接产生，避免 TS numeric ABI 抹掉结果类型；其精确集合由 API inventory
+  与 Phase 9B regression 共同锁定。
 - CPU policy 不得改变 logical `time()`、canonical audio、input edge、draw/persistence transaction，
   也不得根据当前机器性能自适应改变 guest 结果。
 

@@ -114,10 +114,10 @@
       "guestName": "btnp",
       "hostMethod": "btnp",
       "parameters": [
-        { "name": "buttonRaw", "type": "q16.16-raw-i32" },
+        { "name": "buttonRaw", "type": "q16.16-raw-i32", "optional": true },
         { "name": "playerRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
-      "result": "boolean"
+      "result": "integer-if-first-omitted-otherwise-boolean"
     },
     {
       "id": 10,

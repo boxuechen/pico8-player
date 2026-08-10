@@ -114,7 +114,9 @@ test("production WASM memory and Lua heap fail closed without detaching views", 
   assert.equal(module.HEAPU8, heap);
   assert.equal(module.HEAPU8.buffer, buffer);
 
-  const normal = runtimeFor(undefined);
+  // Phase 4G's immutable evidence owns the historical 1 MiB profile. Pass it
+  // explicitly now that ADR-026 supersedes the production default with 2 MiB.
+  const normal = runtimeFor(manifest.limits.luaHeap.defaultBytes);
   try {
     assert.equal(normal.vm.luaHeapLimit, manifest.limits.luaHeap.defaultBytes);
     const ready = assertOk(normal.runtime.boot(carts.get("phase-4/resource-stable-30").cart));

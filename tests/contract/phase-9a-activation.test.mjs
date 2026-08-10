@@ -57,15 +57,9 @@ test("Phase 9A makes the 51-failure target and bounded verification strategy mea
   assert.equal(contract.remediationPolicy.cartSpecificBranchesAllowed, false);
 });
 
-test("Phase 9A is complete, changed no production source and activates only 9B", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A"]);
-  assert.equal(contract.activeWorkUnit, "9B");
-  assert.equal(contract.nextWorkUnit, "9B");
+test("Phase 9A remains complete with its zero-production-change result", () => {
+  assert.ok(contract.completedWorkUnits.includes("9A"));
   assert.equal(contract.workUnits["9A"].status, "complete");
-  assert.equal(contract.workUnits["9B"].status, "active");
-  assert.ok(Object.entries(contract.workUnits)
-    .filter(([name]) => !["9A", "9B"].includes(name))
-    .every(([, unit]) => unit.status === "pending"));
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
   const allowed = contract.workUnits["9A"].allowedPaths;
@@ -109,7 +103,7 @@ test("Phase 9A preserves local-only privacy and zero host-authority expansion", 
   assert.equal(contract.remediationPolicy.hostFilesystemAuthorityExpansion, false);
 });
 
-test("Phase 9A hands the single documented Codex route to 9B", async () => {
+test("Phase 9A keeps the single documented Codex route inside Phase 9", async () => {
   const [docsReadme, phaseIndex, phase, roadmap, packageJson, agents, workflow] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/README.md"),
@@ -120,9 +114,9 @@ test("Phase 9A hands the single documented Codex route to 9B", async () => {
     read(".github/workflows/verify.yml"),
   ]);
   assert.match(docsReadme, /当前阶段 \| Phase 9/u);
-  assert.match(docsReadme, /Active work unit \| 9B/u);
+  assert.match(docsReadme, /Active work unit \| 9[A-H]/u);
   assert.ok(phaseIndex.includes("9-supplemental-compatibility-remediation.md"));
-  assert.match(phase, /Active work unit：9B/u);
+  assert.match(phase, /Active work unit：9[A-H]/u);
   assert.match(phase, /language `45`、timing `5`/u);
   assert.match(roadmap, /9 Supplemental Compatibility Remediation（9A–9H） \| Active/u);
   assert.match(packageJson.scripts["test:phase-9a"], /phase-9a-activation\.test\.mjs/u);
@@ -136,7 +130,7 @@ test("Phase 9A hands the single documented Codex route to 9B", async () => {
   assert.match(packageJson.scripts["verify:quick"], /phase-9a-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:quick"], /phase-9a-failure-freeze\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:quick"], /phase-9b-activation\.test\.mjs/u);
-  assert.equal(packageJson.scripts["verify:phase-9"], "pnpm run verify:quick");
+  assert.match(packageJson.scripts["verify:phase-9"], /pnpm run verify:quick/u);
   assert.match(packageJson.scripts["verify:release"], /run-phase-7d\.mjs/u);
   assert.doesNotMatch(packageJson.scripts["verify:release"], /phase-7g\/run-gate\.mjs/u);
   assert.match(packageJson.scripts["verify:historical"], /test:phase-7g/u);

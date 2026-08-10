@@ -73,6 +73,47 @@ uint32_t update_prng(uint8_t *ram) {
   return a;
 }
 
+bool parse_pico8_hex_number(const char *value, size_t length,
+                            lua_Number *result) {
+  if (value == nullptr || length == 0 || result == nullptr) return false;
+  size_t cursor = 0;
+  bool negative = false;
+  if (value[cursor] == '-' || value[cursor] == '+') {
+    negative = value[cursor] == '-';
+    if (++cursor == length) return false;
+  }
+  uint32_t integer = 0;
+  uint32_t fraction = 0;
+  int integer_digits = 0;
+  int fraction_digits = 0;
+  bool dot = false;
+  for (; cursor < length; ++cursor) {
+    const unsigned char byte = static_cast<unsigned char>(value[cursor]);
+    if (byte == '.' && !dot) {
+      dot = true;
+      continue;
+    }
+    uint32_t digit;
+    if (byte >= '0' && byte <= '9') digit = byte - '0';
+    else if (byte >= 'a' && byte <= 'f') digit = byte - 'a' + 10u;
+    else if (byte >= 'A' && byte <= 'F') digit = byte - 'A' + 10u;
+    else return false;
+    if (!dot) {
+      if (++integer_digits > 4) return false;
+      integer = (integer << 4u) | digit;
+    } else {
+      if (++fraction_digits > 4) return false;
+      fraction = (fraction << 4u) | digit;
+    }
+  }
+  if (integer_digits == 0 && fraction_digits == 0) return false;
+  fraction <<= static_cast<uint32_t>((4 - fraction_digits) * 4);
+  uint32_t bits = (integer << 16u) | fraction;
+  if (negative) bits = 0u - bits;
+  *result = lua_Number::frombits(static_cast<int32_t>(bits));
+  return true;
+}
+
 void seed_prng(uint8_t *ram, uint32_t seed) {
   seed &= 0x7fffffffu;
   const uint32_t b = seed == 0 ? kDefaultSeed : seed;
@@ -102,10 +143,19 @@ int pico8_rnd(lua_State *state) {
     lua_rawgeti(state, 1, static_cast<int>((raw >> 16u) + 1u));
     return 1;
   }
-  const uint32_t range = lua_isnoneornil(state, 1)
-                             ? 0x00010000u
-                             : static_cast<uint32_t>(
-                                   luaL_checknumber(state, 1).bits());
+  lua_Number parsed;
+  uint32_t range = 0x00010000u;
+  if (!lua_isnoneornil(state, 1)) {
+    int is_number = 0;
+    parsed = lua_tonumberx(state, 1, &is_number);
+    if (!is_number && lua_type(state, 1) == LUA_TSTRING) {
+      size_t length = 0;
+      const char *value = lua_tolstring(state, 1, &length);
+      is_number = parse_pico8_hex_number(value, length, &parsed) ? 1 : 0;
+    }
+    if (!is_number) return luaL_argerror(state, 1, "number or table expected");
+    range = static_cast<uint32_t>(parsed.bits());
+  }
   const uint32_t raw = range == 0 ? 0 : update_prng(ram) % range;
   lua_pushnumber(state, lua_Number::frombits(static_cast<int32_t>(raw)));
   return 1;
@@ -219,9 +269,30 @@ int pico8_all_next(lua_State *state) {
 
 int pico8_empty_iterator(lua_State *) { return 0; }
 
+int pico8_string_all_next(lua_State *state) {
+  size_t length = 0;
+  const char *value = lua_tolstring(state, lua_upvalueindex(1), &length);
+  const int index = static_cast<int>(
+      lua_tointeger(state, lua_upvalueindex(2)));
+  if (value == nullptr || index < 1 || static_cast<size_t>(index) > length) {
+    return 0;
+  }
+  lua_pushinteger(state, index + 1);
+  lua_copy(state, -1, lua_upvalueindex(2));
+  lua_pop(state, 1);
+  lua_pushlstring(state, value + index - 1, 1);
+  return 1;
+}
+
 int pico8_all(lua_State *state) {
   if (lua_isnil(state, 1)) {
     lua_pushcfunction(state, pico8_empty_iterator);
+    return 1;
+  }
+  if (lua_type(state, 1) == LUA_TSTRING) {
+    lua_pushvalue(state, 1);
+    lua_pushinteger(state, 1);
+    lua_pushcclosure(state, pico8_string_all_next, 2);
     return 1;
   }
   luaL_checktype(state, 1, LUA_TTABLE);
@@ -260,6 +331,16 @@ int pico8_foreach(lua_State *state) {
     lua_call(state, 1, 0);
     lua_replace(state, 3);
   }
+}
+
+int pico8_inext(lua_State *state) {
+  luaL_checktype(state, 1, LUA_TTABLE);
+  const int index = lua_isnoneornil(state, 2)
+                        ? 1
+                        : static_cast<int>(luaL_checknumber(state, 2)) + 1;
+  lua_pushinteger(state, index);
+  lua_rawgeti(state, 1, index);
+  return lua_isnil(state, -1) ? 1 : 2;
 }
 
 int relative_position(int position, size_t length) {
@@ -378,6 +459,24 @@ int pico8_ord(lua_State *state) {
   return count;
 }
 
+int pico8_extcmd(lua_State *state) {
+  size_t length = 0;
+  static_cast<void>(luaL_optlstring(state, 1, "", &length));
+  if (length > 256) {
+    return luaL_argerror(state, 1, "extcmd command exceeds 256 bytes");
+  }
+  // Browser players do not grant carts process, recording, filesystem or
+  // window authority. PICO-8 command strings therefore terminate in this
+  // bounded null sink instead of becoming an ambient host capability.
+  return 0;
+}
+
+int pico8_set_fps(lua_State *) {
+  // Callback discovery remains the only frame-rate authority. This private
+  // compatibility entry is intentionally a deterministic no-op.
+  return 0;
+}
+
 struct MenuitemIndex {
   int slot;
   uint16_t filter;
@@ -480,10 +579,14 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_function(state, "count", pico8_count);
   register_function(state, "all", pico8_all);
   register_function(state, "foreach", pico8_foreach);
+  register_function(state, "inext", pico8_inext);
   register_function(state, "sub", pico8_sub);
   register_function(state, "tonum", pico8_tonum);
   register_function(state, "ord", pico8_ord);
+  register_function(state, "extcmd", pico8_extcmd);
+  register_function(state, "_set_fps", pico8_set_fps);
   register_function(state, "menuitem", pico8_menuitem);
+  register_table_alias(state, "pack");
   register_table_alias(state, "unpack");
   register_p8scii_globals(state);
   register_prng_function(state, "rnd", pico8_rnd, pico_ram);

@@ -22,7 +22,7 @@
       },
       {
         "path": "wasm/patches/0003-pico8-language-compat.patch",
-        "sha256": "bb26ac5fe7f1ff38881652ffe5f1a192a443353e7fab100256d5651a42aeb1c6"
+        "sha256": "f60323ef922b4aea93a59aba1ef264c3ac27767865a01954065f50ab4e49d35e"
       }
     ]
   },
@@ -114,7 +114,7 @@
     "maximumPages": 256,
     "bytes": 16777216,
     "growth": false,
-    "defaultLuaHeapLimitBytes": 1048576,
+    "defaultLuaHeapLimitBytes": 2097152,
     "minimumTestedLuaHeapLimitBytes": 32768,
     "ordinaryOomStatus": "P8W_OUT_OF_MEMORY"
   },
@@ -233,8 +233,8 @@
       },
       {
         "path": "z8lua-phase-0c.wasm",
-        "bytes": 183735,
-        "sha256": "baa14639490e83004188449aba5834242468a83167050ded8e30e2a2003335ef"
+        "bytes": 184029,
+        "sha256": "15292cf2c7efa1da2610d0c9358ba019a76ae830e62f52128b8bd4f032af8dda"
       }
     ],
     "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."

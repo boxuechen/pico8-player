@@ -37,6 +37,12 @@ static int ispico8envupvalue (LClosure *cl, int index) {
 }
 
 
+static int ispico8envlocal (LClosure *cl, int index, int pc) {
+  const char *name = luaF_getlocalname(cl->p, index + 1, pc);
+  return name != NULL && strcmp(name, "_ENV") == 0;
+}
+
+
 static Table *pico8originalenv (lua_State *L) {
   const TValue *value = luaH_getint(hvalue(&G(L)->l_registry),
                                    p8w::kOriginalEnvironmentRegistryIndex);
@@ -645,7 +651,17 @@ void luaV_execute (lua_State *L) {
         }
       )
       vmcase(OP_GETTABLE,
+        int b = GETARG_B(i);
         Protect(luaV_gettable(L, RB(i), RKC(i), ra));
+        if (ttisnil(RA(i)) &&
+            ispico8envlocal(cl, b, pcRel(ci->u.l.savedpc, cl->p))) {
+          Table *fallback = pico8originalenv(L);
+          if (fallback != NULL) {
+            TValue fallbackvalue;
+            sethvalue(L, &fallbackvalue, fallback);
+            Protect(luaV_gettable(L, &fallbackvalue, RKC(i), RA(i)));
+          }
+        }
       )
       vmcase(OP_SETTABUP,
         int a = GETARG_A(i);

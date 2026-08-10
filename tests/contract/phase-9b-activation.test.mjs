@@ -10,12 +10,13 @@ const [contract, causes] = await Promise.all([
   readJson("spec/compat/phase-9-root-cause-contract-v1.json"),
 ]);
 
-test("Phase 9B is the only active work unit after the 9A freeze", () => {
-  assert.deepEqual(contract.completedWorkUnits, ["9A"]);
-  assert.equal(contract.activeWorkUnit, "9B");
-  assert.equal(contract.nextWorkUnit, "9B");
+test("Phase 9B is complete and activates only 9C", () => {
+  assert.deepEqual(contract.completedWorkUnits, ["9A", "9B"]);
+  assert.equal(contract.activeWorkUnit, "9C");
+  assert.equal(contract.nextWorkUnit, "9C");
   assert.equal(contract.workUnits["9A"].status, "complete");
-  assert.equal(contract.workUnits["9B"].status, "active");
+  assert.equal(contract.workUnits["9B"].status, "complete");
+  assert.equal(contract.workUnits["9C"].status, "active");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -46,14 +47,32 @@ test("Phase 9B authorizes language owners without cart-specific or ref input", (
   assert.equal(contract.remediationPolicy.dailyExternalChromeCasesMaximum, 10);
 });
 
-test("Phase 9B is the documented active route", async () => {
+test("Phase 9B records aggregate-only completion evidence", () => {
+  const result = contract.workUnits["9B"].result;
+  assert.equal(result.candidateBuckets, 13);
+  assert.equal(result.baselineLanguageCases, 45);
+  assert.equal(result.projectAuthoredFixtures, 13);
+  assert.equal(result.ownerRegressionsPassed, 13);
+  assert.equal(result.chromeSelectedCases, 10);
+  assert.equal(result.chromeLanguageRootPasses, 10);
+  assert.equal(result.chromeCuPasses, 9);
+  assert.equal(result.downstreamCasesReownedTo9D, 1);
+  assert.equal(result.defaultLuaHeapBytes, 2 * 1024 * 1024);
+  assert.equal(result.fixedWasmBytes, 16 * 1024 * 1024);
+  assert.equal(result.memoryGrowth, false);
+  assert.equal(result.productionCartSpecificBranches, 0);
+  assert.equal(result.supplementalFullReruns, 0);
+  assert.equal(result.trackedThirdPartyDetails, 0);
+});
+
+test("Phase 9B hands the documented route to 9C", async () => {
   const [readme, phase, index] = await Promise.all([
     read("docs/README.md"),
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9B/u);
-  assert.match(phase, /Active work unit：9B/u);
-  assert.match(phase, /13 个 language root-cause candidate/u);
-  assert.match(index, /active\s+work unit 为 9B/u);
+  assert.match(readme, /Active work unit \| 9C/u);
+  assert.match(phase, /Active work unit：9C/u);
+  assert.match(phase, /13 个 language candidate/u);
+  assert.match(index, /active\s+work unit 为 9C/u);
 });

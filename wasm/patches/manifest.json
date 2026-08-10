@@ -32,14 +32,15 @@
     {
       "order": 3,
       "file": "0003-pico8-language-compat.patch",
-      "sha256": "bb26ac5fe7f1ff38881652ffe5f1a192a443353e7fab100256d5651a42aeb1c6",
+      "sha256": "f60323ef922b4aea93a59aba1ef264c3ac27767865a01954065f50ab4e49d35e",
       "target": "llex.h, llex.c, lparser.c, lvm.c",
-      "purpose": "Preserve PICO-8 short-if semantics across swallowed long comments, accept single-name local compound initialization and omitted argument slots, and fall back from replacement environments to the original cart globals.",
-      "enabledBy": "Phase 8D PICO-8 v0.2.7 language compatibility",
+      "purpose": "Preserve PICO-8 short-if semantics across swallowed long comments; accept conditional do, return-question print, single-token XOR, single-name local compound initialization and omitted argument slots; and fall back from local or captured replacement environments to original cart globals.",
+      "enabledBy": "Phase 8D and Phase 9B PICO-8 v0.2.7 language compatibility",
       "tests": [
         "tests/runtime/phase-8d-real-cart-gaps.test.mjs: short-if long-comment regression",
         "tests/runtime/phase-8d-real-cart-gaps.test.mjs: local compound initialization regression",
-        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: omitted argument and original environment regressions"
+        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: omitted argument and original environment regressions",
+        "tests/runtime/phase-9b-language-compat.test.mjs: parser dialect and local environment regressions"
       ],
       "upstreamStatus": "project compatibility patch; not submitted"
     }

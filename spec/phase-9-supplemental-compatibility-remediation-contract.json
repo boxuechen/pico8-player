@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A"],
-  "activeWorkUnit": "9B",
-  "nextWorkUnit": "9B",
+  "completedWorkUnits": ["9A", "9B"],
+  "activeWorkUnit": "9C",
+  "nextWorkUnit": "9C",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -138,13 +138,15 @@
     },
     "9B": {
       "name": "Language Compatibility Remediation",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "wasm/bridge/",
         "wasm/patches/",
         "wasm/z8lua/",
+        "wasm/source.lock.json",
         "wasm/manifest.lock.json",
         "wasm/runtime-v1.manifest.lock.json",
+        "tools/wasm/",
         "packages/z8lua-bridge/src/",
         "packages/runtime-core/src/",
         "apps/web-player/src/worker/",
@@ -152,12 +154,18 @@
         "tests/wasm/",
         "tests/compat/",
         "tests/contract/",
+        "tests/conformance/phase-4g-resource-long-run.test.mjs",
         "tests/fixtures/phase-9/",
+        "spec/abi/",
         "spec/pico-api-inventory.yaml",
         "docs/adr/",
+        "docs/02-system-architecture.md",
         "docs/03-z8lua-wasm-bridge.md",
         "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
         "docs/README.md",
+        "docs/phases/README.md",
         "docs/phases/9-supplemental-compatibility-remediation.md",
         "spec/phase-9-supplemental-compatibility-remediation-contract.json",
         "package.json"
@@ -166,11 +174,27 @@
         "all shared language root causes have project-authored real-WASM regressions",
         "generic fixes contain no cart identity or copied third-party code",
         "at most 10 representative external cases pass a 120-tick Chrome quick smoke and 9C becomes active"
-      ]
+      ],
+      "result": {
+        "candidateBuckets": 13,
+        "baselineLanguageCases": 45,
+        "projectAuthoredFixtures": 13,
+        "ownerRegressionsPassed": 13,
+        "chromeSelectedCases": 10,
+        "chromeLanguageRootPasses": 10,
+        "chromeCuPasses": 9,
+        "downstreamCasesReownedTo9D": 1,
+        "defaultLuaHeapBytes": 2097152,
+        "fixedWasmBytes": 16777216,
+        "memoryGrowth": false,
+        "productionCartSpecificBranches": 0,
+        "supplementalFullReruns": 0,
+        "trackedThirdPartyDetails": 0
+      }
     },
     "9C": {
       "name": "Timing Compatibility Remediation",
-      "status": "pending",
+      "status": "active",
       "allowedPaths": [
         "packages/runtime-core/src/",
         "packages/z8lua-bridge/src/",
@@ -179,11 +203,13 @@
         "apps/web-player/src/worker/",
         "tests/runtime/",
         "tests/compat/",
+        "tests/contract/",
         "tests/fixtures/phase-9/",
         "docs/adr/",
         "docs/02-system-architecture.md",
         "docs/04-typescript-runtime.md",
         "docs/README.md",
+        "docs/phases/README.md",
         "docs/phases/9-supplemental-compatibility-remediation.md",
         "spec/phase-9-supplemental-compatibility-remediation-contract.json",
         "package.json"
@@ -218,7 +244,7 @@
         "package.json"
       ],
       "exit": [
-        "the single host-feature failure reaches CU through an in-profile generic behavior",
+        "the baseline host-feature failure and the downstream case exposed by 9B reach CU through in-profile generic behavior",
         "no network, BBS, arbitrary URL or host-filesystem authority is added",
         "a project-authored regression proves the behavior and 9E becomes active"
       ]

@@ -49,11 +49,9 @@ function idFromBytes(bytes: Uint8Array): string {
   return String.fromCharCode(...bytes);
 }
 
-function cartDataIndex(indexRaw: number): number {
+function cartDataIndex(indexRaw: number): number | undefined {
   const index = indexRaw >> 16;
-  if (index < 0 || index >= PICO_CART_DATA_NUMBER_COUNT) {
-    throw new RangeError("cartdata index must be between 0 and 63");
-  }
+  if (index < 0 || index >= PICO_CART_DATA_NUMBER_COUNT) return undefined;
   return index;
 }
 
@@ -114,12 +112,18 @@ export class CartDataCore {
 
   dget(indexRaw: number): number {
     this.#assertOpen();
-    return this.#ram.readI32LE(PICO_CART_DATA_ADDRESS + cartDataIndex(indexRaw) * 4);
+    const index = cartDataIndex(indexRaw);
+    return index === undefined
+      ? 0
+      : this.#ram.readI32LE(PICO_CART_DATA_ADDRESS + index * 4);
   }
 
   dset(indexRaw: number, valueRaw: number): void {
     this.#assertOpen();
-    this.#ram.writeI32LE(PICO_CART_DATA_ADDRESS + cartDataIndex(indexRaw) * 4, valueRaw);
+    const index = cartDataIndex(indexRaw);
+    if (index !== undefined) {
+      this.#ram.writeI32LE(PICO_CART_DATA_ADDRESS + index * 4, valueRaw);
+    }
   }
 
   takeCommit(): PicoCartDataCommit | undefined {

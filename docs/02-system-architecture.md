@@ -335,8 +335,9 @@ containment，不恢复已被 `load()` 放弃的执行路径。
 - Runtime 与 renderer 之间不得每帧复制超过必要的 128 × 128 RGBA/frame payload。
 - 稳态运行不得产生与运行时长线性增长的未回收消息或 buffer。
 
-production resource contract 固定为 16 MiB WASM、64 KiB Pico RAM、默认 1 MiB
-Lua heap；最低 32 KiB diagnostic profile 必须以 `E_VM_OOM` fail closed。AudioWorklet source queue
+production resource contract 固定为 16 MiB WASM、64 KiB Pico RAM、默认 2 MiB
+Lua heap；受限 diagnostic profile 必须以 `E_VM_OOM` fail closed。Lua heap 调整不改变 fixed WASM
+memory，也不允许 per-cart/adaptive sizing；边界见 [ADR-026](./adr/026-phase-9-language-compatibility-boundary.md)。AudioWorklet source queue
 capacity/high-water 为 `66,150/44,100` frames，cartdata hydrate 上限为 4,096 records / 1 MiB。
 主页面 retained heap 的硬门禁使用 CDP 强制 GC 后的 isolate 值；`performance.memory` 只作趋势诊断。
 

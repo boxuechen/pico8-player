@@ -176,18 +176,29 @@ function _draw() end`);
   miss.runtime.dispose();
 });
 
-test("cartdata policy faults are deterministic and never publish failed transactions", () => {
+test("cartdata policy faults fail closed while invalid slots are safe no-ops", () => {
   for (const id of ["", "UPPER", "not.valid", "a".repeat(65)]) {
     assertFault(`cartdata(${JSON.stringify(id)})`);
   }
   assertFault(`cartdata("once") cartdata("twice")`);
   assertFault(`x=dget(0)`);
   assertFault(`dset(0,1)`);
-  assertFault(`cartdata("range") x=dget(-1)`);
-  assertFault(`cartdata("range") x=dget(64)`);
-  assertFault(`cartdata("range") dset(-1,1)`);
-  assertFault(`cartdata("range") dset(64,1)`);
   assertFault(`cartdata("fault") dset(0,1) missing_function()`, "E_VM_RUNTIME");
+
+  const { runtime, boot } = createRuntime(`
+function _init()
+ cartdata("range")
+ poke(0x5000,dget(-1),dget(64))
+ dset(-1,1)
+ dset(64,1)
+end
+function _update() end
+function _draw() end`);
+  const result = boot();
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.deepEqual(runtime.copyRam(0x5000, 2), Uint8Array.of(0, 0));
+  assert.equal(result.value.cartDataCommit, undefined);
+  runtime.dispose();
 });
 
 test("cartdata accepts the current lower-case hyphen identifier alphabet", () => {

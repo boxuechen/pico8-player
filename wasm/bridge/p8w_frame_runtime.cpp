@@ -8,6 +8,7 @@
 #include <emscripten/emscripten.h>
 
 #include "lauxlib.h"
+#include "ldo.h"
 #include "lua.h"
 #include "lualib.h"
 #include "generated/p8w_host_bindings.generated.h"
@@ -20,7 +21,7 @@ constexpr uint32_t kAbiVersion = 0x00010004u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
-constexpr uint32_t kDefaultLuaHeapLimit = 1024u * 1024u;
+constexpr uint32_t kDefaultLuaHeapLimit = 2u * 1024u * 1024u;
 constexpr uint32_t kMinimumLuaHeapLimit = 32u * 1024u;
 constexpr uint32_t kMaxMessageLength = 1023;
 constexpr uint32_t kMaxTraceLength = 2047;
@@ -28,7 +29,8 @@ constexpr uint32_t kMaxHostBytes = 4096;
 constexpr uint32_t kPicoVmInstructionsPerSecond = 4000000;
 constexpr uint32_t kImplicitFrameInstructions =
     kPicoVmInstructionsPerSecond / 30;
-constexpr int32_t kMaxMemoryVector = 8192;
+constexpr int32_t kMaxPeekVector = 8192;
+constexpr int32_t kMaxPokeVector = static_cast<int32_t>(p8w::kPicoRamSize);
 constexpr int32_t kMaxMemoryBlock = static_cast<int32_t>(p8w::kPicoRamSize);
 constexpr char kContextRegistryKey[] = "__p8w_runtime_context";
 constexpr char kBudgetSentinel[] = "__p8w_instruction_budget_exceeded__";
@@ -279,7 +281,7 @@ int p8_peek(lua_State *state) {
                             ? 1
                             : static_cast<int32_t>(luaL_checknumber(state, 2));
   if (count <= 0) return 0;
-  if (count > kMaxMemoryVector) {
+  if (count > kMaxPeekVector) {
     return luaL_error(state, "peek result count exceeds 8192");
   }
   if (!lua_checkstack(state, count)) {
@@ -305,16 +307,14 @@ int p8_poke(lua_State *state) {
   Context *context = context_from_lua(state);
   const uint32_t address = logical_address(state, 1);
   const int value_count = lua_gettop(state) - 1;
-  if (value_count <= 0) {
-    luaL_checknumber(state, 2);
-    return 0;
-  }
-  if (value_count > kMaxMemoryVector) {
-    return luaL_error(state, "poke value count exceeds 8192");
+  if (value_count <= 0) return 0;
+  if (value_count > kMaxPokeVector) {
+    return luaL_error(state, "poke value count exceeds Pico RAM size");
   }
   for (int index = 0; index < value_count; ++index) {
     p8w::write8(context->ram, address + static_cast<uint32_t>(index),
-                static_cast<uint8_t>(integer_value(state, index + 2)));
+                static_cast<uint8_t>(static_cast<int32_t>(
+                    lua_tonumber(state, index + 2))));
   }
   return 0;
 }
@@ -421,7 +421,7 @@ int p8_host_call(lua_State *state) {
       frame.scalar_slots[index] =
           (descriptor->boolean_mask & (1u << index)) != 0
               ? (lua_toboolean(state, stack_index) ? 1 : 0)
-              : luaL_checknumber(state, stack_index).bits();
+              : lua_tonumber(state, stack_index).bits();
       frame.scalar_count += 1u;
     }
   }
@@ -451,8 +451,16 @@ int p8_host_call(lua_State *state) {
       }
     } else if (selector == 34) {
       lua_pushinteger(state, static_cast<int16_t>(frame.result));
-    } else if (selector == 20 || selector == 32 || selector == 33 || selector == 36 ||
-               selector == 38 || selector == 39) {
+    } else if (selector == 57 || selector == 110 ||
+               (selector >= 120 && selector <= 122)) {
+      lua_pushboolean(state, frame.result != 0);
+    } else if ((selector >= 16 && selector <= 26) ||
+               selector == 32 || selector == 33 || selector == 36 ||
+               selector == 38 || selector == 39 || selector == 46 ||
+               selector == 47 || selector == 48 || selector == 49 ||
+               selector == 50 || selector == 51 || selector == 52 ||
+               selector == 53 || selector == 54 || selector == 55 ||
+               selector == 56) {
       lua_pushnumber(state, lua_Number::frombits(frame.result));
     } else {
       lua_pushboolean(state, 0);
@@ -476,12 +484,11 @@ int p8_host_call(lua_State *state) {
 }
 
 int p8_print(lua_State *state) {
-  if (lua_gettop(state) == 0) {
-    lua_pushliteral(state, "[nil]");
-  } else if (lua_isnil(state, 1)) {
-    lua_pushliteral(state, "[nil]");
-    lua_replace(state, 1);
-  }
+  if (lua_gettop(state) == 0) lua_pushnil(state);
+  lua_getglobal(state, "tostr");
+  lua_pushvalue(state, 1);
+  lua_call(state, 1, 1);
+  lua_replace(state, 1);
   return p8_host_call(state);
 }
 
@@ -597,6 +604,13 @@ int p8_stop(lua_State *state) {
 int p8_stat(lua_State *state) {
   const int32_t selector = luaL_checknumber(state, 1).bits() >> 16;
   Context *context = context_from_lua(state);
+  if (selector == 0) {
+    const uint64_t raw = static_cast<uint64_t>(context->allocations.live_bytes) *
+                         65536u / 1024u;
+    lua_pushnumber(state, lua_Number::frombits(static_cast<int32_t>(
+                              raw > INT32_MAX ? INT32_MAX : raw)));
+    return 1;
+  }
   if (selector == 1) {
     const uint64_t current_segment =
         context->remaining_budget > context->budget_start
@@ -618,6 +632,28 @@ int p8_stat(lua_State *state) {
   if (selector == 7) {
     lua_pushnumber(state, lua_Number::frombits(
                               static_cast<int32_t>(context->target_fps << 16)));
+    return 1;
+  }
+  if (selector == 8 || selector == 9) {
+    lua_pushnumber(state, lua_Number::frombits(
+                              static_cast<int32_t>(context->target_fps << 16)));
+    return 1;
+  }
+  if (selector == 4) {
+    lua_pushliteral(state, "");
+    return 1;
+  }
+  if (selector == 100 || selector == 101) {
+    lua_pushnil(state);
+    return 1;
+  }
+  if (selector == 102) {
+    lua_pushliteral(state, "web");
+    return 1;
+  }
+  if ((selector >= 80 && selector <= 85) ||
+      (selector >= 90 && selector <= 95)) {
+    lua_pushnumber(state, lua_Number(0));
     return 1;
   }
   return p8_host_call(state);
@@ -891,6 +927,8 @@ void open_guest_environment(lua_State *state) {
   register_function(state, "memcpy", p8_memcpy);
   register_function(state, "memset", p8_memset);
   register_host_functions(state);
+  lua_getglobal(state, "map");
+  lua_setglobal(state, "mapdraw");
   register_function(state, "time", p8_time);
   register_function(state, "t", p8_time);
   register_function(state, "run", p8_run);
@@ -1213,6 +1251,17 @@ P8wStatus continue_after_host_response(Context *context) {
   return finish_resumed_active(context, active_kind, completes_frame);
 }
 
+struct ProtectedThreadCreation {
+  lua_State *thread = nullptr;
+  int reference = LUA_NOREF;
+};
+
+void create_runtime_thread(lua_State *main, void *user_data) {
+  auto *created = static_cast<ProtectedThreadCreation *>(user_data);
+  created->thread = lua_newthread(main);
+  created->reference = luaL_ref(main, LUA_REGISTRYINDEX);
+}
+
 }  // namespace
 
 extern "C" {
@@ -1313,8 +1362,18 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_compile(uint32_t handle,
     return P8W_STATUS_BAD_ARGUMENT;
   clear_error(context);
   context->phase = P8W_PHASE_COMPILE;
-  lua_State *thread = lua_newthread(context->main);
-  context->active_ref = luaL_ref(context->main, LUA_REGISTRYINDEX);
+  context->allocations.denied = false;
+  ProtectedThreadCreation created;
+  const int creation_status =
+      luaD_rawrunprotected(context->main, create_runtime_thread, &created);
+  if (creation_status != LUA_OK || created.thread == nullptr ||
+      created.reference == LUA_NOREF) {
+    copy_lua_error(context, context->main, P8W_STATUS_OUT_OF_MEMORY);
+    lua_settop(context->main, 0);
+    return P8W_STATUS_OUT_OF_MEMORY;
+  }
+  lua_State *thread = created.thread;
+  context->active_ref = created.reference;
   context->active = thread;
   context->active_kind = ActiveKind::TopLevel;
   const char *safe_source =
