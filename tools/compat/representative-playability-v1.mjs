@@ -128,6 +128,45 @@ function validateExpandedIndex(index) {
   return cases;
 }
 
+async function loadCanonicalManifestEntries(expanded, expandedIndexPath, canonicalCases) {
+  if (!Array.isArray(expanded.canonical.batches) || expanded.canonical.batches.length < 1) {
+    fail("E_INDEX", "expanded index must retain canonical batch manifests");
+  }
+  const indexRoot = dirname(expandedIndexPath);
+  const entries = new Map();
+  for (const [position, batch] of expanded.canonical.batches.entries()) {
+    if (!isRecord(batch) || basename(batch.file ?? "") !== batch.file) {
+      fail("E_INDEX", `expanded canonical batch ${position + 1} is invalid`);
+    }
+    assertSha256(batch.sha256, `expanded.canonical.batches[${position}].sha256`);
+    const batchPath = resolve(indexRoot, batch.file);
+    if (!inside(indexRoot, batchPath)) fail("E_INDEX", "expanded canonical batch escaped index directory");
+    const bytes = await readFile(batchPath).catch((error) =>
+      fail("E_INPUT_READ", `canonical batch could not be read: ${error.code ?? error.message}`));
+    if (sha256(bytes) !== batch.sha256) fail("E_INDEX", "expanded canonical batch hash mismatch");
+    let manifest;
+    try {
+      manifest = JSON.parse(bytes.toString("utf8"));
+    } catch {
+      fail("E_JSON", "expanded canonical batch is not valid JSON");
+    }
+    if (!Array.isArray(manifest.entries) || manifest.entries.length !== batch.cases) {
+      fail("E_INDEX", "expanded canonical batch case count drifted");
+    }
+    for (const entry of manifest.entries) {
+      const canonical = canonicalCases.get(entry.id);
+      if (canonical === undefined || canonical.sha256 !== entry.sha256 || entries.has(entry.id)) {
+        fail("E_INDEX", "expanded canonical manifest entry drifted from the index");
+      }
+      entries.set(entry.id, entry);
+    }
+  }
+  if (entries.size !== canonicalCases.size) {
+    fail("E_INDEX", "expanded canonical manifests do not cover the frozen index");
+  }
+  return entries;
+}
+
 function validateTrace(trace, label) {
   exactKeys(trace, ["mode", "ticks", "stepMilliseconds", "inputs"], label);
   if (trace.mode !== "fixed-ticks" || !Number.isInteger(trace.ticks)
@@ -202,6 +241,11 @@ export async function prepareRepresentativePlayability({
     readExternalJson(planPath, "playability plan", projectRoot),
   ]);
   const canonicalCases = validateExpandedIndex(expanded.value);
+  const canonicalManifestEntries = await loadCanonicalManifestEntries(
+    expanded.value,
+    expanded.actual,
+    canonicalCases,
+  );
   const planEntries = validatePlan(plan.value, canonicalCases, expanded.value.corpusFingerprint);
   const externalOutput = await newExternalDirectory(outputRoot, [expanded.actual, plan.actual], projectRoot);
   const manifest = {
@@ -210,19 +254,10 @@ export async function prepareRepresentativePlayability({
     corpusId: "phase-8f-representative-playability-v1",
     policy: "developer-supplied-local-only",
     entries: planEntries.map((planned) => {
-      const cart = canonicalCases.get(planned.id);
+      const cart = canonicalManifestEntries.get(planned.id);
       return {
-        id: cart.id,
+        ...cart,
         label: `representative case ${String(planEntries.indexOf(planned) + 1).padStart(2, "0")}`,
-        file: cart.file,
-        sha256: cart.sha256,
-        pico8Version: "0.2.7",
-        source: {
-          label: "Phase 8 frozen canonical corpus",
-          revision: expanded.value.source.revision,
-          permissionStatus: "caller-authorized-local-research",
-          permissionBasis: "User authorized local compatibility research; redistribution is not authorized.",
-        },
         trace: planned.trace,
       };
     }),

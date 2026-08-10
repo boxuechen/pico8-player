@@ -24,18 +24,54 @@ async function fixture(root) {
   const carts = join(root, "carts");
   await mkdir(carts);
   const cases = [];
+  const manifestEntries = [];
   for (let index = 1; index <= 100; index += 1) {
     const id = `phase8/project-${String(index).padStart(3, "0")}/cart`;
     const file = join(carts, `cart-${String(index).padStart(3, "0")}.p8`);
     const bytes = Buffer.from(`pico-8 cartridge // http://www.pico-8.com\nversion 43\n__lua__\nfunction _draw() cls(${index % 16}) end\n`);
     await writeFile(file, bytes);
     cases.push({ id, identity: `project-${index}/cart`, format: "p8", file, sha256: digest(bytes) });
+    manifestEntries.push({
+      id,
+      label: `project case ${index}`,
+      file,
+      sha256: digest(bytes),
+      pico8Version: "0.2.7",
+      source: {
+        label: "project-owned generated corpus",
+        revision: "0123456789abcdef0123456789abcdef01234567",
+        permissionStatus: "author-provided",
+        permissionBasis: "project-owned generated fixture",
+      },
+      trace: { mode: "fixed-ticks", ticks: 120, stepMilliseconds: 1000 / 30, inputs: [] },
+    });
+  }
+  const includePath = join(carts, "shared.lua");
+  const includeBytes = Buffer.from("shared_value=1\n");
+  await writeFile(includePath, includeBytes);
+  manifestEntries[0].bundle = [{
+    ref: "shared.lua",
+    file: includePath,
+    sha256: digest(includeBytes),
+    access: { load: false, reloadData: false, cstoreData: false, include: true },
+  }];
+  const batches = [];
+  for (let batchIndex = 0; batchIndex < 2; batchIndex += 1) {
+    const file = `canonical-batch-0${batchIndex + 1}.json`;
+    const bytes = Buffer.from(`${JSON.stringify({
+      schemaVersion: 1,
+      corpusId: `phase-8-test-batch-${batchIndex + 1}`,
+      policy: "developer-supplied-local-only",
+      entries: manifestEntries.slice(batchIndex * 50, batchIndex * 50 + 50),
+    })}\n`);
+    await writeFile(join(root, file), bytes);
+    batches.push({ file, cases: 50, sha256: digest(bytes) });
   }
   const corpusFingerprint = "b".repeat(64);
   const expandedIndex = {
     corpusFingerprint,
     source: { revision: "0123456789abcdef0123456789abcdef01234567" },
-    canonical: { cases },
+    canonical: { cases, batches },
   };
   const expandedIndexPath = join(root, "expanded-index.json");
   await writeFile(expandedIndexPath, `${JSON.stringify(expandedIndex)}\n`);
@@ -90,6 +126,7 @@ test("Phase 8F freezes exactly 8 critical-flow plus 2 logical-duration C2 candid
     assert.equal(prepared.selection.entries.filter(({ gate }) => gate === "duration").length, 2);
     const manifest = JSON.parse(await readFile(prepared.manifestPath, "utf8"));
     assert.deepEqual(manifest.entries.slice(-2).map(({ trace }) => trace.ticks), [27_000, 27_000]);
+    assert.equal(manifest.entries[0].bundle[0].ref, "shared.lua");
   });
 });
 
