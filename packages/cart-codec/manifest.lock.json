@@ -30,7 +30,7 @@
     },
     {
       "path": "packages/cart-codec/src/p8.ts",
-      "sha256": "cb2a8a8fd4ee4dd1d52c802308665a4c85fb98ef6e0787d88d33e8a13633a342"
+      "sha256": "4e6609ca3ce413106f537edf2b34350b510f5d44b4b0f276edb56cc030a5744e"
     },
     {
       "path": "packages/cart-codec/src/p8scii.ts",
@@ -60,7 +60,7 @@
   "textFixtures": {
     "ownership": "Project-authored synthetic text vectors; no third-party cart content",
     "manifest": "tests/fixtures/p8/manifest.json",
-    "manifestSha256": "c443e2aa7b35aabfefe55a80c8d702155f1e41f8180ceaaa1dcbb062d448e159",
+    "manifestSha256": "0f20f3b9384da590459c80b3b280f1c40855c63ff2aa3308789bdb74edfc2d9d",
     "generator": "tests/fixtures/p8/fixture-builder.mjs"
   },
   "normativeSources": [

@@ -66,7 +66,9 @@ test("Phase 8E routing and living compatibility counts match the machine invento
   assert.match(scope, /101 compatible、4 partial、\s*8 unsupported/u);
   assert.match(testing, /101 compatible`、`4 partial/u);
   assert.equal(packageJson.scripts["test:phase-8e"],
-    "node --test tests/contract/phase-8e-activation.test.mjs");
+    "pnpm run build && node --test tests/contract/phase-8e-activation.test.mjs tests/compat/phase-8e-format-pairs.test.mjs");
+  assert.match(packageJson.scripts["qualification:phase-8:pairs"],
+    /aggregate-expanded-format-pairs\.mjs/u);
   assert.match(packageJson.scripts.test, /test:phase-8e/u);
   assert.match(packageJson.scripts.verify, /test:phase-8e/u);
   assert.equal(contract.workUnits["8F"].status, "pending");

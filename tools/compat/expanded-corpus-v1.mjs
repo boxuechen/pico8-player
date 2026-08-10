@@ -428,6 +428,8 @@ export async function prepareExpandedCorpus({
     formatPairs: {
       pairs: discovery.pairs.map((identity) => ({
         identity: identity.key,
+        p8Id: stableId("phase8-pair", identity.project, identity.stem, "/p8"),
+        p8PngId: stableId("phase8-pair", identity.project, identity.stem, "/p8.png"),
         p8Sha256: identity.text.sha256,
         p8PngSha256: identity.png.sha256,
       })),

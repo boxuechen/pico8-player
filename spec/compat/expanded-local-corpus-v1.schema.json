@@ -43,7 +43,26 @@
     },
     "formatPairs": {
       "type": "object",
-      "required": ["pairs", "batches"]
+      "additionalProperties": false,
+      "required": ["pairs", "batches"],
+      "properties": {
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["identity", "p8Id", "p8PngId", "p8Sha256", "p8PngSha256"],
+            "properties": {
+              "identity": { "type": "string", "minLength": 1 },
+              "p8Id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]{0,127}$" },
+              "p8PngId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]{0,127}$" },
+              "p8Sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "p8PngSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            }
+          }
+        },
+        "batches": { "type": "array" }
+      }
     }
   }
 }

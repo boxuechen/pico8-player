@@ -25,11 +25,21 @@ function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function playerCommit() {
-  return execFileSync("git", ["rev-parse", "HEAD"], {
+function playerCommit(requireCleanPlayer) {
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], {
     cwd: projectRoot,
     encoding: "utf8",
   }).trim();
+  if (requireCleanPlayer) {
+    const status = execFileSync("git", ["status", "--porcelain"], {
+      cwd: projectRoot,
+      encoding: "utf8",
+    }).trim();
+    if (status.length > 0) {
+      throw new Error("E_PLAYER_WORKTREE_DIRTY: expanded qualification requires a clean player commit");
+    }
+  }
+  return commit;
 }
 
 function incompleteObservation(id) {
@@ -48,7 +58,9 @@ export async function runChromeBaseline({
   observationsPath,
   screenshotsDirectory,
   expectedCaseCount = 12,
+  requireCleanPlayer = false,
 }) {
+  const startingPlayerCommit = playerCommit(requireCleanPlayer);
   const corpus = await loadLocalCorpusManifest({ manifestPath, projectRoot });
   if (expectedCaseCount !== null && corpus.entries.length !== expectedCaseCount) {
     throw new Error(`E_PHASE6C_CASE_COUNT: Phase 6C requires exactly ${expectedCaseCount} cases`);
@@ -136,12 +148,15 @@ export async function runChromeBaseline({
     schemaVersion: 1,
     environment: {
       target: "chrome-production",
-      playerCommit: playerCommit(),
+      playerCommit: startingPlayerCommit,
       runtimeWasmSha256,
       chromeVersion: chrome.version,
     },
     entries: observations,
   };
+  if (requireCleanPlayer && playerCommit(true) !== startingPlayerCommit) {
+    throw new Error("E_PLAYER_COMMIT_DRIFT: player commit changed during expanded qualification");
+  }
   await writeFile(safeObservations, `${JSON.stringify(document, null, 2)}\n`, { flag: "wx" });
   if (infrastructureError !== undefined) throw infrastructureError;
   return document;

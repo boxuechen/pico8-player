@@ -109,14 +109,19 @@ test("all text sections pack byte-exact into the 32 KiB ROM", async () => {
   }
 });
 
-test("missing sections remain zero and label data never overwrites gfx", () => {
+test("missing sections retain canonical empty audio slots and label data never overwrites gfx", () => {
   const missing = decodeP8(makeP8Bytes({ sections: [{ name: "lua", lines: [] }] }));
-  assert.deepEqual(missing.rom, new Uint8Array(0x8000));
+  const expected = new Uint8Array(0x8000);
+  for (let row = 0; row < 64; row += 1) {
+    expected.set([0x41, 0x42, 0x43, 0x44], 0x3100 + row * 4);
+    expected[0x3200 + row * 68 + 65] = 16;
+  }
+  assert.deepEqual(missing.rom, expected);
 
   const labelOnly = decodeP8(makeP8Bytes({
     sections: [{ name: "label", lines: [repeated("v", 128)] }],
   }));
-  assert.deepEqual(labelOnly.rom, new Uint8Array(0x8000));
+  assert.deepEqual(labelOnly.rom, expected);
 });
 
 test("unknown sections warn at the original byte offset and cannot become Lua", () => {

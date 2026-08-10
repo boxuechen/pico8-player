@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.invalid/spec/compat/expanded-format-pair-aggregate-v1.schema.json",
+  "title": "Aggregate-only expanded PICO-8 format-pair qualification v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runner",
+    "targetRuntime",
+    "corpusFingerprint",
+    "sourceRevision",
+    "environment",
+    "summary"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runner": { "const": "phase-8-expanded-format-pairs-v1" },
+    "targetRuntime": { "const": "PICO-8 v0.2.7" },
+    "corpusFingerprint": { "$ref": "#/$defs/sha256" },
+    "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "environment": { "$ref": "#/$defs/environment" },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pairCount",
+        "caseCount",
+        "completedPairCount",
+        "dispositions",
+        "decode",
+        "boot",
+        "framebuffer",
+        "screenshots",
+        "failureClusters",
+        "risks",
+        "potentialRuntimeDefects",
+        "review",
+        "resources",
+        "qualificationComplete"
+      ],
+      "properties": {
+        "pairCount": { "const": 65 },
+        "caseCount": { "const": 130 },
+        "completedPairCount": { "type": "integer", "minimum": 0, "maximum": 65 },
+        "dispositions": { "$ref": "#/$defs/pairDisposition" },
+        "decode": { "$ref": "#/$defs/decode" },
+        "boot": { "$ref": "#/$defs/pairDisposition" },
+        "framebuffer": { "$ref": "#/$defs/binaryDisposition" },
+        "screenshots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["capturedSides", "missingSides"],
+          "properties": {
+            "capturedSides": { "type": "integer", "minimum": 0, "maximum": 130 },
+            "missingSides": { "type": "integer", "minimum": 0, "maximum": 130 }
+          }
+        },
+        "failureClusters": { "$ref": "#/$defs/failureClusters" },
+        "risks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["multicart", "graphics", "audio", "input", "persistence"],
+          "properties": {
+            "multicart": { "$ref": "#/$defs/risk" },
+            "graphics": { "$ref": "#/$defs/risk" },
+            "audio": { "$ref": "#/$defs/risk" },
+            "input": { "$ref": "#/$defs/risk" },
+            "persistence": { "$ref": "#/$defs/risk" }
+          }
+        },
+        "potentialRuntimeDefects": { "type": "integer", "minimum": 0, "maximum": 65 },
+        "review": { "$ref": "#/$defs/review" },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["completedBatchRuns", "infrastructureFailures"],
+          "properties": {
+            "completedBatchRuns": { "const": 3 },
+            "infrastructureFailures": { "type": "integer", "minimum": 0, "maximum": 65 }
+          }
+        },
+        "qualificationComplete": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "count65": { "type": "integer", "minimum": 0, "maximum": 65 },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "playerCommit", "runtimeWasmSha256", "chromeVersion"],
+      "properties": {
+        "target": { "const": "chrome-production" },
+        "playerCommit": { "type": "string", "pattern": "^[a-f0-9]{7,40}$" },
+        "runtimeWasmSha256": { "$ref": "#/$defs/sha256" },
+        "chromeVersion": { "type": "string", "pattern": "^(Google Chrome|Chromium) [0-9]" }
+      }
+    },
+    "pairDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "divergent", "notRun"],
+      "properties": {
+        "matched": { "$ref": "#/$defs/count65" },
+        "divergent": { "$ref": "#/$defs/count65" },
+        "notRun": { "$ref": "#/$defs/count65" }
+      }
+    },
+    "binaryDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "divergent"],
+      "properties": {
+        "matched": { "$ref": "#/$defs/count65" },
+        "divergent": { "$ref": "#/$defs/count65" }
+      }
+    },
+    "nullableDimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matched", "divergent", "notApplicable"],
+      "properties": {
+        "matched": { "$ref": "#/$defs/count65" },
+        "divergent": { "$ref": "#/$defs/count65" },
+        "notApplicable": { "$ref": "#/$defs/count65" }
+      }
+    },
+    "decode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "successfulSides",
+        "faultedSides",
+        "status",
+        "version",
+        "normalizedRom",
+        "normalizedCode",
+        "content"
+      ],
+      "properties": {
+        "successfulSides": { "type": "integer", "minimum": 0, "maximum": 130 },
+        "faultedSides": { "type": "integer", "minimum": 0, "maximum": 130 },
+        "status": { "$ref": "#/$defs/binaryDisposition" },
+        "version": { "$ref": "#/$defs/nullableDimension" },
+        "normalizedRom": { "$ref": "#/$defs/nullableDimension" },
+        "normalizedCode": { "$ref": "#/$defs/nullableDimension" },
+        "content": { "$ref": "#/$defs/binaryDisposition" }
+      }
+    },
+    "failureClusters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parse",
+        "language",
+        "ram",
+        "graphics",
+        "audio",
+        "input",
+        "timing",
+        "persistence",
+        "multicart",
+        "unsupported-host-feature"
+      ],
+      "properties": {
+        "parse": { "$ref": "#/$defs/count65" },
+        "language": { "$ref": "#/$defs/count65" },
+        "ram": { "$ref": "#/$defs/count65" },
+        "graphics": { "$ref": "#/$defs/count65" },
+        "audio": { "$ref": "#/$defs/count65" },
+        "input": { "$ref": "#/$defs/count65" },
+        "timing": { "$ref": "#/$defs/count65" },
+        "persistence": { "$ref": "#/$defs/count65" },
+        "multicart": { "$ref": "#/$defs/count65" },
+        "unsupported-host-feature": { "$ref": "#/$defs/count65" }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signaledPairs", "completedPairs", "runtimeMatched", "runtimeDivergent", "notRun"],
+      "properties": {
+        "signaledPairs": { "$ref": "#/$defs/count65" },
+        "completedPairs": { "$ref": "#/$defs/count65" },
+        "runtimeMatched": { "$ref": "#/$defs/count65" },
+        "runtimeDivergent": { "$ref": "#/$defs/count65" },
+        "notRun": { "$ref": "#/$defs/count65" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "samples", "unavailable", "findings"],
+      "properties": {
+        "status": { "enum": ["pending", "complete"] },
+        "samples": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["matchedBoot", "fault", "divergent"],
+          "properties": {
+            "matchedBoot": { "$ref": "#/$defs/count65" },
+            "fault": { "$ref": "#/$defs/count65" },
+            "divergent": { "$ref": "#/$defs/count65" }
+          }
+        },
+        "unavailable": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fault", "divergent"],
+          "properties": {
+            "fault": { "type": "boolean" },
+            "divergent": { "type": "boolean" }
+          }
+        },
+        "findings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["P0", "P1", "P2", "P3"],
+          "properties": {
+            "P0": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+            "P1": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+            "P2": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+            "P3": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 }
+          }
+        }
+      }
+    }
+  }
+}

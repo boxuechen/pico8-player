@@ -25,6 +25,7 @@ export async function main(argv = process.argv.slice(2)) {
     observationsPath: values.observations,
     screenshotsDirectory: values.screenshots,
     expectedCaseCount: null,
+    requireCleanPlayer: true,
   });
   process.stdout.write(`${JSON.stringify({
     observations: resolve(values.observations),

@@ -504,6 +504,14 @@ export function decodeTextP8(input: Uint8Array, options: P8DecodeOptions = {}): 
   const gff = new Uint8Array(GFF_BYTES);
   const music = new Uint8Array(MUSIC_BYTES);
   const sfx = new Uint8Array(SFX_BYTES);
+  for (let row = 0; row < 64; row += 1) {
+    const musicOffset = row * 4;
+    music[musicOffset] = 0x41;
+    music[musicOffset + 1] = 0x42;
+    music[musicOffset + 2] = 0x43;
+    music[musicOffset + 3] = 0x44;
+    sfx[row * 68 + 65] = 16;
+  }
   const code: number[] = [];
   const warnings: CartWarning[] = [];
   const rows: Record<P8SectionName, number> = {

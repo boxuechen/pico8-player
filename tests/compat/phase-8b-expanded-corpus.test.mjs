@@ -104,6 +104,8 @@ test("Phase 8B selects canonical exports, format pairs and byte-unique programs 
     assert.deepEqual(first.index.formatPairs.batches.map(({ cases }) => cases), [12]);
     assert.equal(first.index.canonical.cases.length, 12);
     assert.equal(first.index.formatPairs.pairs.length, 6);
+    assert.ok(first.index.formatPairs.pairs.every(({ p8Id, p8PngId }) =>
+      p8Id.endsWith("/p8") && p8PngId.endsWith("/p8.png")));
 
     const canonicalManifest = join(first.outputRoot, first.index.canonical.batches[0].file);
     const loaded = await loadLocalCorpusManifest({
