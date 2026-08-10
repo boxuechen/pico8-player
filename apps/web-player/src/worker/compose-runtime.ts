@@ -330,6 +330,8 @@ export function createPlayerWorkerController(
   let cartLoader = new CartLoader(localCartResolver, cartRepository);
   const localPersistenceDiagnostics: SerializedRuntimeError[] = [];
   let cartDataSeeds: readonly PicoCartDataSeed[] = [];
+  let hostPersistence = false;
+  const pendingHostCartDataCommits: PicoCartDataCommit[] = [];
   let audioSequence = 0;
   let nextAudioSample = 0n;
   let instructionBudget: number | undefined;
@@ -475,6 +477,14 @@ export function createPlayerWorkerController(
         .map((seed) => ({ id: seed.id, bytes: seed.bytes.slice() })),
       { id: commit.id, bytes: commit.bytes.slice() },
     ];
+    if (hostPersistence) {
+      pendingHostCartDataCommits.push({
+        id: commit.id,
+        revision: commit.revision,
+        bytes: commit.bytes.slice(),
+      });
+      return;
+    }
     if (persistence === undefined) return;
     try {
       persistence.enqueue(commit);
@@ -490,7 +500,21 @@ export function createPlayerWorkerController(
   function takePersistenceEvents(
     command: PlayerHostToRuntime,
   ): readonly PlayerRuntimeToHost[] {
-    if (persistence === undefined) return [];
+    const commits = pendingHostCartDataCommits.splice(0).map((commit) => ({
+      ...playerBase(command),
+      type: "cartdata-commit" as const,
+      id: commit.id,
+      revision: commit.revision,
+      bytes: commit.bytes.slice().buffer,
+    }));
+    if (persistence === undefined || hostPersistence) {
+      const local = localPersistenceDiagnostics.splice(0).map((error) => ({
+        ...playerBase(command),
+        type: "diagnostic" as const,
+        error,
+      }));
+      return [...commits, ...local];
+    }
     let diagnostics: readonly SerializedRuntimeError[] = [];
     try {
       diagnostics = persistence.takeDiagnostics();
@@ -502,15 +526,15 @@ export function createPlayerWorkerController(
       );
     }
     const combined = [...localPersistenceDiagnostics.splice(0), ...diagnostics];
-    return combined.map((error) => ({
+    return [...commits, ...combined.map((error) => ({
       ...playerBase(command),
       type: "diagnostic" as const,
       error,
-    }));
+    }))];
   }
 
   async function flushPersistence(): Promise<void> {
-    if (persistence === undefined) return;
+    if (persistence === undefined || hostPersistence) return;
     try {
       await persistence.flush();
     } catch (error) {
@@ -534,6 +558,22 @@ export function createPlayerWorkerController(
         error,
       );
     }
+  }
+
+  function useHostPersistence(
+    records: readonly { readonly id: string; readonly bytes: ArrayBuffer }[],
+  ): void {
+    const ids = new Set<string>();
+    if (records.length > 4096) throw new RangeError("host cartdata exceeds 4096 records");
+    cartDataSeeds = records.map((record) => {
+      if (!/^[a-z0-9_-]{1,64}$/u.test(record.id) || ids.has(record.id) ||
+        !(record.bytes instanceof ArrayBuffer) || record.bytes.byteLength !== 256) {
+        throw new RangeError("host cartdata contains an invalid record");
+      }
+      ids.add(record.id);
+      return { id: record.id, bytes: new Uint8Array(record.bytes).slice() };
+    });
+    hostPersistence = true;
   }
 
   function fault(
@@ -1342,7 +1382,7 @@ export function createPlayerWorkerController(
     }
     if (command.type === "flushPersistence") {
       if (workerGeneration === 0) workerGeneration = command.workerGeneration;
-      return [];
+      return [{ ...playerBase(command), type: "persistence-flushed" }];
     }
     if (workerGeneration === 0) workerGeneration = command.workerGeneration;
     if (command.workerGeneration !== workerGeneration) {
@@ -1362,6 +1402,7 @@ export function createPlayerWorkerController(
       inputSequence = -1;
       clearInputState();
       devkitFlags = 0;
+      if (command.hostCartData !== undefined) useHostPersistence(command.hostCartData);
       let nextResolver: LocalCartBundleResolver | undefined;
       try {
         nextResolver = new LocalCartBundleResolver(
@@ -1593,11 +1634,19 @@ export function createPlayerWorkerController(
       if (workerGeneration === 0) workerGeneration = command.workerGeneration;
       if (command.workerGeneration !== workerGeneration) return [];
       await flushPersistence();
-      return takePersistenceEvents(command);
+      return [
+        ...takePersistenceEvents(command),
+        { ...playerBase(command), type: "persistence-flushed" },
+      ];
     }
     if (isValidGenerationReplacement(command)) {
       await flushPersistence();
-      await hydratePersistence();
+      if (command.type === "loadCart" && command.hostCartData !== undefined) {
+        useHostPersistence(command.hostCartData);
+      } else if (!(command.type === "reset" && hostPersistence)) {
+        hostPersistence = false;
+        await hydratePersistence();
+      }
     }
     const events = handleSync(command);
     const hasFault = events.some((event) => event.type === "fault");

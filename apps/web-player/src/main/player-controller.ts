@@ -7,7 +7,10 @@ import { RuntimeClientError } from "./runtime-client.js";
 import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
 import { PlayerInputFrontend } from "./player-input.js";
-import type { PlayerLocalCartSource } from "./player-runtime-client.js";
+import type {
+  PlayerHostCartDataSeed,
+  PlayerLocalCartSource,
+} from "./player-runtime-client.js";
 import {
   isActivelyPlaying,
   validateLocalCartSelection,
@@ -37,6 +40,7 @@ export interface PlayerControllerLoadOptions {
   readonly displayName?: string;
   readonly instructionBudget?: number;
   readonly localCartBundle?: readonly PlayerLocalCartSource[];
+  readonly hostCartData?: readonly PlayerHostCartDataSeed[];
 }
 
 export interface PlayerShellStateEvent {
@@ -192,7 +196,7 @@ export class PlayerController {
       else this.#resumeFromEnvironment();
     });
     this.#bind(this.#window, "pagehide", (event) => {
-      this.#composition.flushPersistence();
+      void this.#composition.flushPersistence().catch(() => undefined);
       if ((event as PageTransitionEvent).persisted) this.#pauseForEnvironment();
     });
     this.#bind(this.#window, "pageshow", (event) => {
@@ -222,6 +226,12 @@ export class PlayerController {
     this.#input.setHostInput(snapshot);
   }
 
+  clearInput(): void {
+    this.#assertActive();
+    this.#input.clear();
+    this.#composition.runtime.clearInput();
+  }
+
   onStateChange(listener: PlayerShellStateListener): () => void {
     this.#assertActive();
     this.#stateListeners.add(listener);
@@ -247,6 +257,7 @@ export class PlayerController {
         source,
         normalized.instructionBudget,
         normalized.localCartBundle,
+        normalized.hostCartData,
       );
       if (this.#disposed) return;
       if (loaded.type === "state" && loaded.state === "stopped") {

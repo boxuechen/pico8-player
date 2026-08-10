@@ -13,6 +13,9 @@ export const PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT = 64 as const;
 export const PLAYER_CART_INPUT_MAX_BYTES = 1_048_576 as const;
 export const PLAYER_CART_REF_MAX_BYTES = 256 as const;
 export const PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES = 64 as const;
+export const PLAYER_CART_DATA_BYTES = 256 as const;
+export const PLAYER_CART_DATA_ID_MAX_BYTES = 64 as const;
+export const PLAYER_CART_DATA_MAX_RECORDS = 4096 as const;
 
 interface PlayerCommandEnvelope {
   readonly v: typeof PLAYER_PROTOCOL_VERSION;
@@ -27,12 +30,19 @@ export interface PlayerLocalCartBundleEntry {
   readonly access: CartAccess;
 }
 
+export interface PlayerCartDataSeedEntry {
+  readonly id: string;
+  readonly bytes: ArrayBuffer;
+}
+
 export type PlayerRuntimeControlCommand =
   | (PlayerCommandEnvelope & {
       readonly type: "loadCart";
       readonly cartBytes: ArrayBuffer;
       /** Caller-authorized local-only targets. The Worker performs no discovery. */
       readonly localCartBundle?: readonly PlayerLocalCartBundleEntry[];
+      /** Presence selects caller-owned persistence; an empty array is a valid fresh store. */
+      readonly hostCartData?: readonly PlayerCartDataSeedEntry[];
       readonly instructionBudget?: number;
     })
   | (PlayerCommandEnvelope & { readonly type: "start" })
@@ -52,6 +62,7 @@ export type PlayerRuntimeControlCommand =
   | (PlayerCommandEnvelope & { readonly type: "resume" })
   | (PlayerCommandEnvelope & { readonly type: "reset" })
   | (PlayerCommandEnvelope & { readonly type: "stop" })
+  | (PlayerCommandEnvelope & { readonly type: "flushPersistence" })
   | (PlayerCommandEnvelope & { readonly type: "dispose" });
 
 export type PlayerRuntimeInputCommand = PlayerCommandEnvelope & {
@@ -62,16 +73,9 @@ export type PlayerRuntimeInputCommand = PlayerCommandEnvelope & {
   readonly input: PicoInputSnapshot;
 };
 
-/** Requestless lifecycle hint used by pagehide to best-effort flush durable data. */
-export type PlayerRuntimePersistenceFlushCommand = PlayerCommandEnvelope & {
-  readonly type: "flushPersistence";
-  readonly requestId: 0;
-};
-
 export type PlayerHostToRuntime =
   | PlayerRuntimeControlCommand
-  | PlayerRuntimeInputCommand
-  | PlayerRuntimePersistenceFlushCommand;
+  | PlayerRuntimeInputCommand;
 
 interface PlayerEventEnvelope {
   readonly v: typeof PLAYER_PROTOCOL_VERSION;
@@ -95,6 +99,15 @@ export interface PlayerMenuItemSnapshot {
 }
 
 export type PlayerRuntimeToHost =
+  | (PlayerEventEnvelope & {
+      readonly type: "cartdata-commit";
+      readonly id: string;
+      readonly revision: number;
+      readonly bytes: ArrayBuffer;
+    })
+  | (PlayerEventEnvelope & {
+      readonly type: "persistence-flushed";
+    })
   | (PlayerEventEnvelope & {
       /** Must be the first event published for an atomic guest load() commit. */
       readonly type: "session-replaced";

@@ -8,6 +8,13 @@ import {
 } from "./main.js";
 import type { PlayerShellState } from "./player-controller.js";
 import type { PlayerShellMode } from "./ui/player-shell-view.js";
+import {
+  HostPersistenceFrontend,
+  type Pico8CartDataCommit,
+  type Pico8HostPersistenceAdapter,
+  type Pico8PersistenceFlushResult,
+  type Pico8PersistenceStatusEventData,
+} from "./host-persistence.js";
 
 export const PICO8_WEB_PLAYER_API_VERSION = 2 as const;
 
@@ -17,6 +24,7 @@ export interface Pico8WebPlayerCreateOptions {
   readonly audio?: AudioFrontendOptions;
   /** `hosted` leaves cart selection, controls and surrounding chrome to the caller. */
   readonly shell?: PlayerShellMode;
+  readonly persistence?: Pico8HostPersistenceAdapter;
 }
 
 export interface Pico8LocalCartSource {
@@ -29,11 +37,13 @@ export interface Pico8LoadCartOptions {
   readonly displayName?: string;
   readonly instructionBudget?: number;
   readonly localCartBundle?: readonly Pico8LocalCartSource[];
+  /** Required when create() received a persistence adapter. */
+  readonly contentId?: string;
 }
 
 interface Pico8EventEnvelope {
   readonly v: typeof PICO8_WEB_PLAYER_API_VERSION;
-  readonly type: "state" | "frame" | "diagnostic" | "fault";
+  readonly type: "state" | "frame" | "diagnostic" | "fault" | "persistence";
 }
 
 export interface Pico8StateEvent extends Pico8EventEnvelope {
@@ -64,11 +74,17 @@ export interface Pico8FaultEvent extends Pico8EventEnvelope {
   readonly error: SerializedRuntimeError;
 }
 
+export interface Pico8PersistenceEvent extends Pico8EventEnvelope,
+  Pico8PersistenceStatusEventData {
+  readonly type: "persistence";
+}
+
 export type Pico8WebPlayerEvent =
   | Pico8StateEvent
   | Pico8FrameEvent
   | Pico8DiagnosticEvent
-  | Pico8FaultEvent;
+  | Pico8FaultEvent
+  | Pico8PersistenceEvent;
 
 export type Pico8WebPlayerEventType = Pico8WebPlayerEvent["type"];
 export type Pico8WebPlayerEventFor<T extends Pico8WebPlayerEventType> =
@@ -83,12 +99,20 @@ export class Pico8WebPlayer {
     Set<(event: never) => void>
   >();
   readonly #removeSubscriptions: (() => void)[];
+  readonly #persistence: HostPersistenceFrontend | undefined;
   #operation: Promise<void> = Promise.resolve();
   #disposeRequested = false;
   #disposePromise: Promise<void> | undefined;
 
-  private constructor(mounted: MountedPlayer) {
+  private constructor(mounted: MountedPlayer, persistence?: Pico8HostPersistenceAdapter) {
     this.#mounted = mounted;
+    this.#persistence = persistence === undefined
+      ? undefined
+      : new HostPersistenceFrontend(persistence, (event) => this.#emit({
+        v: PICO8_WEB_PLAYER_API_VERSION,
+        type: "persistence",
+        ...event,
+      }));
     this.#removeSubscriptions = [
       mounted.controller.onStateChange((event) => {
         this.#emit({
@@ -112,7 +136,7 @@ export class Pico8WebPlayer {
       ...(options.audio === undefined ? {} : { audio: options.audio }),
       ...(options.shell === undefined ? {} : { shell: options.shell }),
     });
-    return new Pico8WebPlayer(mounted);
+    return new Pico8WebPlayer(mounted, options.persistence);
   }
 
   get state(): PlayerShellState {
@@ -143,7 +167,21 @@ export class Pico8WebPlayer {
   }
 
   loadCart(source: Uint8Array, options: Pico8LoadCartOptions = {}): Promise<void> {
-    return this.#enqueue(() => this.#mounted.controller.loadCart(source, options));
+    return this.#enqueue(async () => {
+      let hostCartData: readonly import("./player-runtime-client.js").PlayerHostCartDataSeed[] |
+        undefined;
+      if (this.#persistence !== undefined) {
+        if (options.contentId === undefined) {
+          throw new TypeError("contentId is required with a host persistence adapter");
+        }
+        if (this.#persistence.active) await this.#flushPersistenceInternal("cart-switch");
+        hostCartData = await this.#persistence.activate(options.contentId);
+      }
+      await this.#mounted.controller.loadCart(source, {
+        ...options,
+        ...(hostCartData === undefined ? {} : { hostCartData }),
+      });
+    });
   }
 
   start(): Promise<void> {
@@ -172,6 +210,24 @@ export class Pico8WebPlayer {
     this.#mounted.controller.setInput(snapshot);
   }
 
+  flushPersistence(reason = "explicit"): Promise<Pico8PersistenceFlushResult> {
+    return this.#enqueue(() => this.#flushPersistenceInternal(reason));
+  }
+
+  handleLifecycle(
+    event: "inactive" | "background" | "active",
+  ): Promise<Pico8PersistenceFlushResult | { readonly status: "handled"; readonly event: string }> {
+    return this.#enqueue(async () => {
+      if (event === "active") return { status: "handled", event } as const;
+      this.#mounted.controller.clearInput();
+      if (["running", "audio-blocked", "menu-open"].includes(this.#mounted.controller.state)) {
+        await this.#mounted.controller.pause();
+      }
+      if (event === "background") return this.#flushPersistenceInternal("background");
+      return { status: "handled", event } as const;
+    });
+  }
+
   dispose(): Promise<void> {
     if (this.#disposePromise !== undefined) return this.#disposePromise;
     this.#disposeRequested = true;
@@ -183,25 +239,37 @@ export class Pico8WebPlayer {
     });
     for (const remove of this.#removeSubscriptions.splice(0)) remove();
     this.#listeners.clear();
-    this.#disposePromise = this.#mounted.controller.dispose();
+    this.#disposePromise = this.#operation.catch(() => undefined).then(async () => {
+      if (this.#mounted.controller.state !== "idle") {
+        await this.#flushPersistenceInternal("dispose").catch(() => undefined);
+      }
+      await this.#mounted.controller.dispose();
+    });
     return this.#disposePromise;
   }
 
-  #enqueue(operation: () => Promise<void>): Promise<void> {
+  #enqueue<T>(operation: () => Promise<T>): Promise<T> {
     if (this.#disposeRequested) {
       return Promise.reject(new Error("Pico8WebPlayer is disposed"));
     }
     const result = this.#operation.then(async () => {
       this.#assertActive();
-      await operation();
+      const value = await operation();
       this.#assertActive();
+      return value;
     });
-    this.#operation = result.catch(() => undefined);
+    this.#operation = result.then(() => undefined, () => undefined);
     return result;
   }
 
   #onRuntimeEvent(event: PlayerRuntimeToHost): void {
-    if (event.type === "frame") {
+    if (event.type === "cartdata-commit") {
+      this.#persistence?.enqueue({
+        id: event.id,
+        revision: event.revision,
+        bytes: new Uint8Array(event.bytes).slice(),
+      } satisfies Pico8CartDataCommit);
+    } else if (event.type === "frame") {
       this.#emit({
         v: PICO8_WEB_PLAYER_API_VERSION,
         type: "frame",
@@ -226,6 +294,14 @@ export class Pico8WebPlayer {
         },
       });
     }
+  }
+
+  async #flushPersistenceInternal(reason: string): Promise<Pico8PersistenceFlushResult> {
+    await this.#mounted.composition.flushPersistence();
+    if (this.#persistence === undefined) {
+      return { status: "flushed", reason, durable: true };
+    }
+    return this.#persistence.flush(reason);
   }
 
   #emit(event: Pico8WebPlayerEvent): void {

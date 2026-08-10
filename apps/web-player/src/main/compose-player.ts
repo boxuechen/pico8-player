@@ -18,6 +18,7 @@ import {
 import {
   PlayerRuntimeClient,
   type PlayerLocalCartSource,
+  type PlayerHostCartDataSeed,
   type PlayerRuntimeClientOptions,
   type PlayerRuntimeWorkerFactory,
 } from "./player-runtime-client.js";
@@ -239,9 +240,10 @@ export class PlayerComposition {
     source: Uint8Array,
     instructionBudget?: number,
     localCartBundle: readonly PlayerLocalCartSource[] = [],
+    hostCartData?: readonly PlayerHostCartDataSeed[],
   ) {
     this.#assertActive();
-    return this.runtime.loadCart(source, instructionBudget, localCartBundle);
+    return this.runtime.loadCart(source, instructionBudget, localCartBundle, hostCartData);
   }
 
   start() {
@@ -292,9 +294,9 @@ export class PlayerComposition {
     return this.runtime.stop();
   }
 
-  flushPersistence(): void {
-    if (this.#disposed) return;
-    this.runtime.flushPersistence();
+  flushPersistence() {
+    this.#assertActive();
+    return this.runtime.flushPersistence();
   }
 
   async resumeAudio(): Promise<boolean> {

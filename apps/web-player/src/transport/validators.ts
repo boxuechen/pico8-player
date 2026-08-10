@@ -4,6 +4,9 @@ import type {
 } from "./worker-protocol.js";
 import {
   PLAYER_CART_INPUT_MAX_BYTES,
+  PLAYER_CART_DATA_BYTES,
+  PLAYER_CART_DATA_ID_MAX_BYTES,
+  PLAYER_CART_DATA_MAX_RECORDS,
   PLAYER_CART_REF_MAX_BYTES,
   PLAYER_CONTROLLER_BUTTON_MASK,
   PLAYER_CONTROLLER_COUNT,
@@ -157,11 +160,24 @@ function isLocalCartBundle(value: unknown): boolean {
   return true;
 }
 
+function isHostCartData(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value) || value.length > PLAYER_CART_DATA_MAX_RECORDS) return false;
+  const ids = new Set<string>();
+  return value.every((entry) => {
+    if (!isRecord(entry) || typeof entry.id !== "string" ||
+      entry.id.length < 1 || utf8ByteLength(entry.id) > PLAYER_CART_DATA_ID_MAX_BYTES ||
+      !/^[a-z0-9_-]+$/u.test(entry.id) || ids.has(entry.id) ||
+      !(entry.bytes instanceof ArrayBuffer) || entry.bytes.byteLength !== PLAYER_CART_DATA_BYTES) {
+      return false;
+    }
+    ids.add(entry.id);
+    return true;
+  });
+}
+
 export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
   if (!isPlayerEnvelope(value)) return false;
-  if (value.type === "flushPersistence") {
-    return value.requestId === 0;
-  }
   if (value.type === "input") {
     return (
       value.requestId === 0 &&
@@ -178,6 +194,7 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
       value.cartBytes.byteLength > 0 &&
       value.cartBytes.byteLength <= PLAYER_CART_INPUT_MAX_BYTES &&
       isLocalCartBundle(value.localCartBundle) &&
+      isHostCartData(value.hostCartData) &&
       (value.instructionBudget === undefined ||
         (isPositiveUint(value.instructionBudget)))
     );
@@ -193,7 +210,7 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
   }
   if (
     value.type === "start" || value.type === "pause" || value.type === "resume" ||
-    value.type === "reset" || value.type === "stop" ||
+    value.type === "reset" || value.type === "stop" || value.type === "flushPersistence" ||
     value.type === "openPauseMenu" || value.type === "closePauseMenu"
   ) {
     return isPositiveUint(value.sessionGeneration);
@@ -211,6 +228,13 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
   if (!isPositiveUint(value.requestId) && !(
     value.requestId === 0 && value.type === "diagnostic"
   )) return false;
+  if (value.type === "cartdata-commit") {
+    return typeof value.id === "string" && value.id.length >= 1 &&
+      utf8ByteLength(value.id) <= PLAYER_CART_DATA_ID_MAX_BYTES &&
+      /^[a-z0-9_-]+$/u.test(value.id) && isPositiveUint(value.revision) &&
+      value.bytes instanceof ArrayBuffer && value.bytes.byteLength === PLAYER_CART_DATA_BYTES;
+  }
+  if (value.type === "persistence-flushed") return true;
   if (value.type === "session-replaced") {
     return isPositiveUint(value.previousSessionGeneration) &&
       isPositiveUint(value.nextSessionGeneration) &&

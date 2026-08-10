@@ -5,9 +5,9 @@
   "status": "active",
   "browserGate": "Chrome/Chromium desktop only",
   "downstreamGate": "pico8-mobile iOS Simulator",
-  "activeWorkUnit": "13B",
-  "completedWorkUnits": ["13A"],
-  "nextWorkUnit": "13C",
+  "activeWorkUnit": "13C",
+  "completedWorkUnits": ["13A", "13B"],
+  "nextWorkUnit": "13D",
   "publicApi": {
     "currentVersion": 1,
     "targetVersion": 2,
@@ -77,7 +77,7 @@
     },
     "13B": {
       "name": "Hosted Shell and External Input",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "docs/phases/13-mobile-host-ports.md",
         "spec/phase-13-mobile-host-ports-contract.json",
@@ -92,11 +92,31 @@
         "external snapshots are copied, validated and merged once per frame",
         "input is cleared across non-running lifecycle boundaries",
         "legacy default shell and bytes-first authority remain intact"
-      ]
+      ],
+      "result": {
+        "focusedTests": 7,
+        "affectedOwnerTests": 14
+      }
     },
     "13C": {
       "name": "Host Persistence and Lifecycle",
-      "status": "pending"
+      "status": "active",
+      "allowedPaths": [
+        "docs/phases/13-mobile-host-ports.md",
+        "spec/phase-13-mobile-host-ports-contract.json",
+        "apps/web-player/src/main/",
+        "apps/web-player/src/transport/",
+        "apps/web-player/src/worker/",
+        "tests/runtime/phase-13c-host-persistence.test.mjs",
+        "tests/runtime/phase-3f-persistence.test.mjs",
+        "package.json"
+      ],
+      "exit": [
+        "host hydration precedes ready and committed 256-byte records reach the caller",
+        "flush waits for Worker acknowledgement, host writes and adapter flush",
+        "default IndexedDB profile remains the no-adapter behavior",
+        "inactive and background clear input and never auto-resume"
+      ]
     },
     "13D": {
       "name": "Focused Integration and Artifact Handoff",

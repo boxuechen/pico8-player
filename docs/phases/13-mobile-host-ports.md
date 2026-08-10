@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：13B — Hosted Shell and External Input
+> Active work unit：13C — Host Persistence and Lifecycle
 >
 > 机器合同：[`spec/phase-13-mobile-host-ports-contract.json`](../../spec/phase-13-mobile-host-ports-contract.json)
 >
@@ -29,37 +29,39 @@
 | Unit | 内容 | 状态 |
 | --- | --- | --- |
 | 13A | Active phase 与 API v2 机器合同 | Complete（`pnpm run test:phase-13a`） |
-| 13B | Hosted shell 与外部标准化输入 | **Active** |
-| 13C | 宿主持久化、可等待 flush 与 lifecycle | Pending |
+| 13B | Hosted shell 与外部标准化输入 | Complete（7 个 focused + 14 个 owner tests） |
+| 13C | 宿主持久化、可等待 flush 与 lifecycle | **Active** |
 | 13D | Focused Chrome、release artifact 与本地下游交接 | Pending |
 | 13E | Evidence 与阶段关闭 | Pending |
 
-## Active work unit：13B
+## Active work unit：13C
 
 ### Observable
 
-- `createPico8WebPlayer({ shell: "hosted" })` 只呈现 playfield 与 runtime pause menu；完整 shell 仍是默认值。
-- `setInput(snapshot)` 接受 copy-owned、固定 8 controller 的标准化快照，并与 DOM input 逐玩家按位合并。
-- pause、stop、cart load、lifecycle clear 和 dispose 不保留宿主按键，避免 stuck input。
-- Embed API 版本升级为 2；bytes-first cart authority 与默认完整 shell 不变。
+- caller 提供 `hydrate/write/flush` adapter 与稳定 `contentId` 时，Worker 使用宿主 seeds 并回传 copy-owned commit。
+- caller 未提供 adapter 时，现有 Worker IndexedDB profile 不变。
+- `flushPersistence(reason)` 有 Worker request/ack，并等待主线程 write queue 与 adapter flush。
+- `inactive` 清输入并暂停；`background` 额外 flush；`active` 不自动 resume 或伪造音频手势。
+- persistence status 只发布 `saving/saved/failed` 结构化事件。
 
 ### 允许文件
 
 - `docs/phases/13-mobile-host-ports.md`
 - `spec/phase-13-mobile-host-ports-contract.json`
 - `apps/web-player/src/main/`
-- `apps/web-player/public/player.css`
-- `tests/runtime/phase-13b-hosted-input.test.mjs`
-- `tests/runtime/phase-7b-embed-api.test.mjs`
+- `apps/web-player/src/transport/`
+- `apps/web-player/src/worker/`
+- `tests/runtime/phase-13c-host-persistence.test.mjs`
+- `tests/runtime/phase-3f-persistence.test.mjs`
 - `package.json`
 
 ### Tests / Exit
 
 ```sh
-pnpm run test:phase-13b
+pnpm run test:phase-13c
 ```
 
-通过后 13C 成为唯一 active work unit。
+通过后 13D 成为唯一 active work unit。
 
 ## Phase exit gate
 

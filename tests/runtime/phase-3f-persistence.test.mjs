@@ -223,19 +223,45 @@ function _draw() end`);
   await faulting.handle(command("dispose", { requestId: 5 }));
 });
 
-test("requestless pagehide flush protocol is validated and posted without a pending command", () => {
+test("persistence flush uses a request and waits for Worker acknowledgement", async () => {
   const posted = [];
+  let listener;
   const worker = {
-    postMessage(message) { posted.push(message); },
-    addEventListener() {},
+    postMessage(message) {
+      posted.push(message);
+      if (message.requestId === 0) return;
+      const response = message.type === "loadCart"
+        ? {
+            v: 1, type: "state", requestId: message.requestId,
+            workerGeneration: message.workerGeneration,
+            sessionGeneration: message.sessionGeneration,
+            state: "ready", mode: "callback", targetFps: 60, devkitFlags: 0,
+          }
+        : message.type === "flushPersistence"
+          ? {
+              v: 1, type: "persistence-flushed", requestId: message.requestId,
+              workerGeneration: message.workerGeneration,
+              sessionGeneration: message.sessionGeneration,
+            }
+          : {
+              v: 1, type: "state", requestId: message.requestId,
+              workerGeneration: message.workerGeneration,
+              sessionGeneration: message.sessionGeneration,
+              state: "disposed", mode: "none", targetFps: 0, devkitFlags: 0,
+            };
+      queueMicrotask(() => listener({ data: response }));
+    },
+    addEventListener(_type, next) { listener = next; },
     terminate() {},
   };
   const client = new PlayerRuntimeClient(() => worker);
-  client.flushPersistence();
-  assert.equal(posted.length, 1);
-  assert.equal(posted[0].type, "flushPersistence");
-  assert.equal(posted[0].requestId, 0);
-  assert.equal(isPlayerHostToRuntime(posted[0]), true);
+  await client.loadCart(new Uint8Array([1]));
+  const flushed = await client.flushPersistence();
+  const command = posted.find(({ type }) => type === "flushPersistence");
+  assert.equal(command.requestId > 0, true);
+  assert.equal(isPlayerHostToRuntime(command), true);
+  assert.equal(flushed.type, "persistence-flushed");
+  assert.equal(isPlayerRuntimeToHost(flushed), true);
   assert.equal(isPlayerRuntimeToHost({
     v: 1,
     type: "diagnostic",
@@ -249,4 +275,5 @@ test("requestless pagehide flush protocol is validated and posted without a pend
       recoverable: true,
     },
   }), true);
+  await client.dispose();
 });

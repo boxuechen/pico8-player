@@ -31,6 +31,8 @@ function postPlayerResponse(
 ): void {
   const transfer = response.type === "frame"
     ? [response.packedScreen, response.displayPalette]
+    : response.type === "cartdata-commit"
+      ? [response.bytes]
     : response.type === "runtime-control"
       ? [response.payload]
     : response.type === "session-replaced"

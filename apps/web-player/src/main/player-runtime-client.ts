@@ -7,6 +7,9 @@ import type {
 import {
   isPlayerRuntimeToHost,
   PLAYER_CART_INPUT_MAX_BYTES,
+  PLAYER_CART_DATA_BYTES,
+  PLAYER_CART_DATA_ID_MAX_BYTES,
+  PLAYER_CART_DATA_MAX_RECORDS,
   PLAYER_CART_REF_MAX_BYTES,
   PLAYER_CONTROLLER_BUTTON_MASK,
   PLAYER_CONTROLLER_COUNT,
@@ -47,10 +50,15 @@ export interface PlayerLocalCartSource {
   readonly access: CartAccess;
 }
 
+export interface PlayerHostCartDataSeed {
+  readonly id: string;
+  readonly bytes: Uint8Array;
+}
+
 interface PendingPlayerCommand {
   readonly workerGeneration: number;
   sessionGeneration: number;
-  readonly terminalType: "state" | "heartbeat" | "pause-menu";
+  readonly terminalType: "state" | "heartbeat" | "pause-menu" | "persistence-flushed";
   readonly timer: number;
   readonly resolve: (event: PlayerRuntimeToHost) => void;
   readonly reject: (error: RuntimeClientError) => void;
@@ -90,6 +98,7 @@ export class PlayerRuntimeClient {
   #vsyncSequence = 0;
   #lastCartBytes: Uint8Array | undefined;
   #lastLocalCartBundle: readonly PlayerLocalCartSource[] = [];
+  #lastHostCartData: readonly PlayerHostCartDataSeed[] | undefined;
   #hasWorkerSession = false;
   #disposed = false;
 
@@ -134,6 +143,7 @@ export class PlayerRuntimeClient {
     source: Uint8Array,
     instructionBudget?: number,
     localCartBundle: readonly PlayerLocalCartSource[] = [],
+    hostCartData?: readonly PlayerHostCartDataSeed[],
   ): Promise<PlayerRuntimeToHost> {
     this.#assertActive();
     if (!(source instanceof Uint8Array)) {
@@ -144,18 +154,23 @@ export class PlayerRuntimeClient {
     }
     this.#lastCartBytes = source.slice();
     this.#lastLocalCartBundle = this.#copyLocalCartBundle(localCartBundle);
+    this.#lastHostCartData = hostCartData === undefined
+      ? undefined
+      : this.#copyHostCartData(hostCartData);
     this.#advanceSession();
     const cartBytes = this.#lastCartBytes.slice().buffer;
     const bundle = this.#bundleForTransfer();
+    const host = this.#hostCartDataForTransfer();
     const event = await this.#send(
       {
         type: "loadCart",
         cartBytes,
         localCartBundle: bundle.entries,
+        ...(host === undefined ? {} : { hostCartData: host.entries }),
         ...(instructionBudget === undefined ? {} : { instructionBudget }),
       },
       "state",
-      [cartBytes, ...bundle.transfers],
+      [cartBytes, ...bundle.transfers, ...(host?.transfers ?? [])],
     );
     this.#hasWorkerSession = event.type === "state" && event.state === "ready";
     return event;
@@ -171,10 +186,16 @@ export class PlayerRuntimeClient {
     if (!this.#hasWorkerSession) {
       const cartBytes = retained.slice().buffer;
       const bundle = this.#bundleForTransfer();
+      const host = this.#hostCartDataForTransfer();
       const event = await this.#send(
-        { type: "loadCart", cartBytes, localCartBundle: bundle.entries },
+        {
+          type: "loadCart",
+          cartBytes,
+          localCartBundle: bundle.entries,
+          ...(host === undefined ? {} : { hostCartData: host.entries }),
+        },
         "state",
-        [cartBytes, ...bundle.transfers],
+        [cartBytes, ...bundle.transfers, ...(host?.transfers ?? [])],
       );
       this.#hasWorkerSession = event.type === "state" && event.state === "ready";
       return event;
@@ -245,16 +266,8 @@ export class PlayerRuntimeClient {
     });
   }
 
-  /** Best-effort requestless flush for page lifecycle boundaries. */
-  flushPersistence(): void {
-    if (this.#disposed) return;
-    this.#worker.postMessage({
-      v: 1,
-      type: "flushPersistence",
-      requestId: 0,
-      workerGeneration: this.#workerGeneration,
-      sessionGeneration: this.#sessionGeneration,
-    });
+  flushPersistence(): Promise<PlayerRuntimeToHost> {
+    return this.#send({ type: "flushPersistence" }, "persistence-flushed");
   }
 
   attachAudioPort(port: MessagePort): void {
@@ -286,6 +299,7 @@ export class PlayerRuntimeClient {
       this.#sessionListeners.clear();
       this.#lastCartBytes = undefined;
       this.#lastLocalCartBundle = [];
+      this.#lastHostCartData = undefined;
     }
   }
 
@@ -383,6 +397,14 @@ export class PlayerRuntimeClient {
       value.workerGeneration !== this.#workerGeneration ||
       value.sessionGeneration !== this.#sessionGeneration
     ) return;
+    if (value.type === "cartdata-commit" && this.#lastHostCartData !== undefined) {
+      const records = new Map(this.#lastHostCartData.map((record) => [record.id, record.bytes]));
+      records.set(value.id, new Uint8Array(value.bytes).slice());
+      this.#lastHostCartData = Array.from(records, ([id, bytes]) => ({
+        id,
+        bytes: bytes.slice(),
+      }));
+    }
     for (const listener of this.#eventListeners) listener(value);
     const pending = this.#pending.get(value.requestId);
     if (
@@ -499,6 +521,36 @@ export class PlayerRuntimeClient {
       const cartBytes = entry.bytes.slice().buffer;
       transfers.push(cartBytes);
       return { ref: entry.ref, cartBytes, access: { ...entry.access } };
+    });
+    return { entries, transfers };
+  }
+
+  #copyHostCartData(entries: readonly PlayerHostCartDataSeed[]): readonly PlayerHostCartDataSeed[] {
+    if (!Array.isArray(entries) || entries.length > PLAYER_CART_DATA_MAX_RECORDS) {
+      throw new RangeError("host cartdata exceeds 4096 records");
+    }
+    const ids = new Set<string>();
+    return entries.map((entry) => {
+      if (typeof entry?.id !== "string" || !/^[a-z0-9_-]+$/u.test(entry.id) ||
+        entry.id.length > PLAYER_CART_DATA_ID_MAX_BYTES || ids.has(entry.id) ||
+        !(entry.bytes instanceof Uint8Array) || entry.bytes.byteLength !== PLAYER_CART_DATA_BYTES) {
+        throw new RangeError("host cartdata contains an invalid record");
+      }
+      ids.add(entry.id);
+      return { id: entry.id, bytes: entry.bytes.slice() };
+    });
+  }
+
+  #hostCartDataForTransfer(): {
+    readonly entries: readonly import("../transport/public.js").PlayerCartDataSeedEntry[];
+    readonly transfers: readonly ArrayBuffer[];
+  } | undefined {
+    if (this.#lastHostCartData === undefined) return undefined;
+    const transfers: ArrayBuffer[] = [];
+    const entries = this.#lastHostCartData.map((entry) => {
+      const bytes = entry.bytes.slice().buffer;
+      transfers.push(bytes);
+      return { id: entry.id, bytes };
     });
     return { entries, transfers };
   }
