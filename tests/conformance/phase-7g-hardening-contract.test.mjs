@@ -13,8 +13,12 @@ const phaseContract = JSON.parse(await readFile(
   "utf8",
 ));
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+const PHASE_7_EXIT_COMMIT = "49b24ad32b54d14d4678ebd5b7225d3a9bec668e";
 
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const sha256AtPhase7Exit = (path) => sha256(
+  execFileSync("git", ["show", `${PHASE_7_EXIT_COMMIT}:${path}`]),
+);
 
 test("Phase 7G manifest fixes a complete Chrome-only gate before measurement", () => {
   assert.equal(manifest.schemaVersion, 1);
@@ -50,7 +54,7 @@ test("Phase 7G locks every project cart and declared source input", async () => 
   }
   for (const [path, expected] of Object.entries(manifest.lockedInputs)) {
     assert.match(expected, /^[0-9a-f]{64}$/u, `${path} has no locked SHA-256`);
-    assert.equal(sha256(await readFile(path)), expected, path);
+    assert.equal(sha256AtPhase7Exit(path), expected, path);
   }
 });
 

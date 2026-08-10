@@ -33,7 +33,8 @@
         { "name": "yRaw", "type": "q16.16-raw-i32" },
         { "name": "colorRaw", "type": "q16.16-raw-i32", "optional": true }
       ],
-      "result": "void"
+      "result": "void",
+      "guestWrapperResult": "previous-cursor-x-y"
     },
     {
       "id": 3,

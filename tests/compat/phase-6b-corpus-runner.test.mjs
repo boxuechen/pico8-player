@@ -150,6 +150,49 @@ test("6B fails closed on corpus count, duplicate IDs and cart hash mismatch", as
 
 test("6B keeps incomplete cases CU and rejects contradictory classifications", async () => {
   await withCorpus({
+    mutateManifest(manifest) {
+      manifest.entries[0].expectedTermination = {
+        kind: "fault",
+        faultCode: "E_VM_RUNTIME",
+        basis: "project-authored self-test terminates intentionally",
+      };
+    },
+    mutateObservations(observations) {
+      observations.entries[0] = {
+        ...observations.entries[0],
+        smokeOutcome: "fails",
+        classification: "CU",
+        failureCluster: null,
+        faultCode: "E_VM_RUNTIME",
+        expectedTerminationMatched: true,
+      };
+      delete observations.entries[0].playability;
+    },
+  }, async ({ manifestPath, observationsPath }) => {
+    const report = await buildLocalQualificationReport({ manifestPath, observationsPath, projectRoot });
+    assert.equal(report.summary.counts.CU, 1);
+    assert.equal(report.entries[0].expectedTerminationMatched, true);
+    assert.equal(report.entries[0].smokeOutcome, "fails");
+  });
+  await withCorpus({
+    mutateObservations(observations) {
+      observations.entries[0] = {
+        ...observations.entries[0],
+        smokeOutcome: "fails",
+        classification: "CU",
+        failureCluster: null,
+        faultCode: "E_VM_RUNTIME",
+        expectedTerminationMatched: true,
+      };
+      delete observations.entries[0].playability;
+    },
+  }, async ({ manifestPath, observationsPath }) => {
+    await assert.rejects(
+      buildLocalQualificationReport({ manifestPath, observationsPath, projectRoot }),
+      (error) => error.code === "E_EXPECTED_TERMINATION",
+    );
+  });
+  await withCorpus({
     mutateObservations(observations) {
       observations.entries.pop();
       observations.entries[0] = {

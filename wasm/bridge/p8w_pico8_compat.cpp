@@ -82,7 +82,9 @@ void seed_prng(uint8_t *ram, uint32_t seed) {
 }
 
 int pico8_srand(lua_State *state) {
-  const uint32_t seed = static_cast<uint32_t>(luaL_checknumber(state, 1).bits());
+  const uint32_t seed = lua_isnoneornil(state, 1)
+                            ? 0u
+                            : static_cast<uint32_t>(luaL_checknumber(state, 1).bits());
   seed_prng(prng_ram(state), seed);
   return 0;
 }
@@ -486,6 +488,10 @@ void open_pico8_compat(lua_State *state, uint8_t *pico_ram) {
   register_p8scii_globals(state);
   register_prng_function(state, "rnd", pico8_rnd, pico_ram);
   register_prng_function(state, "srand", pico8_srand, pico_ram);
+  reset_pico8_compat_ram(pico_ram);
+}
+
+void reset_pico8_compat_ram(uint8_t *pico_ram) {
   seed_prng(pico_ram, 0);
 }
 

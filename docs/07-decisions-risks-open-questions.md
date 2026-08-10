@@ -34,6 +34,8 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-021 | [Partially superseded by ADR-023](./adr/021-menuitem-registration-boundary.md) | 五槽 registry/callback VM ownership 继续有效；registration-only/UI Known Difference 已替代 |
 | ADR-022 | [Accepted](./adr/022-cpu-slicing-decision.md) | top-level custom loop 使用 root-safe 30 Hz implicit frame；hard cap 继续 poison |
 | ADR-023 | [Accepted](./adr/023-menuitem-invocation-boundary.md) | VM-local callback + copied snapshot + generation-bound root-safe pause-menu invocation；替代 ADR-021 registration-only 限制 |
+| ADR-024 | [Accepted](./adr/024-pico8-v027-cart-version-and-text-include.md) | v0.2.7 cart version 43、bounded compact text rows 与 caller-authorized non-recursive include |
+| ADR-025 | [Accepted](./adr/025-phase-8d-real-cart-compatibility-boundaries.md) | Phase 8D parser/VM/callback/API/performance 修复和 expected-fault qualification 边界 |
 
 ## 2. 当前未决问题
 
@@ -79,7 +81,7 @@ evidence，不在本表复制测试步骤。
 | R-05 | AudioWorklet underrun 或 queue 增长 | ADR-010 bounded queue；Phase 4G 双速率 1800 秒 steady counters 全零 |
 | R-06 | fixed-point 被 JS float 改写 | raw ABI + boundary tests |
 | R-07 | P8SCII/Unicode 破坏 byte string | byte-oriented text renderer + production pointer/length tests；Phase 2 exit conformance passed |
-| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | Phase 4F/ADR-022 分离 4M/s cost、133333 top-level frame quantum 与 1M safety cap；Node/Chrome controls 锁定 |
+| R-08 | hard budget、soft CPU 与 implicit frame 混淆 | Phase 4F/ADR-022/ADR-025 分离 4M/s cost、133333 top-level frame quantum 与 2M safety cap；Node/Chrome controls 锁定 |
 | R-09 | multi-cart 同步 API 需要 async host data | caller-authorized local repository + root HostRequest + atomic swap；Phase 5 100-swap/soak gate |
 | R-10 | 参考算法混合许可证 | provenance + NOTICE audit |
 | R-11 | BBS 自动访问侵犯条款/作者权利 | ADR-020 Deferred；无 production adapter、endpoint、network access 或 corpus bytes |

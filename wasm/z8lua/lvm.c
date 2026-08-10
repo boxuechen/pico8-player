@@ -30,6 +30,20 @@
 
 
 
+static int ispico8envupvalue (LClosure *cl, int index) {
+  TString *name = cl->p->upvalues[index].name;
+  return name != NULL && name->tsv.len == 4 &&
+         memcmp(getstr(name), "_ENV", 4) == 0;
+}
+
+
+static Table *pico8originalenv (lua_State *L) {
+  const TValue *value = luaH_getint(hvalue(&G(L)->l_registry),
+                                   p8w::kOriginalEnvironmentRegistryIndex);
+  return ttistable(value) ? hvalue(value) : NULL;
+}
+
+
 /* limit for table tag-method chains (to avoid loops) */
 #define MAXTAGLOOP	100
 
@@ -621,6 +635,14 @@ void luaV_execute (lua_State *L) {
       vmcase(OP_GETTABUP,
         int b = GETARG_B(i);
         Protect(luaV_gettable(L, cl->upvals[b]->v, RKC(i), ra));
+        if (ttisnil(RA(i)) && ispico8envupvalue(cl, b)) {
+          Table *fallback = pico8originalenv(L);
+          if (fallback != NULL) {
+            TValue fallbackvalue;
+            sethvalue(L, &fallbackvalue, fallback);
+            Protect(luaV_gettable(L, &fallbackvalue, RKC(i), RA(i)));
+          }
+        }
       )
       vmcase(OP_GETTABLE,
         Protect(luaV_gettable(L, RB(i), RKC(i), ra));

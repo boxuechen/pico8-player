@@ -28,6 +28,7 @@ export const MAXIMUM_CART_BYTES = 1024 * 1024;
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CART_PATTERN = /\.p8(?:\.png)?$/iu;
 const PNG_PATTERN = /\.p8\.png$/iu;
+const INCLUDE_PATTERN = /^\s*#include[\t ]+(.+?)[\t ]*$/u;
 
 export class ExpandedCorpusError extends Error {
   constructor(code, message) {
@@ -87,6 +88,43 @@ function chooseCandidate(candidates, format) {
     .filter((candidate) => candidate.format === format)
     .sort((left, right) => candidateRank(left) - candidateRank(right)
       || left.relativePath.localeCompare(right.relativePath))[0];
+}
+
+async function discoverTextIncludes(cartPath, bytes, externalRoot) {
+  const includes = [];
+  const seen = new Set();
+  let section;
+  for (const line of bytes.toString("utf8").split(/\r?\n/u)) {
+    const marker = /^__([a-z0-9_.:-]+)__$/iu.exec(line);
+    if (marker !== null) {
+      section = marker[1].toLowerCase();
+      continue;
+    }
+    if (section !== "lua") continue;
+    const match = INCLUDE_PATTERN.exec(line);
+    if (match === null) continue;
+    const ref = match[1];
+    if (ref.includes("://") || ref.includes("\\") || ref.startsWith("/")
+      || ref.split("/").some((part) => part.length === 0 || part === "." || part === "..")) {
+      fail("E_INCLUDE_REF", "include ref must be a canonical relative opaque name");
+    }
+    if (seen.has(ref)) continue;
+    seen.add(ref);
+    const unresolved = resolve(dirname(cartPath), ref);
+    const metadata = await lstat(unresolved).catch((error) =>
+      fail("E_INCLUDE_READ", `include could not be inspected: ${error.code ?? error.message}`));
+    if (metadata.isSymbolicLink() || !metadata.isFile()) {
+      fail("E_INCLUDE_PATH", "include must be a regular non-symlink file");
+    }
+    const path = await realpath(unresolved);
+    if (!isInside(externalRoot, path)) fail("E_INCLUDE_PATH", "include must remain inside source");
+    const includeBytes = await readFile(path);
+    if (includeBytes.length < 1 || includeBytes.length > MAXIMUM_CART_BYTES) {
+      fail("E_INCLUDE_SIZE", `include must contain 1..${MAXIMUM_CART_BYTES} bytes`);
+    }
+    includes.push({ ref, path, bytes: includeBytes.length, sha256: sha256(includeBytes) });
+  }
+  return includes;
 }
 
 async function assertExternalExistingDirectory(path, label, projectRoot = repositoryRoot) {
@@ -173,6 +211,19 @@ function manifestEntry(candidate, id, label, source) {
       stepMilliseconds: 1000 / 30,
       inputs: [],
     },
+    ...(candidate.includes.length === 0 ? {} : {
+      bundle: candidate.includes.map((include) => ({
+        ref: include.ref,
+        file: include.path,
+        sha256: include.sha256,
+        access: {
+          load: false,
+          reloadData: false,
+          cstoreData: false,
+          include: true,
+        },
+      })),
+    }),
   };
 }
 
@@ -218,14 +269,16 @@ export async function discoverExpandedCorpus({ sourceRoot, projectRoot = reposit
     if (bytes.length < 1 || bytes.length > MAXIMUM_CART_BYTES) {
       fail("E_CART_SIZE", `${relativePath} must contain 1..${MAXIMUM_CART_BYTES} bytes`);
     }
+    const format = cartFormat(path);
     candidates.push({
       path,
       relativePath,
       project,
       stem: cartStem(path),
-      format: cartFormat(path),
+      format,
       bytes: bytes.length,
       sha256: sha256(bytes),
+      includes: format === "p8" ? await discoverTextIncludes(path, bytes, externalRoot) : [],
     });
   }
   candidates.sort((left, right) => left.relativePath.localeCompare(right.relativePath));

@@ -17,7 +17,7 @@ export const CART_DATA_MAX_HYDRATED_BYTES = 1024 * 1024;
 export const CART_DATA_DEFAULT_DEBOUNCE_MS = 100;
 
 const MAX_DIAGNOSTICS = 32;
-const CART_DATA_ID_PATTERN = /^[a-z0-9_]+$/u;
+const CART_DATA_ID_PATTERN = /^[a-z0-9_-]+$/u;
 
 interface StoredCartDataRecord {
   readonly schemaVersion: typeof CART_DATA_RECORD_SCHEMA_VERSION;

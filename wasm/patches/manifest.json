@@ -28,6 +28,20 @@
         "tests/wasm/phase-0b.test.mjs: GFX/SCREEN remap mapper convergence"
       ],
       "upstreamStatus": "project integration patch; not submitted"
+    },
+    {
+      "order": 3,
+      "file": "0003-pico8-language-compat.patch",
+      "sha256": "bb26ac5fe7f1ff38881652ffe5f1a192a443353e7fab100256d5651a42aeb1c6",
+      "target": "llex.h, llex.c, lparser.c, lvm.c",
+      "purpose": "Preserve PICO-8 short-if semantics across swallowed long comments, accept single-name local compound initialization and omitted argument slots, and fall back from replacement environments to the original cart globals.",
+      "enabledBy": "Phase 8D PICO-8 v0.2.7 language compatibility",
+      "tests": [
+        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: short-if long-comment regression",
+        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: local compound initialization regression",
+        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: omitted argument and original environment regressions"
+      ],
+      "upstreamStatus": "project compatibility patch; not submitted"
     }
   ],
   "policy": "Ordered patches are applied to the vendored snapshot and must remain minimal, reviewable, and covered by named conformance tests."

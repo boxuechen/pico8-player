@@ -99,16 +99,7 @@ export class LocalCartBundleResolver implements CartResolverPort {
     context: CartResolveContext,
     cancellation: CartCancellationToken,
   ): Promise<ResolvedCartSource> {
-    this.#assertLive();
-    const checkedRef = assertLocalRef(ref);
-    const entry = this.#entries.get(checkedRef);
-    if (entry === undefined) {
-      throw new CartResolutionError(
-        CART_RESOLUTION_ERROR_CODES.notFound,
-        `local cart bundle does not contain ref: ${checkedRef}`,
-      );
-    }
-    assertCartAccessForPurpose(entry.access, assertCartResolvePurpose(context.purpose));
+    const entry = this.#resolveEntry(ref, context.purpose);
 
     return new Promise<ResolvedCartSource>((resolve, reject) => {
       let settled = false;
@@ -155,6 +146,16 @@ export class LocalCartBundleResolver implements CartResolverPort {
     });
   }
 
+  /** Synchronous lookup for codec-time include expansion over already-owned bytes. */
+  resolveImmediate(ref: string, purpose: "include"): ResolvedCartSource {
+    const entry = this.#resolveEntry(ref, purpose);
+    return Object.freeze({
+      ref: entry.ref,
+      bytes: entry.bytes.slice(),
+      access: copyCartAccess(entry.access),
+    });
+  }
+
   dispose(): void {
     if (this.#disposed) return;
     this.#entries.clear();
@@ -168,5 +169,19 @@ export class LocalCartBundleResolver implements CartResolverPort {
         "local cart bundle resolver is disposed",
       );
     }
+  }
+
+  #resolveEntry(ref: string, purpose: CartResolveContext["purpose"]): OwnedLocalCartBundleEntry {
+    this.#assertLive();
+    const checkedRef = assertLocalRef(ref);
+    const entry = this.#entries.get(checkedRef);
+    if (entry === undefined) {
+      throw new CartResolutionError(
+        CART_RESOLUTION_ERROR_CODES.notFound,
+        `local cart bundle does not contain ref: ${checkedRef}`,
+      );
+    }
+    assertCartAccessForPurpose(entry.access, assertCartResolvePurpose(purpose));
+    return entry;
   }
 }

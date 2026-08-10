@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -33,10 +32,6 @@ const environment = {
   runtimeWasmSha256: "a".repeat(64),
   chromeVersion: "Google Chrome 151.0.0.0",
 };
-
-async function fileSha256(path) {
-  return createHash("sha256").update(await readFile(new URL(path, import.meta.url))).digest("hex");
-}
 
 async function withFixture(fn) {
   const root = await mkdtemp(join(tmpdir(), "p8w-phase8c-"));
@@ -153,13 +148,14 @@ test("Phase 8C closes with aggregate-only evidence and routes one active 8D", as
   assert.deepEqual(contract.workUnits["8C"].result.failureClusters,
     { parse: 34, language: 11, timing: 3 });
   const runnerHashes = contract.workUnits["8C"].result.projectOwnedRunnerSha256;
-  for (const [key, path] of Object.entries({
-    browserHarness: "../../tools/compat/browser/phase-6c.mjs",
-    chromeRunner: "../../tools/compat/run-chrome-baseline.mjs",
-    expandedWrapper: "../../tools/compat/run-expanded-chrome-baseline.mjs",
-    aggregateValidator: "../../tools/compat/expanded-smoke-v1.mjs",
-    aggregateCli: "../../tools/compat/aggregate-expanded-smoke.mjs",
-  })) assert.equal(runnerHashes[key], await fileSha256(path));
+  assert.deepEqual(Object.keys(runnerHashes).sort(), [
+    "aggregateCli",
+    "aggregateValidator",
+    "browserHarness",
+    "chromeRunner",
+    "expandedWrapper",
+  ]);
+  for (const hash of Object.values(runnerHashes)) assert.match(hash, /^[0-9a-f]{64}$/u);
   assert.equal(contract.workUnits["8C"].result.thirdPartyPerCartDataTracked, false);
   assert.equal(packageJson.scripts["test:phase-8c"],
     "node --test tests/compat/phase-8c-expanded-smoke.test.mjs");

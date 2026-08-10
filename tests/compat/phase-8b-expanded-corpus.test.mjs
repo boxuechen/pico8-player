@@ -19,7 +19,8 @@ const source = {
 };
 
 function p8Bytes(index) {
-  return Buffer.from(`pico-8 cartridge // http://www.pico-8.com\nversion 43\n__lua__\nfunction _draw() cls(${index % 16}) end\n`);
+  const include = index === 7 ? "#include shared.lua\n" : "";
+  return Buffer.from(`pico-8 cartridge // http://www.pico-8.com\nversion 43\n__lua__\n${include}function _draw() cls(${index % 16}) end\n`);
 }
 
 async function makeFixture(root, { symlinkEscape = false } = {}) {
@@ -31,6 +32,7 @@ async function makeFixture(root, { symlinkEscape = false } = {}) {
     const projectRootPath = join(cartsRoot, project);
     await mkdir(projectRootPath, { recursive: true });
     await writeFile(join(projectRootPath, `${project}.p8`), p8Bytes(index));
+    if (index === 7) await writeFile(join(projectRootPath, "shared.lua"), "shared_value=7\n");
     if (index <= 6) {
       const exportRoot = join(projectRootPath, "export");
       await mkdir(exportRoot);
@@ -110,8 +112,28 @@ test("Phase 8B selects canonical exports, format pairs and byte-unique programs 
       minimumCases: 12,
     });
     assert.equal(loaded.entries.length, 12);
+    const includeEntry = loaded.entries.find(({ localCartBundle }) => localCartBundle.length > 0);
+    assert.equal(includeEntry.localCartBundle.length, 1);
+    assert.equal(includeEntry.localCartBundle[0].ref, "shared.lua");
+    assert.equal(includeEntry.localCartBundle[0].access.include, true);
     assert.ok(loaded.entries.every(({ source: entrySource }) =>
       entrySource.permissionStatus === "caller-authorized-local-research"));
+
+    const expectedManifest = JSON.parse(await readFile(canonicalManifest, "utf8"));
+    expectedManifest.entries[0].expectedTermination = {
+      kind: "fault",
+      faultCode: "E_VM_RUNTIME",
+      basis: "project-authored fixture intentionally terminates",
+    };
+    const expectedManifestPath = join(root, "expected-termination.json");
+    await writeFile(expectedManifestPath, `${JSON.stringify(expectedManifest)}\n`);
+    const expectedLoaded = await loadLocalCorpusManifest({
+      manifestPath: expectedManifestPath,
+      projectRoot,
+      minimumCases: 12,
+    });
+    assert.deepEqual(expectedLoaded.entries[0].expectedTermination,
+      expectedManifest.entries[0].expectedTermination);
   });
 });
 
@@ -173,4 +195,15 @@ test("Phase 8B remains closed under its active successor", async () => {
   assert.match(packageJson.scripts["qualification:phase-8:chrome"], /run-expanded-chrome-baseline\.mjs/u);
   assert.match(packageJson.scripts.test, /test:phase-8b/u);
   assert.match(packageJson.scripts.verify, /test:phase-8b/u);
+});
+
+test("Chrome smoke treats a fault-free cart stop as a completed boot", async () => {
+  const harness = await readFile(
+    new URL("../../tools/compat/browser/phase-6c.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(harness, /const cleanStop = controller\.state === "stopped"/u);
+  assert.match(harness, /const boots = cleanStop \|\|/u);
+  assert.match(harness, /const expectedTerminationMatched =/u);
+  assert.doesNotMatch(harness, /code = "E_CART_STOPPED"/u);
 });

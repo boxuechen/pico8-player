@@ -167,7 +167,16 @@ function assertLockedEntry(entry, actual) {
   assert.equal(actual.displayPaletteHex, entry.expected.displayPaletteHex,
     `${entry.id} display palette bytes`);
   assert.equal(actual.rgbaSha256, entry.expected.rgbaSha256, `${entry.id} RGBA`);
-  assert.deepEqual(actual.ramRegions, entry.ramRegions, `${entry.id} RAM regions`);
+  // Phase 4 added the live PRNG state at 0x5f44..0x5f4b. Preserve the
+  // immutable Phase 2 oracle for the surrounding hardware bytes while later
+  // tests own the deterministic, non-zero PRNG contract.
+  const historicalRamRegions = actual.ramRegions.map((region) => {
+    if (region.id !== "draw-and-hardware-state" || region.hex === undefined) return region;
+    const bytes = Buffer.from(region.hex, "hex");
+    bytes.fill(0, 0x44, 0x4c);
+    return { ...region, hex: hex(bytes), sha256: sha256(bytes) };
+  });
+  assert.deepEqual(historicalRamRegions, entry.ramRegions, `${entry.id} RAM regions`);
 }
 
 function command(type, requestId, sessionGeneration, overrides = {}) {

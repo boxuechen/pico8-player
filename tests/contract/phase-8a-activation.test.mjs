@@ -9,6 +9,9 @@ const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), 
 const sha256 = async (path) => createHash("sha256")
   .update(await readFile(new URL(path, root)))
   .digest("hex");
+const sha256AtCommit = (commit, path) => createHash("sha256")
+  .update(execFileSync("git", ["show", `${commit}:${path}`]))
+  .digest("hex");
 const contract = await readJson("spec/phase-8-expanded-real-cart-qualification-contract.json");
 
 test("Phase 8A freezes the completed Phase 7 release baseline", async () => {
@@ -28,8 +31,11 @@ test("Phase 8A freezes the completed Phase 7 release baseline", async () => {
     ["phase7Contract", "phase7ContractSha256"],
     ["phase7Evidence", "phase7EvidenceSha256"],
     ["phase7ExitManifest", "phase7ExitManifestSha256"],
-    ["runtimeManifest", "runtimeManifestSha256"],
   ]) assert.equal(await sha256(contract.baseline[pathKey]), contract.baseline[hashKey]);
+  assert.equal(
+    sha256AtCommit(contract.baseline.baselineCommit, contract.baseline.runtimeManifest),
+    contract.baseline.runtimeManifestSha256,
+  );
 });
 
 test("Phase 8A locks the expanded external corpus without granting redistribution", () => {

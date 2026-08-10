@@ -17,11 +17,16 @@ const contract = JSON.parse(await readFile(
   "spec/phase-7-web-player-release-candidate-contract.json",
   "utf8",
 ));
-const inventory = JSON.parse(await readFile("spec/pico-api-inventory.yaml", "utf8"));
+const PHASE_7_EXIT_COMMIT = "49b24ad32b54d14d4678ebd5b7225d3a9bec668e";
+const readAtPhase7Exit = (path) => execFileSync(
+  "git", ["show", `${PHASE_7_EXIT_COMMIT}:${path}`], { encoding: "utf8" },
+);
+const inventory = JSON.parse(readAtPhase7Exit("spec/pico-api-inventory.yaml"));
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const sha256AtPhase7Exit = (path) => sha256(Buffer.from(readAtPhase7Exit(path)));
 
-test("Phase 7H aggregate input locks and Chrome gate source locks are current", async () => {
+test("Phase 7H aggregate input locks and Chrome gate source locks match the frozen exit", async () => {
   assert.equal(exit.schemaVersion, 1);
   assert.equal(exit.phase, "7H");
   assert.equal(
@@ -30,7 +35,7 @@ test("Phase 7H aggregate input locks and Chrome gate source locks are current", 
   );
   for (const [path, expected] of Object.entries(exit.sourceLocks)) {
     assert.match(expected, /^[0-9a-f]{64}$/u, path);
-    assert.equal(sha256(await readFile(path)), expected, path);
+    assert.equal(sha256AtPhase7Exit(path), expected, path);
   }
   assert.equal(
     exit.sourceLocks["tests/conformance/manifests/phase-7g-chrome-hardening.json"],
@@ -38,7 +43,7 @@ test("Phase 7H aggregate input locks and Chrome gate source locks are current", 
   );
   assert.deepEqual(exit.gateSourceHashes, phase7g.lockedInputs);
   for (const [path, expected] of Object.entries(exit.gateSourceHashes)) {
-    assert.equal(sha256(await readFile(path)), expected, path);
+    assert.equal(sha256AtPhase7Exit(path), expected, path);
   }
 });
 

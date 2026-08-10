@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -20,11 +21,10 @@ async function sha256(relativePath) {
 }
 
 const exit = await readJson("tests/conformance/manifests/phase-6h-exit.json");
-const EVOLVING_AFTER_PHASE_6 = new Set([
-  "wasm/bridge/p8w_frame_runtime.cpp",
-  "wasm/bridge/p8w_pico8_compat.cpp",
-  "wasm/runtime-v1.manifest.lock.json",
-]);
+const PHASE_6_EXIT_COMMIT = "117882a8bbd368ea8d8ebea2a2145d8f71152ec3";
+const sha256AtCommit = (relativePath) => createHash("sha256")
+  .update(execFileSync("git", ["show", `${PHASE_6_EXIT_COMMIT}:${relativePath}`]))
+  .digest("hex");
 
 test("Phase 6H hash-locks only project-owned exit inputs", async () => {
   assert.equal(exit.schemaVersion, 1);
@@ -47,9 +47,7 @@ test("Phase 6H hash-locks only project-owned exit inputs", async () => {
     assert.ok(!relativePath.includes("ref/"), relativePath);
     assert.ok(!relativePath.includes("local-corpus"), relativePath);
     assert.match(expectedSha256, /^[0-9a-f]{64}$/u);
-    if (!EVOLVING_AFTER_PHASE_6.has(relativePath)) {
-      assert.equal(await sha256(relativePath), expectedSha256, relativePath);
-    }
+    assert.equal(sha256AtCommit(relativePath), expectedSha256, relativePath);
   }
 });
 

@@ -294,8 +294,7 @@ static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
 }
 
 
-static void singlevar (LexState *ls, expdesc *var) {
-  TString *varname = str_checkname(ls);
+static void singlevarname (LexState *ls, TString *varname, expdesc *var) {
   FuncState *fs = ls->fs;
   if (singlevaraux(fs, varname, var, 1) == VVOID) {  /* global name? */
     expdesc key;
@@ -304,6 +303,11 @@ static void singlevar (LexState *ls, expdesc *var) {
     codestring(ls, &key, varname);  /* key is variable name */
     luaK_indexed(fs, var, &key);  /* env[varname] */
   }
+}
+
+
+static void singlevar (LexState *ls, expdesc *var) {
+  singlevarname(ls, str_checkname(ls), var);
 }
 
 
@@ -821,6 +825,25 @@ static int explist (LexState *ls, expdesc *v) {
 }
 
 
+static int funcarglist (LexState *ls, expdesc *v) {
+  /* funcarglist -> [expr] { `,' [expr] }
+  ** PICO-8 treats an omitted argument between delimiters as nil. */
+  int n = 0;
+  for (;;) {
+    if (ls->t.token == ',' || ls->t.token == ')')
+      init_exp(v, VNIL, 0);
+    else
+      expr(ls, v);
+    n++;
+    if (ls->t.token != ',')
+      break;
+    luaK_exp2nextreg(ls->fs, v);
+    luaX_next(ls);
+  }
+  return n;
+}
+
+
 static void funcargs (LexState *ls, expdesc *f, int line) {
   FuncState *fs = ls->fs;
   expdesc args;
@@ -831,7 +854,7 @@ static void funcargs (LexState *ls, expdesc *f, int line) {
       if (ls->t.token == ')')  /* arg list is empty? */
         args.k = VVOID;
       else {
-        explist(ls, &args);
+        funcarglist(ls, &args);
         luaK_setmultret(fs, &args);
       }
       check_match(ls, ')', '(', line);
@@ -1186,19 +1209,14 @@ static void assignment (LexState *ls, struct LHS_assign *lh, int nvars) {
 }
 
 
-static void compound (LexState *ls, expdesc *v) {
-  int i, line, extra;
+static void compoundexpr (LexState *ls, expdesc *v) {
+  int line;
   FuncState *fs = ls->fs;
   expdesc e1 = *v, e2;
   /* compound -> ( `+=' | `-=' | `*=' | `/=' | etc. ) expression */
   BinOpr op = ls->t.token >= TK_ADDE && ls->t.token <= TK_CONCATE ?
               BinOpr(ls->t.token - TK_ADDE + OPR_ADD) :
               OPR_NOBINOPR;
-  extra = fs->freereg - fs->nactvar;
-  for (i = 0; i < extra; ++i)
-    new_localvarliteral(ls, "(for compound)");
-  adjustlocalvars(ls, extra);
-
   luaX_next(ls);
   line = ls->linenumber;
 
@@ -1208,9 +1226,24 @@ static void compound (LexState *ls, expdesc *v) {
     luaK_posfix(fs, op, &e1, &e2, line);
   leavelevel(ls);
 
-  luaK_exp2nextreg(fs, &e1);
-  luaK_setoneret(ls->fs, &e1);
-  luaK_storevar(ls->fs, v, &e1);
+  *v = e1;
+}
+
+
+static void compound (LexState *ls, expdesc *v) {
+  int i, extra;
+  FuncState *fs = ls->fs;
+  expdesc result = *v;
+  extra = fs->freereg - fs->nactvar;
+  for (i = 0; i < extra; ++i)
+    new_localvarliteral(ls, "(for compound)");
+  adjustlocalvars(ls, extra);
+
+  compoundexpr(ls, &result);
+
+  luaK_exp2nextreg(fs, &result);
+  luaK_setoneret(ls->fs, &result);
+  luaK_storevar(ls->fs, v, &result);
 }
 
 
@@ -1439,12 +1472,13 @@ static int test_then_block (LexState *ls, int *escapelist) {
   expdesc v;
   int jf;  /* instruction to skip 'then' code (if condition is false) */
   int line = ls->linenumber;
+  int logicalline = ls->logicalline;
   int short_if = (ls->t.token == TK_IF);  /* if TK_IF, can be a short IF */
   luaX_next(ls);  /* skip IF or ELSEIF */
   luaX_trackbraces(ls);  /* track braces for short IF */
   expr(ls, &v);  /* read condition */
   short_if &= ls->t.token != TK_THEN && ls->t.token != TK_EOS
-           && ls->braces == 0 && line == ls->linenumber;
+           && ls->braces == 0 && logicalline == ls->logicalline;
   if (short_if)
     ls->emiteol = 1;
   else
@@ -1513,12 +1547,20 @@ static void localstat (LexState *ls) {
   int nvars = 0;
   int nexps;
   expdesc e;
+  TString *firstvar = NULL;
   do {
-    new_localvar(ls, str_checkname(ls));
+    TString *varname = str_checkname(ls);
+    if (firstvar == NULL) firstvar = varname;
+    new_localvar(ls, varname);
     nvars++;
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
     nexps = explist(ls, &e);
+  else if (nvars == 1 && ls->t.token >= TK_ADDE && ls->t.token <= TK_CONCATE) {
+    singlevarname(ls, firstvar, &e);
+    compoundexpr(ls, &e);
+    nexps = 1;
+  }
   else {
     e.k = VVOID;
     nexps = 0;
@@ -1761,4 +1803,3 @@ Closure *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff,
   lua_assert(dyd->actvar.n == 0 && dyd->gt.n == 0 && dyd->label.n == 0);
   return cl;  /* it's on the stack too */
 }
-

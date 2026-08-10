@@ -74,6 +74,18 @@ export class PicoRam {
 
   fill(logicalAddress: number, length: number, value: number): void {
     assertLength(length);
+    if (length === 0) return;
+    const normalizedStart = logicalAddress & 0xffff;
+    const normalizedEnd = normalizedStart + length - 1;
+    const changesVideoMapping = normalizedStart <= 0x5f57 && normalizedEnd >= 0x5f54;
+    if (normalizedEnd < PICO_RAM_SIZE && !changesVideoMapping) {
+      const physicalStart = this.mapAddress(normalizedStart);
+      const physicalEnd = this.mapAddress(normalizedEnd);
+      if (physicalEnd === physicalStart + length - 1) {
+        this.physicalBytes.fill(value & 0xff, physicalStart, physicalEnd + 1);
+        return;
+      }
+    }
     for (let index = 0; index < length; index += 1) {
       this.writeU8(logicalAddress + index, value);
     }

@@ -89,7 +89,7 @@ async function dispose() {
   mounted = undefined;
 }
 
-async function runCase(payloadBase64, trace) {
+async function runCase(payloadBase64, trace, localCartBundle = [], expectedTermination) {
   await dispose();
   const animationFrames = new ManualAnimationFrames();
   const view = elements();
@@ -118,7 +118,14 @@ async function runCase(payloadBase64, trace) {
   mounted = { controller, removeRuntimeListener };
 
   try {
-    await controller.loadCart(decodeBase64(payloadBase64), "local qualification cart");
+    await controller.loadCart(decodeBase64(payloadBase64), {
+      displayName: "local qualification cart",
+      localCartBundle: localCartBundle.map((entry) => ({
+        ref: entry.ref,
+        bytes: decodeBase64(entry.cartBase64),
+        access: entry.access,
+      })),
+    });
   } catch (error) {
     if (controller.state !== "faulted") throw error;
   }
@@ -145,20 +152,23 @@ async function runCase(payloadBase64, trace) {
   if (controller.state === "running") await controller.pause();
 
   const diagnostic = playerElements.diagnostic.textContent ?? "";
-  let code = firstFault?.code ?? faultCode(diagnostic, "E_FRAME_MISSING");
-  const boots = completedTicks >= trace.ticks && frameCount > 0
-    && (controller.state === "paused" || controller.state === "running");
-  if (!boots && code === "E_FRAME_MISSING" && controller.state === "stopped") {
-    code = "E_CART_STOPPED";
-  }
+  const code = firstFault?.code ?? faultCode(diagnostic, "E_FRAME_MISSING");
+  const cleanStop = controller.state === "stopped" && firstFault === undefined
+    && !/^E_[A-Z0-9_]+/u.test(diagnostic);
+  const expectedTerminationMatched = expectedTermination?.kind === "fault"
+    && firstFault?.code === expectedTermination.faultCode;
+  const boots = cleanStop || (completedTicks >= trace.ticks && frameCount > 0
+    && (controller.state === "paused" || controller.state === "running"));
+  const compatibleUntested = boots || expectedTerminationMatched;
   const telemetry = await screenTelemetry(playerElements.canvas, frameCount > 0);
   return {
     completed: true,
     smokeOutcome: boots ? "boots" : "fails",
-    classification: boots ? "CU" : "C0",
-    failureCluster: boots ? null : failureClusterForFault(code),
+    classification: compatibleUntested ? "CU" : "C0",
+    failureCluster: compatibleUntested ? null : failureClusterForFault(code),
     completedTicks: Math.min(completedTicks, trace.ticks),
     ...(boots ? {} : { faultCode: code, faultMessage: diagnostic.slice(0, 512) || code }),
+    ...(expectedTerminationMatched ? { expectedTerminationMatched: true } : {}),
     frameCount,
     ...telemetry,
     screenshotCaptured: false,

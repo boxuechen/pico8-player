@@ -6,6 +6,7 @@
 namespace p8w {
 
 constexpr uint32_t kPicoRamSize = 0x10000u;
+constexpr int kOriginalEnvironmentRegistryIndex = 3;
 constexpr uint16_t kGfxMapRegister = 0x5f54u;
 constexpr uint16_t kScreenMapRegister = 0x5f55u;
 constexpr uint16_t kMapBaseRegister = 0x5f56u;

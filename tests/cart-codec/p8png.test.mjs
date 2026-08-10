@@ -234,7 +234,7 @@ test("input, chunk, IDAT, inflate and code limits are enforced before unbounded 
 test("future cart versions and corrupt legacy/PXA code streams fail with structured errors", () => {
   const raw = fixtureManifest.vectors[0];
   assert.throws(
-    () => decodeP8Png(makeP8Png(raw, { cartVersion: 43 }).png),
+    () => decodeP8Png(makeP8Png(raw, { cartVersion: 44 }).png),
     throwsCode("E_CART_FUTURE_VERSION"),
   );
 

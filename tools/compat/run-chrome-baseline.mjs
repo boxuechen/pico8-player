@@ -87,9 +87,14 @@ export async function runChromeBaseline({
     for (const [index, entry] of corpus.entries.entries()) {
       try {
         const cartBase64 = (await readFile(entry.cartPath)).toString("base64");
+        const localCartBundle = await Promise.all(entry.localCartBundle.map(async (bundleEntry) => ({
+          ref: bundleEntry.ref,
+          cartBase64: (await readFile(bundleEntry.cartPath)).toString("base64"),
+          access: bundleEntry.access,
+        })));
         const result = await evaluate(
           chrome.cdp,
-          `globalThis.__phase6cRunCase(${JSON.stringify(cartBase64)}, ${JSON.stringify(entry.trace)})`,
+          `globalThis.__phase6cRunCase(${JSON.stringify(cartBase64)}, ${JSON.stringify(entry.trace)}, ${JSON.stringify(localCartBundle)}, ${JSON.stringify(entry.expectedTermination)})`,
         );
         const screenshot = await chrome.cdp.command("Page.captureScreenshot", {
           format: "png",

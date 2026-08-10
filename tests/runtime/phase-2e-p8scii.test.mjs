@@ -121,11 +121,24 @@ function _draw() end`));
   runtime.dispose();
 });
 
-test("production wrappers reject missing and malformed required arguments without stale dispatch", () => {
+test("production wrappers default missing scalar arguments but reject malformed values", () => {
+  const validVm = new Z8LuaFrameVm(module, createPicoApiHostRouter(module));
+  const validRuntime = new FrameSliceRuntime(validVm);
+  const validBoot = validRuntime.boot(sourceCart(`
+function _init()
+ print()
+ cursor(1)
+ poke(0x5000,peek(0x5f26),peek(0x5f27))
+end
+function _update() end
+function _draw() end`));
+  assert.equal(validBoot.ok, true, JSON.stringify(validBoot));
+  assert.deepEqual(validRuntime.copyRam(0x5000, 2), Uint8Array.of(1, 0));
+  validRuntime.dispose();
+
   for (const source of [
-    `function _init() print() end`,
     `function _init() print({}) end`,
-    `function _init() cursor(1) end`,
+    `function _init() cursor("x",1) end`,
   ]) {
     const vm = new Z8LuaFrameVm(module, createPicoApiHostRouter(module));
     const runtime = new FrameSliceRuntime(vm);

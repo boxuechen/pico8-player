@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "target": {
     "pico8Version": "0.2.7",
-    "maximumCartVersion": 42
+    "maximumCartVersion": 43
   },
   "formats": ["p8", "p8.png"],
   "parsedCart": {
@@ -29,9 +29,9 @@
     "unknownSection": "warning-and-ignore",
     "duplicateKnownSection": "error",
     "rows": {
-      "gfx": { "maximum": 128, "characters": 128, "encoding": "hex pixel nibbles, low nibble first" },
-      "gff": { "maximum": 2, "characters": 256, "encoding": "hex bytes" },
-      "map": { "maximum": 64, "characters": 256, "encoding": "hex bytes; rows 32..63 OR into gfx2" },
+      "gfx": { "maximumBytes": 8192, "charactersPerRow": "even 2..128", "encoding": "sequential hex pixel nibbles, low nibble first" },
+      "gff": { "maximumBytes": 256, "charactersPerRow": "even 2..256", "encoding": "sequential hex bytes" },
+      "map": { "maximumBytes": 8192, "charactersPerRow": "even 2..256", "encoding": "sequential hex bytes; bytes 4096..8191 OR into gfx2" },
       "sfx": { "maximum": 64, "characters": 168, "encoding": "8 metadata hex chars plus 32 five-hex-character notes" },
       "music": { "maximum": 64, "characters": 11, "encoding": "2 flag hex chars, space, 4 channel bytes" },
       "label": { "maximum": 128, "characters": 128, "encoding": "base32 palette indices; validation only" }
@@ -40,9 +40,9 @@
       "maximumInputBytes": 1048576,
       "maximumCodeBytes": 65535,
       "maximumLines": 32768,
-      "maximumCartVersion": 42
+      "maximumCartVersion": 43
     },
-    "includeWithoutResolver": "E_CART_INCLUDE_UNRESOLVED",
+    "include": "non-recursive caller-authorized plaintext Lua resolver; unresolved entries fail E_CART_INCLUDE_UNRESOLVED",
     "diagnosticOffsets": "original input byte offsets including optional BOM and CRLF bytes"
   },
   "png": {
@@ -73,7 +73,7 @@
     "maximumIdatBytes": 262144,
     "maximumInflatedBytes": 131405,
     "maximumCodeBytes": 65535,
-    "maximumCartVersion": 42
+    "maximumCartVersion": 43
   },
   "errorCodes": [
     "E_CART_ARGUMENT",

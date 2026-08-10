@@ -56,6 +56,8 @@ export const DEFAULT_P8_LIMITS: Readonly<P8DecodeLimits> = Object.freeze({
 
 export interface P8DecodeOptions {
   readonly limits?: Partial<P8DecodeLimits>;
+  /** Resolve one non-recursive #include to caller-authorized plaintext Lua bytes. */
+  readonly includeResolver?: (specifier: string) => Uint8Array | undefined;
 }
 
 interface SourceLine {
@@ -186,7 +188,7 @@ function sectionMarker(bytes: Uint8Array): string | undefined {
     const valid =
       (byte >= 0x30 && byte <= 0x39) ||
       (byte >= 0x41 && byte <= 0x5a) ||
-      byte === 0x5f ||
+      byte === 0x2d || byte === 0x2e || byte === 0x3a || byte === 0x5f ||
       (byte >= 0x61 && byte <= 0x7a);
     if (!valid) return undefined;
     name += String.fromCharCode(byte);
@@ -240,21 +242,34 @@ function requireCapacity(
   }
 }
 
-function decodeHexRow(
+function decodeHexChunk(
   section: P8SectionName,
   bytes: Uint8Array,
-  expectedChars: number,
+  maximumChars: number,
   sourceOffset: number,
   target: Uint8Array,
   targetOffset: number,
   swapNibbles = false,
-): void {
-  requireRowLength(section, bytes, expectedChars, sourceOffset);
+): number {
+  if (bytes.length < 2 || bytes.length > maximumChars || bytes.length % 2 !== 0) {
+    codecFailure("E_CART_TEXT_ROW", `__${section}__ row has an invalid encoded width`, {
+      offset: sourceOffset,
+      details: { section, actualChars: bytes.length, maximumChars },
+    });
+  }
+  const decodedBytes = bytes.length / 2;
+  if (targetOffset + decodedBytes > target.length) {
+    codecFailure("E_CART_TEXT_CAPACITY", `__${section}__ exceeds its byte capacity`, {
+      offset: sourceOffset,
+      details: { section, maximumBytes: target.length },
+    });
+  }
   for (let index = 0; index < bytes.length; index += 2) {
     const first = hexNibble(bytes, index, sourceOffset);
     const second = hexNibble(bytes, index + 1, sourceOffset);
     target[targetOffset + index / 2] = swapNibbles ? first | (second << 4) : (first << 4) | second;
   }
+  return decodedBytes;
 }
 
 function decodeSfxRow(bytes: Uint8Array, sourceOffset: number, target: Uint8Array, row: number): void {
@@ -332,7 +347,12 @@ function validateLabelRow(bytes: Uint8Array, sourceOffset: number): void {
   }
 }
 
-function includeDirectiveOffset(bytes: Uint8Array): number | undefined {
+interface IncludeDirective {
+  readonly offset: number;
+  readonly specifier: string;
+}
+
+function includeDirective(bytes: Uint8Array, sourceOffset: number): IncludeDirective | undefined {
   let cursor = 0;
   while (bytes[cursor] === 0x20 || bytes[cursor] === 0x09) cursor += 1;
   const directive = "#include";
@@ -341,29 +361,80 @@ function includeDirectiveOffset(bytes: Uint8Array): number | undefined {
   }
   const separator = bytes[cursor + directive.length];
   if (separator !== 0x20 && separator !== 0x09) return undefined;
-  let specifier = cursor + directive.length;
-  while (bytes[specifier] === 0x20 || bytes[specifier] === 0x09) specifier += 1;
-  return specifier < bytes.length ? cursor : undefined;
+  let start = cursor + directive.length;
+  while (bytes[start] === 0x20 || bytes[start] === 0x09) start += 1;
+  let end = bytes.length;
+  while (bytes[end - 1] === 0x20 || bytes[end - 1] === 0x09) end -= 1;
+  if (start >= end) {
+    codecFailure("E_CART_INCLUDE_UNRESOLVED", "Text cart include has no specifier", {
+      offset: sourceOffset + cursor,
+    });
+  }
+  let specifier = "";
+  for (let index = start; index < end; index += 1) {
+    const byte = bytes[index] ?? 0;
+    if (byte < 0x20 || byte > 0x7e) {
+      codecFailure("E_CART_INCLUDE_UNRESOLVED", "Text cart include specifier must be printable ASCII", {
+        offset: sourceOffset + index,
+      });
+    }
+    specifier += String.fromCharCode(byte);
+  }
+  return { offset: cursor, specifier };
 }
 
 function appendCode(
   output: number[],
   bytes: Uint8Array,
   line: SourceLine,
-  maximumCodeBytes: number,
+  options: P8DecodeOptions,
+  limits: P8DecodeLimits,
 ): void {
-  const includeOffset = includeDirectiveOffset(bytes);
-  if (includeOffset !== undefined) {
-    codecFailure("E_CART_INCLUDE_UNRESOLVED", "Text cart include requires a loader resolver", {
-      offset: line.start + includeOffset,
-    });
+  const include = includeDirective(bytes, line.start);
+  if (include !== undefined) {
+    const resolved = options.includeResolver?.(include.specifier);
+    if (!(resolved instanceof Uint8Array)) {
+      codecFailure("E_CART_INCLUDE_UNRESOLVED", "Text cart include requires an authorized resolver entry", {
+        offset: line.start + include.offset,
+      });
+    }
+    if (resolved.length > limits.maximumInputBytes) {
+      codecFailure("E_CART_INPUT_TOO_LARGE", "Resolved include exceeds the configured input limit", {
+        offset: line.start + include.offset,
+        details: { inputBytes: resolved.length, maximumInputBytes: limits.maximumInputBytes },
+      });
+    }
+    const included = scanLines(resolved, hasBom(resolved) ? UTF8_BOM.length : 0, limits.maximumLines);
+    for (const includedLine of included.lines) {
+      const encoded = encodeP8sciiLine(lineBytes(resolved, includedLine), line.start + include.offset);
+      const terminator = includedLine.terminatorBytes > 0 ? 1 : 0;
+      if (output.length + encoded.length + terminator > limits.maximumCodeBytes) {
+        codecFailure("E_CART_CODE_TOO_LARGE", "Text cart code exceeds the configured byte limit", {
+          offset: line.start + include.offset,
+          details: { maximumCodeBytes: limits.maximumCodeBytes },
+        });
+      }
+      for (const byte of encoded) output.push(byte);
+      if (terminator > 0) output.push(0x0a);
+    }
+    const lastIncludedLine = included.lines.at(-1);
+    if (line.terminatorBytes > 0 && lastIncludedLine?.terminatorBytes !== 1 && lastIncludedLine?.terminatorBytes !== 2) {
+      if (output.length + 1 > limits.maximumCodeBytes) {
+        codecFailure("E_CART_CODE_TOO_LARGE", "Text cart code exceeds the configured byte limit", {
+          offset: line.start + include.offset,
+          details: { maximumCodeBytes: limits.maximumCodeBytes },
+        });
+      }
+      output.push(0x0a);
+    }
+    return;
   }
   const encoded = encodeP8sciiLine(bytes, line.start);
   const nextLength = output.length + encoded.length + (line.terminatorBytes > 0 ? 1 : 0);
-  if (nextLength > maximumCodeBytes) {
+  if (nextLength > limits.maximumCodeBytes) {
     codecFailure("E_CART_CODE_TOO_LARGE", "Text cart code exceeds the configured byte limit", {
       offset: line.start,
-      details: { maximumCodeBytes },
+      details: { maximumCodeBytes: limits.maximumCodeBytes },
     });
   }
   for (const byte of encoded) output.push(byte);
@@ -445,6 +516,7 @@ export function decodeTextP8(input: Uint8Array, options: P8DecodeOptions = {}): 
     label: 0,
   };
   const seen = new Set<P8SectionName>();
+  const hexOffsets = { gfx: 0, gff: 0, map: 0 };
   let current: P8SectionName | "unknown" | undefined;
 
   for (let lineIndex = 2; lineIndex < scanned.lines.length; lineIndex += 1) {
@@ -484,7 +556,7 @@ export function decodeTextP8(input: Uint8Array, options: P8DecodeOptions = {}): 
     }
     if (current === "unknown") continue;
     if (current === "lua") {
-      appendCode(code, bytes, line, limits.maximumCodeBytes);
+      appendCode(code, bytes, line, options, limits);
       rows.lua += 1;
       continue;
     }
@@ -493,16 +565,19 @@ export function decodeTextP8(input: Uint8Array, options: P8DecodeOptions = {}): 
     const row = rows[current];
     switch (current) {
       case "gfx":
-        requireCapacity(current, row, 128, line.start);
-        decodeHexRow(current, bytes, GFX_ROW_CHARS, line.start, gfx, row * 64, true);
+        hexOffsets.gfx += decodeHexChunk(
+          current, bytes, GFX_ROW_CHARS, line.start, gfx, hexOffsets.gfx, true,
+        );
         break;
       case "gff":
-        requireCapacity(current, row, 2, line.start);
-        decodeHexRow(current, bytes, GFF_MAP_ROW_CHARS, line.start, gff, row * 128);
+        hexOffsets.gff += decodeHexChunk(
+          current, bytes, GFF_MAP_ROW_CHARS, line.start, gff, hexOffsets.gff,
+        );
         break;
       case "map":
-        requireCapacity(current, row, 64, line.start);
-        decodeHexRow(current, bytes, GFF_MAP_ROW_CHARS, line.start, map, row * 128);
+        hexOffsets.map += decodeHexChunk(
+          current, bytes, GFF_MAP_ROW_CHARS, line.start, map, hexOffsets.map,
+        );
         break;
       case "sfx":
         requireCapacity(current, row, 64, line.start);

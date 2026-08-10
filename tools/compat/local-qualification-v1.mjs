@@ -28,6 +28,7 @@ const CHROME_VERSION_PATTERN = /^(Google Chrome|Chromium) [0-9]/u;
 const REVIEWED_AT_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/u;
 const MAXIMUM_CART_BYTES = 1024 * 1024;
 const MAXIMUM_CASES = 64;
+const MAXIMUM_BUNDLE_ENTRIES = 64;
 
 export class QualificationInputError extends Error {
   constructor(code, message) {
@@ -58,6 +59,28 @@ function requiredString(value, label, maximumLength = 512) {
   }
   if (/\p{Cc}/u.test(value)) fail("E_SCHEMA", `${label} contains a control character`);
   return value;
+}
+
+function validateLocalRef(value, label) {
+  const ref = requiredString(value, label, 256);
+  if (ref.includes("://") || ref.includes("\\") || ref.startsWith("/") || ref.startsWith("#")
+    || ref.split("/").some((part) => part.length === 0 || part === "." || part === "..")) {
+    fail("E_SCHEMA", `${label} must be a canonical relative opaque name`);
+  }
+  return ref;
+}
+
+function validateCartAccess(value, label) {
+  exactKeys(value, ["load", "reloadData", "cstoreData", "include"], label);
+  for (const capability of ["load", "reloadData", "cstoreData", "include"]) {
+    if (typeof value[capability] !== "boolean") fail("E_SCHEMA", `${label}.${capability} must be boolean`);
+  }
+  return {
+    load: value.load,
+    reloadData: value.reloadData,
+    cstoreData: value.cstoreData,
+    include: value.include,
+  };
 }
 
 function sha256(bytes) {
@@ -203,7 +226,10 @@ export async function loadLocalCorpusManifest({ manifestPath, projectRoot, minim
   const entries = [];
   for (const [index, entry] of manifest.entries.entries()) {
     const label = `manifest.entries[${index}]`;
-    exactKeys(entry, ["id", "label", "file", "sha256", "pico8Version", "source", "trace"], label);
+    exactKeys(entry, [
+      "id", "label", "file", "sha256", "pico8Version", "source", "trace", "bundle",
+      "expectedTermination",
+    ], label);
     if (!ID_PATTERN.test(entry.id ?? "")) fail("E_SCHEMA", `${label}.id is invalid`);
     if (seen.has(entry.id)) fail("E_DUPLICATE_ID", `${entry.id} appears more than once`);
     seen.add(entry.id);
@@ -221,6 +247,21 @@ export async function loadLocalCorpusManifest({ manifestPath, projectRoot, minim
     requiredString(entry.source.permissionBasis, `${label}.source.permissionBasis`, 512);
     if (entry.source.url !== undefined) requiredString(entry.source.url, `${label}.source.url`, 2048);
     const trace = validateTrace(entry.trace, `${label}.trace`);
+    let expectedTermination;
+    if (entry.expectedTermination !== undefined) {
+      exactKeys(entry.expectedTermination, ["kind", "faultCode", "basis"],
+        `${label}.expectedTermination`);
+      if (entry.expectedTermination.kind !== "fault"
+        || !/^E_[A-Z0-9_]+$/u.test(entry.expectedTermination.faultCode ?? "")) {
+        fail("E_SCHEMA", `${label}.expectedTermination must name an E_* fault`);
+      }
+      expectedTermination = {
+        kind: "fault",
+        faultCode: entry.expectedTermination.faultCode,
+        basis: requiredString(entry.expectedTermination.basis,
+          `${label}.expectedTermination.basis`, 256),
+      };
+    }
 
     const unresolvedCart = isAbsolute(file) ? resolve(file) : resolve(dirname(absoluteManifest), file);
     assertLocalInputPath(absoluteRoot, unresolvedCart, `${label}.file`, "cart");
@@ -241,6 +282,39 @@ export async function loadLocalCorpusManifest({ manifestPath, projectRoot, minim
     }
     const actualSha256 = sha256(cartBytes);
     if (actualSha256 !== entry.sha256) fail("E_CART_HASH", `${entry.id} SHA-256 mismatch`);
+    if (entry.bundle !== undefined && (!Array.isArray(entry.bundle)
+      || entry.bundle.length > MAXIMUM_BUNDLE_ENTRIES)) {
+      fail("E_SCHEMA", `${label}.bundle must contain at most ${MAXIMUM_BUNDLE_ENTRIES} entries`);
+    }
+    const seenBundleRefs = new Set();
+    const localCartBundle = [];
+    for (const [bundleIndex, bundleEntry] of (entry.bundle ?? []).entries()) {
+      const bundleLabel = `${label}.bundle[${bundleIndex}]`;
+      exactKeys(bundleEntry, ["ref", "file", "sha256", "access"], bundleLabel);
+      const ref = validateLocalRef(bundleEntry.ref, `${bundleLabel}.ref`);
+      if (seenBundleRefs.has(ref)) fail("E_DUPLICATE_ID", `${ref} appears more than once in bundle`);
+      seenBundleRefs.add(ref);
+      const bundleFile = requiredString(bundleEntry.file, `${bundleLabel}.file`, 4096);
+      if (bundleFile.includes("://")) fail("E_PATH_URL", `${bundleLabel}.file must be a local path`);
+      if (!SHA256_PATTERN.test(bundleEntry.sha256 ?? "")) {
+        fail("E_SCHEMA", `${bundleLabel}.sha256 is invalid`);
+      }
+      const access = validateCartAccess(bundleEntry.access, `${bundleLabel}.access`);
+      const unresolvedBundle = isAbsolute(bundleFile)
+        ? resolve(bundleFile)
+        : resolve(dirname(absoluteManifest), bundleFile);
+      assertLocalInputPath(absoluteRoot, unresolvedBundle, `${bundleLabel}.file`, "cart");
+      const bundlePath = await realpath(unresolvedBundle).catch((error) =>
+        fail("E_INPUT_READ", `${bundleLabel}.file could not be resolved: ${error.code ?? error.message}`));
+      assertLocalInputPath(absoluteRoot, bundlePath, `${bundleLabel}.file`, "cart");
+      const bundleBytes = await readFile(bundlePath);
+      if (bundleBytes.length === 0 || bundleBytes.length > MAXIMUM_CART_BYTES) {
+        fail("E_CART_SIZE", `${bundleLabel}.file must contain 1..${MAXIMUM_CART_BYTES} bytes`);
+      }
+      const bundleSha256 = sha256(bundleBytes);
+      if (bundleSha256 !== bundleEntry.sha256) fail("E_CART_HASH", `${ref} SHA-256 mismatch`);
+      localCartBundle.push({ ref, cartPath: bundlePath, cartSha256: bundleSha256, access });
+    }
     entries.push({
       id: entry.id,
       label: entry.label,
@@ -255,6 +329,8 @@ export async function loadLocalCorpusManifest({ manifestPath, projectRoot, minim
       },
       trace,
       traceSha256: stableJsonHash(trace),
+      localCartBundle,
+      ...(expectedTermination === undefined ? {} : { expectedTermination }),
     });
   }
   entries.sort((left, right) => left.id.localeCompare(right.id));
@@ -398,6 +474,7 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       "nonBlackPixels",
       "distinctColors",
       "screenshotCaptured",
+      "expectedTerminationMatched",
       "playability",
     ], label);
     if (!ID_PATTERN.test(entry.id ?? "")) fail("E_SCHEMA", `${label}.id is invalid`);
@@ -426,9 +503,22 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
     if (entry.classification === "C0" && entry.smokeOutcome !== "fails") {
       fail("E_SMOKE_OUTCOME", `${label} C0 must have a fails smoke outcome`);
     }
-    if (["C1", "C2", "C3", "CU"].includes(entry.classification)
+    if (["C1", "C2", "C3"].includes(entry.classification)
       && entry.completed && entry.smokeOutcome !== "boots") {
       fail("E_SMOKE_OUTCOME", `${label} completed ${entry.classification} must have a boots smoke outcome`);
+    }
+    if (entry.classification === "CU" && entry.completed && entry.smokeOutcome !== "boots"
+      && entry.expectedTerminationMatched !== true) {
+      fail("E_SMOKE_OUTCOME", `${label} completed CU failure must match an expected termination`);
+    }
+    if (entry.expectedTerminationMatched !== undefined
+      && typeof entry.expectedTerminationMatched !== "boolean") {
+      fail("E_OBSERVATION", `${label}.expectedTerminationMatched must be boolean`);
+    }
+    if (entry.expectedTerminationMatched === true
+      && (entry.classification !== "CU" || entry.smokeOutcome !== "fails"
+        || entry.failureCluster !== null || entry.faultCode === undefined)) {
+      fail("E_OBSERVATION", `${label} matched expected termination must retain a CU fault observation`);
     }
     if (["C0", "C1"].includes(entry.classification) && entry.failureCluster === null) {
       fail("E_FAILURE_CLUSTER", `${label} requires a failure cluster for C0/C1`);
@@ -480,6 +570,9 @@ export async function loadLocalObservations({ observationsPath, projectRoot }) {
       ...(entry.screenshotCaptured === undefined ? {} : {
         screenshotCaptured: entry.screenshotCaptured,
       }),
+      ...(entry.expectedTerminationMatched === undefined ? {} : {
+        expectedTerminationMatched: entry.expectedTerminationMatched,
+      }),
       ...(playability === undefined ? {} : { playability }),
     });
   }
@@ -514,6 +607,12 @@ export async function buildLocalQualificationReport({
     if (observation.completedTicks > entry.trace.ticks) {
       fail("E_TRACE", `${entry.id} completed more ticks than requested`);
     }
+    if (observation.expectedTerminationMatched === true
+      && (entry.expectedTermination?.kind !== "fault"
+        || entry.expectedTermination.faultCode !== observation.faultCode)) {
+      fail("E_EXPECTED_TERMINATION",
+        `${entry.id} observation does not exactly match its declared expected fault`);
+    }
     counts[observation.classification] += 1;
     if (observation.failureCluster !== null) failureClusters[observation.failureCluster] += 1;
     return {
@@ -545,6 +644,9 @@ export async function buildLocalQualificationReport({
       }),
       ...(observation.screenshotCaptured === undefined ? {} : {
         screenshotCaptured: observation.screenshotCaptured,
+      }),
+      ...(observation.expectedTerminationMatched === undefined ? {} : {
+        expectedTerminationMatched: observation.expectedTerminationMatched,
       }),
       ...(observation.playability === undefined ? {} : {
         playability: observation.playability,

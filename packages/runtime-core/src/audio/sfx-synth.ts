@@ -371,13 +371,13 @@ export class PicoSfxSynth implements AudioSynth {
     if (targetFps !== 30 && targetFps !== 60) {
       throw new RangeError("audio targetFps must be 30 or 60");
     }
-    if (this.#targetFps !== 0 && this.#targetFps !== targetFps) {
-      throw new Error("audio targetFps cannot change within a runtime generation");
-    }
     this.#targetFps = targetFps;
-    const numerator = this.#sampleRemainder + sliceCount * PICO_AUDIO_SAMPLE_RATE;
-    const frameCount = Math.floor(numerator / targetFps);
-    this.#sampleRemainder = numerator % targetFps;
+    // Keep one 60 Hz timebase so a cart can install/remove _update60 without
+    // resetting or skewing the sample clock between adjacent runtime slices.
+    const canonicalSlices = sliceCount * (60 / targetFps);
+    const numerator = this.#sampleRemainder + canonicalSlices * PICO_AUDIO_SAMPLE_RATE;
+    const frameCount = Math.floor(numerator / 60);
+    this.#sampleRemainder = numerator % 60;
     const pcm16le = new Uint8Array(frameCount * 2);
     const view = new DataView(pcm16le.buffer);
     for (let frame = 0; frame < frameCount; frame += 1) {

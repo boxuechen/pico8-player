@@ -56,6 +56,7 @@ typedef struct Token {
 typedef struct LexState {
   int current;  /* current character (charint) */
   int linenumber;  /* input line counter */
+  int logicalline;  /* line breaks visible outside long comments */
   int atsol;  /* are we at start of line? */
   int emiteol;  /* should EOL be emitted? */
   int lastline;  /* line of last token `consumed' */

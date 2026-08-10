@@ -19,6 +19,10 @@
       {
         "path": "wasm/patches/0002-shared-pico-memory-reader.patch",
         "sha256": "d062cbc0ee2af76cbf969cbf4cf727fe9e5a003b3ec0bdcb3640fcb53722cd00"
+      },
+      {
+        "path": "wasm/patches/0003-pico8-language-compat.patch",
+        "sha256": "bb26ac5fe7f1ff38881652ffe5f1a192a443353e7fab100256d5651a42aeb1c6"
       }
     ]
   },
@@ -229,8 +233,8 @@
       },
       {
         "path": "z8lua-phase-0c.wasm",
-        "bytes": 183120,
-        "sha256": "cb1d472203df9794fdf94bdccc3caf2c9e3ffaa6b8f8758bc06f2a2e6d734191"
+        "bytes": 183735,
+        "sha256": "baa14639490e83004188449aba5834242468a83167050ded8e30e2a2003335ef"
       }
     ],
     "reproducibility": "Two clean output directories built with the pinned toolchain are byte-identical for every listed file."

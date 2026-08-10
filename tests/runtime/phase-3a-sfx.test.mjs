@@ -238,7 +238,17 @@ test("canonical clock commits exact 30/60 Hz PCM16LE slices without floating acc
     ["0", 735, "735", 367, "1102", 368],
   );
   assert.throws(() => sixty.renderSlices(121, 60), /0\.\.120/u);
-  assert.throws(() => sixty.renderSlices(1, 30), /cannot change/u);
+
+  const changing = new PicoSfxSynth(new Uint8Array(0x10000));
+  const beforeChange = changing.renderSlices(1, 60);
+  const changed = changing.renderSlices(1, 30);
+  const afterChange = changing.renderSlices(1, 60);
+  assert.deepEqual(
+    [beforeChange.firstSample, beforeChange.frameCount,
+      changed.firstSample, changed.frameCount,
+      afterChange.firstSample, afterChange.frameCount],
+    ["0", 367, "367", 735, "1102", 368],
+  );
 });
 
 test("four channels implement auto selection, stealing, offset, length, stop and loop release", () => {

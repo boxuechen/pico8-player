@@ -68,16 +68,51 @@ failure 为 0。该结果不含逐-cart事实，也不作为最终兼容率。�
   official observation 定义预期；不得复制第三方源码、字符串、资源或按 cart identity 分支。
 - parser、language、instruction-budget/timing 按共同根因合并；一个修复要证明覆盖整个语义簇，并重新运行
   受影响的本地 case。只对单个 cart 有效的行为不得进入 production。
+- Runtime 的 4M VM instructions/s 帧级 soft budget 保持不变；默认 2M transaction hard guard 只负责终止
+  无法返回安全边界的失控 boot/callback，不作为正常 cart 的每帧限额。
+- v0.2.7 语言兼容包含函数实参空位按 `nil`、替换 `_ENV` 后缺失全局回退到原始 cart environment；显式
+  `flip()` 可在 root、`_init`、`_update`/`_update60` 与 `_draw` 建立可恢复帧边界，guest coroutine 内仍禁止。
+- 音频 sample clock 使用统一 60 Hz timebase，因此运行中新增或移除 `_update60` 不重置时钟、不丢样本，
+  同时保持 22050 Hz 的累计精确性。
+- `printh` 提供无文件系统权限的 diagnostic-only 子集：保留 `tostr` 转换，输出进入有界 null sink；cart
+  指定的 filename/overwrite/desktop/clipboard 副作用继续明确不可用。
+- `cursor(x,y[,col])` 仍由 host binding 修改 draw-state RAM，VM-local wrapper 额外返回修改前的
+  `(x,y)`；`cursor()` 将位置重置为 `(0,0)` 并返回之前的位置。
+- Chrome smoke 的 `boots` 表示 cart 已成功启动且无 fault；没有注册持续循环而自然进入 `stopped` 的工具型
+  cart 也属于成功终态，并保留其真实 `completedTicks`/`frameCount`，不伪造 120 帧。
+- 开发者工具/self-test cart 的预期 fault 只能由仓库外 manifest 显式声明 fault code 与人工 basis；Chrome
+  必须精确匹配后才可记为 CU，observation 仍保留 `fails`、fault 和 matched 标志。未声明或不匹配仍为 C0，
+  production Runtime 不读取该标注。
 - 无法安全通用修复或超出 v0.2.7 RC profile 的项登记 Known Difference/unsupported disposition；所有 P0/P1
   必须关闭或有明确退出裁决，随后才可进入 8E format/multicart lane。
 
-### 6.2 允许修改
+### 6.2 当前 candidate 结果
+
+通用修复后，同一 100-case fingerprint 在 Chrome 151 production path 完成两个 50-case batch：
+`100/100 CU`、`99 boots`、`1` 个由仓库外 manifest 显式声明且精确匹配的开发者自测 fault；
+parse/language/timing 及其他 failure cluster 全部为 `0`。这仍是 fixed-tick CU 故障资格验证，不是
+C2 可玩性或公开第三方兼容率。
+
+100 张 Canvas screenshot 保留在仓库外，已抽查 4 个代表状态：正常游戏画面、交互工具完成画面、
+合法黑屏 custom loop 和保留 fault diagnostic 的自测画面。最终 artifact hash 为
+`608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700`。
+在 8D 独立提交与全量 `pnpm run verify` 完成前，本 unit 仍保持 Active，不提前激活 8E。
+
+### 6.3 允许修改
 
 - `packages/cart-codec/src/`、`packages/runtime-core/src/`、`packages/z8lua-bridge/src/`
-- `wasm/bridge/`、`wasm/patches/`、`wasm/z8lua/` 及对应 source/runtime lock
+- `packages/contracts/src/`、`apps/web-player/src/worker/`
+- `wasm/bridge/`、`wasm/patches/`、`wasm/z8lua/` 及对应 source/runtime/Phase 0C manifest lock
 - `tools/compat/`、`tools/wasm/`、`spec/abi/`、`spec/compat/`、cart-codec/API inventory 与当前 phase contract
-- `tests/cart-codec/`、`tests/runtime/`、`tests/wasm/`、`tests/compat/` 与项目原创 `tests/fixtures/phase-8/`
+- `tests/cart-codec/`、`tests/contract/`、`tests/runtime/`、`tests/wasm/`、`tests/compat/`、
+  `tests/browser/` 与项目原创 `tests/fixtures/phase-8/`
+- `docs/adr/`（只允许追加 superseding decision，不改写历史 ADR）
+- `docs/02-system-architecture.md`
+- `docs/03-z8lua-wasm-bridge.md`
+- `docs/04-typescript-runtime.md`
 - `docs/06-testing-compatibility.md`
+- `docs/07-decisions-risks-open-questions.md`
+- `docs/08-source-layout-and-boundaries.md`
 - `docs/README.md`
 - `docs/phases/8-expanded-real-cart-qualification.md`
 - `spec/phase-8-expanded-real-cart-qualification-contract.json`
@@ -86,9 +121,10 @@ failure 为 0。该结果不含逐-cart事实，也不作为最终兼容率。�
 RuntimeCore 仍不得获得浏览器依赖；codec、RuntimeCore、z8lua bridge 与 WASM 的职责按
 [`08-source-layout-and-boundaries.md`](../08-source-layout-and-boundaries.md) 第 2、7 节保持不变。
 
-### 6.3 验证与退出
+### 6.4 验证与退出
 
-- 三个初始失败簇都有 aggregate disposition、项目原创最小复现和相应 owner test，或明确 Known Difference。
+- 三个初始失败簇都有 aggregate disposition、项目原创最小复现和相应 owner test，或明确 Known Difference；
+  compile-time include 只可读取 caller 显式提供且授予 `include` capability 的 Worker-local bundle。
 - 通用修复后的受影响本地 case 重跑；tracked 内容只记录簇级变化，不记录 cart identity/path/hash/message。
 - `pnpm run test:cart-codec`、`pnpm run test:wasm`、受影响 Runtime/Chrome 测试、
   `pnpm run test:architecture` 与 `pnpm run verify` 通过。

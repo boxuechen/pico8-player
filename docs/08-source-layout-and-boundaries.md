@@ -173,8 +173,8 @@ package；package 只用于强制真正的架构边界。
 section packing、校验和诊断。当前 bytes-magic `decodeCart`、text `decodeP8`
 和 lossless `decodeP8Png`，两种格式统一返回 content identity、32 KiB ROM、P8SCII code、
 version 和 warnings。typed arrays 是独立 caller-owned snapshots，由 consumer 只读对待；
-CartLoader/resolver/repository 位于 RuntimeCore 与 Worker adapter，不能反向塞进 codec；include
-resolution 仍 Deferred。
+CartLoader/resolver/repository 位于 RuntimeCore 与 Worker adapter，不能反向塞进 codec。codec 只接收同步、
+非递归 include resolver；Worker composition 只从 caller-authorized bundle 注入已授予 `include` capability 的 bytes。
 
 允许依赖：`@pico8-web/contracts`。
 禁止依赖：RuntimeCore、z8lua bridge、DOM、Canvas、File API、IndexedDB、网络 resolver。

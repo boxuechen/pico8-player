@@ -9,7 +9,7 @@ import { PicoRam } from "../memory/pico-ram.js";
 
 export const PICO_CART_DATA_ADDRESS = 0x5e00;
 
-const CART_DATA_ID_PATTERN = /^[a-z0-9_]+$/u;
+const CART_DATA_ID_PATTERN = /^[a-z0-9_-]+$/u;
 
 function validId(id: string): boolean {
   return id.length >= 1 && id.length <= PICO_CART_DATA_ID_MAX_BYTES &&
@@ -20,7 +20,7 @@ function copySeedRecords(seeds: readonly PicoCartDataSeed[]): ReadonlyMap<string
   const records = new Map<string, Uint8Array>();
   for (const seed of seeds) {
     if (typeof seed !== "object" || seed === null || !validId(seed.id)) {
-      throw new RangeError("cartdata seed id must contain 1..64 lower-case ASCII id bytes");
+      throw new RangeError("cartdata seed id must contain 1..64 lower-case ASCII id bytes, underscore or hyphen");
     }
     if (!(seed.bytes instanceof Uint8Array) || seed.bytes.byteLength !== PICO_CART_DATA_BYTES) {
       throw new RangeError("cartdata seed must contain exactly 256 bytes");
@@ -40,11 +40,11 @@ function idFromBytes(bytes: Uint8Array): string {
       !(
         (byte >= 0x61 && byte <= 0x7a) ||
         (byte >= 0x30 && byte <= 0x39) ||
-        byte === 0x5f
+        byte === 0x2d || byte === 0x5f
       )
     )
   ) {
-    throw new RangeError("cartdata id must contain 1..64 lower-case ASCII id bytes");
+    throw new RangeError("cartdata id must contain 1..64 lower-case ASCII id bytes, underscore or hyphen");
   }
   return String.fromCharCode(...bytes);
 }

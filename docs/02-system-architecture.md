@@ -8,8 +8,8 @@
 | 状态 | 本文内容 |
 | --- | --- |
 | **Accepted** | 三执行域、状态唯一所有权、依赖方向、固定 Pico RAM 和资源上限原则 |
-| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；stable-manifest release artifact；class-driven production DOM shell；caller-authorized local CartLoader/resolver/repository；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
-| **Deferred** | general nested-coroutine HostRequest、include resolution、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
+| **Implemented** | 三执行域 production path；versioned bytes-first embed facade；stable-manifest release artifact；class-driven production DOM shell；caller-authorized local CartLoader/resolver/repository 与 non-recursive text include；root HostRequest；atomic guest `load`；external `reload/cstore`；deterministic CPU policy；fixed 16 MiB WASM、64 KiB Pico RAM 与 bounded lifecycle |
+| **Deferred** | general nested-coroutine HostRequest、BBS/network resolver、非 Chrome qualification 和未激活的 capability/API 扩展 |
 
 第 4–11 节只维护稳定架构约束，不复制容易漂移的 DTO 和 error union。当前 production player
 协议由 [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts) 定义；最近关闭
@@ -245,7 +245,8 @@ v1 Window → Worker 包含 `loadCart`（可携带 caller-authorized local bundl
 一次 cart load 按以下顺序执行：
 
 1. 验证输入长度和 signature。
-2. 解析为不可变 `ParsedCart`，产生 source hash、cart version 和 diagnostics。
+2. 使用当前 load command 显式授权的 Worker-local bundle 展开一层 text `#include`，再解析为不可变
+   `ParsedCart`，产生 source hash、cart version 和 diagnostics；codec 不自行访问 URL/filesystem。
 3. 检查版本支持策略。
 4. 创建或重置 VM、Base RAM、Cart ROM、graphics/audio/input state。
 5. 将 Cart ROM 规定区域复制到 Base RAM。

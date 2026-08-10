@@ -20,6 +20,9 @@ enum class MenuitemLookup : uint8_t { Missing, Filtered, Ready };
 // only for the documented PRNG state.
 void open_pico8_compat(lua_State *state, uint8_t *pico_ram);
 
+// Restore deterministic PRNG state after Base RAM is cleared.
+void reset_pico8_compat_ram(uint8_t *pico_ram);
+
 // Copy the VM-local five-slot registry into the fixed ADR-023 codec.
 bool copy_menuitem_snapshot(lua_State *state, uint8_t *destination,
                             uint32_t capacity);

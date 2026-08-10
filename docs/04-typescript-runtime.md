@@ -12,9 +12,9 @@
 
 | 状态 | 对应范围 |
 | --- | --- |
-| **Implemented** | browser-neutral CartSession/RuntimeCore；canonical RAM/graphics/audio/input/persistence；CartLoader/local resolver/repository；root controls 与 root HostRequest；atomic guest `load`、external `reload/cstore`；deterministic scheduler/CPU accounting；Worker/Canvas/AudioWorklet/IndexedDB adapters；bounded resource lifecycle |
+| **Implemented** | browser-neutral CartSession/RuntimeCore；canonical RAM/graphics/audio/input/persistence；CartLoader/local resolver/repository 与 caller-authorized text include；root controls 与 root HostRequest；atomic guest `load`、external `reload/cstore`；deterministic scheduler/CPU accounting；Worker/Canvas/AudioWorklet/IndexedDB adapters；bounded resource lifecycle |
 | **Accepted invariant** | WASM/TS 分工、单一 Pico RAM、浏览器中立 RuntimeCore、确定性 canonical PCM 与错误边界 |
-| **Deferred** | include resolution、label presentation、advanced Graphics、general nested-coroutine HostRequest、BBS/network resolver 与未激活 capability |
+| **Deferred** | label presentation、advanced Graphics、general nested-coroutine HostRequest、BBS/network resolver 与未激活 capability |
 
 当前 L3 local/multicart profile 以
 [`phase-5-l3-multicart-contract.json`](../spec/phase-5-l3-multicart-contract.json) 为准；早期
@@ -544,10 +544,10 @@ type StepResult = Readonly<{
   都是 0 instruction。
 - 30 Hz implicit-frame quantum 固定使用 `floor(4,000,000 / 30) = 133,333`，只负责让 top-level
   custom loop 形成官方 back-buffer copy boundary；它与普通 frame 的 soft `slowFrame` 分类、默认
-  `1,000,000` hard safety cap 分别计数。floor quantum 的 Q16.16 fraction 是 `0xffff`。
+  `2,000,000` hard safety cap 分别计数。floor quantum 的 Q16.16 fraction 是 `0xffff`。
 - raw `0x00010000` 仍属预算内；只有量化结果大于它才标记 `slowFrame=true`。ordinary slow frame
   不降频、不跳 draw，也不拆成部分提交，而是完成一个原子 logical frame。默认
-  `1,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
+  `2,000,000` instruction safety hard cap 专门 containment 非 yield/infinite loop，使用
   `E_VM_INSTRUCTION_BUDGET`，与 soft classification 分离。
 - `stat(1)` 报告当前 transaction 到调用点为止的 CPU fraction，并跨 root HostRequest continuation
   累计；因此它可略小于 frame 完成后的诊断值。`stat(7)` 返回 logical target FPS。两者都不读取
@@ -626,7 +626,8 @@ runtime-control/diagnostic/fault。root HostRequest 在 Worker 内通过 Runtime
 
 > 状态：Implemented for the closed local L3 profile。覆盖 Window load/reset、current-cart
 > `reload/cstore`、caller-authorized external cart-data、root guest `load()` 和原子 generation
-> replacement。BBS/network、include resolution 与 general nested-coroutine recovery 仍 Deferred。
+> replacement。BBS/network 与 general nested-coroutine recovery 仍 Deferred；text include 只使用当前 command
+> 携带且显式授予 `include` capability 的 Worker-local bundle。
 
 ### 13.1 状态机
 

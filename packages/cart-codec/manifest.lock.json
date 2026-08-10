@@ -3,13 +3,13 @@
   "phase": "1B",
   "target": {
     "pico8Version": "0.2.7",
-    "maximumCartVersion": 42,
+    "maximumCartVersion": 43,
     "formats": [".p8", ".p8.png"]
   },
   "publicEntry": "packages/cart-codec/src/public.ts",
   "contract": {
     "path": "spec/cart-codec-contract.json",
-    "sha256": "840755f4cacc30af11bd7b7eb83601c2015109e99c613560863066c78c0a445b"
+    "sha256": "0222c286b5120a6c03054b5f09d29d22ebf36b9e9210ff9ef78a400c947f1b76"
   },
   "productionSources": [
     {
@@ -30,7 +30,7 @@
     },
     {
       "path": "packages/cart-codec/src/p8.ts",
-      "sha256": "a238a13085fdcac8aa8ab0a9b02b3c8b1dd0af5f46f8052e2fe6dfd2539a1f04"
+      "sha256": "cb2a8a8fd4ee4dd1d52c802308665a4c85fb98ef6e0787d88d33e8a13633a342"
     },
     {
       "path": "packages/cart-codec/src/p8scii.ts",

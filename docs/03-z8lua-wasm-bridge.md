@@ -17,9 +17,9 @@ public adapter 与自动测试的交集为准；完成测量见
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/`menuitem` registration/snapshot/invocation/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors |
+| **Implemented** | raw integer ABI、80-byte host-call frame、bindings `1..41`、VM-local helpers/`menuitem` registration/snapshot/invocation/root controls、root request payload/suspension/completion、shared Pico RAM、fixed 16 MiB memory、1 MiB default Lua heap、instruction/resource diagnostics、structured errors、PICO-8 parser/environment/argument compatibility shims |
 | **Accepted invariant** | 同步且不可重入的 import、append-only binding IDs、同一 Pico RAM、root-only recoverable host suspension、host-owned capability policy |
-| **Deferred** | PICO-8 system settings/full console menu、general nested-coroutine HostRequest recovery、include resolution、multi-return/result vectors 和未激活的 capability/API 扩展 |
+| **Deferred** | PICO-8 system settings/full console menu、general nested-coroutine HostRequest recovery、general host-facing result vectors 和未激活的 capability/API 扩展 |
 
 机器事实入口是 [`p8w-v1.json`](../spec/abi/p8w-v1.json) 与当前 public adapter。历史实施顺序、
 benchmark 数值和关闭 checklist 只从 evidence/ADR 按需追溯，不在本 living contract 重复。
@@ -326,9 +326,9 @@ boolean 参数仍占一个 scalar slot，descriptor 的 boolean mask 决定 C �
 `13` 的 typed host method；它不在 bridge 实现 palette mapping。
 
 sprite/map/flags/tline operation `19..28` 最多使用 10 个 scalar，并复用既有 presence、boolean 与
-Q16 lowering。`print/cursor` operation `29..30` 使用 production byte-string slot；
-`print` 是 production byte-string slot 的首个语义 consumer，C wrapper 以 pointer + explicit length
-同步借出 guest bytes。map/text hardware semantics、texture sampling 与 glyph raster 均不进入 bridge。
+Q16 lowering。`print/cursor` operation `29..30` 使用 production binding；`print` C wrapper 以
+pointer + explicit length 同步借出 guest bytes，`cursor` C wrapper 返回修改前的 `(x,y)`，而 draw-state RAM
+修改仍属于 host binding。map/text hardware semantics、texture sampling 与 glyph raster 均不进入 bridge。
 
 operation `31..41` 覆盖 audio/input/persistence/memory/root controls。bridge 只处理 Lua stack、
 optional/presence、boolean/Q16/string result 与同步错误边界；synthesis、input latch、RAM authority、
@@ -426,7 +426,7 @@ transaction 与 control matrix 由 [ADR-022](./adr/022-cpu-slicing-decision.md) 
 
 implicit quantum、safety cap 与 compatibility CPU cost 是三个不同概念。Phase 4F 已锁定每条 count hook
 instruction 作为 deterministic accounting unit，由 Runtime 以 4M/s 和 logical target FPS 换算
-Q16.16；默认 1M instruction cap 仍只负责安全。`p8w_consumed_instructions()` 返回当前 resume
+Q16.16；默认 2M instruction cap 仍只负责安全。`p8w_consumed_instructions()` 返回当前 resume
 segment，bridge 内的 `stat(1)` 另行累计同一 transaction 的先前 HostRequest segments。
 
 Window watchdog 是第二层：若 Worker 在 wall-clock deadline 内没有回复，Window 终止整个 Worker 并重建 session。它覆盖 C parser、host import、WASM trap 或 hook 无法中断的情况；它不能替代 instruction hook。deadline 必须考虑后台暂停和移动设备抖动，并在 browser test 后确定。

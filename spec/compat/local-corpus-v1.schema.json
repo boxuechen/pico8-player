@@ -90,6 +90,42 @@
               }
             }
           }
+        },
+        "bundle": {
+          "type": "array",
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/bundleEntry" }
+        },
+        "expectedTermination": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "faultCode", "basis"],
+          "properties": {
+            "kind": { "const": "fault" },
+            "faultCode": { "type": "string", "pattern": "^E_[A-Z0-9_]+$" },
+            "basis": { "type": "string", "minLength": 1, "maxLength": 256 }
+          }
+        }
+      }
+    },
+    "bundleEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "file", "sha256", "access"],
+      "properties": {
+        "ref": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "file": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "access": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["load", "reloadData", "cstoreData", "include"],
+          "properties": {
+            "load": { "type": "boolean" },
+            "reloadData": { "type": "boolean" },
+            "cstoreData": { "type": "boolean" },
+            "include": { "type": "boolean" }
+          }
         }
       }
     }

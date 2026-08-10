@@ -1362,23 +1362,37 @@ export function createPlayerWorkerController(
       inputSequence = -1;
       clearInputState();
       devkitFlags = 0;
+      let nextResolver: LocalCartBundleResolver | undefined;
       try {
-        const cart = decodeCart(new Uint8Array(command.cartBytes));
-        const nextResolver = new LocalCartBundleResolver(
+        nextResolver = new LocalCartBundleResolver(
           (command.localCartBundle ?? []).map((entry) => ({
             ref: entry.ref,
             bytes: new Uint8Array(entry.cartBytes),
             access: entry.access,
           })),
         );
+        const cart = decodeCart(new Uint8Array(command.cartBytes), {
+          p8: {
+            includeResolver(specifier) {
+              try {
+                return nextResolver?.resolveImmediate(specifier, "include").bytes;
+              } catch (error) {
+                if (error instanceof CartResolutionError) return undefined;
+                throw error;
+              }
+            },
+          },
+        });
         localCartResolver.dispose();
         localCartResolver = nextResolver;
+        nextResolver = undefined;
         cartLoader = new CartLoader(localCartResolver, cartRepository);
         breadcrumbStack.length = 0;
         externalCstoreTargetIdentities.clear();
         cartRepository.registerCart(cart);
         return acceptBoot(command, session.load(cart));
       } catch (error) {
+        nextResolver?.dispose();
         if (session.cart !== undefined) session.stop();
         if (error instanceof CartCodecError) {
           return [fault(command, {

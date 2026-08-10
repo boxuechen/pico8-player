@@ -73,6 +73,7 @@
         "nonBlackPixels": { "type": "integer", "minimum": 0, "maximum": 16384 },
         "distinctColors": { "type": "integer", "minimum": 0, "maximum": 256 },
         "screenshotCaptured": { "type": "boolean" },
+        "expectedTerminationMatched": { "type": "boolean" },
         "playability": { "$ref": "#/$defs/playability" }
       },
       "allOf": [
@@ -80,6 +81,33 @@
           "if": { "properties": { "classification": { "const": "C2" } } },
           "then": { "required": ["playability"] },
           "else": { "not": { "required": ["playability"] } }
+        },
+        {
+          "if": {
+            "required": ["expectedTerminationMatched"],
+            "properties": { "expectedTerminationMatched": { "const": true } }
+          },
+          "then": {
+            "required": ["faultCode"],
+            "properties": {
+              "classification": { "const": "CU" },
+              "smokeOutcome": { "const": "fails" },
+              "failureCluster": { "const": null }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": { "const": "CU" },
+              "smokeOutcome": { "const": "fails" }
+            },
+            "required": ["classification", "smokeOutcome"]
+          },
+          "then": {
+            "required": ["expectedTerminationMatched"],
+            "properties": { "expectedTerminationMatched": { "const": true } }
+          }
         }
       ]
     },

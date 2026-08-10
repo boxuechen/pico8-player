@@ -138,6 +138,17 @@ test("unknown sections warn at the original byte offset and cannot become Lua", 
   assert.equal(Object.isFrozen(decoded.warnings[0]), true);
 });
 
+test("tool metadata markers with punctuation remain unknown sections", () => {
+  const decoded = decodeP8(makeP8Bytes({
+    sections: [
+      { name: "gfx", lines: ["00"] },
+      { name: "meta:cart_info_start", lines: ["not gfx data"] },
+    ],
+  }));
+  assert.equal(decoded.rom[0], 0);
+  assert.equal(decoded.warnings[0]?.section, "meta:cart_info_start");
+});
+
 test("known duplicate sections and non-empty preamble fail structurally", () => {
   const duplicate = makeP8Bytes({
     sections: [{ name: "lua", lines: [] }, { name: "lua", lines: [] }],
@@ -158,14 +169,16 @@ test("header, version and future-version failures retain stable codes and offset
     "pico-8 cartridge // http://www.pico-8.com\nversion x\n",
   );
   assert.throws(() => decodeP8(malformed), throwsCode("E_CART_TEXT_VERSION", 42));
-  const future = makeP8Bytes({ version: 43 });
+  const current = makeP8Bytes({ version: 43 });
+  assert.equal(decodeP8(current).version, 43);
+  const future = makeP8Bytes({ version: 44 });
   assert.throws(() => decodeP8(future), throwsCode("E_CART_FUTURE_VERSION", 50));
-  assert.equal(decodeP8(future, { limits: { maximumCartVersion: 43 } }).version, 43);
+  assert.equal(decodeP8(future, { limits: { maximumCartVersion: 44 } }).version, 44);
 });
 
 test("row width, alphabet, field bit width and row capacity never truncate", () => {
   assert.throws(
-    () => decodeP8(makeP8Bytes({ sections: [{ name: "gfx", lines: ["00"] }] })),
+    () => decodeP8(makeP8Bytes({ sections: [{ name: "gfx", lines: ["0"] }] })),
     throwsCode("E_CART_TEXT_ROW"),
   );
   assert.throws(
@@ -188,6 +201,13 @@ test("row width, alphabet, field bit width and row capacity never truncate", () 
   );
 });
 
+test("hex sections accept bounded half-width rows and pack them sequentially", () => {
+  const decoded = decodeP8(makeP8Bytes({
+    sections: [{ name: "gfx", lines: ["12", "34"] }],
+  }));
+  assert.deepEqual(decoded.rom.slice(0, 2), Uint8Array.of(0x21, 0x43));
+});
+
 test("include, malformed UTF-8, unmapped Unicode and lone CR fail at byte boundaries", () => {
   const include = makeP8Bytes({ sections: [{ name: "lua", lines: ["  #include sibling.lua"] }] });
   const includeOffset = new TextDecoder().decode(include).indexOf("#include");
@@ -195,6 +215,13 @@ test("include, malformed UTF-8, unmapped Unicode and lone CR fail at byte bounda
     () => decodeP8(include),
     throwsCode("E_CART_INCLUDE_UNRESOLVED", includeOffset),
   );
+  const resolved = decodeP8(include, {
+    includeResolver(specifier) {
+      assert.equal(specifier, "sibling.lua");
+      return new TextEncoder().encode("x=1\ny=2");
+    },
+  });
+  assert.deepEqual(resolved.code, new TextEncoder().encode("x=1\ny=2\n"));
 
   const validPrefix = makeP8Bytes({
     sections: [{ name: "lua", lines: [] }],

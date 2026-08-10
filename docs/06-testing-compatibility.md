@@ -182,6 +182,12 @@ C2 playability。65-pair parity 和 C2 review 仍只能从 local artifacts 生�
 artifact 不读取它们。tracked test 仅使用运行时生成的项目原创 fixture 验证 discovery、selection、
 dedupe、batch、hash、environment drift、exact coverage、redaction 和 path quarantine。
 
+Phase 8D 通用修复 candidate 在同一 corpus fingerprint 上得到 `100 CU`：`99 boots` 和 `1`
+个由仓库外 manifest 声明、fault code 精确匹配的开发者自测终止；所有 failure cluster 为 `0`。
+CU 仍不进入可玩分母，`fails` 也仍保留在本地 observation，不会因预期标注被伪造成 boot。
+100 张本地 Canvas screenshot 已生成，其中 4 个代表状态已人工抽查；第三方 bytes、截图、路径和
+逐 cart 结果仍为仓库内 `0`。
+
 ## 4. 确定性执行模型
 
 Golden 和差分测试必须运行在 deterministic host 中：
@@ -739,7 +745,8 @@ fresh-generation recovery 由
 [`phase-7f-required-api.json`](../tests/conformance/manifests/phase-7f-required-api.json) 锁定；这不是
 official bit-exact 或第三方 cart 成功率声明。
 
-- Conditional：`printh`、`extcmd`；`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
+- Partial：`printh` 已实现 browser-safe diagnostic null sink，但不授予 filename、desktop、clipboard 或
+  filesystem side effect；Conditional：`extcmd`。`menuitem` 的 cart-defined pause-menu surface 已由 ADR-023 与
   Phase 7E Node/Worker/Chrome gate 完成，历史 `P6-KD-01` 已关闭。PICO-8 system menu 仍属于 player scope
   exclusion，不计作 `menuitem()` API 差异。
 - Excluded platform API：`save`、`folder`、`ls`、`resume`、`reboot`、`info`、`serial`；guest root

@@ -177,7 +177,7 @@ function _draw() end`);
 });
 
 test("cartdata policy faults are deterministic and never publish failed transactions", () => {
-  for (const id of ["", "UPPER", "not-valid", "a".repeat(65)]) {
+  for (const id of ["", "UPPER", "not.valid", "a".repeat(65)]) {
     assertFault(`cartdata(${JSON.stringify(id)})`);
   }
   assertFault(`cartdata("once") cartdata("twice")`);
@@ -188,6 +188,20 @@ test("cartdata policy faults are deterministic and never publish failed transact
   assertFault(`cartdata("range") dset(-1,1)`);
   assertFault(`cartdata("range") dset(64,1)`);
   assertFault(`cartdata("fault") dset(0,1) missing_function()`, "E_VM_RUNTIME");
+});
+
+test("cartdata accepts the current lower-case hyphen identifier alphabet", () => {
+  const { runtime, boot } = createRuntime(`
+function _init()
+ cartdata("project-save_1")
+ dset(0,7)
+end
+function _update() end
+function _draw() end`);
+  const result = boot();
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.value.cartDataCommit?.id, "project-save_1");
+  runtime.dispose();
 });
 
 test("browser-neutral seed and commit snapshots are isolated, revisioned and resettable", () => {

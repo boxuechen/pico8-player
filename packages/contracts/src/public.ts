@@ -8,7 +8,7 @@ export const PICO_CART_ROM_SIZE = 0x8000 as const;
 export const PICO_CART_DATA_ROM_SIZE = 0x4300 as const;
 
 /** Highest cart format version accepted by the PICO-8 0.2.7 target. */
-export const PICO8_0_2_7_CART_VERSION = 42 as const;
+export const PICO8_0_2_7_CART_VERSION = 43 as const;
 
 /** Stable content identity shared by codec, RuntimeCore and app transports. */
 export interface CartIdentity {

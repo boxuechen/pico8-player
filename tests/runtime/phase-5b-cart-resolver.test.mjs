@@ -142,6 +142,27 @@ test("local bundle resolver owns bytes/capabilities and checks purpose twice", a
   );
 });
 
+test("codec-time include lookup is synchronous, copied and capability checked", () => {
+  const resolver = new LocalCartBundleResolver([{
+    ref: "shared.lua",
+    bytes: Uint8Array.of(1, 2, 3),
+    access: { load: false, reloadData: false, cstoreData: false, include: true },
+  }]);
+  const first = resolver.resolveImmediate("shared.lua", "include");
+  first.bytes[0] = 99;
+  assert.deepEqual(resolver.resolveImmediate("shared.lua", "include").bytes, Uint8Array.of(1, 2, 3));
+
+  const denied = new LocalCartBundleResolver([{
+    ref: "private.lua",
+    bytes: Uint8Array.of(1),
+    access: { load: true, reloadData: false, cstoreData: false, include: false },
+  }]);
+  assert.throws(
+    () => denied.resolveImmediate("private.lua", "include"),
+    expectCode(CART_RESOLUTION_ERROR_CODES.accessDenied),
+  );
+});
+
 test("local bundle resolver rejects invalid refs, duplicates, limits and missing entries", async () => {
   const bytes = await validCartBytes();
   assert.throws(

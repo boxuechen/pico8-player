@@ -254,6 +254,7 @@ void reset_ram(Context *context) {
   context->ram[p8w::kScreenMapRegister] = 0x60u;
   context->ram[p8w::kMapBaseRegister] = 0x20u;
   context->ram[p8w::kMapWidthRegister] = 0x80u;
+  p8w::reset_pico8_compat_ram(context->ram);
 }
 
 void remove_global(lua_State *state, const char *name) {
@@ -399,7 +400,9 @@ int p8_host_call(lua_State *state) {
         } else if ((descriptor->boolean_mask & (1u << index)) != 0) {
           luaL_checkany(state, stack_index);
         } else {
-          luaL_checknumber(state, stack_index);
+          frame.presence_bits |= 1u << index;
+          frame.scalar_slots[index] = 0;
+          frame.scalar_count += 1u;
         }
       }
       continue;
@@ -470,6 +473,46 @@ int p8_host_call(lua_State *state) {
   }
   lua_pushinteger(state, static_cast<int16_t>(frame.result));
   return 1;
+}
+
+int p8_print(lua_State *state) {
+  if (lua_gettop(state) == 0) {
+    lua_pushliteral(state, "[nil]");
+  } else if (lua_isnil(state, 1)) {
+    lua_pushliteral(state, "[nil]");
+    lua_replace(state, 1);
+  }
+  return p8_host_call(state);
+}
+
+int p8_cursor(lua_State *state) {
+  Context *context = context_from_lua(state);
+  if (context == nullptr) return luaL_error(state, "cursor context is not active");
+  const uint8_t previous_x = context->ram[0x5f26u];
+  const uint8_t previous_y = context->ram[0x5f27u];
+  // PICO-8's cursor overload returns the previous position. The generated
+  // host binding still owns the RAM mutation; missing x/y are normalized to
+  // zero by p8_host_call, matching cursor()'s reset behavior.
+  static_cast<void>(p8_host_call(state));
+  lua_pushinteger(state, previous_x);
+  lua_pushinteger(state, previous_y);
+  return 2;
+}
+
+int p8_printh(lua_State *state) {
+  // The browser player exposes no cart-selected filesystem. Preserve PICO-8's
+  // tostr conversion and route the result to a bounded null diagnostic sink.
+  lua_getglobal(state, "tostr");
+  if (lua_gettop(state) == 1) {
+    lua_pushnil(state);
+  } else {
+    lua_pushvalue(state, 1);
+  }
+  lua_call(state, 1, 1);
+  size_t length = 0;
+  static_cast<void>(lua_tolstring(state, -1, &length));
+  static_cast<void>(length > kMaxHostBytes ? kMaxHostBytes : length);
+  return 0;
 }
 
 int p8_pal(lua_State *state) {
@@ -809,6 +852,8 @@ void register_host_functions(lua_State *state) {
     lua_pushlightuserdata(
         state, const_cast<P8wHostBindingDescriptor *>(&binding));
     lua_CFunction function = p8_host_call;
+    if (std::strcmp(binding.guest_name, "print") == 0) function = p8_print;
+    if (std::strcmp(binding.guest_name, "cursor") == 0) function = p8_cursor;
     if (std::strcmp(binding.guest_name, "pal") == 0) function = p8_pal;
     if (std::strcmp(binding.guest_name, "stat") == 0) function = p8_stat;
     if (std::strcmp(binding.guest_name, "reload") == 0 ||
@@ -852,6 +897,7 @@ void open_guest_environment(lua_State *state) {
   register_function(state, "stop", p8_stop);
   register_function(state, "load", p8_load);
   register_function(state, "flip", p8_flip);
+  register_function(state, "printh", p8_printh);
   p8w::open_pico8_compat(state, context_from_lua(state)->ram);
   // Phase 0E-only control-flow probe. It is deliberately not a PICO-8 API.
   register_function(state, "__p8w_probe_host_request", p8_probe_host_request);
@@ -859,6 +905,9 @@ void open_guest_environment(lua_State *state) {
   alias_coroutine_function(state, "resume", "coresume");
   alias_coroutine_function(state, "status", "costatus");
   alias_coroutine_function(state, "yield", "yield");
+  lua_pushglobaltable(state);
+  lua_rawseti(state, LUA_REGISTRYINDEX,
+              p8w::kOriginalEnvironmentRegistryIndex);
 }
 
 void instruction_hook(lua_State *state, lua_Debug *) {
@@ -1025,13 +1074,25 @@ P8wStatus resume_active(Context *context) {
       context->state = P8W_STATE_WAITING_HOST;
       return P8W_STATUS_YIELDED;
     }
-    if (context->yield_reason == P8W_YIELD_FLIP &&
-        completed_kind == ActiveKind::TopLevel) {
-      context->mode = P8W_MODE_CUSTOM;
-      context->target_fps = 30;
-      context->phase = P8W_PHASE_CUSTOM_LOOP;
-      context->state = P8W_STATE_CUSTOM_LOOP;
-      return P8W_STATUS_YIELDED;
+    if (context->yield_reason == P8W_YIELD_FLIP) {
+      if (completed_kind == ActiveKind::TopLevel) {
+        context->mode = P8W_MODE_CUSTOM;
+        context->target_fps = 30;
+        context->phase = P8W_PHASE_CUSTOM_LOOP;
+        context->state = P8W_STATE_CUSTOM_LOOP;
+        return P8W_STATUS_YIELDED;
+      }
+      if (completed_kind == ActiveKind::Init ||
+          completed_kind == ActiveKind::Update ||
+          completed_kind == ActiveKind::Update60 ||
+          completed_kind == ActiveKind::Draw) {
+        detect_callback_target_fps(context);
+        context->mode = P8W_MODE_CALLBACK;
+        // Reuse the resumable-loop state until this suspended callback
+        // completes; the public mode remains callback throughout.
+        context->state = P8W_STATE_CUSTOM_LOOP;
+        return P8W_STATUS_YIELDED;
+      }
     }
     if (context->yield_reason == P8W_YIELD_FRAME_END &&
         completed_kind == ActiveKind::TopLevel) {
@@ -1096,6 +1157,33 @@ P8wStatus finish_top_level(Context *context, bool completes_frame) {
   return status;
 }
 
+P8wStatus finish_resumed_active(Context *context, ActiveKind active_kind,
+                                bool completes_frame) {
+  if (active_kind == ActiveKind::TopLevel) {
+    return finish_top_level(context, completes_frame);
+  }
+  if (active_kind == ActiveKind::Init) {
+    select_callback_mode(context);
+    if (completes_frame) context->yield_reason = P8W_YIELD_FRAME_END;
+    return P8W_STATUS_OK;
+  }
+  if (active_kind == ActiveKind::Update ||
+      active_kind == ActiveKind::Update60) {
+    context->state = P8W_STATE_CALLBACK_LOOP;
+    if (start_global(context, "_draw", ActiveKind::Draw, P8W_PHASE_DRAW)) {
+      return finish_callback_sequence(context);
+    }
+    context->yield_reason = P8W_YIELD_FRAME_END;
+    return P8W_STATUS_OK;
+  }
+  if (active_kind == ActiveKind::Draw) {
+    context->state = P8W_STATE_CALLBACK_LOOP;
+    context->yield_reason = P8W_YIELD_FRAME_END;
+    return P8W_STATUS_OK;
+  }
+  return P8W_STATUS_INTERNAL_ERROR;
+}
+
 P8wStatus run_callback_step(Context *context) {
   const bool has_update60 = global_is_function(context, "_update60");
   context->target_fps = has_update60 ? 60 : 30;
@@ -1122,27 +1210,7 @@ P8wStatus continue_after_host_response(Context *context) {
   const ActiveKind active_kind = context->active_kind;
   const P8wStatus status = resume_active(context);
   if (status != P8W_STATUS_OK) return status;
-  if (active_kind == ActiveKind::TopLevel) {
-    return finish_top_level(context, completes_frame);
-  }
-  if (active_kind == ActiveKind::Init) {
-    select_callback_mode(context);
-    if (completes_frame) context->yield_reason = P8W_YIELD_FRAME_END;
-    return P8W_STATUS_OK;
-  }
-  if (active_kind == ActiveKind::Update ||
-      active_kind == ActiveKind::Update60) {
-    if (start_global(context, "_draw", ActiveKind::Draw, P8W_PHASE_DRAW)) {
-      return finish_callback_sequence(context);
-    }
-    context->yield_reason = P8W_YIELD_FRAME_END;
-    return P8W_STATUS_OK;
-  }
-  if (active_kind == ActiveKind::Draw) {
-    context->yield_reason = P8W_YIELD_FRAME_END;
-    return P8W_STATUS_OK;
-  }
-  return P8W_STATUS_INTERNAL_ERROR;
+  return finish_resumed_active(context, active_kind, completes_frame);
 }
 
 }  // namespace
@@ -1307,13 +1375,13 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_step(uint32_t handle,
   context->time_raw = time_raw;
   if (context->state == P8W_STATE_CALLBACK_LOOP)
     return run_callback_step(context);
-  context->phase = P8W_PHASE_CUSTOM_LOOP;
   const ActiveKind active_kind = context->active_kind;
+  if (active_kind == ActiveKind::TopLevel) {
+    context->phase = P8W_PHASE_CUSTOM_LOOP;
+  }
   const P8wStatus status = resume_active(context);
   if (status != P8W_STATUS_OK) return status;
-  return active_kind == ActiveKind::TopLevel
-             ? finish_top_level(context, true)
-             : P8W_STATUS_OK;
+  return finish_resumed_active(context, active_kind, true);
 }
 
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_complete_host_request(

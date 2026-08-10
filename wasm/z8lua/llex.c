@@ -173,6 +173,7 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
   ls->z = z;
   ls->fs = NULL;
   ls->linenumber = 1;
+  ls->logicalline = 1;
   ls->emiteol = 0;
   ls->lastline = 1;
   ls->braces = -1;
@@ -421,6 +422,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
     switch (ls->current) {
       case '\n': case '\r': {  /* line breaks */
         inclinenumber(ls);
+        ls->logicalline++;
         if (ls->emiteol) { ls->emiteol = 0; return TK_EOL; }
         break;
       }
@@ -605,4 +607,3 @@ int luaX_lookahead (LexState *ls) {
   ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
   return ls->lookahead.token;
 }
-
