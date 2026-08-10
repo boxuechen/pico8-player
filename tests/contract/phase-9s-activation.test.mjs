@@ -12,8 +12,8 @@ const [contract, packageJson] = await Promise.all([
 
 test("Phase 9S remains complete while one later work unit is active", () => {
   assert.ok(contract.completedWorkUnits.includes("9S"));
-  assert.equal(contract.activeWorkUnit, "9G");
-  assert.equal(contract.nextWorkUnit, "9G");
+  assert.equal(contract.activeWorkUnit, "9H");
+  assert.equal(contract.nextWorkUnit, "9H");
   assert.equal(contract.workUnits["9S"].status, "complete");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
@@ -50,10 +50,10 @@ test("Phase 9S remains documented and executable without another full sweep", as
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9G/u);
+  assert.match(readme, /Active work unit \| 9H/u);
   assert.match(phase, /唯一 affected external case/u);
   assert.match(phase, /第二次 full sweep/u);
-  assert.match(index, /active\s+work unit 为 9G/u);
+  assert.match(index, /active\s+work unit 为 9H/u);
   assert.match(packageJson.scripts["test:phase-9s"], /phase-9s-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9s/u);
 });

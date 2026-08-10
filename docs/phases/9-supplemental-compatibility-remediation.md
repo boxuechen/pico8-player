@@ -2,7 +2,7 @@
 
 > 状态：Active
 >
-> Active work unit：9G — Release Regression
+> Active work unit：9H — Aggregate Exit
 >
 > 机器合同：[`spec/phase-9-supplemental-compatibility-remediation-contract.json`](../../spec/phase-9-supplemental-compatibility-remediation-contract.json)
 >
@@ -45,8 +45,8 @@ hash、截图和逐-cart observation 继续只位于仓库外；tracked evidence
 | 9F Single Supplemental Requalification | Complete | 唯一一次完整 4×50 得到 199 CU、1 个 language failure |
 | 9R Requalification Failure Remediation | Complete | 3 个原创语言复现与显式 local bundle 使 4 个 affected case 全部达到 CU |
 | 9S Final Requalification Remediation | Complete | bounded display prefix 修复使唯一 affected case 达到 CU |
-| 9G Release Regression | **Active** | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
-| 9H Aggregate Exit | Pending | aggregate-only evidence 归档并关闭阶段 |
+| 9G Release Regression | Complete | release artifact、短 Chrome lifecycle 与 focused release gate 通过 |
+| 9H Aggregate Exit | **Active** | aggregate-only evidence 归档并关闭阶段 |
 
 ## 4. 已完成：9A Failure-set Freeze / Root-cause Contract
 
@@ -146,36 +146,34 @@ registration owner tests 和 WASM reproducibility 均通过。决定见
 CU，remaining focused failure 为 0。该验证只执行 1 case；第二次 full sweep、长 playability、historical/
 soak、cart-specific branch、authority expansion 与 tracked third-party detail 均为 0。
 
-## 12. 当前工作：9G Release Regression
+## 12. 已完成：9G Release Regression
 
-### 12.1 输入与可观察结果
+`pnpm run verify:phase-9` 与 `pnpm run verify:release` 均通过；12-file release artifact、Chrome
+151.0.7922.76 短 player lifecycle、Worker release 与 AudioContext close 均正常。一个 Phase 7 历史测试中
+把 successor 子阶段硬编码为 `9A` 的断言被收紧为 Phase 7 自有的稳定退出事实。production source、external
+corpus case、historical run、long soak 与 open P0/P1 均为 0。
 
-9G 只验证 Phase 9 owner contracts、release artifact 与短 Chrome player lifecycle，没有新的 compatibility
-实现。先运行 `pnpm run verify:phase-9`，再运行 `pnpm run verify:release`；两者都不得依赖仓库外 corpus。
+## 13. 当前工作：9H Aggregate Exit
 
-本 work unit 不重复 historical phase matrix、600 秒 soak、full supplemental、C2 或长 playability。若 gate
-暴露与本阶段修改直接相关的回归，只运行对应 owner test；否则不得扩大验证范围。
+### 13.1 输入与可观察结果
 
-### 12.2 允许修改
+9H 只把已完成 work unit 的 aggregate 结果归档为不可变 evidence，关闭机器合同、更新 roadmap 和默认
+文档入口，然后删除本 phase 执行文档。证据必须区分单一 clean environment 的 199/200 结果与最终一个
+case 的 focused delta；不得把跨 commit observation 合并成新的单环境兼容率。
 
-机器权威 allowlist 位于 `workUnits.9G.allowedPaths`。9G 是 verification-only；production source、WASM
-bridge、`ref/**` 与 external corpus 均不授权。
+### 13.2 允许修改
 
-### 12.3 路由 owner
+机器权威 allowlist 位于 `workUnits.9H.allowedPaths`。production source、WASM bridge、external corpus、
+`ref/**`、第三方 identity/path/hash/screenshot/per-case result 均不授权。
 
-- focused release gate：
-  [`06-testing-compatibility.md`](../06-testing-compatibility.md#34-release-gate-与日常默认验证)
-- Chrome-only matrix：
-  [`06-testing-compatibility.md`](../06-testing-compatibility.md#11-chromechromium-支持矩阵)
+### 13.3 验证与退出
 
-### 12.4 验证与退出
+- 创建 aggregate-only exit evidence、manifest 与 conformance test。
+- 关闭 Phase 9 contract 和 roadmap，删除本 active phase 文档。
+- 不运行第二次 supplemental sweep、historical matrix、long soak 或 external case。
+- Phase 9 aggregate exit test 与 quick gate 通过，worktree clean。
 
-- `pnpm run verify:phase-9` 通过。
-- `pnpm run verify:release` 通过。
-- external corpus case、historical run、long soak 与 production source change 均为 0。
-- open P0/P1 为 0，worktree clean，随后 9H 成为唯一 active unit。
-
-## 13. Phase exit gate
+## 14. Phase exit gate
 
 - supplemental `200/200` 达到 CU，remaining failure 与 failure cluster 均为 `0`。
 - 所有 production fix 都有项目原创 regression，cart-specific branch 为 `0`。

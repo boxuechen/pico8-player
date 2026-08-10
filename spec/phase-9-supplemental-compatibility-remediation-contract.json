@@ -75,9 +75,9 @@
     "focusedReleaseVerification": "pass",
     "historicalVerificationRequired": false
   },
-  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F", "9S"],
-  "activeWorkUnit": "9G",
-  "nextWorkUnit": "9G",
+  "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E", "9R", "9F", "9S", "9G"],
+  "activeWorkUnit": "9H",
+  "nextWorkUnit": "9H",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -529,7 +529,7 @@
     },
     "9G": {
       "name": "Release Regression",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "tools/release/",
         "tools/browser/",
@@ -557,13 +557,52 @@
         "pnpm run verify:phase-9 and pnpm run verify:release pass without external corpus dependency",
         "historical phase sweeps and long soaks are not repeated without a relevant observed regression",
         "open P0 and P1 are zero and 9H becomes active"
-      ]
+      ],
+      "result": {
+        "phaseVerificationPassed": true,
+        "releaseVerificationPassed": true,
+        "releaseArtifactFiles": 12,
+        "releaseArtifactVerified": true,
+        "chromeVersion": "Google Chrome 151.0.7922.76",
+        "shortChromeLifecyclePassed": true,
+        "workersReleased": true,
+        "audioContextClosed": true,
+        "externalCorpusCases": 0,
+        "historicalVerificationRuns": 0,
+        "longSoakRuns": 0,
+        "productionSourceChanges": 0,
+        "openP0": 0,
+        "openP1": 0
+      }
     },
     "9H": {
       "name": "Aggregate Exit",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "docs/evidence/phase-9/",
+        "docs/README.md",
+        "docs/05-delivery-plan.md",
+        "docs/06-testing-compatibility.md",
+        "docs/phases/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "tests/conformance/",
+        "tests/conformance/manifests/",
+        "tests/contract/",
+        "package.json"
+      ],
+      "scope": {
+        "aggregateEvidenceOnly": true,
+        "externalCorpusCases": 0,
+        "supplementalFullRerunsAllowed": 0,
+        "historicalVerificationRunsRequired": 0,
+        "longSoakRunsRequired": 0,
+        "productionSourceChangesAllowed": false,
+        "trackedThirdPartyDetails": 0,
+        "publicCompatibilityRate": false
+      },
       "exit": [
-        "aggregate evidence records 200 CU without publishing a third-party compatibility rate",
+        "aggregate evidence records the 199-case single-environment result plus the one-case focused delta without merging them into a compatibility rate",
         "the machine contract closes, the phase document is removed and the worktree is clean"
       ]
     }
