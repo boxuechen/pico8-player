@@ -103,6 +103,11 @@ version/normalized-ROM/normalized-code 分别为 25/37/56 matched。boot 与 fra
   录制与逐 case notes 只留在仓库外。
 - 发现通用缺口时先构造项目原创最小复现；禁止 cart-specific 分支、BBS/URL/filesystem authority 扩张和
   第三方代码复制。
+- Top200 只作为 supplemental defect-discovery corpus：固定 4×50 batch，每个 cart 只跑 120 logical tick；
+  它不改变既有 100 canonical formal denominator，也不生成或发布兼容率。
+- 为控制验证时间，正式 10-case C2 固定为 8 个 critical-flow 与 2 个 duration case。duration gate 沿用
+  Phase 6 的 `900s = 27000` logical-frame 口径，在 production Chrome player 中确定性推进，不要求等待
+  900 秒 wall clock。
 
 ### 8.2 允许修改
 
@@ -113,6 +118,8 @@ version/normalized-ROM/normalized-code 分别为 25/37/56 matched。boot 与 fra
 
 - 至少 10 个分层 case 满足 C2 duration 或 critical-flow gate，风险覆盖和 review 字段完整。
 - 代表 Canvas 状态均在本地人工审阅，open P0/P1 为 0；逐 case 数据不进入 tracked/release/CI。
+- supplemental Top200 完成 4 个 50-case Chrome batch；只有失败 cluster 的聚合计数可进入机器合同，原始
+  observations、截图、cart identity/path/hash 全部留在仓库外。
 - `pnpm run test:phase-8f`、受影响 owner tests、`pnpm run test:architecture` 与 `pnpm run verify` 通过；随后
   8G 成为唯一 active work unit。
 

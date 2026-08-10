@@ -51,3 +51,23 @@ external review document containing only reviewer metadata, sample counts, sever
 evidence digest. The tracked aggregate contract is
 `spec/compat/expanded-format-pair-aggregate-v1.schema.json`; it deliberately cannot contain cart
 identity, path, cart/screen hash, fault message, screenshot or per-pair result.
+
+## Phase 8F supplemental smoke and representative playability
+
+The supplemental Top 200 lane is defect discovery only; it never changes the frozen 100-cart Phase 8
+denominator. Copy the caller-authorized snapshot out of `ref/`, then use
+`prepare:phase-8f:top200` to create a new external-only anonymous corpus. Run each of the four 50-case
+manifests with `qualification:phase-8f:top200:chrome` and aggregate them with
+`qualification:phase-8f:top200:aggregate`. Every case is a short 120-logical-tick smoke and all cart
+bytes, screenshots, paths, hashes and per-cart observations remain outside the repository.
+
+Formal C2 evidence still comes from the frozen 100 canonical carts. An external plan selects exactly
+10 cases, assigns the risk strata and provides deterministic input traces. The v1 policy uses eight
+completed critical flows and two duration cases; each duration case advances 27,000 production-player
+logical frames (900 seconds at 30 Hz) without requiring 900 seconds of wall-clock time. Run
+`prepare:phase-8f:playability`, then `qualification:phase-8f:playability:chrome`. The raw Chrome result
+is not C2. A reviewer must inspect the external screenshots and record input, visual, audio,
+persistence, crash and soft-lock conclusions before
+`qualification:phase-8f:playability:finalize` can emit reviewed C2 observations. Finally,
+`qualification:phase-8f:playability:aggregate` enforces risk/gate coverage and open P0/P1 = 0 while
+emitting no per-cart detail.

@@ -431,6 +431,22 @@
     "8F": {
       "name": "Representative Playability",
       "status": "active",
+      "execution": {
+        "quickSmoke": {
+          "corpus": "supplemental-top200-local-snapshot",
+          "cases": 200,
+          "batches": [50, 50, 50, 50],
+          "logicalTicksPerCase": 120,
+          "formalPhase8DenominatorChanged": false
+        },
+        "representativeC2": {
+          "cases": 10,
+          "criticalFlowCases": 8,
+          "durationCases": 2,
+          "durationSeconds": 900,
+          "durationLogicalFrames": 27000
+        }
+      },
       "allowedPaths": [
         "apps/web-player/src/",
         "packages/contracts/src/",
@@ -475,6 +491,7 @@
         "the local selection covers graphics, audio, input, persistence and multicart or complex-flow risk without publishing cart identities",
         "main verbs, input, visual, audio, persistence, crash and soft-lock outcomes are reviewed",
         "Canvas screenshots are reviewed locally and never tracked",
+        "the supplemental Top 200 snapshot completes four 50-case 120-tick Chrome smoke batches without changing the formal Phase 8 denominator",
         "generic fixes have project-owned regressions, open P0/P1 are zero and 8G becomes active"
       ]
     },

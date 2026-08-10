@@ -58,10 +58,11 @@ export async function runChromeBaseline({
   observationsPath,
   screenshotsDirectory,
   expectedCaseCount = 12,
+  minimumCaseCount = 12,
   requireCleanPlayer = false,
 }) {
   const startingPlayerCommit = playerCommit(requireCleanPlayer);
-  const corpus = await loadLocalCorpusManifest({ manifestPath, projectRoot });
+  const corpus = await loadLocalCorpusManifest({ manifestPath, projectRoot, minimumCases: minimumCaseCount });
   if (expectedCaseCount !== null && corpus.entries.length !== expectedCaseCount) {
     throw new Error(`E_PHASE6C_CASE_COUNT: Phase 6C requires exactly ${expectedCaseCount} cases`);
   }

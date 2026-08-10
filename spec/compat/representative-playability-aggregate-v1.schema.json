@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pico8-web-player.invalid/spec/compat/representative-playability-aggregate-v1.schema.json",
+  "title": "Aggregate-only Phase 8F representative playability result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runner", "targetRuntime", "corpusFingerprint", "sourceRevision", "environment", "summary"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runner": { "const": "phase-8f-representative-playability-v1" },
+    "targetRuntime": { "const": "PICO-8 v0.2.7" },
+    "corpusFingerprint": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sourceRevision": { "type": "string", "minLength": 1 },
+    "environment": { "$ref": "local-observations-v1.schema.json#/properties/environment" },
+    "summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["caseCount", "c2CaseCount", "gateCounts", "riskCoverage", "outcomes", "screenshotsReviewed", "openFindings", "evidenceSha256"],
+      "properties": {
+        "caseCount": { "const": 10 },
+        "c2CaseCount": { "const": 10 },
+        "gateCounts": {
+          "type": "object", "additionalProperties": false,
+          "required": ["criticalFlow", "duration"],
+          "properties": { "criticalFlow": { "const": 8 }, "duration": { "const": 2 } }
+        },
+        "riskCoverage": {
+          "type": "object", "additionalProperties": false,
+          "required": ["graphics", "audio", "input", "persistence", "multicart", "complex-flow"],
+          "properties": {
+            "graphics": { "$ref": "#/$defs/count" }, "audio": { "$ref": "#/$defs/count" },
+            "input": { "$ref": "#/$defs/count" }, "persistence": { "$ref": "#/$defs/count" },
+            "multicart": { "$ref": "#/$defs/zeroCount" }, "complex-flow": { "$ref": "#/$defs/zeroCount" }
+          }
+        },
+        "outcomes": { "type": "object" },
+        "screenshotsReviewed": { "const": 10 },
+        "openFindings": {
+          "type": "object", "additionalProperties": false,
+          "required": ["P0", "P1", "P2", "P3"],
+          "properties": { "P0": { "const": 0 }, "P1": { "const": 0 }, "P2": { "$ref": "#/$defs/zeroCount" }, "P3": { "$ref": "#/$defs/zeroCount" } }
+        },
+        "evidenceSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "zeroCount": { "type": "integer", "minimum": 0, "maximum": 10 }
+  }
+}
