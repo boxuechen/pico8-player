@@ -76,8 +76,8 @@
     "historicalVerificationRequired": false
   },
   "completedWorkUnits": ["9A", "9B", "9C", "9D", "9E"],
-  "activeWorkUnit": "9F",
-  "nextWorkUnit": "9F",
+  "activeWorkUnit": "9R",
+  "nextWorkUnit": "9R",
   "nextPhase": "deferred",
   "workUnits": {
     "9A": {
@@ -339,7 +339,7 @@
     },
     "9F": {
       "name": "Single Supplemental Requalification",
-      "status": "active",
+      "status": "paused",
       "allowedPaths": [
         "tools/compat/",
         "tools/browser/",
@@ -363,10 +363,62 @@
         "networkAuthorityExpansion": false,
         "hostFilesystemAuthorityExpansion": false
       },
+      "attempt": {
+        "qualificationAttempts": 1,
+        "completedRequalificationRuns": 0,
+        "completedObservationBatches": 3,
+        "completedObservationCases": 150,
+        "partialFourthBatchCases": 25,
+        "observedCases": 175,
+        "observedCu": 171,
+        "observedFailures": 4,
+        "observedFailureClusters": { "language": 3, "unsupported-host-feature": 1 },
+        "abortedOnFailure": true,
+        "productionSourceChanges": 0,
+        "trackedThirdPartyDetails": 0
+      },
       "exit": [
         "one and only one four-by-fifty 120-tick supplemental Chrome rerun completes",
         "the aggregate reaches 200 CU with zero remaining failure clusters",
         "all third-party detail remains local-only and 9G becomes active"
+      ]
+    },
+    "9R": {
+      "name": "Requalification Failure Remediation",
+      "status": "active",
+      "allowedPaths": [
+        "wasm/bridge/",
+        "wasm/runtime-v1.manifest.lock.json",
+        "tools/wasm/",
+        "tests/runtime/",
+        "tests/contract/",
+        "tests/fixtures/phase-9/",
+        "spec/pico-api-inventory.yaml",
+        "docs/adr/",
+        "docs/README.md",
+        "docs/phases/README.md",
+        "docs/phases/9-supplemental-compatibility-remediation.md",
+        "spec/phase-9-supplemental-compatibility-remediation-contract.json",
+        "package.json"
+      ],
+      "scope": {
+        "observedFailures": 4,
+        "languageFailures": 3,
+        "hostFeatureFailures": 1,
+        "genericLanguageRootCauses": 2,
+        "projectAuthoredReproducersRequired": 2,
+        "focusedExternalCasesMaximum": 4,
+        "logicalTicksPerCase": 120,
+        "fullSupplementalRerunsAllowed": 0,
+        "cartSpecificBranchesAllowed": false,
+        "networkAuthorityExpansion": false,
+        "hostFilesystemAuthorityExpansion": false
+      },
+      "exit": [
+        "camera previous-state returns and absent-value all iteration have project-authored real-WASM regressions",
+        "the companion cart is supplied only through an explicit caller-authorized local bundle",
+        "the four affected external cases reach CU in a bounded Chrome rerun without a supplemental sweep",
+        "9F is reactivated for the one complete four-by-fifty requalification"
       ]
     },
     "9G": {

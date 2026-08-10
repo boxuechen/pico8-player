@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "phase": "4G",
-  "compatibilityRevision": "9D",
+  "compatibilityRevision": "9R",
   "abiContract": "spec/abi/p8w-v1.json",
   "hostApiContract": "spec/abi/pico-host-api-v1.json",
   "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
@@ -43,13 +43,13 @@
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 197297,
-        "sha256": "bcd89867869ea2a3a564aa840cb7c30fb57ea6f17c6f7c8a393381cd2a2d4724"
+        "bytes": 197473,
+        "sha256": "e73aa37da1df234ab720a0dc7a6cad0cc4b1e43996f559cbde4981679d70557f"
       }
     ]
   },
   "tests": {
-    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs + tests/runtime/phase-3b-music-audio.test.mjs + tests/runtime/phase-3c-controller-input.test.mjs + tests/runtime/phase-3d-devkit-input.test.mjs + tests/runtime/phase-3e-cartdata.test.mjs + tests/runtime/phase-3g-current-cart.test.mjs + tests/runtime/phase-6d-stat20.test.mjs + tests/runtime/phase-6e-menuitem.test.mjs + tests/runtime/phase-6f-cpu-slicing.test.mjs + tests/runtime/phase-6g-language-compat.test.mjs + tests/runtime/phase-8d-real-cart-gaps.test.mjs + tests/runtime/phase-9b-language-compat.test.mjs + tests/runtime/phase-9c-timing-compat.test.mjs + tests/runtime/phase-9d-host-feature-compat.test.mjs + tests/conformance/phase-4c-core-library.test.mjs + tests/conformance/phase-4d-graphics-memory-text.test.mjs + tests/conformance/phase-4e-system-integration.test.mjs + tests/conformance/phase-4f-cpu-scheduler.test.mjs + tests/conformance/phase-4g-resource-long-run.test.mjs",
+    "node": "tests/runtime/phase-0e.test.mjs + tests/runtime/phase-1a-host-api.test.mjs + tests/runtime/phase-1d-graphics-input.test.mjs + tests/runtime/phase-2a-memory-abi.test.mjs + tests/runtime/phase-2b-draw-state.test.mjs + tests/runtime/phase-2c-sprites.test.mjs + tests/runtime/phase-2d-map-tline.test.mjs + tests/runtime/phase-2e-p8scii.test.mjs + tests/runtime/phase-3a-sfx.test.mjs + tests/runtime/phase-3b-music-audio.test.mjs + tests/runtime/phase-3c-controller-input.test.mjs + tests/runtime/phase-3d-devkit-input.test.mjs + tests/runtime/phase-3e-cartdata.test.mjs + tests/runtime/phase-3g-current-cart.test.mjs + tests/runtime/phase-6d-stat20.test.mjs + tests/runtime/phase-6e-menuitem.test.mjs + tests/runtime/phase-6f-cpu-slicing.test.mjs + tests/runtime/phase-6g-language-compat.test.mjs + tests/runtime/phase-8d-real-cart-gaps.test.mjs + tests/runtime/phase-9b-language-compat.test.mjs + tests/runtime/phase-9c-timing-compat.test.mjs + tests/runtime/phase-9d-host-feature-compat.test.mjs + tests/runtime/phase-9r-requalification-remediation.test.mjs + tests/conformance/phase-4c-core-library.test.mjs + tests/conformance/phase-4d-graphics-memory-text.test.mjs + tests/conformance/phase-4e-system-integration.test.mjs + tests/conformance/phase-4f-cpu-scheduler.test.mjs + tests/conformance/phase-4g-resource-long-run.test.mjs",
     "chromium": "tests/browser/phase-0e.html + tests/browser/phase-2b.html + tests/browser/phase-2c.html + tests/browser/phase-2d.html + tests/browser/phase-2e.html + tests/browser/phase-3b.html + tests/browser/phase-3c.html + tests/browser/phase-3d.html + tests/browser/phase-3f.html + tests/browser/phase-3g.html + tests/browser/phase-4c.html + tests/browser/phase-4d.html + tests/browser/phase-4e.html + tests/browser/phase-4f.html + tests/browser/phase-4g.html + tests/compat/run-phase-6d-project-smoke.mjs + tests/compat/run-phase-6e-project-smoke.mjs + tests/compat/run-phase-6f-project-smoke.mjs + tests/compat/run-phase-6g-project-smoke.mjs",
     "fixtures": "project-owned synthetic source and p8.png only"
   }

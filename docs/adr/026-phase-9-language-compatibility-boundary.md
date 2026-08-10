@@ -34,6 +34,8 @@ variadic memory API、persistence 边界和有限 Lua heap。它们不是 cart i
    将 allocator rejection 转成 structured OOM；64 KiB diagnostic workload 锁定此路径。
 7. 语言修复后才暴露的外部 `load()` 缺口重新归入 9D。9B 不改变 caller-authorized local repository、
    URL、BBS 或 host-filesystem 边界。
+8. 9F requalification 后补充的 `camera()` previous-state return 与 absent-value `all()` 由
+   [ADR-029](./029-phase-9-requalification-remediation-boundary.md) 单独锁定，不回写为 9B 原始测量。
 
 ## Consequences
 

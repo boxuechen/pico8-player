@@ -10,11 +10,11 @@ const [contract, packageJson] = await Promise.all([
   readJson("package.json"),
 ]);
 
-test("Phase 9F is the only active work unit", () => {
+test("Phase 9F remains paused while its bounded remediation is active", () => {
   assert.deepEqual(contract.completedWorkUnits, ["9A", "9B", "9C", "9D", "9E"]);
-  assert.equal(contract.activeWorkUnit, "9F");
-  assert.equal(contract.nextWorkUnit, "9F");
-  assert.equal(contract.workUnits["9F"].status, "active");
+  assert.equal(contract.activeWorkUnit, "9R");
+  assert.equal(contract.nextWorkUnit, "9R");
+  assert.equal(contract.workUnits["9F"].status, "paused");
   assert.equal(Object.values(contract.workUnits)
     .filter(({ status }) => status === "active").length, 1);
 });
@@ -50,12 +50,28 @@ test("Phase 9F is the documented and executable route", async () => {
     read("docs/phases/9-supplemental-compatibility-remediation.md"),
     read("docs/phases/README.md"),
   ]);
-  assert.match(readme, /Active work unit \| 9F/u);
-  assert.match(phase, /Active work unit：9F/u);
-  assert.match(phase, /恰好一次 4×50/u);
-  assert.match(index, /active\s+work unit 为 9F/u);
+  assert.match(readme, /171 CU/u);
+  assert.match(phase, /完整\s+requalification run 仍为 0/u);
+  assert.match(index, /active\s+work unit 为 9R/u);
   assert.match(packageJson.scripts["test:phase-9f"], /phase-9f-activation\.test\.mjs/u);
   assert.match(packageJson.scripts["verify:phase-9"], /test:phase-9f/u);
+});
+
+test("Phase 9F records the aborted attempt as aggregate-only evidence", () => {
+  const attempt = contract.workUnits["9F"].attempt;
+  assert.equal(attempt.qualificationAttempts, 1);
+  assert.equal(attempt.completedRequalificationRuns, 0);
+  assert.equal(attempt.completedObservationBatches, 3);
+  assert.equal(attempt.observedCases, 175);
+  assert.equal(attempt.observedCu, 171);
+  assert.equal(attempt.observedFailures, 4);
+  assert.deepEqual(attempt.observedFailureClusters, {
+    language: 3,
+    "unsupported-host-feature": 1,
+  });
+  assert.equal(attempt.abortedOnFailure, true);
+  assert.equal(attempt.productionSourceChanges, 0);
+  assert.equal(attempt.trackedThirdPartyDetails, 0);
 });
 
 function qualificationAuthority(field) {

@@ -285,7 +285,7 @@ int pico8_string_all_next(lua_State *state) {
 }
 
 int pico8_all(lua_State *state) {
-  if (lua_isnil(state, 1)) {
+  if (lua_isnoneornil(state, 1)) {
     lua_pushcfunction(state, pico8_empty_iterator);
     return 1;
   }

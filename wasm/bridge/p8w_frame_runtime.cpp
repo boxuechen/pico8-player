@@ -506,6 +506,21 @@ int p8_cursor(lua_State *state) {
   return 2;
 }
 
+int p8_camera(lua_State *state) {
+  Context *context = context_from_lua(state);
+  if (context == nullptr) return luaL_error(state, "camera context is not active");
+  constexpr uint32_t kCameraX = 0x5f28u;
+  constexpr uint32_t kCameraY = 0x5f2au;
+  const int16_t previous_x = static_cast<int16_t>(p8w::read16(context->ram, kCameraX));
+  const int16_t previous_y = static_cast<int16_t>(p8w::read16(context->ram, kCameraY));
+  // The host binding remains the sole owner of the RAM mutation. Preserve the
+  // pre-call snapshot here because PICO-8 returns both previous coordinates.
+  static_cast<void>(p8_host_call(state));
+  lua_pushinteger(state, previous_x);
+  lua_pushinteger(state, previous_y);
+  return 2;
+}
+
 int p8_printh(lua_State *state) {
   // The browser player exposes no cart-selected filesystem. Preserve PICO-8's
   // tostr conversion and route the result to a bounded null diagnostic sink.
@@ -893,6 +908,7 @@ void register_host_functions(lua_State *state) {
     lua_CFunction function = p8_host_call;
     if (std::strcmp(binding.guest_name, "print") == 0) function = p8_print;
     if (std::strcmp(binding.guest_name, "cursor") == 0) function = p8_cursor;
+    if (std::strcmp(binding.guest_name, "camera") == 0) function = p8_camera;
     if (std::strcmp(binding.guest_name, "pal") == 0) function = p8_pal;
     if (std::strcmp(binding.guest_name, "stat") == 0) function = p8_stat;
     if (std::strcmp(binding.guest_name, "reload") == 0 ||
