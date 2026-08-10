@@ -107,9 +107,9 @@
     "testRelease": "pass",
     "fullVerify": "pass"
   },
-  "completedWorkUnits": ["8A", "8B", "8C", "8D"],
-  "activeWorkUnit": "8E",
-  "nextWorkUnit": "8E",
+  "completedWorkUnits": ["8A", "8B", "8C", "8D", "8E"],
+  "activeWorkUnit": "8F",
+  "nextWorkUnit": "8F",
   "nextPhase": "deferred",
   "workUnits": {
     "8A": {
@@ -320,7 +320,7 @@
     },
     "8E": {
       "name": "Format / Multicart Qualification",
-      "status": "active",
+      "status": "complete",
       "allowedPaths": [
         "apps/web-player/src/worker/",
         "packages/contracts/src/",
@@ -365,15 +365,117 @@
         "multicart, graphics, audio, input and persistence risks are qualified with caller-authorized bundle ownership preserved",
         "Canvas screenshots cover representative matched and divergent states and remain outside the repository",
         "generic fixes have project-owned regressions, open P0/P1 are zero and 8F becomes active"
-      ]
+      ],
+      "result": {
+        "pairCount": 65,
+        "caseCount": 130,
+        "completedPairCount": 65,
+        "dispositions": { "matched": 9, "divergent": 56, "notRun": 0 },
+        "decode": {
+          "successfulSides": 130,
+          "faultedSides": 0,
+          "version": { "matched": 25, "divergent": 40 },
+          "normalizedRom": { "matched": 37, "divergent": 28 },
+          "normalizedCode": { "matched": 56, "divergent": 9 },
+          "content": { "matched": 9, "divergent": 56 }
+        },
+        "boot": { "matched": 64, "divergent": 1, "notRun": 0 },
+        "framebuffer": { "matched": 64, "divergent": 1 },
+        "failureClusters": {
+          "parse": 0,
+          "language": 0,
+          "ram": 0,
+          "graphics": 0,
+          "audio": 0,
+          "input": 0,
+          "timing": 0,
+          "persistence": 0,
+          "multicart": 0,
+          "unsupported-host-feature": 0
+        },
+        "riskPairs": {
+          "multicart": { "signaled": 4, "completed": 4, "runtimeMatched": 4 },
+          "graphics": { "signaled": 65, "completed": 65, "runtimeMatched": 64, "runtimeDivergent": 1 },
+          "audio": { "signaled": 36, "completed": 36, "runtimeMatched": 35, "runtimeDivergent": 1 },
+          "input": { "signaled": 51, "completed": 51, "runtimeMatched": 50, "runtimeDivergent": 1 },
+          "persistence": { "signaled": 3, "completed": 3, "runtimeMatched": 3 }
+        },
+        "potentialRuntimeDefects": 0,
+        "screenshotsCapturedLocally": 130,
+        "screenshotReview": {
+          "matchedBootPairs": 1,
+          "faultPairs": 0,
+          "faultUnavailable": true,
+          "divergentPairs": 1,
+          "openP0": 0,
+          "openP1": 0,
+          "openP2": 0,
+          "openP3": 0
+        },
+        "sourceRevision": "9c846040438bdc649b30c115c355c8864cbba06e",
+        "corpusFingerprint": "941bcc486bbf18fa22936d4ff9f6d9a8f3eb00f3eb76b35619687c89cb30e33c",
+        "playerCommit": "bfc83d6f4f245318876177e3a02c9eac08fb6009",
+        "runtimeWasmSha256": "608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700",
+        "chromeVersion": "Google Chrome 151.0.7922.76",
+        "localAggregateSha256": "87add5b7f2588e07402f4b5f98856346fb1a1901327d36f2edc5267973ac0763",
+        "implementationCommit": "bfc83d6f4f245318876177e3a02c9eac08fb6009",
+        "productionChanged": true,
+        "networkSurfaceChanged": false,
+        "productionCartSpecificBranches": 0,
+        "thirdPartyPerPairDataTracked": false,
+        "thirdPartyScreenshotsTracked": false,
+        "publicCompatibilityRatePublished": false,
+        "qualificationComplete": true
+      }
     },
     "8F": {
       "name": "Representative Playability",
-      "status": "pending",
+      "status": "active",
+      "allowedPaths": [
+        "apps/web-player/src/",
+        "packages/contracts/src/",
+        "packages/cart-codec/src/",
+        "packages/runtime-core/src/",
+        "packages/z8lua-bridge/src/",
+        "wasm/bridge/",
+        "wasm/patches/",
+        "wasm/z8lua/",
+        "wasm/source.lock.json",
+        "wasm/manifest.lock.json",
+        "wasm/runtime-v1.manifest.lock.json",
+        "tools/compat/",
+        "tools/browser/",
+        "tools/wasm/",
+        "spec/abi/",
+        "spec/compat/",
+        "spec/cart-codec-contract.json",
+        "spec/pico-api-inventory.yaml",
+        "tests/cart-codec/",
+        "tests/contract/",
+        "tests/runtime/",
+        "tests/wasm/",
+        "tests/compat/",
+        "tests/browser/",
+        "tests/fixtures/phase-8/",
+        "docs/adr/",
+        "docs/01-scope-and-success-criteria.md",
+        "docs/02-system-architecture.md",
+        "docs/03-z8lua-wasm-bridge.md",
+        "docs/04-typescript-runtime.md",
+        "docs/06-testing-compatibility.md",
+        "docs/07-decisions-risks-open-questions.md",
+        "docs/08-source-layout-and-boundaries.md",
+        "docs/README.md",
+        "docs/phases/8-expanded-real-cart-qualification.md",
+        "spec/phase-8-expanded-real-cart-qualification-contract.json",
+        "package.json"
+      ],
       "exit": [
         "at least 10 stratified representative cases meet C2 duration or critical-flow gates",
+        "the local selection covers graphics, audio, input, persistence and multicart or complex-flow risk without publishing cart identities",
         "main verbs, input, visual, audio, persistence, crash and soft-lock outcomes are reviewed",
-        "Canvas screenshots are reviewed locally and never tracked; 8G becomes active"
+        "Canvas screenshots are reviewed locally and never tracked",
+        "generic fixes have project-owned regressions, open P0/P1 are zero and 8G becomes active"
       ]
     },
     "8G": {

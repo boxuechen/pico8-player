@@ -9,13 +9,13 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 | --- | --- |
 | 最近完成 | Phase 7；[Web Player Release Candidate exit evidence](./evidence/phase-7/81-phase-7-web-player-release-candidate-exit-evidence.md) |
 | 当前阶段 | Phase 8；[Expanded Real-cart Qualification](./phases/8-expanded-real-cart-qualification.md) |
-| Active work unit | 8E — Format / Multicart Qualification |
+| Active work unit | 8F — Representative Playability |
 | 当前机器合同 | [`spec/phase-8-expanded-real-cart-qualification-contract.json`](../spec/phase-8-expanded-real-cart-qualification-contract.json) |
 
 Phase 7A–7H 已关闭。Phase 8 只把 caller-authorized external corpus qualification 扩展到 100 个
 canonical logical cart 和 65 个格式 pair；第三方 bytes、截图、路径、hash 与逐-cart 结果保持本地，
 不成为 CI、release artifact 或公开兼容率。8D 已用通用修复把 100-case fixed smoke 收敛为
-100 CU；当前唯一授权工作是 8E 的 65 组格式配对和 multicart 风险定性。
+100 CU，8E 已完成 65 组格式配对；当前唯一授权工作是 8F 的分层本地 C2 playability review。
 
 日常实现入口：本页 → active phase → 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

@@ -1,7 +1,7 @@
 # Phase 8 — Expanded Real-cart Qualification
 
 > 状态：Active
-> Active work unit：8E — Format / Multicart Qualification
+> Active work unit：8F — Representative Playability
 > 机器合同：[`spec/phase-8-expanded-real-cart-qualification-contract.json`](../../spec/phase-8-expanded-real-cart-qualification-contract.json)
 > 基线：Phase 7 exit commit `49b24ad32b54d14d4678ebd5b7225d3a9bec668e`
 
@@ -37,8 +37,8 @@ BBS/URL/host-filesystem authority，不发布第三方 cart、截图、路径、
 | 8B External Corpus Tooling | Complete | 仓库外 discovery、canonical selection、batch manifest、local index 可重复生成 |
 | 8C Canonical Chrome Smoke | Complete | 100 个 canonical cart 完成 fixed-tick Chrome production smoke 与失败簇聚合 |
 | 8D Fault Triage / Core Fixes | Complete | 48 个 C0 由通用 parser/language/CPU/timing 修复收敛为 100 CU |
-| 8E Format / Multicart Qualification | **Active** | 65 组格式配对及 multicart、graphics/audio/input/persistence 风险完成定性 |
-| 8F Representative Playability | Pending | 至少 10 个分层代表 case 完成 C2，截图本地人工审阅 |
+| 8E Format / Multicart Qualification | Complete | 65 组格式配对及 multicart、graphics/audio/input/persistence 风险完成定性 |
+| 8F Representative Playability | **Active** | 至少 10 个分层代表 case 完成 C2，截图本地人工审阅 |
 | 8G Release Regression Requalification | Pending | 所有修复通过 RC、资源回收、确定性和 clean tracked-input 回归 |
 | 8H Aggregate Exit | Pending | aggregate-only evidence、兼容口径与机器合同关闭 |
 
@@ -71,39 +71,52 @@ caller-authorized include、2M runaway guard、callback `flip()`、统一音频�
 `cursor()` multi-return 和 contiguous RAM fill 由 ADR-024/025 与 `pnpm run test:phase-8d` 维护；完整
 `pnpm run verify` 已通过。
 
-## 7. 当前工作：8E Format / Multicart Qualification
+## 7. 已完成：8E Format / Multicart Qualification
 
-### 7.1 Observable behavior
+8E 实现提交 `bfc83d6f4f245318876177e3a02c9eac08fb6009` 修正了文本 cart 空 SFX/Music 槽位的
+规范 ROM 默认值，并建立 aggregate-only format-pair runner。三个 44/44/42 case batch 在同一 clean commit、
+Chrome 151 和 WASM hash 下完成 130/130 decode、CU boot、120 ticks/frames 和本地截图。
 
-- 对 65 个 logical pair 的 source `.p8` 与 export `.p8.png` 分别使用 production codec、Worker 和 Chrome
-  fixed-tick path；不得用 Canvas、`<img>` 或第三方解析器读取 cart payload。
-- 每组至少比较 decode success/fault、cart version、规范化 ROM/code identity、boot/fault、完成 tick/frame、
-  framebuffer presence 与 expected-termination disposition；逐 pair 原始值只留在仓库外。
-- pair aggregate 只允许发布总 pair 数、matched/divergent/not-run、有限 failure cluster 和风险维度计数；禁止
-  cart identity、path、cart/screen hash、fault message、截图或可反推单个 cart 的结果进入 tracked 内容。
-- 三个既有 pair batch 为 44/44/42 runner cases，aggregate 必须证明 65 个 logical pair exact coverage、无重复、
-  同一 source revision/player commit/WASM/Chrome 环境和两侧 screenshot coverage。
-- multicart/include/load/reload/cstore 只能使用 caller-authorized Worker-local bundle；不得增加 BBS、URL、
-  host filesystem 或 production auto-discovery authority。
-- graphics、audio、input、persistence 与 multicart 风险通过本地 observation 定性；发现差异时先构造项目原创
-  最小复现，只允许通用修复或 Known Difference，不得按 cart identity 分支。
-- 按 `game-playtest` 工作流抽查代表性的 matched、fault 和 divergent Canvas 状态；DOM 断言不能替代截图。
+aggregate 结果为 9 matched、56 source/export content-divergent、0 not-run；65/65 两侧均成功 decode，
+version/normalized-ROM/normalized-code 分别为 25/37/56 matched。boot 与 framebuffer 均为 64 matched、
+1 divergent；该 pair 的输入内容本身不同，因此 same-content runtime defect 为 0。所有 failure cluster 为 0。
+风险信号覆盖 multicart 4、graphics 65、audio 36、input 51、persistence 3，全部完成 production Chrome
+观测。matched 与 divergent Canvas 在仓库外完成人工审阅，fault 样本不存在并标记不适用，P0–P3 均为 0。
 
-### 7.2 允许修改
+逐 pair 详情、第三方 bytes/path/hash、截图和 review 原始证据继续只位于仓库外；tracked 内容只记录不可反推
+单个 cart 的 aggregate。最终本地 aggregate SHA-256 为
+`87add5b7f2588e07402f4b5f98856346fb1a1901327d36f2edc5267973ac0763`，WASM SHA-256 为
+`608cb76400a125f975a71ec8ea44c67078d1c9764ef52855fec08a52e21f2700`。验证：
+`pnpm run test:phase-8e`、`pnpm run test:cart-codec`、`pnpm run test:architecture`。
 
-机器权威 allowlist 位于当前 phase contract 的 `workUnits.8E.allowedPaths`。Production 修改只允许用于由
-pair/multicart 暴露且有原创最小复现的通用缺口；RuntimeCore 保持 browser-neutral，外部 corpus、截图、
-trace 和逐 pair 报告继续位于仓库外。
+## 8. 当前工作：8F Representative Playability
 
-### 7.3 验证与退出
+### 8.1 Observable behavior
 
-- 65/65 logical pair 具有 deterministic decode/boot parity disposition；所有 not-run 都有结构化基础设施原因。
-- multicart、graphics、audio、input、persistence 风险均有 aggregate disposition，开放 P0/P1 为 0。
-- 代表 Canvas 状态在本地人工审阅，tracked/release/CI 的第三方 bytes、截图、path、hash 和逐 pair 结果为 0。
-- `pnpm run test:phase-8e`、受影响 owner tests、`pnpm run test:architecture` 与 `pnpm run verify` 通过；随后
-  8F 成为唯一 active work unit。
+- 从既有 100 canonical local index 分层选择至少 10 个 case；aggregate 必须覆盖 graphics、audio、input、
+  persistence 和 multicart/complex-flow 风险，但 tracked 内容不得出现选择出的 cart identity。
+- 每个 case 通过既有 C2 contract 的 900 秒 duration gate 或明确完成的 critical-flow gate；smoke/CU 不能自动
+  升级为 C2。
+- 本地 observation 记录 main verbs、input、visual、audio、persistence、crash-free、soft-lock-free、reviewedAt
+  与证据 digest。所有操作继续走 production Chrome player，不允许用测试替身代替交互路径。
+- 按 `game-playtest` 工作流检查首次可操作状态、主要动作、Canvas 画面和必要的 audio/persistence 结果；截图、
+  录制与逐 case notes 只留在仓库外。
+- 发现通用缺口时先构造项目原创最小复现；禁止 cart-specific 分支、BBS/URL/filesystem authority 扩张和
+  第三方代码复制。
 
-## 8. Phase exit gate
+### 8.2 允许修改
+
+机器权威 allowlist 位于当前 phase contract 的 `workUnits.8F.allowedPaths`。Production 修改只允许用于 C2
+交互暴露且有原创回归的通用缺口；RuntimeCore、Worker/browser adapter 和 external corpus ownership 边界不变。
+
+### 8.3 验证与退出
+
+- 至少 10 个分层 case 满足 C2 duration 或 critical-flow gate，风险覆盖和 review 字段完整。
+- 代表 Canvas 状态均在本地人工审阅，open P0/P1 为 0；逐 case 数据不进入 tracked/release/CI。
+- `pnpm run test:phase-8f`、受影响 owner tests、`pnpm run test:architecture` 与 `pnpm run verify` 通过；随后
+  8G 成为唯一 active work unit。
+
+## 9. Phase exit gate
 
 - 100/100 canonical case 有 C* disposition；所有 in-profile case 完成 production Chrome fixed smoke。
 - 65 个 `.p8`/`.p8.png` pair 均完成 decode/boot parity 定性；差异必须进入 failure cluster 或 Known Difference。
