@@ -1,4 +1,0 @@
-{
-  "logicalPath": "packages/z8lua-bridge/src/illegal.ts",
-  "expectedRule": "bridge-runtime-core-runtime-import"
-}

@@ -1,4 +1,0 @@
-{
-  "logicalPath": "apps/web-player/src/worklet/illegal.ts",
-  "expectedRule": "worklet-imports-runtime"
-}

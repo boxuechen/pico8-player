@@ -5,7 +5,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -92,18 +91,60 @@ test("ref cannot be added to workspace globs", () => {
   }
 });
 
-for (const fixtureName of readdirSync(path.join(TEST_DIRECTORY, "fixtures")).sort()) {
-  test(`negative fixture is rejected: ${fixtureName}`, () => {
-    const fixtureDirectory = path.join(TEST_DIRECTORY, "fixtures", fixtureName);
-    const fixture = JSON.parse(readFileSync(path.join(fixtureDirectory, "fixture.json"), "utf8"));
-    const sourceText = readFileSync(path.join(fixtureDirectory, "source.ts"), "utf8");
+const negativeCases = [
+  {
+    name: "bridge-runtime-import",
+    logicalPath: "packages/z8lua-bridge/src/illegal.ts",
+    expectedRule: "bridge-runtime-core-runtime-import",
+    sourceText: "import \"@pico8-web/runtime-core\";",
+  },
+  {
+    name: "deep-import",
+    logicalPath: "packages/runtime-core/src/illegal.ts",
+    expectedRule: "deep-package-import",
+    sourceText: "import \"@pico8-web/cart-codec/src/public.js\";",
+  },
+  {
+    name: "main-to-runtime",
+    logicalPath: "apps/web-player/src/main/illegal.ts",
+    expectedRule: "main-imports-runtime",
+    sourceText: "import \"@pico8-web/runtime-core\";",
+  },
+  {
+    name: "packages-to-apps",
+    logicalPath: "packages/runtime-core/src/illegal.ts",
+    expectedRule: "package-imports-app",
+    sourceText: "import \"../../../apps/web-player/src/main/main.js\";",
+  },
+  {
+    name: "platform-leak",
+    logicalPath: "packages/runtime-core/src/illegal.ts",
+    expectedRule: "platform-global-leak",
+    sourceText: "document.title = \"illegal core platform access\";\ncreateImageBitmap(new Blob());\nglobalThis[\"DecompressionStream\"];",
+  },
+  {
+    name: "ref-import",
+    logicalPath: "packages/runtime-core/src/illegal.ts",
+    expectedRule: "ref-import",
+    sourceText: "import \"../../../ref/fake-08/source/cart.cpp\";",
+  },
+  {
+    name: "worklet-to-z8lua",
+    logicalPath: "apps/web-player/src/worklet/illegal.ts",
+    expectedRule: "worklet-imports-runtime",
+    sourceText: "import \"@pico8-web/z8lua-bridge\";",
+  },
+];
+
+for (const { name, logicalPath, sourceText, expectedRule } of negativeCases) {
+  test(`negative fixture is rejected: ${name}`, () => {
     const violations = auditSourceText({
       repoRoot: REPO_ROOT,
-      logicalPath: fixture.logicalPath,
+      logicalPath,
       sourceText,
     });
     const rules = [...new Set(violations.map(({ rule }) => rule))];
-    assert.deepEqual(rules, [fixture.expectedRule], violations.map(formatViolation).join("\n"));
+    assert.deepEqual(rules, [expectedRule], violations.map(formatViolation).join("\n"));
   });
 }
 
