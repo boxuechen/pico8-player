@@ -198,8 +198,6 @@ export function createSessionController(
   let cartDataSeeds: readonly PicoCartDataSeed[] = [];
   let hostPersistence = false;
   const pendingHostCartDataCommits: PicoCartDataCommit[] = [];
-  let audioSequence = 0;
-  let nextAudioSample = 0n;
   let instructionBudget: number | undefined;
   const scheduler = new FrameScheduler({ maximumCatchUpTicks: 5 });
   function createSession(): CartSession {
@@ -280,35 +278,20 @@ export function createSessionController(
   }
 
   function beginAudioGeneration(generation: number): void {
-    audioSequence = 0;
-    nextAudioSample = 0n;
-    audioTransport?.beginGeneration(generation, audioSequence, nextAudioSample);
+    audioTransport?.beginGeneration(generation);
   }
 
   function resetAudioQueue(generation: number): void {
     if (audioTransport === undefined) return;
     if (audioTransport.sessionGeneration !== generation) {
-      beginAudioGeneration(generation);
+      audioTransport.beginGeneration(generation);
     } else {
-      audioTransport.reset(audioSequence, nextAudioSample);
+      audioTransport.reset();
     }
   }
 
   function sendAudio(slice: CanonicalAudioSlice): void {
-    const firstSample = BigInt(slice.firstSample);
-    if (firstSample !== nextAudioSample) {
-      audioTransport?.reset(audioSequence, firstSample);
-      nextAudioSample = firstSample;
-    }
-    const pcm16le = slice.pcm16le.slice().buffer;
-    audioTransport?.send({
-      sequence: audioSequence,
-      firstSample,
-      frameCount: slice.frameCount,
-      pcm16le,
-    });
-    audioSequence = (audioSequence + 1) >>> 0;
-    nextAudioSample = firstSample + BigInt(slice.frameCount);
+    audioTransport?.submit(slice);
   }
 
   function recordPersistenceFailure(

@@ -5,11 +5,9 @@ import {
   type AudioResetMessage,
 } from "../transport/public.js";
 
-export interface RuntimeAudioMessagePort {
-  postMessage(message: AudioResetMessage | AudioChunkMessage, transfer: ArrayBuffer[]): void;
-  start?(): void;
-  close(): void;
-}
+import type { CanonicalAudioSlice } from "@pico8-web/runtime-core";
+import type { RuntimeAudioPort } from "../transport/runtime-port.js";
+export type RuntimeAudioMessagePort = RuntimeAudioPort;
 
 export interface CanonicalPcmChunk {
   readonly sequence: number;
@@ -67,7 +65,7 @@ export class PcmOutput {
     this.reset(nextSequence, firstSample);
   }
 
-  reset(nextSequence: number, firstSample: bigint): void {
+  reset(nextSequence = this.#nextSequence, firstSample = this.#nextFirstSample): void {
     this.#assertActive();
     assertUint32(nextSequence, "nextSequence");
     if (firstSample < 0n) throw new RangeError("firstSample must be non-negative");
@@ -80,6 +78,25 @@ export class PcmOutput {
       nextSequence,
       firstSample: firstSample.toString(),
     }, []);
+  }
+
+  submit(slice: CanonicalAudioSlice): void {
+    this.#assertActive();
+    const firstSample = BigInt(slice.firstSample);
+    if (firstSample !== this.#nextFirstSample) {
+      this.reset(this.#nextSequence, firstSample);
+    }
+    if (this.#port === undefined) {
+      this.#nextSequence = (this.#nextSequence + 1) >>> 0;
+      this.#nextFirstSample = firstSample + BigInt(slice.frameCount);
+      return;
+    }
+    this.send({
+      sequence: this.#nextSequence,
+      firstSample,
+      frameCount: slice.frameCount,
+      pcm16le: slice.pcm16le.slice().buffer,
+    });
   }
 
   send(chunk: CanonicalPcmChunk): void {

@@ -243,7 +243,7 @@ test("production controller exposes zero nested host, swap, frame, audio or pers
             get sessionGeneration() { return audioGeneration; },
             beginGeneration(generation) { audioGeneration = generation; },
             reset() {},
-            send() { audioSends += 1; },
+            submit() { audioSends += 1; },
           },
           persistence: {
             async hydrate() { return []; },
