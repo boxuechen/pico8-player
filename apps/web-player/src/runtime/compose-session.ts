@@ -114,6 +114,7 @@ type SessionLifecycle =
   | "disposed";
 
 interface PendingRootHostRequest {
+  readonly kind: "host";
   readonly sessionGeneration: number;
   readonly runtimeGeneration: number;
   readonly requestId: number;
@@ -126,6 +127,7 @@ interface PendingRootHostRequest {
 }
 
 interface PendingGuestLoad {
+  readonly kind: "load";
   readonly sessionGeneration: number;
   readonly requestId: number;
   readonly cancellation: CartCancellationSource;
@@ -133,6 +135,7 @@ interface PendingGuestLoad {
 }
 
 interface PendingExternalCartData {
+  readonly kind: "cart-data";
   readonly sessionGeneration: number;
   readonly runtimeGeneration: number;
   readonly requestId: number;
@@ -236,9 +239,7 @@ export function createSessionController(
   let mode: "none" | "callback" | "custom" = "none";
   let targetFps: 0 | 30 | 60 = 0;
   let devkitFlags = 0;
-  let pendingHostRequest: PendingRootHostRequest | undefined;
-  let pendingGuestLoad: PendingGuestLoad | undefined;
-  let pendingExternalCartData: PendingExternalCartData | undefined;
+  let pendingRequest: PendingRootHostRequest | PendingGuestLoad | PendingExternalCartData | undefined;
   let activeMenuSnapshot: CartSessionMenuSnapshot | undefined;
   const externalCstoreTargetIdentities = new Set<string>();
   let breadcrumbDepth = 0;
@@ -448,9 +449,7 @@ export function createSessionController(
     context: SessionContext,
     error: SerializedRuntimeError,
   ): SessionEvent {
-    cancelPendingHostRequest();
-    cancelPendingGuestLoad();
-    cancelPendingExternalCartData();
+    cancelPendingRequest();
     activeMenuSnapshot = undefined;
     lifecycle = "faulted";
     scheduler.pause();
@@ -501,25 +500,10 @@ export function createSessionController(
     return state({ ...context, sessionGeneration: generation }, next);
   }
 
-  function cancelPendingHostRequest(): void {
-    const pending = pendingHostRequest;
-    if (pending === undefined) return;
-    pendingHostRequest = undefined;
-    pending.cancellation.cancel();
-  }
-
-  function cancelPendingGuestLoad(): void {
-    const pending = pendingGuestLoad;
-    if (pending === undefined) return;
-    pendingGuestLoad = undefined;
-    pending.cancellation.cancel();
-  }
-
-  function cancelPendingExternalCartData(): void {
-    const pending = pendingExternalCartData;
-    if (pending === undefined) return;
-    pendingExternalCartData = undefined;
-    pending.cancellation.cancel();
+  function cancelPendingRequest(): void {
+    const pending = pendingRequest;
+    pendingRequest = undefined;
+    pending?.cancellation.cancel();
   }
 
   function guestLoadFault(
@@ -527,8 +511,8 @@ export function createSessionController(
     pending: PendingGuestLoad,
     error: unknown,
   ): void {
-    if (pendingGuestLoad !== pending) return;
-    pendingGuestLoad = undefined;
+    if (pendingRequest !== pending) return;
+    pendingRequest = undefined;
     session.stop();
     const serialized: SerializedRuntimeError = error instanceof CartCodecError
       ? {
@@ -574,7 +558,7 @@ export function createSessionController(
         pending.cancellation.token,
       );
       if (
-        pendingGuestLoad !== pending || pending.cancellation.token.cancelled ||
+        pendingRequest !== pending || pending.cancellation.token.cancelled ||
         pending.sessionGeneration !== sessionGeneration
       ) return;
 
@@ -610,7 +594,7 @@ export function createSessionController(
         guestLoadFault(context, pending, oldDisposed.error);
         return;
       }
-      pendingGuestLoad = undefined;
+      pendingRequest = undefined;
       session = staged;
       sessionGeneration = nextSessionGeneration;
       externalCstoreTargetIdentities.clear();
@@ -655,8 +639,7 @@ export function createSessionController(
     continueRunning: boolean,
   ): readonly SessionEvent[] {
     if (
-      pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
-      pendingExternalCartData !== undefined
+      pendingRequest !== undefined
     ) {
       return [fault(context, {
         code: "E_HOST_REQUEST",
@@ -680,18 +663,19 @@ export function createSessionController(
     scheduler.pause();
     lifecycle = "waiting-host";
     const pending: PendingGuestLoad = {
+      kind: "load",
       sessionGeneration,
       requestId: request.id,
       cancellation: new CartCancellationSource(),
       continueRunning,
     };
-    pendingGuestLoad = pending;
+    pendingRequest = pending;
     void completeGuestLoad(context, pending, decoded);
     return [state(context, "waiting-host")];
   }
 
   function externalCartDataIsCurrent(pending: PendingExternalCartData): boolean {
-    return pendingExternalCartData === pending &&
+    return pendingRequest === pending &&
       !pending.cancellation.token.cancelled &&
       pending.sessionGeneration === sessionGeneration &&
       pending.runtimeGeneration === session.generation;
@@ -701,7 +685,7 @@ export function createSessionController(
     pending: PendingExternalCartData,
   ): void {
     if (!externalCartDataIsCurrent(pending)) return;
-    pendingExternalCartData = undefined;
+    pendingRequest = undefined;
     pending.emit(pending.resume(new Uint8Array(), true));
   }
 
@@ -758,7 +742,7 @@ export function createSessionController(
       }
 
       if (!externalCartDataIsCurrent(pending)) return;
-      pendingExternalCartData = undefined;
+      pendingRequest = undefined;
       pending.emit(pending.resume(new Uint8Array(), false));
     } catch {
       failExternalCartData(pending);
@@ -771,8 +755,7 @@ export function createSessionController(
     resume: PendingRootHostRequest["resume"],
   ): readonly SessionEvent[] {
     if (
-      pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
-      pendingExternalCartData !== undefined
+      pendingRequest !== undefined
     ) {
       session.stop();
       return [fault(context, {
@@ -810,6 +793,7 @@ export function createSessionController(
       scheduler.pause();
       lifecycle = "waiting-host";
       const pending: PendingExternalCartData = {
+      kind: "cart-data",
         sessionGeneration,
         runtimeGeneration: hostRequest.generation,
         requestId: hostRequest.id,
@@ -817,7 +801,7 @@ export function createSessionController(
         resume,
         emit: context.onResume,
       };
-      pendingExternalCartData = pending;
+      pendingRequest = pending;
       void completeExternalCartData(
         pending,
         request,
@@ -842,10 +826,10 @@ export function createSessionController(
     completion: RootHostRequestCompletion | undefined,
   ): void {
     if (
-      pendingHostRequest !== pending || pending.cancellation.token.cancelled ||
+      pendingRequest !== pending || pending.cancellation.token.cancelled ||
       pending.sessionGeneration !== sessionGeneration
     ) return;
-    pendingHostRequest = undefined;
+    pendingRequest = undefined;
 
     const valid = completion !== undefined &&
       completion.generation === pending.runtimeGeneration &&
@@ -874,8 +858,7 @@ export function createSessionController(
     }
     if (
       request.bytes.byteLength > PICO_HOST_REQUEST_MAX_BYTES ||
-      pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
-      pendingExternalCartData !== undefined
+      pendingRequest !== undefined
     ) {
       return [fault(context, {
         code: "E_HOST_REQUEST",
@@ -889,6 +872,7 @@ export function createSessionController(
     lifecycle = "waiting-host";
     const cancellation = new CartCancellationSource();
     const pending: PendingRootHostRequest = {
+      kind: "host",
       sessionGeneration,
       runtimeGeneration: request.generation,
       requestId: request.id,
@@ -896,7 +880,7 @@ export function createSessionController(
       resume,
       emit: context.onResume,
     };
-    pendingHostRequest = pending;
+    pendingRequest = pending;
     const handlerRequest = Object.freeze({
       generation: request.generation,
       requestId: request.id,
@@ -1202,9 +1186,7 @@ export function createSessionController(
     if (context.sessionGeneration <= sessionGeneration) {
       return generationFault(context, "loadCart requires a new session generation");
     }
-    cancelPendingHostRequest();
-    cancelPendingGuestLoad();
-    cancelPendingExternalCartData();
+    cancelPendingRequest();
     activeMenuSnapshot = undefined;
     sessionGeneration = context.sessionGeneration;
     instructionBudget = load.instructionBudget;
@@ -1264,9 +1246,7 @@ export function createSessionController(
   }
 
   function releaseResources(generation: number) {
-    cancelPendingHostRequest();
-    cancelPendingGuestLoad();
-    cancelPendingExternalCartData();
+    cancelPendingRequest();
     activeMenuSnapshot = undefined;
     scheduler.reset();
     clearInputState();
@@ -1291,9 +1271,7 @@ export function createSessionController(
     if (lifecycle === "disposed" || context.sessionGeneration <= sessionGeneration) {
       return generationFault(context, "reset requires a new session generation");
     }
-    cancelPendingHostRequest();
-    cancelPendingGuestLoad();
-    cancelPendingExternalCartData();
+    cancelPendingRequest();
     activeMenuSnapshot = undefined;
     sessionGeneration = context.sessionGeneration;
     scheduler.reset();
@@ -1412,9 +1390,7 @@ export function createSessionController(
   }
 
   function stopSync(context: SessionContext): readonly SessionEvent[] {
-    cancelPendingHostRequest();
-    cancelPendingGuestLoad();
-    cancelPendingExternalCartData();
+    cancelPendingRequest();
     const stopped = session.stop();
     scheduler.reset();
     clearInputState();
