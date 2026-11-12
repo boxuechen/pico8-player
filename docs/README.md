@@ -7,10 +7,13 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 16；[`Unified lifecycle queue exit evidence`](./evidence/phase-16/171-phase-16-unified-lifecycle-queue-exit-evidence.md) |
+| 最近完成 | Phase 17；[`Standalone session exit evidence`](./evidence/phase-17/181-phase-17-standalone-session-exit-evidence.md) |
 | 当前阶段 | None |
 | Active work unit | None |
-| 最近关闭的机器合同 | [`spec/phase-16-unified-lifecycle-queue-contract.json`](../spec/phase-16-unified-lifecycle-queue-contract.json) |
+| 最近关闭的机器合同 | [`spec/phase-17-player-session-contract.json`](../spec/phase-17-player-session-contract.json) |
+
+Phase 17 已关闭：默认主线程直调共享 session，独立 manual API 与 JSON tool adapter 支持源码→按帧执行→观察。
+可选 Worker 复用同一实现；RuntimeCore/z8lua 语义未修改。
 
 Phase 16 已关闭：API、DOM、文件加载与环境事件共享 Controller-owned lifecycle queue；
 复合操作、首帧 barrier 与 terminal dispose 已完成 Node/Chrome 并发回归。当前没有 active phase。
@@ -42,6 +45,7 @@ matrix、长测和远程发布均未执行。
 | 测试策略、兼容矩阵和发布门禁 | [`06-testing-compatibility.md`](./06-testing-compatibility.md) |
 | ADR 索引、风险和真正未决问题 | [`07-decisions-risks-open-questions.md`](./07-decisions-risks-open-questions.md) |
 | 源码目录、依赖和 composition roots | [`08-source-layout-and-boundaries.md`](./08-source-layout-and-boundaries.md) |
+| 独立组件与工具接入 | [`11-standalone-session.md`](./11-standalone-session.md) |
 | 通用 Codex 工作协议 | [`09-codex-task-protocol.md`](./09-codex-task-protocol.md) |
 | 本地参考源码与许可隔离 | [`10-reference-sources.md`](./10-reference-sources.md) |
 | 已完成阶段和 differential 记录 | [`evidence/`](./evidence/) |
@@ -75,7 +79,7 @@ matrix、长测和远程发布均未执行。
 - z8lua WASM 负责 P8 Lua parser、VM、coroutine、GC 和 Q16.16 语言语义。
 - TypeScript Runtime 负责 cart hardware、Pico RAM、graphics、audio、input、
   persistence、scheduler 和 player orchestration。
-- Runtime 在 Web Worker；Canvas/WebGL 和 AudioContext/AudioWorklet 是 app adapters。
+- Runtime 与线程无关，默认主线程直调，Worker 为可选适配；Canvas/WebGL 和 AudioContext/AudioWorklet 是 app adapters。
 - Chrome/Chromium 是唯一浏览器支持和发布门禁；Firefox/WebKit 不在范围。
 - `.p8.png` 从 bytes 无损解析，禁止用 Canvas 读取 cart payload。
 - 当前 profile 只接受 caller-provided/caller-authorized local cart bytes；未经授权不实现 BBS

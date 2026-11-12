@@ -103,7 +103,7 @@ async function run() {
   check(writes.every(w => w.value === (w.contentId === "cart-a" ? 10 : 40)),
     "commit crossed content identities");
   check(flushes.at(-1) === "cart-b", "dispose did not flush B");
-  check(frames.size === 0 && contexts[0].state === "closed" && terminated === 1,
+  check(frames.size === 0 && contexts[0].state === "closed" && terminated === 0,
     "host facade leaked resources");
 
   mount.replaceChildren();
@@ -117,7 +117,7 @@ async function run() {
   await fresh.dispose();
   await sleep(20);
   check(unhandled.length === 0, `unhandled rejections: ${unhandled}`);
-  check(workers === 2 && terminated === 2 && frames.size === 0 &&
+  check(workers === 0 && terminated === 0 && frames.size === 0 &&
     contexts.every(context => context.state === "closed"), "final resource teardown failed");
   return { writes: writes.length, contentIds: [...new Set(writes.map(w => w.contentId))],
     workers, terminated, closedAudioContexts: contexts.length, activeAnimationFrames: frames.size,

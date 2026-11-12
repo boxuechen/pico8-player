@@ -88,36 +88,33 @@ TypeScript 负责：
 历史 decision ledger 已由 [`docs/adr/`](./adr/) 和
 [`07-decisions-risks-open-questions.md`](./07-decisions-risks-open-questions.md) 接管，本文件不复制其
 阶段状态。当前必须保持的结论包括：fixed WASM memory、bytes-only `.p8.png`、dedicated
-MessagePort audio、四 package/三 execution-domain 边界、root-only recoverable HostRequest，以及
+MessagePort audio、四 package 与 app runtime/host 边界、root-only recoverable HostRequest，以及
 callback/custom-loop committed-slice clock。改变其中任一项必须先替代对应 Accepted ADR。
 
 ## 3. 运行拓扑与数据流
 
 ```text
-Window PlayerController <── control / input / frame / diagnostics ──> RuntimeWorker
-        │                                                          ├─ RuntimeCore
-        │ creates MessageChannel                                   ├─ z8lua WASM <─> PicoRam
-        │ transfers port A                                         ├─ Cart/Graphics/Input/Scheduler
-        ▼                                                          └─ AudioSynth
-AudioWorklet <──────── port B : bounded PCM queue ──────────────────────────┘
+Window PlayerController / Manual Session -> app runtime -> RuntimeCore + z8lua + PicoRam
+Optional Worker adapter -------------------^
+app runtime PCM -> dedicated MessagePort -> AudioWorklet (when mounted)
 ```
 
 关键约束：
 
-- **MUST** 在 Dedicated Worker 内运行 z8lua、Graphics、AudioSynth 和调度器。cart 卡死时，主线程必须仍可响应并终止 Worker。
+- Runtime 实现 **MUST** 与线程无关；默认由主线程直接调用，可选 Worker adapter 才提供外部终止能力。
 - **MUST NOT** 从 WASM import 中操作 DOM、Canvas、AudioContext、`fetch()` 或 IndexedDB Promise。
 - 所有 Lua 调用的 PICO API 都是同步的。需要异步资源时，ABI 必须产生可恢复的 `HostRequest`，Runtime 暂停 VM，资源就绪后显式 resume；不得伪造同步网络读取。
 - Canvas/WebGL 只是呈现器，AudioWorklet 只是设备适配器。二者不得反向决定游戏状态或逻辑 tick。
 - Window 只负责创建 AudioContext/AudioWorklet 和转交专用 port；完成握手后，PCM 数据
-  **MUST** 走 Worker ↔ AudioWorklet 的专用 `MessagePort`，不混入 Window↔Worker 控制协议。
+  **MUST** 走 execution host ↔ AudioWorklet 的专用 `MessagePort`，不混入 Window↔Worker 控制协议。
 
 ## 4. 依赖方向
 
 允许的依赖方向如下：
 
 ```text
-player-ui ──> runtime-client/protocol
-runtime-worker ──> RuntimeCore ──> domain ports
+player-ui ──> app session facade
+app runtime ──> RuntimeCore ──> domain ports
 RuntimeCore ──> CartSession / PicoRam / Graphics / AudioSynth / Input / Scheduler
 Graphics / AudioSynth / Input ──> PicoRam
 WasmBridge ──> PicoApiHost interfaces ──> RuntimeCore modules
@@ -130,7 +127,7 @@ IndexedDB / network / File API ──> port adapters（实现接口）
 - `CartParser` **MUST NOT** 发网络请求、读 IndexedDB 或创建 Canvas。
 - Graphics **MUST NOT** 依赖 Canvas/WebGL；AudioSynth **MUST NOT** 依赖 AudioContext。
 - z8lua glue **MUST NOT** 知道 URL、BBS、IndexedDB schema 或 UI。
-- 主线程 **MUST NOT** 直接读写 WASM/PICO RAM。
+- UI/presenter **MUST NOT** 直接读写 WASM/PICO RAM；主线程中执行的 RuntimeCore/bridge 仍拥有该能力。
 
 源码目录不在本文重复定义；唯一 canonical layout、package exports、composition roots 和机器边界门禁见 [08-source-layout-and-boundaries.md](./08-source-layout-and-boundaries.md)。本文概念模块映射如下：
 
@@ -144,7 +141,7 @@ IndexedDB / network / File API ──> port adapters（实现接口）
 | Window ↔ Worker、Worker ↔ Worklet DTO | `apps/web-player/src/transport` |
 | DOM、renderer、input frontend、Worker/Worklet entrypoint、IndexedDB adapter | `apps/web-player` 对应 execution domain |
 
-RuntimeCore 不 import z8lua concrete adapter；`apps/web-player/src/worker/compose-runtime.ts` 是唯一把 core、codec、bridge 和浏览器 adapters 组装起来的 composition root。
+RuntimeCore 不 import z8lua concrete adapter；`apps/web-player/src/runtime/compose-session.ts` 把 core、codec、bridge 与外部 adapter ports 组装起来，供主线程和 Worker 复用。
 
 ADR-008 已 Accepted：production API schema 单向生成 C descriptor 与 TS dispatcher，生成物
 必须位于独立目录并由 hash manifest/architecture test 审计。prototype schema 不得作为
@@ -256,11 +253,11 @@ fake-08/zepto8 参考路径做格式交叉检查；production 实现和 fixtures
 > [`cart-repository-port.ts`](../packages/runtime-core/src/ports/cart-repository-port.ts) 和 package
 > exports 为准；本文不复制接口定义。
 
-Runtime 只认识 opaque cart ref。当前 Worker 的
+Runtime 只认识 opaque cart ref。当前 app runtime 的
 [`LocalCartBundleResolver`](../apps/web-player/src/worker/adapters/host-cart-resolver-adapter.ts) 只解析
 调用方随 `loadCart` 显式提供的 bounded bundle，不做 discovery、文件系统或网络访问；
 [`CartRepositoryAdapter`](../apps/web-player/src/worker/adapters/cart-repository-adapter.ts) 负责
-Worker-local parsed-cart cache 与 copy-on-write data overlay。BBS、URL 或其他来源必须由未来 phase
+session-local parsed-cart cache 与 copy-on-write data overlay。BBS、URL 或其他来源必须由未来 phase
 显式授权新的 adapter，RuntimeCore **MUST NOT** 内建抓取 Lexaloffle BBS 的逻辑。
 
 `CartCancellationToken` 是 RuntimeCore 自己的 runtime-neutral contract；`AbortSignal`/DOM type 不得
@@ -459,7 +456,7 @@ channel；Window↔Worker 的一般 `RuntimeCommand/RuntimeEvent` 不转发 PCM�
 
 - AudioSynth **MUST** 由逻辑 tick 和已生成 sample index 驱动，禁止读取 `performance.now()`。
 - 22050/60 = 367.5；必须使用整数有理数 accumulator（例如交替 367/368），不得因浮点累计漂移。30fps 每 tick 为 735 samples。
-- 输入相同的 cart、RAM、API 调用和 tick 数时，Worker 生成的 PCM bytes 必须 bit-exact；设备重采样结果不属于核心确定性状态。
+- 输入相同的 cart、RAM、API 调用和 tick 数时，Runtime 生成的 PCM bytes 必须 bit-exact；设备重采样结果不属于核心确定性状态。
 - AudioContext 未经用户手势启动或 worklet underrun 时，audio subsystem 不得自行暂停、加速或回滚游戏模拟。页面后台化只可由 Runtime 明确的 visibility policy 同时暂停 scheduler/audio；不得由设备 queue 状态暗中决定。
 - 队列超过高水位时应丢弃/重同步设备队列并上报 `audio-overrun`，不得让音频反压阻塞 VM。
 - cart swap/reset/fault 必须使旧 `sessionGeneration` 的 chunk 失效，并重置 synth 与 worklet 队列。
@@ -481,7 +478,7 @@ keypress FIFO、逐 slice delta latch 与 `stat()` consumption 由 RuntimeCore �
 pointer lock 和 event normalization 仍由 app 拥有。
 
 - **MUST** 在每个 simulation slice 开始锁存输入；常规 callback 模式在 `_update`/`_update60` 前可见，自定义 loop 则在 resume 后直至下一 `flip()` boundary 保持稳定。同一 slice 内多次 `btn()` 结果相同；慢帧多 update 的重锁存细节由 conformance 固定。
-- `btnp()` edge/repeat 由 Worker 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效；省略 button 时返回 player 0/1 的当前 edge/repeat mask。
+- `btnp()` edge/repeat 由 Runtime 的 tick 计数计算，不使用浏览器 `KeyboardEvent.repeat`。`0x5f5c/0x5f5d` 的初始延迟和重复间隔必须生效；省略 button 时返回 player 0/1 的当前 edge/repeat mask。
 - replay 记录每 tick 的 normalized input snapshot，不记录 DOM timestamp。相同 replay 必须产生相同状态 hash。
 - `blur`、visibility loss、设备断连和 cart swap 必须显式清 held 状态，防止 stuck key。
 - 主线程映射可配置，但 core 只接收 PICO button index；UI 快捷键不得泄漏为 cart 输入。
@@ -563,7 +560,7 @@ type StepResult = Readonly<{
 
 ## 11. Persistence
 
-> 状态：Implemented。覆盖 browser-neutral 同步 guest mirror、Worker-owned IndexedDB
+> 状态：Implemented。覆盖 browser-neutral 同步 guest mirror、app-owned IndexedDB
 > hydrate/commit transaction、migration、lifecycle flush 与 recoverable diagnostics。
 
 ### 11.1 同步 guest、异步浏览器
@@ -579,14 +576,18 @@ type StepResult = Readonly<{
 - 提交必须 copy bytes，不能把会继续变化的 RAM view 交给 IndexedDB。
 - quota、事务失败必须上报 `E_PERSISTENCE_WRITE`，游戏可以继续但 UI 必须可见“存档未保存”；不得谎报成功。
 - `CartDataPersistencePort.flush()` 返回 `{ durable, message? }`，失败 snapshot 保留供 retry。
-  Worker 的 `persistence-flushed` 必须携带明确的 boolean durability；默认 profile 的公开 flush
+  session 的 `persistence-flushed` 必须携带明确的 boolean durability；默认 profile 的公开 flush
   透传该结果，不能把 acknowledgement 当作 durable success。Host profile 中该应答只表示
-  Worker commit drain 完成，公开成功还必须等待 host write queue 和 adapter flush。
+  runtime commit drain 完成，公开成功还必须等待 host write queue 和 adapter flush。
 - schema migration 必须版本化、可回滚读取，并保留 256 bytes 原值。
 
 `cstore` 不得覆写用户本地原文件。Web Player 使用每 cart identity 的 copy-on-write ROM overlay，并可由 UI 另行提供导出；overlay 是否跨 session 持久化由产品配置决定，但同一次运行内 `cstore` 后的 `reload` 必须读取新值。
 
 ## 12. Worker、watchdog 与消息协议
+
+[ADR-031](./adr/031-standalone-session-main-thread-default.md) 将默认路径改为主线程 direct session。
+以下 wire/watchdog 条款只适用于可选 Worker adapter；共享 session 不包含 wire v 或 workerGeneration。
+逻辑 session generation、异步 host cancellation 与 deterministic VM instruction cap 在两种执行方式中均保留。
 
 > 状态：Implemented。精确 union、validator 与 transfer list 只以
 > [`player-protocol.ts`](../apps/web-player/src/transport/player-protocol.ts)、

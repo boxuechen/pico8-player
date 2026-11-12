@@ -41,15 +41,9 @@ type CommandBody<T = Phase0EHostToRuntime> = T extends Phase0EHostToRuntime
   ? Omit<T, "v" | "requestId" | "sessionGeneration">
   : never;
 
-export class RuntimeClientError extends Error {
-  readonly record: SerializedRuntimeError;
+export { RuntimeClientError } from "../transport/runtime-error.js";
+import { RuntimeClientError } from "../transport/runtime-error.js";
 
-  constructor(record: SerializedRuntimeError) {
-    super(record.message);
-    this.name = "RuntimeClientError";
-    this.record = record;
-  }
-}
 
 export class Phase0ERuntimeClient {
   readonly #factory: RuntimeWorkerFactory;

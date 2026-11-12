@@ -439,7 +439,7 @@ z8lua numeric `for` 的 next index 必须先在扩大到 `int64` 的 raw Q16.16 
 signed `int32` 可表示范围则结束循环。不得先执行 signed C++ overflow，再用已经回绕的值判断方向；
 否则接近 `0x7fff` / `-0x8000` 的有限循环可能退化成 runaway。
 
-Window watchdog 是第二层：若 Worker 在 wall-clock deadline 内没有回复，Window 终止整个 Worker 并重建 session。它覆盖 C parser、host import、WASM trap 或 hook 无法中断的情况；它不能替代 instruction hook。deadline 必须考虑后台暂停和移动设备抖动，并在 browser test 后确定。
+可选 Worker adapter 的 Window watchdog 是第二层（默认主线程没有此抢占能力，见 ADR-031）：若 Worker 在 wall-clock deadline 内没有回复，Window 终止整个 Worker 并重建 session。它覆盖 C parser、host import、WASM trap 或 hook 无法中断的情况；它不能替代 instruction hook。deadline 必须考虑后台暂停和移动设备抖动，并在 browser test 后确定。
 
 ### 9.3 Error record
 
@@ -468,8 +468,9 @@ imports 与 artifact hash 分别由 `wasm/toolchain.lock.json` 和
 `wasm/manifest.lock.json` 机器验证。production artifact 使用 16 MiB fixed memory、
 `worker,node` ES module、Wasm EH、`SUPPORT_LONGJMP=wasm`、filesystem/dynamic
 execution/growth off。binary descriptor 已验证 `initial=maximum=256` pages，
-`grow(1)` 失败且 view identity 不变。`node` 只服务 CI Worker smoke；当前资源契约固定为
+`grow(1)` 失败且 view identity 不变。`node` 也服务独立 manual session 与 CI smoke；当前资源契约固定为
 16 MiB linear memory 与 2 MiB default Lua heap，变更必须先修改机器契约与资源测试。
+Phase 17 复用同一锁定 loader/binary；生成 loader 已包含 Window 异步加载分支，主线程行为由 Chrome gate 验证，未修改 ABI 或构建 flags。
 
 z8lua 的 `.c` 作为 C++17 编译，并在 protected error path 使用 C++ `try/throw`，
 因此不能使用 `-fno-exceptions`。工具链固定使用 native Wasm exceptions；正式浏览器

@@ -1,3 +1,5 @@
+import { createPlayerSession } from "../runtime/create-session.js";
+import type { PlayerRuntimePort } from "../transport/runtime-port.js";
 import type {
   PicoInputSnapshot,
 } from "@pico8-web/contracts";
@@ -7,6 +9,7 @@ import type {
 import {
   DedicatedAudioFrontend,
   type AudioFrontendOptions,
+  type RuntimeAudioPortTarget,
 } from "./audio-frontend.js";
 import {
   Canvas2DFramePresenter,
@@ -145,6 +148,7 @@ export class Phase0FPlayerComposition {
 }
 
 export interface PlayerCompositionOptions {
+  readonly execution?: "main" | "worker";
   readonly canvas: HTMLCanvasElement;
   readonly runtimeWorkerFactory?: PlayerRuntimeWorkerFactory;
   /** Use package-owned, relative Worker and AudioWorklet assets. */
@@ -158,7 +162,7 @@ const AUDIO_RESUME_PROBE_TIMEOUT_MS = 250;
 
 /** Stable player composition; DOM policy remains in PlayerController. */
 export class PlayerComposition {
-  readonly runtime: PlayerRuntimeClient;
+  readonly runtime: PlayerRuntimePort & RuntimeAudioPortTarget;
   readonly presenter: Canvas2DFramePresenter;
   readonly audio: DedicatedAudioFrontend | undefined;
   readonly #removeRuntimeListener: () => void;
@@ -166,7 +170,7 @@ export class PlayerComposition {
   #disposed = false;
 
   private constructor(
-    runtime: PlayerRuntimeClient,
+    runtime: PlayerRuntimePort & RuntimeAudioPortTarget,
     presenter: Canvas2DFramePresenter,
     audio: DedicatedAudioFrontend | undefined,
   ) {
@@ -191,6 +195,10 @@ export class PlayerComposition {
   }
 
   static async create(options: PlayerCompositionOptions): Promise<PlayerComposition> {
+    if (options.commandTimeoutMs !== undefined &&
+      (!Number.isFinite(options.commandTimeoutMs) || options.commandTimeoutMs <= 0)) {
+      throw new RangeError("commandTimeoutMs must be positive");
+    }
     if (options.useDefaultAssets === true && options.runtimeWorkerFactory !== undefined) {
       throw new TypeError("default assets and a custom Worker factory are mutually exclusive");
     }
@@ -200,17 +208,16 @@ export class PlayerComposition {
         { type: "module" },
       )
       : options.runtimeWorkerFactory;
-    if (runtimeWorkerFactory === undefined) {
-      throw new TypeError("a runtime Worker factory is required");
-    }
     const workletModuleUrl = options.useDefaultAssets === true
       ? new URL("../worklet/pico8-audio-processor.js", import.meta.url)
       : options.workletModuleUrl;
-    const runtime = new PlayerRuntimeClient(runtimeWorkerFactory, {
-      ...(options.commandTimeoutMs === undefined
-        ? {}
-        : { commandTimeoutMs: options.commandTimeoutMs }),
-    });
+    const useWorker = options.execution === "worker" || options.runtimeWorkerFactory !== undefined;
+    if (useWorker && runtimeWorkerFactory === undefined) throw new TypeError("a runtime Worker factory is required");
+    const runtime: PlayerRuntimePort & RuntimeAudioPortTarget = useWorker
+      ? new PlayerRuntimeClient(runtimeWorkerFactory!, {
+        ...(options.commandTimeoutMs === undefined ? {} : { commandTimeoutMs: options.commandTimeoutMs }),
+      })
+      : await createPlayerSession();
     const presenter = new Canvas2DFramePresenter(options.canvas);
     presenter.reset(runtime.sessionGeneration);
     let audio: DedicatedAudioFrontend | undefined;

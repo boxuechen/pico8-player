@@ -58,6 +58,17 @@ The manifest fetch above discovers release assets only; cart acquisition remains
 explicit responsibility. Use `pnpm run verify:release` for the bounded Chrome RC gate. No npm package,
 website, GitHub Release, or other external publication is performed by the build or test commands.
 
+## Standalone session and agent tools
+
+The web facade executes on the main thread by default. Set `execution: "worker"` to use the optional
+isolated adapter. Both hosts use the same session execution and RuntimeCore.
+
+The release also exports `createPico8Session()` and `createPico8SessionTool(session)` for a manual
+source → exact-frame input → image/diagnostic observation loop. A standalone session creates no DOM,
+RAF, Worker or audio device. It works in Chrome and in a Node process importing the extracted release.
+See [the standalone component guide](./docs/11-standalone-session.md) for code, JSON tool arguments,
+image encoding, lifecycle boundaries and plugin integration.
+
 ## Local cart gallery
 
 The repository includes a loopback-only developer gallery for manually browsing a caller-authorized directory

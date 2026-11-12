@@ -1,9 +1,20 @@
 {
   "files": [],
   "references": [
-    { "path": "./src/transport" },
-    { "path": "./src/main" },
-    { "path": "./src/worker" },
-    { "path": "./src/worklet" }
+    {
+      "path": "./src/transport"
+    },
+    {
+      "path": "./src/runtime"
+    },
+    {
+      "path": "./src/main"
+    },
+    {
+      "path": "./src/worker"
+    },
+    {
+      "path": "./src/worklet"
+    }
   ]
 }

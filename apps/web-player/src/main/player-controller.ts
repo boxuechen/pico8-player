@@ -1,6 +1,6 @@
 import type {
   PlayerMenuItemSnapshot,
-  PlayerRuntimeToHost,
+  SessionEvent as PlayerRuntimeToHost,
 } from "../transport/public.js";
 import type { PicoInputSnapshot } from "@pico8-web/contracts";
 import { RuntimeClientError } from "./runtime-client.js";

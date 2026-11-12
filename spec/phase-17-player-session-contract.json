@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "phase": "17",
+  "name": "standalone-player-session",
+  "status": "complete",
+  "activeWorkUnit": null,
+  "orderedSteps": [
+    "preserve-core",
+    "thread-independent-session",
+    "main-thread-default",
+    "agent-loop-surface",
+    "optional-worker-adapter"
+  ],
+  "defaultExecution": "main",
+  "optionalExecution": "worker",
+  "guestSemanticsChanged": false,
+  "publicWebApiVersion": 2,
+  "sessionApiVersion": 1,
+  "manualFrameLimit": 600,
+  "historicalRuns": 0,
+  "soakRuns": 0,
+  "externalCorpusRuns": 0,
+  "completedWorkUnits": [
+    "17A"
+  ],
+  "evidence": "docs/evidence/phase-17/181-phase-17-standalone-session-exit-evidence.md",
+  "api": {
+    "session": [
+      "loadSource",
+      "loadCart",
+      "advance",
+      "observe",
+      "reset",
+      "dispose"
+    ],
+    "toolActions": [
+      "load_source",
+      "advance",
+      "observe",
+      "reset",
+      "dispose"
+    ],
+    "defaultPersistence": "memory",
+    "optionalPersistence": "indexeddb",
+    "observationIdentity": [
+      "sessionId",
+      "revision",
+      "generation",
+      "frameId"
+    ],
+    "imageFormats": [
+      "rgba8",
+      "packed-4bpp",
+      "rgba8-base64"
+    ],
+    "diagnosticLimit": 64,
+    "manualYieldEveryFrames": 8,
+    "transientInput": "first-frame-only",
+    "defaultWorkerCount": 0,
+    "manualDeviceCount": 0,
+    "preemptiveWatchdog": "optional-worker-only",
+    "guestPrintCapture": false
+  },
+  "result": {
+    "focusedNodeTests": 75,
+    "newSessionTests": 12,
+    "extractedPackageTests": 1,
+    "chromeVersion": "Google Chrome 157.0.8103.51",
+    "workersCreated": 1,
+    "workersTerminated": 1,
+    "audioContextsClosed": 4,
+    "activeAnimationFrames": 0,
+    "unhandledRejections": 0,
+    "focusedChromeScenarios": 2,
+    "quickTests": 78,
+    "releasePackageSha256": "e277c15813cc60f68f30733bcb3e59bf09aaa66596c87437ba4ba1135a3027e5"
+  }
+}

@@ -8,7 +8,8 @@
 当前本地候选是 **`0.2.0-alpha.1` PICO-8 v0.2.7 L3 local/multicart Web Player on Chrome/Chromium desktop**：
 
 - 接受 caller-provided `.p8` / `.p8.png` bytes，以及 caller-authorized local bundle。
-- cart code 运行在可终止的 production Worker；Canvas、AudioContext 和 DOM 只存在于 app adapter。
+- cart code 默认在主线程 session 运行，可显式选择可终止 Worker；Canvas、AudioContext 和 DOM 只存在于 app adapter。
+- 独立 manual session 支持 Lua source、bounded logical-frame advance 与 copy-owned observations；不创建 UI/audio devices。
 - 支持 root `load/run/stop`、local multicart、external local `reload/cstore`、cart-defined pause menu、
   keyboard/touch/gamepad、audio、persistence 与 structured recovery。
 - 不自动访问 BBS，不解析任意 URL 或宿主文件系统，不发布第三方 cart 内容。
@@ -18,7 +19,7 @@
 `required unknown=0`。唯一权威数据源是
 [`spec/pico-api-inventory.yaml`](../spec/pico-api-inventory.yaml)；文档不维护第二份 API 清单。
 
-当前真实 cart 证据支持以下有界结论：
+历史 Worker profile 的真实 cart 证据支持以下有界结论（不视为默认主线程性能重新认证）：
 
 - canonical fixed smoke：`100/100` 完成，playability disposition 为 `100 CU`。
 - representative playability：`10/10 C2`。
@@ -68,6 +69,7 @@ CU 不进入分母。报告必须给出 corpus、revision、player/WASM/Chrome �
 | --- | --- | --- |
 | 日常改动 | `pnpm run verify` | 默认 quick gate；architecture、codec、embed lifecycle/persistence 与 release exit integrity |
 | 当前测试别名 | `pnpm test` | 与 quick gate 相同 |
+| 独立会话与执行适配 | `pnpm run test:player-session` | 真实 WASM manual loop、原有 guest/host/menu/scheduler 与 lifecycle；需要锁定 WASM artifact |
 | 生命周期并发 | `pnpm run test:lifecycle-queue` | API/UI/environment 顺序、terminal dispose、首帧、持久化和受影响 shell/input tests；部分需要既有锁定 WASM |
 | Phase 9 owner integrity | `pnpm run verify:phase-9` | 已关闭阶段的快速完整性入口，不读外部 corpus |
 | Focused release | `pnpm run verify:release` | release artifact + 短 Chrome player lifecycle |
@@ -129,7 +131,7 @@ Focused release gate 至少覆盖：
   combined notices、deterministic archive/checksum 和 nested base path。
 - local file choose/drop、player state/ARIA、keyboard/touch、mute/fullscreen 与 audio unlock。
 - fault 后重新加载、pagehide/dispose、Worker/RAF/AudioContext teardown。
-- production Worker path、128×128 Canvas backing 与非 cross-origin-isolated 环境。
+- 默认主线程与可选 Worker path、128×128 Canvas backing 与非 cross-origin-isolated 环境。
 - Embed `start()` 等待当前 session 的 accepted Canvas 首帧；同实例 cart replacement 与 dispose 后
   fresh instance 分别验证像素和 Worker/RAF/AudioContext 隔离。
 - zero network cart authority；不得读取 BBS、`ref/` 或 external corpus。
@@ -141,6 +143,7 @@ Focused release gate 至少覆盖：
 
 | ID | API / 模式 | 当前影响与边界 |
 | --- | --- | --- |
+| `P17-KD-01` | 主线程执行 | 无外部抢占式 watchdog；VM instruction cap 保留，同线程 timer 不能中断同步 WASM；未重新认证外部 corpus 的 UI 响应性能 |
 | `P4-KD-02` | `stat()` selector subset | inventory 列出的 deterministic selector 有类型值；其他 selector 返回 false |
 | `P4-KD-03` | timed P8SCII | delay control 不暂停 guest；使用 logical frame 驱动文字时间 |
 | `P4-KD-05` | fractional power edges | z8lua floating path 不承诺 official bit-exact |

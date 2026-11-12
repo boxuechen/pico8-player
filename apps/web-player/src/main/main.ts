@@ -13,6 +13,7 @@ import {
 } from "./ui/player-shell-view.js";
 
 export interface MountPlayerOptions {
+  readonly execution?: "main" | "worker";
   readonly root: HTMLElement;
   readonly runtimeWorkerFactory?: PlayerCompositionOptions["runtimeWorkerFactory"];
   /** Internal release composition switch; public consumers use createPico8WebPlayer. */
@@ -45,6 +46,7 @@ export async function mountPico8Player(
 
   try {
     const composition = await PlayerComposition.create({
+      ...(options.execution === undefined ? {} : { execution: options.execution }),
       canvas: elements.canvas,
       ...(options.runtimeWorkerFactory === undefined
         ? {}

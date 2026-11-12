@@ -1,6 +1,6 @@
 import type { CartAccess, SerializedRuntimeError } from "@pico8-web/contracts";
 
-import type { PlayerRuntimeToHost } from "../transport/public.js";
+import type { SessionEvent as PlayerRuntimeToHost } from "../transport/public.js";
 import type { AudioFrontendOptions } from "./audio-frontend.js";
 import {
   mountPico8Player,
@@ -20,6 +20,8 @@ import {
 export const PICO8_WEB_PLAYER_API_VERSION = 2 as const;
 
 export interface Pico8WebPlayerCreateOptions {
+  /** Main-thread execution is the default; Worker is an optional isolated adapter. */
+  readonly execution?: "main" | "worker";
   readonly root: HTMLElement;
   readonly commandTimeoutMs?: number;
   readonly audio?: AudioFrontendOptions;
@@ -136,6 +138,7 @@ export class Pico8WebPlayer {
   static async create(options: Pico8WebPlayerCreateOptions): Promise<Pico8WebPlayer> {
     const mounted = await mountPico8Player({
       root: options.root,
+      ...(options.execution === undefined ? {} : { execution: options.execution }),
       useDefaultAssets: true,
       ...(options.commandTimeoutMs === undefined
         ? {}

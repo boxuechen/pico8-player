@@ -110,6 +110,11 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
     target: ["chrome120"],
     legalComments: "none",
     sourcemap: false,
+    plugins: [{ name: "main-z8lua-runtime", setup(context) {
+      context.onResolve({ filter: /z8lua-runtime-v1\.mjs$/ }, () => ({
+        path: "../wasm/z8lua-runtime-v1.mjs", external: true,
+      }));
+    } }],
   });
   await build({
     entryPoints: [join(PROJECT_ROOT, "apps/web-player/src/worker/player-worker-entry.mjs")],

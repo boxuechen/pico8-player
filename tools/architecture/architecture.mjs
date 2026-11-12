@@ -104,6 +104,7 @@ const REQUIRED_FILES = [
   "apps/web-player/src/main/compose-player.ts",
   "apps/web-player/src/worker/runtime-worker.ts",
   "apps/web-player/src/worker/compose-runtime.ts",
+  "apps/web-player/src/runtime/compose-session.ts",
   "apps/web-player/src/worker/player-worker-entry.mjs",
   "apps/web-player/src/worklet/pico8-audio-processor.ts",
   "spec/pico-api-inventory.yaml",
@@ -147,7 +148,7 @@ function layerFor(relativePath) {
     };
   }
   const domainMatch = normalized.match(
-    /^apps\/web-player\/src\/(transport|main|worker|worklet)(?:\/|$)/,
+    /^apps\/web-player\/src\/(transport|main|runtime|worker|worklet)(?:\/|$)/,
   );
   if (domainMatch) return { kind: "app", name: domainMatch[1] };
   if (normalized === "ref" || normalized.startsWith("ref/")) {
@@ -243,6 +244,7 @@ function forbiddenGlobalsFor(layer) {
   if (layer.kind !== "app") return new Set();
   if (layer.name === "transport") return NEUTRAL_GLOBALS;
   if (layer.name === "worker") return WORKER_FORBIDDEN_GLOBALS;
+  if (layer.name === "runtime") return new Set([...WORKER_FORBIDDEN_GLOBALS, "Worker", "self", "DedicatedWorkerGlobalScope"]);
   if (layer.name === "worklet") return WORKLET_FORBIDDEN_GLOBALS;
   return new Set();
 }
@@ -411,8 +413,8 @@ export function auditSourceText({ repoRoot, logicalPath, sourceText }) {
 
       if (targetLayer.kind === "app" && targetLayer.name !== sourceLayer.name) {
         const allowedTarget =
-          ["main", "worker", "worklet"].includes(sourceLayer.name) &&
-          targetLayer.name === "transport";
+          (["main", "worker", "runtime", "worklet"].includes(sourceLayer.name) && targetLayer.name === "transport") ||
+          (["main", "worker"].includes(sourceLayer.name) && targetLayer.name === "runtime");
         if (!allowedTarget) {
           violations.push(
             violation(
@@ -602,13 +604,18 @@ function checkProjectReferences(repoRoot) {
     ["apps/web-player/tsconfig.json", [
       "apps/web-player/src/transport",
       "apps/web-player/src/main",
+      "apps/web-player/src/runtime",
       "apps/web-player/src/worker",
       "apps/web-player/src/worklet",
     ]],
     ["apps/web-player/src/transport/tsconfig.json", ["packages/contracts"]],
-    ["apps/web-player/src/main/tsconfig.json", ["apps/web-player/src/transport"]],
+    ["apps/web-player/src/main/tsconfig.json", ["apps/web-player/src/transport", "apps/web-player/src/runtime"]],
+    ["apps/web-player/src/runtime/tsconfig.json", [
+      "apps/web-player/src/transport", "packages/cart-codec", "packages/runtime-core", "packages/z8lua-bridge",
+    ]],
     ["apps/web-player/src/worker/tsconfig.json", [
       "apps/web-player/src/transport",
+      "apps/web-player/src/runtime",
       "packages/cart-codec",
       "packages/runtime-core",
       "packages/z8lua-bridge",
@@ -646,6 +653,7 @@ function checkTypeScriptLibs(repoRoot) {
     ["apps/web-player/src/transport/tsconfig.json", ["ES2022"]],
     ["apps/web-player/src/main/tsconfig.json", ["DOM", "DOM.Iterable", "ES2022"]],
     ["apps/web-player/src/worker/tsconfig.json", ["ES2022", "WebWorker"]],
+    ["apps/web-player/src/runtime/tsconfig.json", ["ES2022", "WebWorker"]],
     ["apps/web-player/src/worklet/tsconfig.json", ["ES2022"]],
   ]);
   const violations = [];

@@ -14,20 +14,20 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-001 | Accepted | z8lua WASM + TypeScript Runtime |
 | ADR-002 | Accepted | 不用普通 Lua/Fengari 替代 P8 VM |
 | ADR-003 | Accepted | Pico RAM 位于 WASM memory，TS 使用 zero-copy lease |
-| ADR-004 | Accepted | Runtime 在 Worker，Window 只拥有 host/UI |
+| ADR-004 | Superseded by ADR-031 | Runtime 在 Worker，Window 只拥有 host/UI |
 | ADR-005 | [Accepted](./adr/005-lossless-p8png.md) | bounded、bytes-only `.p8.png` codec |
 | ADR-006 | [Accepted](./adr/006-interop-hot-path-boundary.md) | raw primitive/pointer-length hybrid ABI 与 profile-driven fallback |
 | ADR-007 | Superseded by ADR-018 | 首版只接受 caller-provided/local cart bytes |
 | ADR-008 | [Accepted](./adr/008-schema-generated-host-bindings.md) | production schema 单向生成 C/TS host bindings；prototype 不暴露未实现 API |
 | ADR-009 | [Accepted](./adr/009-canvas2d-frame-presenter.md) | Canvas2D 是唯一默认 presenter；WebGL fallback 未实现 |
-| ADR-010 | [Accepted](./adr/010-dedicated-messageport-audio-transport.md) | dedicated MessagePort 是唯一默认 PCM transport；不实现 relay/SAB |
+| ADR-010 | [Partially superseded by ADR-031](./adr/010-dedicated-messageport-audio-transport.md) | dedicated MessagePort 是唯一默认 PCM transport；不实现 relay/SAB |
 | ADR-011 | [Accepted](./adr/011-hidden-tab-pause.md) | hidden/blur 默认 pause、清输入并重建 scheduler anchor，不追墙钟 backlog |
 | ADR-012 | [Accepted](./adr/012-z8lua-source-and-phase-0a-wasm.md) | z8lua pin、patch manifest 与 reproducible WASM |
 | ADR-013 | [Accepted](./adr/013-shared-pico-ram-boundary.md) | context-owned 64 KiB RAM、canonical mapper、fixed memory |
 | ADR-014 | Accepted | canonical test PCM 为 22050 Hz mono signed PCM16LE |
-| ADR-015 | Accepted | 四 package DAG + main/worker/worklet execution domains |
+| ADR-015 | Partially superseded by ADR-031 | 四 package DAG + main/worker/worklet execution domains |
 | ADR-016 | Accepted | pnpm workspace 和精确 tool versions |
-| ADR-017 | Partially superseded by ADR-022 | hard budget/watchdog 与 nested suspension 降级继续有效；blanket hook-yield rejection 已替换 |
+| ADR-017 | Partially superseded by ADR-022/031 | hard budget/watchdog 与 nested suspension 降级继续有效；blanket hook-yield rejection 已替换 |
 | ADR-018 | [Accepted](./adr/018-caller-authorized-cart-resolution.md) | caller-authorized local bundle resolver；BBS 自动访问保持 Deferred |
 | ADR-019 | [Accepted](./adr/019-phase-5-coroutine-compatibility.md) | L3 host suspension 保持 root-only；nested surface 统一 structured fault |
 | ADR-020 | [Deferred](./adr/020-phase-5-bbs-adapter.md) | 不新增自动 BBS adapter、endpoint 或 production network capability |
@@ -37,10 +37,11 @@ active phase 如何回答 Proposed 项由其 phase 文档定义。
 | ADR-024 | [Accepted](./adr/024-pico8-v027-cart-version-and-text-include.md) | v0.2.7 cart version 43、bounded compact text rows 与 caller-authorized non-recursive include |
 | ADR-025 | [Accepted](./adr/025-phase-8d-real-cart-compatibility-boundaries.md) | parser/VM/callback/API/performance 修复和 expected-fault qualification 边界 |
 | ADR-026 | [Accepted](./adr/026-phase-9-language-compatibility-boundary.md) | P8 Lua/host coercion/typed selector、safe helper 与固定 2 MiB Lua heap 边界 |
-| ADR-027 | [Accepted](./adr/027-phase-9-timing-safety-boundary.md) | fixed 32M hard safety cap 与 Q16.16 numeric-for termination |
+| ADR-027 | [Partially superseded by ADR-031](./adr/027-phase-9-timing-safety-boundary.md) | fixed 32M hard safety cap 与 Q16.16 numeric-for termination |
 | ADR-028 | [Accepted](./adr/028-phase-9-local-host-feature-boundary.md) | explicit local bundle、empty `load("")` no-op 与 missing/denied fail-closed |
 | ADR-029 | [Accepted](./adr/029-phase-9-requalification-remediation-boundary.md) | `camera()` previous return、absent `all()`、bounded large `chr()` 与 local multicart composition |
 | ADR-030 | [Accepted](./adr/030-menuitem-display-label-boundary.md) | 16-character display prefix 保持有界，超长 label 不得使 cart fault |
+| ADR-031 | [Accepted](./adr/031-standalone-session-main-thread-default.md) | 独立 session、默认主线程直调、可选 Worker 与 Agent manual loop |
 
 ## 2. 当前未决问题
 

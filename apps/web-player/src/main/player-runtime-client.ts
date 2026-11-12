@@ -44,16 +44,8 @@ export interface PlayerRuntimeClientOptions {
   readonly commandTimeoutMs?: number;
 }
 
-export interface PlayerLocalCartSource {
-  readonly ref: string;
-  readonly bytes: Uint8Array;
-  readonly access: CartAccess;
-}
-
-export interface PlayerHostCartDataSeed {
-  readonly id: string;
-  readonly bytes: Uint8Array;
-}
+export type { PlayerLocalCartSource, PlayerHostCartDataSeed } from "../transport/runtime-port.js";
+import type { PlayerLocalCartSource, PlayerHostCartDataSeed } from "../transport/runtime-port.js";
 
 interface PendingPlayerCommand {
   readonly workerGeneration: number;
@@ -248,6 +240,12 @@ export class PlayerRuntimeClient {
     this.#postInput(input);
     const sequence = ++this.#vsyncSequence;
     return this.#send({ type: "vsync", sequence, timestampMs }, "heartbeat");
+  }
+
+  step(input: PicoInputSnapshot): Promise<PlayerRuntimeToHost> {
+    this.#assertActive();
+    this.#postInput(input);
+    return this.#send({ type: "step", sequence: ++this.#vsyncSequence }, "heartbeat");
   }
 
   clearInput(): void {

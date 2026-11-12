@@ -57,8 +57,8 @@ async function waitFor(predicate, message, timeoutMs = 8000) {
 async function run() {
   document.body.dataset.progress = "create independent players";
   const [first, second] = await Promise.all([
-    createPico8WebPlayer({ root: document.querySelector("#first"), audio }),
-    createPico8WebPlayer({ root: document.querySelector("#second"), audio }),
+    createPico8WebPlayer({ execution: "worker", root: document.querySelector("#first"), audio }),
+    createPico8WebPlayer({ execution: "worker", root: document.querySelector("#second"), audio }),
   ]);
   check(PICO8_WEB_PLAYER_API_VERSION === 2, "unexpected public API version");
   check(workers.length === 2, "create did not allocate one Worker per player");
@@ -101,7 +101,7 @@ async function run() {
     "disposing first stopped second");
 
   document.body.dataset.progress = "load/dispose race";
-  const race = await createPico8WebPlayer({
+  const race = await createPico8WebPlayer({ execution: "worker",
     root: document.querySelector("#race"),
     audio,
   });

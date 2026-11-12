@@ -51,7 +51,7 @@ function pixel(player) {
 
 async function run() {
   const gates = new Map(["cart-b", "cart-c"].map(id => [id, { entered: deferred(), release: deferred() }]));
-  const player = await createPico8WebPlayer({ root: mount, shell: "full", audio,
+  const player = await createPico8WebPlayer({ root: mount, shell: "full", audio, execution: "worker",
     persistence: {
       async hydrate(id) {
         const gate = gates.get(id);

@@ -1,3 +1,4 @@
+import type { SessionCommand } from "./session-contract.js";
 import type {
   Phase0EHostToRuntime,
   Phase0ERuntimeToHost,
@@ -57,7 +58,7 @@ function isInt32(value: unknown): boolean {
     Number(value) <= 0x7fff_ffff;
 }
 
-function isPicoInputSnapshot(value: unknown): boolean {
+export function isPicoInputSnapshot(value: unknown): boolean {
   return isRecord(value) &&
     Array.isArray(value.controllers) &&
     value.controllers.length === PLAYER_CONTROLLER_COUNT &&
@@ -177,7 +178,11 @@ function isHostCartData(value: unknown): boolean {
 }
 
 export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
-  if (!isPlayerEnvelope(value)) return false;
+  return isPlayerEnvelope(value) && isSessionCommand(value);
+}
+
+export function isSessionCommand(value: unknown): value is SessionCommand {
+  if (!isRecord(value) || !isUint(value.sessionGeneration)) return false;
   if (value.type === "input") {
     return (
       value.requestId === 0 &&
@@ -199,6 +204,7 @@ export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRunt
         (isPositiveUint(value.instructionBudget)))
     );
   }
+  if (value.type === "step") return isPositiveUint(value.sessionGeneration) && isUint(value.sequence);
   if (value.type === "vsync") {
     return (
       isPositiveUint(value.sessionGeneration) &&

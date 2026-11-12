@@ -3,7 +3,7 @@
 本目录只保存 **当前 active phase 的可执行入口**，不保存已完成阶段全文，也不为 future
 phase 预建愿望清单。阶段总状态只由 [`docs/README.md`](../README.md) 路由。当前没有 active phase，
 当前 work unit 为 **None**。最近完成结果见
-[Phase 16 evidence](../evidence/phase-16/171-phase-16-unified-lifecycle-queue-exit-evidence.md)。
+[Phase 17 evidence](../evidence/phase-17/181-phase-17-standalone-session-exit-evidence.md)。
 
 ## Activation contract
 

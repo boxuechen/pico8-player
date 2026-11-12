@@ -5,13 +5,30 @@
     "rootDir": ".",
     "outDir": "../../dist/worker",
     "tsBuildInfoFile": "../../dist/worker.tsbuildinfo",
-    "lib": ["ES2022", "WebWorker"]
+    "lib": [
+      "ES2022",
+      "WebWorker"
+    ]
   },
-  "include": ["*.ts", "adapters/**/*.ts"],
+  "include": [
+    "*.ts",
+    "adapters/**/*.ts"
+  ],
   "references": [
-    { "path": "../transport" },
-    { "path": "../../../../packages/cart-codec" },
-    { "path": "../../../../packages/runtime-core" },
-    { "path": "../../../../packages/z8lua-bridge" }
+    {
+      "path": "../transport"
+    },
+    {
+      "path": "../../../../packages/cart-codec"
+    },
+    {
+      "path": "../../../../packages/runtime-core"
+    },
+    {
+      "path": "../../../../packages/z8lua-bridge"
+    },
+    {
+      "path": "../runtime"
+    }
   ]
 }

@@ -7,10 +7,10 @@
 
 | 状态 | 本文内容 |
 | --- | --- |
-| **Implemented** | 四个 package；main/transport/worker/worklet execution-domain 边界；package exports；browser-neutral RuntimeCore；WASM/Canvas/Audio/IndexedDB adapters；CartLoader/local resolver/repository；architecture negative tests；`ref/` quarantine |
+| **Implemented** | 四个 package；main/runtime/transport/worker/worklet 边界；package exports；browser-neutral RuntimeCore；WASM/Canvas/Audio/IndexedDB adapters；CartLoader/local resolver/repository；architecture negative tests；`ref/` quarantine |
 | **Scaffold** | 其余未激活 adapter 文件位；文件存在不代表功能完成 |
 | **Target** | 本文目录树中的其余文件、ports 和 adapters；创建前仍需由当前阶段范围授权 |
-| **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，Worker producer 属于 `worker`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
+| **Accepted ownership** | presenter 属于 `apps/web-player/src/main`，audio DTO 属于 `transport`，session producer 属于 `runtime`，device queue 属于 `worklet`；不得把浏览器 adapter 放入 RuntimeCore |
 
 目录树是归属契约，不是“文件全部存在”的清单。当前 source truth 是实际文件、package exports、
 TypeScript project references 和 architecture tests；阶段完成历史只在 [`evidence/`](./evidence/) 与
@@ -23,7 +23,7 @@ authority。AudioContext、IndexedDB、Canvas 和 browser input 始终属于 app
 目录美观不是目标。目标是让以下约束能够被 TypeScript project references、package `exports` 和自动化依赖图测试强制执行：
 
 - simulation/runtime core 不依赖浏览器、renderer、Worker transport 或 z8lua 具体实现。
-- Window、Runtime Worker、AudioWorklet 三个执行域不能通过随意 import 合并成一个隐式进程。
+- app runtime 可在 Window 或 Worker 执行；执行入口与 UI/Worklet 之间的依赖必须保持显式。
 - z8lua、IndexedDB、Canvas/WebGL、AudioWorklet 都是边界 adapter，不成为权威游戏状态所有者。
 - 每个跨边界接口有唯一 owner、唯一公共入口和可替换 test double。
 
@@ -58,6 +58,13 @@ package；package 只用于强制真正的架构边界。
 │       │   │   ├── devkit-input.ts
 │       │   │   ├── render/
 │       │   │   └── ui/
+│       │   ├── runtime/             # shared execution and browser storage adapters
+│       │   │   ├── create-session.ts
+│       │   │   ├── player-session.ts
+│       │   │   ├── compose-session.ts
+│       │   │   ├── lifecycle-queue.ts
+│       │   │   ├── audio-transport.ts
+│       │   │   └── adapters/
 │       │   ├── worker/
 │       │   │   ├── player-worker-entry.mjs
 │       │   │   ├── runtime-worker.ts
@@ -204,13 +211,13 @@ runtime factory port 拥有 cart snapshot、generation、cold reset、stale resp
 fault/stop/dispose lifecycle；`FrameScheduler` 拥有 wall-clock accumulator/catch-up policy，但
 不拥有 clock source 或 simulation。`PicoSfxSynth` 从同一 physical Pico RAM live-read SFX/song，
 由 committed logical slices 生成 browser-neutral canonical PCM；visual/custom-font 与同步 audio
-P8SCII 都落在 RuntimeCore。Worker 只把 startup/frame PCM 交给 app-owned dedicated transport，
+P8SCII 都落在 RuntimeCore。app runtime 只把 startup/frame PCM 交给 app-owned dedicated transport，
 AudioWorklet 独占 device queue/resampling。固定八玩家/devkit latch 已在 core，keyboard/Gamepad/touch
 device mapping 已在 app。package-private `CartDataCore` 从 prehydrated seed 复制到 live
 `0x5e00..0x5eff`，并只在 committed boot/frame 输出 copy-owned dirty snapshot；browser-neutral
-`CartDataPersistencePort` 由 Worker-owned IndexedDB adapter 实现，RuntimeCore 不依赖 storage API。
+`CartDataPersistencePort` 由 app runtime-owned IndexedDB adapter 实现，RuntimeCore 不依赖 storage API。
 browser-neutral `CartResolverPort`、`CartRepositoryPort`、`RootHostRequestHandlerPort`、
-`CurrentCartDataRepositoryPort` 与 Worker-local bounded copy-on-write overlay 已完成。
+`CurrentCartDataRepositoryPort` 与 session-local bounded copy-on-write overlay 已完成。
 
 允许依赖：`@pico8-web/contracts`、`@pico8-web/cart-codec`。
 禁止依赖：`@pico8-web/z8lua-bridge`、`apps/`、Worker API、Canvas/WebGL、AudioContext、IndexedDB、File API、`fetch()`。
@@ -244,22 +251,24 @@ Host bindings `1..41` 保持 append-only；`rrect/rrectfill` 为 `39..40`，syst
 helpers 位于 `p8w_pico8_compat.*`，table/function handle 不进入 TypeScript，PRNG state 位于 shared
 Pico RAM。`menuitem()` 的 bounded 五槽 registry、16-P8SCII-character display label 与 callback strong
 reference 也由当前 `lua_State` 独占；更长输入只截取显示前缀。ADR-023 的 fixed copy snapshot/root-safe invoke 由 bridge adapter 暴露给 RuntimeCore，
-但任何 Lua handle 都不离开 VM。Worker 独占 menu-open/generation authority，Main 的 DOM dialog 只渲染
+但任何 Lua handle 都不离开 VM。app runtime 独占 menu-open/generation authority，Main 的 DOM dialog 只渲染
 copied slots；host lifecycle pause 不消费或伪装 guest callback。
 精确 operation 列表只以 `spec/abi/` 和生成 manifest 为准。
 
 明确命名的 `p8w0*` memory bindings 和 `p8w0c_bench_*` 只属于隔离 probe；不得进入
 `z8lua-runtime-v1` artifact、production adapter interface 或 RuntimeCore。
 
-RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 只在 Worker composition root 注入。
+RuntimeCore **MUST NOT** 反向 import 此 package。具体 adapter 在共享 app runtime composition root 注入。
 
 ### `apps/web-player`
 
 这是产品 application shell 和唯一浏览器集成层，不是可被 packages 反向复用的 library。
 
-- `transport/`：只放 Window ↔ Worker 与 Worker ↔ AudioWorklet 的 versioned structured-clone DTO、validator 和 transfer-list helper；不得放状态机或业务逻辑。
-- `main/`：DOM/UI、输入设备采样与 physical→normalized action mapping、Canvas/WebGL presenter、AudioContext 生命周期、Worker watchdog 和 `RuntimeClient`。其中 `main/ui/` 只拥有 DOM view、derived control policy、bounded local-file preflight 和 integer-scale presentation；`PlayerController` 映射 intent 到 lifecycle，二者都不得复制 Worker simulation 状态机或读取 WASM/Pico RAM。
-- `worker/`：Runtime Worker entrypoint、消息适配、IndexedDB/repository adapters，以及唯一的 `compose-runtime.ts`。
+- `transport/`：线程无关的 session data/port contract，以及可选 Worker wire envelope、audio DTO 与 validators；不得放状态机或业务逻辑。
+- `main/`：DOM/UI、输入设备采样与 physical→normalized action mapping、Canvas/WebGL presenter、AudioContext 生命周期、Worker watchdog 和 `RuntimeClient`。其中 `main/ui/` 只拥有 DOM view、derived control policy、bounded local-file preflight 和 integer-scale presentation；`PlayerController` 映射 intent 到 lifecycle，二者都不得复制 Runtime simulation 状态机或读取 WASM/Pico RAM。
+- `runtime/`：共享 session controller、VM/core 装配、lifecycle queue 与 storage/PCM adapters；不 import main/worker/worklet，不创建 Worker、DOM 或 AudioContext。
+- `worker/`：可选 entrypoint、消息验证/适配；旧 adapter/composer import 路径仅作 compatibility re-export/probe。生产执行委托 runtime/。
+- `main/standalone-session.ts`：无 UI 的 bounded manual API 与 copy-owned observations；`session-tool.ts` 只提供 JSON tool schema/parameter/result conversion。
 - `worklet/`：PCM queue、重采样所需的实时设备逻辑和 processor 注册；不得 import RuntimeCore 或 z8lua。
 
 `apps/web-player` 可以依赖 packages；任何 package **MUST NOT** import `apps/web-player`。
@@ -304,17 +313,21 @@ flowchart LR
     Transport --> C
     Main --> Transport
     Worker --> Transport
-    Worker --> Core
-    Worker --> Cart
-    Worker --> Bridge
+    Runtime["web-player/runtime"]
+    Main --> Runtime
+    Worker --> Runtime
+    Runtime --> Transport
+    Runtime --> Core
+    Runtime --> Cart
+    Runtime --> Bridge
     Worklet --> Transport
 ```
 
 额外约束：
 
-- `main/` 不得 import RuntimeCore、cart codec 或 z8lua bridge；它只发送 bytes/commands、接收 frames/status。
+- `main/` 不得直接 import RuntimeCore、cart codec 或 z8lua bridge；通过 app runtime facade 调用，消费 frames/status。
 - `worklet/` 不得 import RuntimeCore、cart codec、z8lua bridge 或 `main/`。
-- `worker/` 是唯一可以同时 import RuntimeCore、cart codec、z8lua bridge 和 Worker adapters 的 execution-domain composition root。
+- `runtime/` 是生产 session 装配 owner。`worker/` 的旧 probe 可继续引用 core/codec/bridge；生产 adapter 委托 runtime/，不复制执行逻辑。
 - production package graph 必须无环。测试可以 import 多个 package 做集成，但不得被 production source import。
 
 ## 4. Composition roots 与实例生命周期
@@ -322,15 +335,16 @@ flowchart LR
 只有以下文件允许实例化跨边界 concrete adapter：
 
 - `apps/web-player/src/main/compose-player.ts`
-- `apps/web-player/src/worker/compose-runtime.ts`
+- `apps/web-player/src/runtime/compose-session.ts` / `create-session.ts`
+- `apps/web-player/src/worker/compose-runtime.ts`（旧 probe / optional wire adapter）
 - `apps/web-player/src/worklet/pico8-audio-processor.ts`
 
 规则：
 
 - `runtime-worker.ts` 只做消息 schema 校验、调用 composed Runtime、序列化结果；不实现 PICO API。
-- `compose-runtime.ts` 创建 CartParser、z8lua adapter、RuntimeCore、persistence/repository adapters 并注入 ports；不得承载 frame algorithm。
+- `runtime/compose-session.ts` 组合 CartSession、VM、scheduler 与外部 ports；frame algorithm 始终由 RuntimeCore 实现。Worker `compose-runtime.ts` 只适配生产 wire envelope 并保留旧 probe。
 - `compose-player.ts` 是 Window adapter composition root，创建 package-owned relative Worker/Worklet
-  assets、Worker client、presenter 和 AudioContext frontend；不得读取 WASM/Pico RAM。
+  assets、默认 direct session 或可选 Worker client、presenter 和 AudioContext frontend；不得读取 WASM/Pico RAM。
 - `main/public.ts` 只 re-export versioned stable embed contract；`embed-player.ts` 只组合
   `mountPico8Player`、lifecycle transactions 和 copy-owned typed events，不得创建 concrete Worker、Worklet、
   presenter 或 persistence adapter。
@@ -341,11 +355,11 @@ flowchart LR
 - 每个 player session 使用独立 object graph；禁止用 module-level mutable singleton 保存 VM、RAM、cartdata 或 input state。
 - dispose 顺序必须由 composition root 显式管理，并测试 Worker、AudioWorklet、MessagePort、RAF 和事件监听器全部释放。
 
-### Worker 两阶段 bootstrap
+### Runtime 两阶段 bootstrap
 
 z8lua context 先提供 WASM memory，PicoApiHost 随后才可围绕该 memory 创建；同时 z8lua imports 又需要 PicoApiHost。这是显式 bootstrap dependency，不得用全局 mutable singleton 或让 RuntimeCore import concrete bridge 来绕开。
 
-`compose-runtime.ts` 必须按以下事务执行：
+`runtime/compose-session.ts` 必须按以下事务执行：
 
 1. 创建 session-local host-call router，初始为 `unbound`；任何 guest call 都 fail-fast，不能排队猜测。
 2. 创建 z8lua VM context 但不 compile/resume，取得稳定 64KiB `PicoMemoryLease`。
@@ -358,7 +372,7 @@ z8lua context 先提供 WASM memory，PicoApiHost 随后才可围绕该 memory �
 ### 跨执行域 ownership
 
 - input：main 只把 keyboard/gamepad/touch 转成 versioned normalized snapshot；held/edge/repeat、RAM registers 和逐 tick latch 由 RuntimeCore 拥有。`packages/contracts` 是 DTO 常量权威；browser-native ESM 的 app protocol 保留无 bare-specifier 的 runtime mirror，并由 contract test 锁定相等。
-- render：RuntimeCore/Worker 产生 frame DTO；main presenter 只消费 RGBA/indexed output，不读取 Pico RAM、不回写 draw state。
+- render：RuntimeCore/app runtime 产生 frame data；main presenter 只消费 RGBA/indexed output，不读取 Pico RAM、不回写 draw state。
 - persistence：RuntimeCore 拥有当前 256-byte cartdata window、dirty/lifecycle 语义；IndexedDB adapter 只执行 hydrate/commit/flush。
 - audio：RuntimeCore 拥有 SFX/music/sample timeline；Worklet 只拥有 bounded device queue、重采样和 underrun counters。
 - diagnostics/perf：core 发出结构化 diagnostic/metric events，main debug UI 只展示；启用 probe 不得改变 simulation algorithm 或时钟。
@@ -402,6 +416,7 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 - contracts、cart-codec、runtime-core：只允许 ECMAScript/runtime-neutral types；不得因为方便加入 DOM lib。
 - z8lua-bridge：可以使用 WebAssembly/Worker 所需 types，但通过 lint/import rule 禁止 DOM UI、storage 和 network globals。
 - app main：DOM + browser main-thread types。
+- app runtime：使用 WebWorker lib 中与 Worker/Window 共通的 IDB/timer types；架构检查禁止 Worker/self/DOM/device globals。
 - app worker：WebWorker + IndexedDB 所需 types，不得取得 `document`/HTML element types。
 - app worklet：AudioWorklet 专用 types，不得取得 DOM、Worker 或 RuntimeCore types。
 
@@ -440,7 +455,7 @@ import { PicoRam } from "@pico8-web/runtime-core/src/memory/pico-ram";
 
 1. workspace production dependency graph 无环。
 2. dependency edge 只出现在第 3 节允许矩阵中。
-3. packages 不 import `apps/`；main/worklet 不 import RuntimeCore/z8lua/cart-codec。
+3. packages 不 import `apps/`；main/worklet 不直接 import RuntimeCore/z8lua/cart-codec；runtime 不反向 import main/worker/worklet。
 4. 跨 package import 只通过 package `exports`，没有 `/src/` 或 internal deep import。
 5. runtime-neutral packages 不出现 `window`、`document`、Canvas、AudioContext、Worker、IndexedDB、File API 或 `fetch()`。
 6. `generated/` 没有未由 generator 复现的手工差异。

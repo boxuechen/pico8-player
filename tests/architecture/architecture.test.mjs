@@ -157,3 +157,20 @@ test("bridge type-only dependency does not become a runtime load", () => {
   );
   assert.equal(output.includes("@pico8-web/runtime-core"), false, output);
 });
+
+test("shared session layer rejects host-specific imports and Worker/UI globals", () => {
+  for (const sourceText of [
+    'import { PlayerController } from "../main/player-controller.js";',
+    'import { installPlayerRuntimeWorker } from "../worker/runtime-worker.js";',
+    'new Worker("runtime.mjs");',
+    'globalThis.document.createElement("canvas");',
+  ]) {
+    const violations = auditSourceText({ repoRoot: REPO_ROOT,
+      logicalPath: "apps/web-player/src/runtime/negative.ts", sourceText });
+    assert.ok(violations.length > 0, sourceText);
+  }
+  const valid = auditSourceText({repoRoot: REPO_ROOT,
+    logicalPath: "apps/web-player/src/runtime/positive.ts",
+    sourceText: 'import { CartSession } from "@pico8-web/runtime-core";'});
+  assert.deepEqual(valid, []);
+});

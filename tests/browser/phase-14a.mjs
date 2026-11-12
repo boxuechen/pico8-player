@@ -91,7 +91,7 @@ async function startAndObserve(player, frames) {
 
 async function run() {
   const firstFrames = [];
-  const player = await createPico8WebPlayer({ root: mount, shell: "hosted", audio });
+  const player = await createPico8WebPlayer({ execution: "worker", root: mount, shell: "hosted", audio });
   player.on("frame", (event) => firstFrames.push({
     generation: event.sessionGeneration,
     frameId: event.frameId,
@@ -129,7 +129,7 @@ async function run() {
   document.body.dataset.progress = "fresh-player";
   label.textContent = "Fresh player visible after dispose";
   const freshFrames = [];
-  const fresh = await createPico8WebPlayer({ root: mount, shell: "hosted", audio });
+  const fresh = await createPico8WebPlayer({ execution: "worker", root: mount, shell: "hosted", audio });
   fresh.on("frame", (event) => freshFrames.push(event.frameId));
   await fresh.loadCart(cart(3, "FRESH"), { displayName: "fresh.p8" });
   await startAndObserve(fresh, freshFrames);

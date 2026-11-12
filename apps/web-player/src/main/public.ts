@@ -22,3 +22,10 @@ export {
   type Pico8PersistenceFlushResult,
   type Pico8PersistenceStatus,
 } from "./host-persistence.js";
+export {
+  createPico8Session, Pico8Session, PICO8_SESSION_API_VERSION,
+  type Pico8SessionOptions, type Pico8SessionLoadOptions,
+  type Pico8SessionFrame, type Pico8SessionObservation,
+  type Pico8AdvanceOptions, type Pico8AdvanceResult,
+} from "./standalone-session.js";
+export { createPico8SessionTool, PICO8_SESSION_TOOL } from "./session-tool.js";
