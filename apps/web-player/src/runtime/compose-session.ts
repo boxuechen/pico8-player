@@ -3,6 +3,9 @@ import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import { CartCodecError, decodeCart } from "@pico8-web/cart-codec";
 import {
   PICO_CONTROLLER_COUNT,
+  PICO_CART_DATA_MAX_RECORDS,
+  PICO_CART_DATA_ID_MAX_BYTES,
+  PICO_CART_DATA_BYTES,
   PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
   PICO_HOST_REQUEST_MAX_BYTES,
   type PicoCartDataCommit,
@@ -317,9 +320,7 @@ export function createSessionController(
 
   function enqueueCartDataCommit(commit: PicoCartDataCommit): void {
     cartDataSeeds = [
-      ...cartDataSeeds
-        .filter((seed) => seed.id !== commit.id)
-        .map((seed) => ({ id: seed.id, bytes: seed.bytes.slice() })),
+      ...cartDataSeeds.filter((seed) => seed.id !== commit.id),
       { id: commit.id, bytes: commit.bytes.slice() },
     ];
     if (hostPersistence) {
@@ -352,23 +353,17 @@ export function createSessionController(
       revision: commit.revision,
       bytes: commit.bytes.slice().buffer,
     }));
-    if (persistence === undefined || hostPersistence) {
-      const local = localPersistenceDiagnostics.splice(0).map((error) => ({
-        ...playerBase(context),
-        type: "diagnostic" as const,
-        error,
-      }));
-      return [...commits, ...local];
-    }
     let diagnostics: readonly SerializedRuntimeError[] = [];
-    try {
-      diagnostics = persistence.takeDiagnostics();
-    } catch (error) {
-      recordPersistenceFailure(
-        "E_PERSISTENCE_READ",
-        "Unable to read persistence diagnostics",
-        error,
-      );
+    if (persistence !== undefined && !hostPersistence) {
+      try {
+        diagnostics = persistence.takeDiagnostics();
+      } catch (error) {
+        recordPersistenceFailure(
+          "E_PERSISTENCE_READ",
+          "Unable to read persistence diagnostics",
+          error,
+        );
+      }
     }
     const combined = [...localPersistenceDiagnostics.splice(0), ...diagnostics];
     return [...commits, ...combined.map((error) => ({
@@ -416,10 +411,10 @@ export function createSessionController(
     records: readonly PicoCartDataSeed[],
   ): void {
     const ids = new Set<string>();
-    if (records.length > 4096) throw new RangeError("host cartdata exceeds 4096 records");
+    if (records.length > PICO_CART_DATA_MAX_RECORDS) throw new RangeError("host cartdata exceeds 4096 records");
     cartDataSeeds = records.map((record) => {
-      if (!/^[a-z0-9_-]{1,64}$/u.test(record.id) || ids.has(record.id) ||
-        !(record.bytes instanceof Uint8Array) || record.bytes.byteLength !== 256) {
+      if ((!/^[a-z0-9_-]+$/u.test(record.id) || record.id.length > PICO_CART_DATA_ID_MAX_BYTES) || ids.has(record.id) ||
+        !(record.bytes instanceof Uint8Array) || record.bytes.byteLength !== PICO_CART_DATA_BYTES) {
         throw new RangeError("host cartdata contains an invalid record");
       }
       ids.add(record.id);
@@ -1391,44 +1386,67 @@ export function createSessionController(
       : action();
   }
 
-  function perform(
+  function replaceSession(
     context: SessionContext,
     action: () => readonly SessionEvent[],
-    policy: "normal" | "load" | "reset" | "pause" | "stop" | "dispose" = "normal",
-    hostCartData?: readonly PicoCartDataSeed[],
+    prepareSeeds: () => void | Promise<void>,
   ): SessionBatch {
     if (persistence === undefined) return action();
     return (async () => {
-      if ((policy === "load" || policy === "reset") &&
-        context.sessionGeneration > sessionGeneration && lifecycle !== "disposed") {
+      if (context.sessionGeneration > sessionGeneration && lifecycle !== "disposed") {
         await flushPersistence();
-        if (hostCartData !== undefined) useHostPersistence(hostCartData);
-        else if (!(policy === "reset" && hostPersistence)) {
-          hostPersistence = false;
-          await hydratePersistence();
-        }
+        await prepareSeeds();
       }
+      return perform(context, action);
+    })();
+  }
+
+  function perform(
+    context: SessionContext,
+    action: () => readonly SessionEvent[],
+    flush = false,
+  ): SessionBatch {
+    if (persistence === undefined) return action();
+    return (async () => {
       const events = action();
-      if (policy === "dispose") {
-        try { await persistence.dispose(); }
-        catch (error) { recordPersistenceFailure("E_PERSISTENCE_WRITE", "Unable to dispose cartdata persistence cleanly", error); }
-      } else if (policy === "pause" || policy === "stop" ||
-        events.some(event => event.type === "fault" || event.type === "runtime-control")) {
+      if (flush || events.some(event => event.type === "fault" || event.type === "runtime-control")) {
         await flushPersistence();
       }
       return [...takePersistenceEvents(context), ...events];
     })();
   }
 
+
   return {
     input(generation, sequence, input) { acceptInput({ sessionGeneration: generation, sequence, input }); },
-    loadCart(context, load) { return perform(context, () => loadCartSync(context, load), "load", load.hostCartData); },
-    reset(context) { return perform(context, () => resetSync(context), "reset"); },
-    dispose(context) { return perform(context, () => disposeSync(context), "dispose"); },
+    loadCart(context, load) {
+      return replaceSession(context, () => loadCartSync(context, load), async () => {
+        if (load.hostCartData === undefined) {
+          hostPersistence = false;
+          await hydratePersistence();
+        }
+      });
+    },
+    reset(context) {
+      return replaceSession(context, () => resetSync(context), () => {
+        if (!hostPersistence) return hydratePersistence();
+      });
+    },
+    dispose(context) {
+      const events = disposeSync(context);
+      if (persistence === undefined) return events;
+      return (async () => {
+        try { await persistence.dispose(); }
+        catch (error) {
+          recordPersistenceFailure("E_PERSISTENCE_WRITE", "Unable to dispose cartdata persistence cleanly", error);
+        }
+        return [...takePersistenceEvents(context), ...events];
+      })();
+    },
     start(context) { return perform(context, () => current(context, () => startSync(context))); },
-    pause(context) { return perform(context, () => current(context, () => pauseSync(context)), "pause"); },
+    pause(context) { return perform(context, () => current(context, () => pauseSync(context)), true); },
     resume(context) { return perform(context, () => current(context, () => resumeSync(context))); },
-    stop(context) { return perform(context, () => current(context, () => stopSync(context)), "stop"); },
+    stop(context) { return perform(context, () => current(context, () => stopSync(context)), true); },
     openPauseMenu(context) { return perform(context, () => current(context, () => openPauseMenuSync(context))); },
     closePauseMenu(context) { return perform(context, () => current(context, () => closePauseMenuSync(context))); },
     invokeMenuItem(context, slot, button) {

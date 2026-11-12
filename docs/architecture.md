@@ -43,13 +43,15 @@ Core 拥有权威游戏状态，z8lua 负责 Lua parser/VM、Q16.16、协程与 
 
 输入、cart 和存档的跨层常量由 `packages/contracts` 唯一定义，transport 直接 re-export；空输入使用同处的深度冻结快照。
 
+普通帧与异步 host 恢复共用执行结果处理。`PcmOutput` 统一维护音频序号、样本位置和传输复制，无音频端口时仅推进传输状态。
+
 输入为八玩家快照与 devkit 瞬态。暂停、菜单、失焦和停止清理按键。手动批次内保持按钮，keypress/wheel/movement 只用于首帧。
 
 ## 生命周期与资源
 
 每个 Web controller / 独立会话拥有自己的串行生命周期队列。API、DOM、文件载入和环境事件使用同一队列；复合操作不递归入队。实时帧回调独立运行，使 `start()` 能等待当前 generation 的首帧实际呈现到 Canvas。
 
-换卡先停止旧 producer 并 flush 旧身份，再验证并激活新存档。共享执行器通过每次调用持有的续体交付异步结果，普通结果直接返回，不经公共事件监听器匹配。VM host 回应仍以 generation/request identity 检查，迟到结果不能写入新会话。解析失败、写入失败和取消均有明确返回，队列不会因一次失败失效。
+换卡先停止旧 producer 并 flush 旧身份，再验证并激活新存档。执行器使用单个带类型标记的 pending request 管理 host 调用、guest load 和外部 cartdata，统一取消请求。共享执行器通过每次调用持有的续体交付异步结果，普通结果直接返回，不经公共事件监听器匹配。VM host 回应仍以 generation/request identity 检查，迟到结果不能写入新会话。解析失败、写入失败和取消均有明确返回，队列不会因一次失败失效。
 
 `dispose()` 立即关闭新的公共操作并取消未开始的操作；等待进行中的操作/必要存档提交后，释放 WASM 引用、监听器、RAF、AudioContext 和可选 Worker。重复 dispose 幂等。主线程无法抢占已进入的同步 WASM 调用。
 
