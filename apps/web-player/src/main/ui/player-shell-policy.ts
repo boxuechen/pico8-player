@@ -1,4 +1,6 @@
-export const MAX_LOCAL_CART_BYTES = 1_048_576;
+import { PICO_CART_INPUT_MAX_BYTES } from "@pico8-web/contracts";
+
+export const MAX_LOCAL_CART_BYTES = PICO_CART_INPUT_MAX_BYTES;
 export const PICO_PLAYFIELD_SIZE = 128;
 export const MAX_INTEGER_SCALE = 8;
 

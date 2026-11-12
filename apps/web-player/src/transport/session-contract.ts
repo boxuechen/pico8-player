@@ -6,17 +6,18 @@ import type {
 } from "@pico8-web/contracts";
 
 export const PLAYER_PROTOCOL_VERSION = 1 as const;
-/** Runtime mirror of the package DTO constants for browser-native ESM modules. */
-export const PLAYER_CONTROLLER_COUNT = 8 as const;
-export const PLAYER_CONTROLLER_BUTTON_COUNT = 6 as const;
-export const PLAYER_CONTROLLER_BUTTON_MASK = 0x3f as const;
-export const PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT = 64 as const;
-export const PLAYER_CART_INPUT_MAX_BYTES = 1_048_576 as const;
-export const PLAYER_CART_REF_MAX_BYTES = 256 as const;
-export const PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES = 64 as const;
-export const PLAYER_CART_DATA_BYTES = 256 as const;
-export const PLAYER_CART_DATA_ID_MAX_BYTES = 64 as const;
-export const PLAYER_CART_DATA_MAX_RECORDS = 4096 as const;
+export {
+  PICO_CONTROLLER_COUNT,
+  PICO_CONTROLLER_BUTTON_COUNT,
+  PICO_CONTROLLER_BUTTON_MASK,
+  PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  PICO_CART_INPUT_MAX_BYTES,
+  PICO_CART_REF_MAX_BYTES,
+  PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES,
+  PICO_CART_DATA_BYTES,
+  PICO_CART_DATA_ID_MAX_BYTES,
+  PICO_CART_DATA_MAX_RECORDS,
+} from "@pico8-web/contracts";
 
 interface SessionCommandContext {
   readonly requestId: number;

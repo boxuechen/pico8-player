@@ -1,5 +1,5 @@
 import type { PicoDevkitInputBatch } from "@pico8-web/contracts";
-import { PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT } from "../transport/player-protocol.js";
+import { PICO_DEVKIT_KEYPRESS_BATCH_LIMIT } from "../transport/player-protocol.js";
 
 const DEVKIT_ENABLE = 0x01;
 const DEVKIT_POINTER_LOCK = 0x04;
@@ -195,7 +195,7 @@ export class DevkitInputFrontend {
     const keyboard = event as KeyboardEvent;
     if (!this.#acceptsInput() || keyboard.repeat) return;
     const byte = keyByte(keyboard);
-    if (byte === undefined || this.#keypresses.length >= PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT) return;
+    if (byte === undefined || this.#keypresses.length >= PICO_DEVKIT_KEYPRESS_BATCH_LIMIT) return;
     this.#keypresses.push(byte);
   };
 

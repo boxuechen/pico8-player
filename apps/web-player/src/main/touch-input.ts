@@ -1,7 +1,7 @@
 import type { PicoControllerSnapshot } from "@pico8-web/contracts";
 import {
-  PLAYER_CONTROLLER_BUTTON_COUNT,
-  PLAYER_CONTROLLER_COUNT,
+  PICO_CONTROLLER_BUTTON_COUNT,
+  PICO_CONTROLLER_COUNT,
 } from "../transport/player-protocol.js";
 
 interface TouchBinding {
@@ -32,7 +32,7 @@ export class TouchInputFrontend {
   readonly #window: Window;
   readonly #document: Document;
   readonly #onChange: ((snapshot: PicoControllerSnapshot) => void) | undefined;
-  readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
+  readonly #controllers = new Uint8Array(PICO_CONTROLLER_COUNT);
   readonly #pointers = new Map<number, TouchBinding>();
   readonly #controls: TouchControl[] = [];
   readonly #removeListeners: (() => void)[] = [];
@@ -46,8 +46,8 @@ export class TouchInputFrontend {
     for (const element of root.querySelectorAll<HTMLElement>("[data-pico-button]")) {
       const player = Number(element.dataset.picoPlayer ?? 0);
       const button = Number(element.dataset.picoButton);
-      if (!Number.isInteger(player) || player < 0 || player >= PLAYER_CONTROLLER_COUNT ||
-        !Number.isInteger(button) || button < 0 || button >= PLAYER_CONTROLLER_BUTTON_COUNT) continue;
+      if (!Number.isInteger(player) || player < 0 || player >= PICO_CONTROLLER_COUNT ||
+        !Number.isInteger(button) || button < 0 || button >= PICO_CONTROLLER_BUTTON_COUNT) continue;
       const binding = { player, button };
       this.#controls.push({ element, binding });
       setOptionalAttribute(element, "aria-pressed", "false");
@@ -113,7 +113,7 @@ export class TouchInputFrontend {
   }
 
   #recompute(): void {
-    const next = new Uint8Array(PLAYER_CONTROLLER_COUNT);
+    const next = new Uint8Array(PICO_CONTROLLER_COUNT);
     for (const { player, button } of this.#pointers.values()) {
       next[player] = next[player]! | (1 << button);
     }

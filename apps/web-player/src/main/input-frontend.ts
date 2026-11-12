@@ -1,5 +1,5 @@
 import type { PicoControllerSnapshot } from "@pico8-web/contracts";
-import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
+import { PICO_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 
 interface KeyboardBinding {
   readonly player: number;
@@ -42,7 +42,7 @@ export class KeyboardInputFrontend {
   readonly #onChange: ((snapshot: PicoControllerSnapshot) => void) | undefined;
   readonly #heldCodes = new Set<string>();
   #enabled = false;
-  readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
+  readonly #controllers = new Uint8Array(PICO_CONTROLLER_COUNT);
   #disposed = false;
 
   constructor(
@@ -81,7 +81,7 @@ export class KeyboardInputFrontend {
     if (this.#disposed) return;
     if (this.#heldCodes.size === 0 && this.#controllers.every((value) => value === 0)) return;
     this.#heldCodes.clear();
-    this.#setControllers(new Uint8Array(PLAYER_CONTROLLER_COUNT));
+    this.#setControllers(new Uint8Array(PICO_CONTROLLER_COUNT));
   }
 
   dispose(): void {
@@ -122,7 +122,7 @@ export class KeyboardInputFrontend {
   }
 
   #recomputeButtons(): void {
-    const controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
+    const controllers = new Uint8Array(PICO_CONTROLLER_COUNT);
     for (const code of this.#heldCodes) {
       const binding = KEY_TO_BUTTON.get(code);
       if (binding !== undefined) {

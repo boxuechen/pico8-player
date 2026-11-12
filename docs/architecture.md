@@ -39,6 +39,8 @@ Core 拥有权威游戏状态，z8lua 负责 Lua parser/VM、Q16.16、协程与 
 
 实时播放由 RAF 提供时间，`FrameScheduler` 决定逻辑 tick；manual `advance` 按精确帧数直接 step，不依赖墙钟。主线程单次 WASM 调用受指令上限约束，不能被 timer 抢占；Worker 适配另有 watchdog/recovery。
 
+输入、cart 和存档的跨层常量由 `packages/contracts` 唯一定义，transport 直接 re-export；空输入使用同处的深度冻结快照。
+
 输入为八玩家快照与 devkit 瞬态。暂停、菜单、失焦和停止清理按键。手动批次内保持按钮，keypress/wheel/movement 只用于首帧。
 
 ## 生命周期与资源

@@ -19,12 +19,8 @@ import {
   Z8LuaFrameVm,
 } from "@pico8-web/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import {
-  isPlayerHostToRuntime,
-  PLAYER_CONTROLLER_BUTTON_COUNT,
-  PLAYER_CONTROLLER_BUTTON_MASK,
-  PLAYER_CONTROLLER_COUNT,
-} from "../../apps/web-player/dist/transport/public.js";
+import { isPlayerHostToRuntime } from "../../apps/web-player/dist/transport/public.js";
+import * as transport from "../../apps/web-player/dist/transport/public.js";
 import {
   GamepadInputFrontend,
 } from "../../apps/web-player/dist/main/gamepad-input.js";
@@ -216,7 +212,7 @@ test("eight independent repeat latches honor 30/60 Hz registers and reset", () =
 
 test("fixed input DTO rejects malformed masks without advancing runtime state", () => {
   assert.deepEqual(
-    [PLAYER_CONTROLLER_COUNT, PLAYER_CONTROLLER_BUTTON_COUNT, PLAYER_CONTROLLER_BUTTON_MASK],
+    [transport.PICO_CONTROLLER_COUNT, transport.PICO_CONTROLLER_BUTTON_COUNT, transport.PICO_CONTROLLER_BUTTON_MASK],
     [PICO_CONTROLLER_COUNT, PICO_CONTROLLER_BUTTON_COUNT, PICO_CONTROLLER_BUTTON_MASK],
   );
   const runtime = createRuntime();

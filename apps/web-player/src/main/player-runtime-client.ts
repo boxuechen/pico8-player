@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type {
   CartAccess,
   PicoInputSnapshot,
@@ -6,15 +7,15 @@ import type {
 
 import {
   isPlayerRuntimeToHost,
-  PLAYER_CART_INPUT_MAX_BYTES,
-  PLAYER_CART_DATA_BYTES,
-  PLAYER_CART_DATA_ID_MAX_BYTES,
-  PLAYER_CART_DATA_MAX_RECORDS,
-  PLAYER_CART_REF_MAX_BYTES,
-  PLAYER_CONTROLLER_BUTTON_MASK,
-  PLAYER_CONTROLLER_COUNT,
-  PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT,
-  PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES,
+  PICO_CART_INPUT_MAX_BYTES,
+  PICO_CART_DATA_BYTES,
+  PICO_CART_DATA_ID_MAX_BYTES,
+  PICO_CART_DATA_MAX_RECORDS,
+  PICO_CART_REF_MAX_BYTES,
+  PICO_CONTROLLER_BUTTON_MASK,
+  PICO_CONTROLLER_COUNT,
+  PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES,
   type AudioPortAttachmentEnvelope,
   type PlayerHostToRuntime,
   type PlayerRuntimeControlCommand,
@@ -140,7 +141,7 @@ export class PlayerRuntimeClient {
     if (!(source instanceof Uint8Array)) {
       throw new TypeError("cart source must be a Uint8Array");
     }
-    if (source.byteLength === 0 || source.byteLength > PLAYER_CART_INPUT_MAX_BYTES) {
+    if (source.byteLength === 0 || source.byteLength > PICO_CART_INPUT_MAX_BYTES) {
       throw new RangeError("cart source must contain at most 1 MiB");
     }
     this.#lastCartBytes = source.slice();
@@ -249,18 +250,7 @@ export class PlayerRuntimeClient {
 
   clearInput(): void {
     if (this.#disposed || this.#sessionGeneration === 0) return;
-    this.#postInput({
-      controllers: new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0),
-      devkit: {
-        mouseXRaw: 0,
-        mouseYRaw: 0,
-        mouseButtons: 0,
-        wheelRaw: 0,
-        movementXRaw: 0,
-        movementYRaw: 0,
-        keypresses: [],
-      },
-    });
+    this.#postInput(PICO_EMPTY_INPUT);
   }
 
   flushPersistence(): Promise<PlayerRuntimeToHost> {
@@ -331,17 +321,17 @@ export class PlayerRuntimeClient {
     const isInt32 = (value: unknown): boolean => Number.isInteger(value) &&
       Number(value) >= -0x8000_0000 && Number(value) <= 0x7fff_ffff;
     if (
-      !Array.isArray(input.controllers) || input.controllers.length !== PLAYER_CONTROLLER_COUNT ||
+      !Array.isArray(input.controllers) || input.controllers.length !== PICO_CONTROLLER_COUNT ||
       input.controllers.some((buttons) =>
         !Number.isSafeInteger(buttons) || buttons < 0 ||
-        buttons > PLAYER_CONTROLLER_BUTTON_MASK) ||
+        buttons > PICO_CONTROLLER_BUTTON_MASK) ||
       typeof devkit !== "object" || devkit === null ||
       !isInt32(devkit.mouseXRaw) || !isInt32(devkit.mouseYRaw) ||
       !Number.isInteger(devkit.mouseButtons) || devkit.mouseButtons < 0 ||
       devkit.mouseButtons > 0x07 || !isInt32(devkit.wheelRaw) ||
       !isInt32(devkit.movementXRaw) || !isInt32(devkit.movementYRaw) ||
       !Array.isArray(devkit.keypresses) ||
-      devkit.keypresses.length > PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT ||
+      devkit.keypresses.length > PICO_DEVKIT_KEYPRESS_BATCH_LIMIT ||
       devkit.keypresses.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 0xff)
     ) {
       throw new RangeError("input must contain a fixed controller snapshot and devkit batch");
@@ -463,7 +453,7 @@ export class PlayerRuntimeClient {
 
   #copyLocalCartBundle(entries: readonly PlayerLocalCartSource[]): readonly PlayerLocalCartSource[] {
     if (!Array.isArray(entries)) throw new TypeError("local cart bundle must be an array");
-    if (entries.length > PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES) {
+    if (entries.length > PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES) {
       throw new RangeError("local cart bundle exceeds 64 entries");
     }
     const refs = new Set<string>();
@@ -484,14 +474,14 @@ export class PlayerRuntimeClient {
         } else refBytes += 3;
       }
       if (entry.ref.length === 0 || entry.ref.includes("\0") ||
-        refBytes > PLAYER_CART_REF_MAX_BYTES || entry.ref.startsWith("/") ||
+        refBytes > PICO_CART_REF_MAX_BYTES || entry.ref.startsWith("/") ||
         entry.ref.startsWith("#") || entry.ref.includes("://") ||
         entry.ref.includes("\\") || entry.ref.split("/").some((part: string) =>
           part === "" || part === "." || part === "..") || refs.has(entry.ref)) {
         throw new RangeError("local cart bundle ref is not canonical or is duplicated");
       }
       if (entry.bytes.byteLength === 0 ||
-        entry.bytes.byteLength > PLAYER_CART_INPUT_MAX_BYTES) {
+        entry.bytes.byteLength > PICO_CART_INPUT_MAX_BYTES) {
         throw new RangeError("local cart bundle bytes must contain at most 1 MiB");
       }
       refs.add(entry.ref);
@@ -523,14 +513,14 @@ export class PlayerRuntimeClient {
   }
 
   #copyHostCartData(entries: readonly PlayerHostCartDataSeed[]): readonly PlayerHostCartDataSeed[] {
-    if (!Array.isArray(entries) || entries.length > PLAYER_CART_DATA_MAX_RECORDS) {
+    if (!Array.isArray(entries) || entries.length > PICO_CART_DATA_MAX_RECORDS) {
       throw new RangeError("host cartdata exceeds 4096 records");
     }
     const ids = new Set<string>();
     return entries.map((entry) => {
       if (typeof entry?.id !== "string" || !/^[a-z0-9_-]+$/u.test(entry.id) ||
-        entry.id.length > PLAYER_CART_DATA_ID_MAX_BYTES || ids.has(entry.id) ||
-        !(entry.bytes instanceof Uint8Array) || entry.bytes.byteLength !== PLAYER_CART_DATA_BYTES) {
+        entry.id.length > PICO_CART_DATA_ID_MAX_BYTES || ids.has(entry.id) ||
+        !(entry.bytes instanceof Uint8Array) || entry.bytes.byteLength !== PICO_CART_DATA_BYTES) {
         throw new RangeError("host cartdata contains an invalid record");
       }
       ids.add(entry.id);

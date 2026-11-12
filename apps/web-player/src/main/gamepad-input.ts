@@ -1,5 +1,5 @@
 import type { PicoControllerSnapshot } from "@pico8-web/contracts";
-import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
+import { PICO_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 const AXIS_PRESS_THRESHOLD = 0.5;
 const AXIS_RELEASE_THRESHOLD = 0.35;
 
@@ -39,8 +39,8 @@ function latchAxisPair(
 /** Polls standard-mapped browser slots; simulation only sees the normalized result. */
 export class GamepadInputFrontend {
   readonly #source: GamepadSource;
-  readonly #axisMasks = new Uint8Array(PLAYER_CONTROLLER_COUNT);
-  readonly #controllers = new Uint8Array(PLAYER_CONTROLLER_COUNT);
+  readonly #axisMasks = new Uint8Array(PICO_CONTROLLER_COUNT);
+  readonly #controllers = new Uint8Array(PICO_CONTROLLER_COUNT);
   #enabled = false;
   #disposed = false;
 
@@ -52,11 +52,11 @@ export class GamepadInputFrontend {
     this.#assertActive();
     this.#controllers.fill(0);
     if (!this.#enabled) return { controllers: Array.from(this.#controllers) };
-    const connected = new Uint8Array(PLAYER_CONTROLLER_COUNT);
+    const connected = new Uint8Array(PICO_CONTROLLER_COUNT);
     for (const gamepad of this.#source.getGamepads()) {
       if (
         gamepad === null || gamepad.connected === false || gamepad.mapping !== "standard" ||
-        !Number.isInteger(gamepad.index) || gamepad.index < 0 || gamepad.index >= PLAYER_CONTROLLER_COUNT
+        !Number.isInteger(gamepad.index) || gamepad.index < 0 || gamepad.index >= PICO_CONTROLLER_COUNT
       ) continue;
       const player = gamepad.index;
       connected[player] = 1;
@@ -72,7 +72,7 @@ export class GamepadInputFrontend {
       if (pressed(gamepad, 1)) mask |= 1 << 5;
       this.#controllers[player] = mask;
     }
-    for (let player = 0; player < PLAYER_CONTROLLER_COUNT; player += 1) {
+    for (let player = 0; player < PICO_CONTROLLER_COUNT; player += 1) {
       if (connected[player] === 0) this.#axisMasks[player] = 0;
     }
     return { controllers: Array.from(this.#controllers) };

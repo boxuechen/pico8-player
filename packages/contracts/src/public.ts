@@ -71,6 +71,7 @@ export const PICO_CONTROLLER_BUTTON_COUNT = 6;
 export const PICO_CONTROLLER_BUTTON_MASK = 0x3f;
 export const PICO_DEVKIT_KEYPRESS_BATCH_LIMIT = 64;
 export const PICO_CART_DATA_BYTES = 256;
+export const PICO_CART_DATA_MAX_RECORDS = 4096;
 export const PICO_CART_DATA_NUMBER_COUNT = 64;
 export const PICO_CART_DATA_ID_MAX_BYTES = 64;
 
@@ -128,3 +129,13 @@ export interface PicoCartDataCommit {
   readonly bytes: Uint8Array;
   readonly revision: number;
 }
+
+/** Shared deeply immutable idle input; consumers copy arrays before mutation. */
+export const PICO_EMPTY_INPUT: PicoInputSnapshot = Object.freeze({
+  controllers: Object.freeze(new Array<number>(PICO_CONTROLLER_COUNT).fill(0)),
+  devkit: Object.freeze({
+    mouseXRaw: 0, mouseYRaw: 0, mouseButtons: 0,
+    wheelRaw: 0, movementXRaw: 0, movementYRaw: 0,
+    keypresses: Object.freeze([]),
+  }),
+});

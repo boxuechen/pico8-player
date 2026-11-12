@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { CartFormat, ParsedCart } from "@pico8-web/cart-codec";
 import {
   PICO_CART_ROM_SIZE,
@@ -19,7 +20,6 @@ import type {
   RuntimeSessionState,
   RuntimeStepResult,
 } from "../frame-runtime.js";
-import { ZERO_PICO_INPUT } from "../input/l1-input.js";
 
 export type CartSessionState =
   | "empty"
@@ -342,7 +342,7 @@ export class CartSession {
     return this.#start(this.#cart, snapshot);
   }
 
-  step(input: PicoInputSnapshot = ZERO_PICO_INPUT): RuntimeResult<CartSessionStepResult> {
+  step(input: PicoInputSnapshot = PICO_EMPTY_INPUT): RuntimeResult<CartSessionStepResult> {
     const runtime = this.#runtime;
     if (this.#state !== "ready" || runtime === undefined) {
       return invalid("cart session is not ready to step");
@@ -685,7 +685,7 @@ export class CartSession {
     try {
       result = runtime.boot(
         { rom: cart.rom.slice(), code: cart.code.slice() },
-        ZERO_PICO_INPUT,
+        PICO_EMPTY_INPUT,
       );
     } catch (error) {
       return this.#faultCurrent(lifecycleError(

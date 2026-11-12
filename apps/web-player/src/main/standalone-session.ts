@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { PicoInputSnapshot, SerializedRuntimeError } from "@pico8-web/contracts";
 import { isPicoInputSnapshot } from "../transport/validators.js";
 import type { SessionEvent } from "../transport/session-contract.js";
@@ -47,10 +48,6 @@ export interface Pico8AdvanceResult {
   readonly outcome: "completed" | "stopped" | "faulted" | "session-replaced" | "interrupted";
   readonly observation: Pico8SessionObservation;
 }
-const ZERO_INPUT: PicoInputSnapshot = { controllers: [0,0,0,0,0,0,0,0], devkit: {
-  mouseXRaw: 0, mouseYRaw: 0, mouseButtons: 0, wheelRaw: 0,
-  movementXRaw: 0, movementYRaw: 0, keypresses: [],
-} };
 
 /** A standalone manual session: no DOM, RAF, Worker or audio device is created. */
 export class Pico8Session {
@@ -117,7 +114,7 @@ export class Pico8Session {
       return Promise.reject(new RangeError("frames must be an integer between 1 and 600"));
     }
     const requestedFrames = options.frames;
-    const raw = options.input ?? ZERO_INPUT;
+    const raw = options.input ?? PICO_EMPTY_INPUT;
     if (!isPicoInputSnapshot(raw)) return Promise.reject(new TypeError("invalid input snapshot"));
     // Freeze caller input at admission, before preceding operations can await I/O.
     const input = { controllers: raw.controllers.slice(), devkit: { ...raw.devkit, keypresses: raw.devkit.keypresses.slice() } };

@@ -1,14 +1,14 @@
 import type { SessionCommand } from "./session-contract.js";
 import {
-  PLAYER_CART_INPUT_MAX_BYTES,
-  PLAYER_CART_DATA_BYTES,
-  PLAYER_CART_DATA_ID_MAX_BYTES,
-  PLAYER_CART_DATA_MAX_RECORDS,
-  PLAYER_CART_REF_MAX_BYTES,
-  PLAYER_CONTROLLER_BUTTON_MASK,
-  PLAYER_CONTROLLER_COUNT,
-  PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT,
-  PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES,
+  PICO_CART_INPUT_MAX_BYTES,
+  PICO_CART_DATA_BYTES,
+  PICO_CART_DATA_ID_MAX_BYTES,
+  PICO_CART_DATA_MAX_RECORDS,
+  PICO_CART_REF_MAX_BYTES,
+  PICO_CONTROLLER_BUTTON_MASK,
+  PICO_CONTROLLER_COUNT,
+  PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
+  PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES,
   type PlayerHostToRuntime,
   type PlayerRuntimeToHost,
 } from "./player-protocol.js";
@@ -45,15 +45,15 @@ function isInt32(value: unknown): boolean {
 export function isPicoInputSnapshot(value: unknown): boolean {
   return isRecord(value) &&
     Array.isArray(value.controllers) &&
-    value.controllers.length === PLAYER_CONTROLLER_COUNT &&
+    value.controllers.length === PICO_CONTROLLER_COUNT &&
     value.controllers.every((buttons) =>
-      isUint(buttons) && Number(buttons) <= PLAYER_CONTROLLER_BUTTON_MASK) &&
+      isUint(buttons) && Number(buttons) <= PICO_CONTROLLER_BUTTON_MASK) &&
     isRecord(value.devkit) &&
     isInt32(value.devkit.mouseXRaw) && isInt32(value.devkit.mouseYRaw) &&
     isUint(value.devkit.mouseButtons) && Number(value.devkit.mouseButtons) <= 0x07 &&
     isInt32(value.devkit.wheelRaw) && isInt32(value.devkit.movementXRaw) &&
     isInt32(value.devkit.movementYRaw) && Array.isArray(value.devkit.keypresses) &&
-    value.devkit.keypresses.length <= PLAYER_DEVKIT_KEYPRESS_BATCH_LIMIT &&
+    value.devkit.keypresses.length <= PICO_DEVKIT_KEYPRESS_BATCH_LIMIT &&
     value.devkit.keypresses.every((byte) => isUint(byte) && Number(byte) <= 0xff);
 }
 
@@ -132,13 +132,13 @@ function utf8ByteLength(value: string): number {
 
 function isLocalCartBundle(value: unknown): boolean {
   if (value === undefined) return true;
-  if (!Array.isArray(value) || value.length > PLAYER_LOCAL_CART_BUNDLE_MAX_ENTRIES) return false;
+  if (!Array.isArray(value) || value.length > PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES) return false;
   const refs = new Set<string>();
   for (const entry of value) {
     if (!isRecord(entry) || typeof entry.ref !== "string" || entry.ref.length === 0 ||
-      utf8ByteLength(entry.ref) > PLAYER_CART_REF_MAX_BYTES ||
+      utf8ByteLength(entry.ref) > PICO_CART_REF_MAX_BYTES ||
       entry.cartBytes instanceof ArrayBuffer === false || entry.cartBytes.byteLength === 0 ||
-      entry.cartBytes.byteLength > PLAYER_CART_INPUT_MAX_BYTES || !isCartAccess(entry.access) ||
+      entry.cartBytes.byteLength > PICO_CART_INPUT_MAX_BYTES || !isCartAccess(entry.access) ||
       refs.has(entry.ref)) return false;
     refs.add(entry.ref);
   }
@@ -147,13 +147,13 @@ function isLocalCartBundle(value: unknown): boolean {
 
 function isHostCartData(value: unknown): boolean {
   if (value === undefined) return true;
-  if (!Array.isArray(value) || value.length > PLAYER_CART_DATA_MAX_RECORDS) return false;
+  if (!Array.isArray(value) || value.length > PICO_CART_DATA_MAX_RECORDS) return false;
   const ids = new Set<string>();
   return value.every((entry) => {
     if (!isRecord(entry) || typeof entry.id !== "string" ||
-      entry.id.length < 1 || utf8ByteLength(entry.id) > PLAYER_CART_DATA_ID_MAX_BYTES ||
+      entry.id.length < 1 || utf8ByteLength(entry.id) > PICO_CART_DATA_ID_MAX_BYTES ||
       !/^[a-z0-9_-]+$/u.test(entry.id) || ids.has(entry.id) ||
-      !(entry.bytes instanceof ArrayBuffer) || entry.bytes.byteLength !== PLAYER_CART_DATA_BYTES) {
+      !(entry.bytes instanceof ArrayBuffer) || entry.bytes.byteLength !== PICO_CART_DATA_BYTES) {
       return false;
     }
     ids.add(entry.id);
@@ -181,7 +181,7 @@ export function isSessionCommand(value: unknown): value is SessionCommand {
       isPositiveUint(value.sessionGeneration) &&
       value.cartBytes instanceof ArrayBuffer &&
       value.cartBytes.byteLength > 0 &&
-      value.cartBytes.byteLength <= PLAYER_CART_INPUT_MAX_BYTES &&
+      value.cartBytes.byteLength <= PICO_CART_INPUT_MAX_BYTES &&
       isLocalCartBundle(value.localCartBundle) &&
       isHostCartData(value.hostCartData) &&
       (value.instructionBudget === undefined ||
@@ -220,9 +220,9 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
   )) return false;
   if (value.type === "cartdata-commit") {
     return typeof value.id === "string" && value.id.length >= 1 &&
-      utf8ByteLength(value.id) <= PLAYER_CART_DATA_ID_MAX_BYTES &&
+      utf8ByteLength(value.id) <= PICO_CART_DATA_ID_MAX_BYTES &&
       /^[a-z0-9_-]+$/u.test(value.id) && isPositiveUint(value.revision) &&
-      value.bytes instanceof ArrayBuffer && value.bytes.byteLength === PLAYER_CART_DATA_BYTES;
+      value.bytes instanceof ArrayBuffer && value.bytes.byteLength === PICO_CART_DATA_BYTES;
   }
   if (value.type === "persistence-flushed") {
     return typeof value.durable === "boolean" &&

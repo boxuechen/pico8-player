@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { Pico8Session, Pico8SessionObservation } from "./standalone-session.js";
 
 /** Platform-neutral tool schema; adapters supply their own registration and image encoding. */
@@ -55,8 +56,8 @@ export function createPico8SessionTool(session: Pico8Session) {
         if (!Number.isInteger(buttons) || Number(buttons) < 0 || Number(buttons) > 63) throw new RangeError("buttons must be 0–63");
         if (typeof args.frames !== "number") throw new TypeError("frames is required");
         const result = await session.advance({ frames: args.frames, input: {
-          controllers: [Number(buttons), 0,0,0,0,0,0,0],
-          devkit: { mouseXRaw: 0, mouseYRaw: 0, mouseButtons: 0, wheelRaw: 0, movementXRaw: 0, movementYRaw: 0, keypresses: [] },
+          controllers: PICO_EMPTY_INPUT.controllers.map((_, index) => index === 0 ? Number(buttons) : 0),
+          devkit: PICO_EMPTY_INPUT.devkit,
         } });
         return { ...result, observation: serialize(result.observation, image) };
       }

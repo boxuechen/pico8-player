@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import { CartCodecError, decodeCart } from "@pico8-web/cart-codec";
 import {
   PICO_CONTROLLER_COUNT,
@@ -116,16 +117,6 @@ interface PendingExternalCartData {
   readonly cancellation: CartCancellationSource;
   readonly resume: PendingRootHostRequest["resume"];
 }
-
-const ZERO_DEVKIT_INPUT: PicoDevkitInputBatch = Object.freeze({
-  mouseXRaw: 0,
-  mouseYRaw: 0,
-  mouseButtons: 0,
-  wheelRaw: 0,
-  movementXRaw: 0,
-  movementYRaw: 0,
-  keypresses: Object.freeze([]),
-});
 
 function saturatingAddInt32(left: number, right: number): number {
   const result = left + right;
@@ -258,7 +249,7 @@ export function createSessionController(
         movementYRaw: pendingMovementYRaw,
         keypresses: pendingKeypresses.slice(),
       } : {
-        ...ZERO_DEVKIT_INPUT,
+        ...PICO_EMPTY_INPUT.devkit,
         mouseXRaw: inputMouseXRaw,
         mouseYRaw: inputMouseYRaw,
         mouseButtons: inputMouseButtons,

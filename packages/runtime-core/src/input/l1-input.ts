@@ -19,21 +19,6 @@ const DEVKIT_MOUSE_BUTTONS = 0x02;
 const DEVKIT_FLAG_MASK = 0x07;
 const DEVKIT_BUTTON_COUNT = 7;
 
-const ZERO_DEVKIT_INPUT: PicoDevkitInputBatch = Object.freeze({
-  mouseXRaw: 0,
-  mouseYRaw: 0,
-  mouseButtons: 0,
-  wheelRaw: 0,
-  movementXRaw: 0,
-  movementYRaw: 0,
-  keypresses: Object.freeze([]),
-});
-
-export const ZERO_PICO_INPUT: PicoInputSnapshot = Object.freeze({
-  controllers: Object.freeze(new Array<number>(PICO_CONTROLLER_COUNT).fill(0)),
-  devkit: ZERO_DEVKIT_INPUT,
-});
-
 export function normalizeControllers(input: PicoInputSnapshot): readonly number[] {
   if (!Array.isArray(input.controllers) || input.controllers.length !== PICO_CONTROLLER_COUNT) {
     throw new RangeError("input controllers must contain exactly eight player masks");

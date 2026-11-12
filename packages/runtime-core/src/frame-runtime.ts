@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { ParsedCart } from "@pico8-web/cart-codec";
 import {
   PICO_CART_DATA_ROM_SIZE,
@@ -9,7 +10,7 @@ import {
   type RuntimePhase,
   type SerializedRuntimeError,
 } from "@pico8-web/contracts";
-import { normalizeInputSnapshot, ZERO_PICO_INPUT } from "./input/l1-input.js";
+import { normalizeInputSnapshot } from "./input/l1-input.js";
 import type { CanonicalAudioSlice } from "./audio/sfx-synth.js";
 import {
   createPicoApiHost,
@@ -388,7 +389,7 @@ export class FrameSliceRuntime {
 
   boot(
     cart: Pick<ParsedCart, "rom" | "code">,
-    input: PicoInputSnapshot = ZERO_PICO_INPUT,
+    input: PicoInputSnapshot = PICO_EMPTY_INPUT,
   ): RuntimeResult<RuntimeBootResult> {
     if (this.#state !== "empty") {
       return { ok: false, error: invalidState("runtime session is not empty") };
@@ -455,7 +456,7 @@ export class FrameSliceRuntime {
     );
   }
 
-  step(input: PicoInputSnapshot = ZERO_PICO_INPUT): RuntimeResult<RuntimeStepResult> {
+  step(input: PicoInputSnapshot = PICO_EMPTY_INPUT): RuntimeResult<RuntimeStepResult> {
     if (this.#state !== "ready" || this.#targetFps === 0) {
       return { ok: false, error: invalidState("runtime session is not ready to step") };
     }

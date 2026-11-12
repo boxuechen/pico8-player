@@ -1,3 +1,4 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { PicoInputSnapshot } from "@pico8-web/contracts";
 import type { SessionCommand, SessionControlCommand, SessionEvent } from "../transport/session-contract.js";
 import type { PlayerRuntimePort, PlayerLocalCartSource, PlayerHostCartDataSeed, RuntimeAudioPort } from "../transport/runtime-port.js";
@@ -8,10 +9,6 @@ import { PcmOutput } from "./audio-transport.js";
 import type { FrameRuntimeModule } from "@pico8-web/z8lua-bridge";
 
 type Body<T = SessionControlCommand> = T extends unknown ? Omit<T, "requestId" | "sessionGeneration"> : never;
-const EMPTY_INPUT: PicoInputSnapshot = { controllers: [0,0,0,0,0,0,0,0], devkit: {
-  mouseXRaw: 0, mouseYRaw: 0, mouseButtons: 0, wheelRaw: 0,
-  movementXRaw: 0, movementYRaw: 0, keypresses: [],
-} };
 
 /** Direct execution, with no Worker, wire envelopes, response map or watchdog. */
 export class PlayerSession implements PlayerRuntimePort {
@@ -93,7 +90,7 @@ export class PlayerSession implements PlayerRuntimePort {
   clearInput(): void {
     if (this.#disposed || this.#generation === 0) return;
     // Ordered with asynchronous persistence, without waiting for guest continuations.
-    void this.#execute(this.#input(EMPTY_INPUT)).catch(() => undefined);
+    void this.#execute(this.#input(PICO_EMPTY_INPUT)).catch(() => undefined);
   }
   attachAudioPort(port: RuntimeAudioPort): void {
     this.#assertActive(); this.#audio.attach(port, this.#generation);

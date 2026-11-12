@@ -1,5 +1,6 @@
+import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { PicoInputSnapshot } from "@pico8-web/contracts";
-import { PLAYER_CONTROLLER_COUNT } from "../transport/player-protocol.js";
+import { PICO_CONTROLLER_COUNT } from "../transport/player-protocol.js";
 
 import { GamepadInputFrontend, type GamepadSource } from "./gamepad-input.js";
 import { DevkitInputFrontend } from "./devkit-input.js";
@@ -19,7 +20,7 @@ export class PlayerInputFrontend {
   readonly gamepad: GamepadInputFrontend;
   readonly devkit: DevkitInputFrontend;
   readonly touch: TouchInputFrontend | undefined;
-  #hostInput: PicoInputSnapshot = emptyInput();
+  #hostInput: PicoInputSnapshot = PICO_EMPTY_INPUT;
   #hostInputEnabled = false;
   #disposed = false;
 
@@ -64,7 +65,7 @@ export class PlayerInputFrontend {
       this.touch?.snapshot().controllers,
       this.#hostInputEnabled ? this.#hostInput.controllers : undefined,
     ];
-    const controllers = new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0);
+    const controllers = new Array<number>(PICO_CONTROLLER_COUNT).fill(0);
     for (const source of sources) {
       if (source === undefined) continue;
       for (let player = 0; player < controllers.length; player += 1) {
@@ -102,7 +103,7 @@ export class PlayerInputFrontend {
 
   setEnabled(enabled: boolean): void {
     this.#assertActive();
-    if (!enabled) this.#hostInput = emptyInput();
+    if (!enabled) this.#hostInput = PICO_EMPTY_INPUT;
     this.keyboard.setEnabled(enabled);
     this.gamepad.setEnabled(enabled);
     this.touch?.setEnabled(enabled);
@@ -116,7 +117,7 @@ export class PlayerInputFrontend {
     this.gamepad.clear();
     this.touch?.clear();
     this.devkit.clear();
-    this.#hostInput = emptyInput();
+    this.#hostInput = PICO_EMPTY_INPUT;
   }
 
   dispose(): void {
@@ -138,28 +139,13 @@ function saturatingInt32(value: number): number {
   return Math.max(-0x8000_0000, Math.min(0x7fff_ffff, value)) | 0;
 }
 
-function emptyInput(): PicoInputSnapshot {
-  return {
-    controllers: new Array<number>(PLAYER_CONTROLLER_COUNT).fill(0),
-    devkit: {
-      mouseXRaw: 0,
-      mouseYRaw: 0,
-      mouseButtons: 0,
-      wheelRaw: 0,
-      movementXRaw: 0,
-      movementYRaw: 0,
-      keypresses: [],
-    },
-  };
-}
-
 function copyInput(snapshot: PicoInputSnapshot): PicoInputSnapshot {
   const devkit = snapshot?.devkit;
   const int32 = (value: unknown): value is number => Number.isInteger(value) &&
     Number(value) >= -0x8000_0000 && Number(value) <= 0x7fff_ffff;
   if (
     !Array.isArray(snapshot?.controllers) ||
-    snapshot.controllers.length !== PLAYER_CONTROLLER_COUNT ||
+    snapshot.controllers.length !== PICO_CONTROLLER_COUNT ||
     snapshot.controllers.some((buttons) =>
       !Number.isSafeInteger(buttons) || buttons < 0 || buttons > 0x3f) ||
     typeof devkit !== "object" || devkit === null ||
