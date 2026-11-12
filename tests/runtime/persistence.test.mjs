@@ -7,7 +7,7 @@ import {
   isPlayerHostToRuntime,
   isPlayerRuntimeToHost,
 } from "../../apps/web-player/dist/transport/public.js";
-import { PlayerRuntimeClient } from "../../apps/web-player/dist/main/player-runtime-client.js";
+import { PlayerRuntimeClient } from "../../apps/web-player/dist/main/worker-client.js";
 
 const encoder = new TextEncoder();
 let module;

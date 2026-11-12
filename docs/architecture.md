@@ -12,9 +12,9 @@ Web facade ── PlayerController / 生命周期队列 ── runtime port
                                RuntimeCore ← ports ← z8lua bridge → WASM
 ```
 
-`PlayerComposition` 仅创建、连接和销毁 runtime、Canvas 与音频设备；Controller/facade 直接调用 runtime port，没有 Composition 方法转发。
+`compose-player.ts` 负责挂载 Web 播放器。`PlayerComposition` 创建、连接和销毁 runtime、Canvas 与音频设备；Controller/facade 直接调用 runtime port，没有 Composition 方法转发。
 
-Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution: "worker"` 时，`PlayerRuntimeClient` 经消息协议连接 Worker，Worker 仍调用同一个 `compose-session.ts` 的类型化方法。命令分发、wire requestId 和 worker generation 仅由 Worker 适配维护；主线程不构造协议消息。手动会话不创建 DOM、RAF、Worker 或音频设备。AudioWorklet 只负责设备 PCM 队列与重采样。
+Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution: "worker"` 时，`main/worker-client.ts` 中的 `PlayerRuntimeClient` 经消息协议连接 Worker，Worker 仍调用同一个 `compose-session.ts` 的类型化方法。命令分发、wire requestId 和 worker generation 仅由 Worker 适配维护；主线程不构造协议消息。手动会话不创建 DOM、RAF、Worker 或音频设备。AudioWorklet 只负责设备 PCM 队列与重采样。
 
 ## 源码归属
 
@@ -24,8 +24,8 @@ Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution
 | `packages/cart-codec` | `.p8` / `.p8.png` bytes 解码；仅依赖 contracts |
 | `packages/runtime-core` | RAM、graphics、audio、input、cart/session、frame scheduler、外部能力 ports；依赖 contracts/codec |
 | `packages/z8lua-bridge` | 实现 VM port，管理 WASM handle、内存 lease、host bindings；只以 type 引用 Core |
-| `apps/web-player/src/runtime` | 组合 Core/bridge/codec、执行会话、调度、PCM 输出、IndexedDB 和 caller cart adapters |
-| `apps/web-player/src/main` | 独立 API、Web facade、Canvas、音频设备、输入与 UI；通过 runtime/transport 访问执行层 |
+| `apps/web-player/src/runtime` | 组合 Core/bridge/codec、执行会话、独立会话 API、JSON tool、像素解码、调度、PCM 输出、IndexedDB 和 caller cart adapters |
+| `apps/web-player/src/main` | 公共导出、Web facade、Canvas、音频设备、输入、UI 与宿主侧 Worker client |
 | `apps/web-player/src/transport` | 执行事件、runtime port、错误、参数验证；Worker 协议单独拥有命令、requestId、版本和 worker generation |
 | `apps/web-player/src/worker` | 可选 Worker 入口与消息适配；无重复模拟实现 |
 | `apps/web-player/src/worklet` | PCM 消费、设备统计和重采样；不驱动模拟 |

@@ -5,7 +5,7 @@ import type { AudioFrontendOptions } from "./audio-frontend.js";
 import {
   mountPico8Player,
   type MountedPlayer,
-} from "./main.js";
+} from "./compose-player.js";
 import type { PlayerShellState, PlayerLifecycleActions } from "./player-controller.js";
 import type { PlayerShellMode } from "./ui/player-shell-view.js";
 import { RuntimeClientError } from "../transport/runtime-error.js";

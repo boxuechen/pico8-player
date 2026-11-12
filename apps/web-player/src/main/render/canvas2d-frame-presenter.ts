@@ -3,7 +3,7 @@ import {
   PICO_FRAME_HEIGHT,
   PICO_FRAME_WIDTH,
   type PackedPicoFrame,
-} from "./pico-frame.js";
+} from "../../runtime/pico-frame.js";
 
 export interface PresenterSize {
   readonly widthCssPixels: number;

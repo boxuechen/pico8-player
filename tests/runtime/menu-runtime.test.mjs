@@ -9,7 +9,7 @@ import {
 import {
   createPlayerWorkerController,
 } from "../../apps/web-player/dist/worker/compose-runtime.js";
-import { PlayerRuntimeClient } from "../../apps/web-player/dist/main/player-runtime-client.js";
+import { PlayerRuntimeClient } from "../../apps/web-player/dist/main/worker-client.js";
 import { RuntimeClientError } from "../../apps/web-player/dist/transport/runtime-error.js";
 
 const encoder = new TextEncoder();

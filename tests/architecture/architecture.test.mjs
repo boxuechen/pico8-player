@@ -114,7 +114,7 @@ const negativeCases = [
     name: "packages-to-apps",
     logicalPath: "packages/runtime-core/src/illegal.ts",
     expectedRule: "package-imports-app",
-    sourceText: "import \"../../../apps/web-player/src/main/main.js\";",
+    sourceText: "import \"../../../apps/web-player/src/main/public.js\";",
   },
   {
     name: "platform-leak",
@@ -183,7 +183,7 @@ test("all package and execution-domain build outputs exist", () => {
     "packages/cart-codec/dist/public.js",
     "packages/runtime-core/dist/public.js",
     "packages/z8lua-bridge/dist/public.js",
-    "apps/web-player/dist/main/main.js",
+    "apps/web-player/dist/main/public.js",
     "apps/web-player/dist/worker/runtime-worker.js",
     "apps/web-player/dist/worklet/pico8-audio-processor.js",
   ]) {

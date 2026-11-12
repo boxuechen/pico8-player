@@ -9,7 +9,7 @@ import {
   PICO8_DEFAULT_PALETTE_RGBA,
   PICO_PACKED_FRAME_BYTES,
   PICO_RGBA_FRAME_BYTES,
-} from "../../apps/web-player/dist/main/render/pico-frame.js";
+} from "../../apps/web-player/dist/runtime/pico-frame.js";
 
 function createCanvasDouble() {
   const state = {

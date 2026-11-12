@@ -12,7 +12,14 @@ import {
   PlayerRuntimeClient,
   type PlayerRuntimeClientOptions,
   type PlayerRuntimeWorkerFactory,
-} from "./player-runtime-client.js";
+} from "./worker-client.js";
+import type { GamepadSource } from "./gamepad-input.js";
+import { PlayerController } from "./player-controller.js";
+import {
+  PlayerShellView,
+  type PlayerShellElements,
+  type PlayerShellMode,
+} from "./ui/player-shell-view.js";
 
 export interface PlayerCompositionOptions {
   readonly execution?: "main" | "worker";
@@ -146,5 +153,51 @@ export class PlayerComposition {
 
   #assertActive(): void {
     if (this.#disposed) throw new Error("PlayerComposition is disposed");
+  }
+}
+
+interface MountPlayerOptions extends Omit<PlayerCompositionOptions, "canvas"> {
+  readonly root: HTMLElement;
+  readonly gamepadSource?: GamepadSource;
+  readonly shell?: PlayerShellMode;
+}
+
+export interface MountedPlayer {
+  readonly composition: PlayerComposition;
+  readonly controller: PlayerController;
+  readonly elements: PlayerShellElements;
+}
+
+/** Creates the production DOM shell inside a caller-owned root. */
+export async function mountPico8Player({
+  root,
+  shell,
+  gamepadSource,
+  ...compositionOptions
+}: MountPlayerOptions): Promise<MountedPlayer> {
+  const document = root.ownerDocument;
+  const hostWindow = document.defaultView ?? window;
+  const view = PlayerShellView.create(root, {
+    window: hostWindow,
+    document,
+    ...(shell === undefined ? {} : { shell }),
+  });
+  const { elements } = view;
+
+  try {
+    const composition = await PlayerComposition.create({
+      ...compositionOptions,
+      canvas: elements.canvas,
+    });
+    const controller = new PlayerController(composition, view, {
+      window: hostWindow,
+      document,
+      ...(gamepadSource === undefined ? {} : { gamepadSource }),
+    });
+    return { composition, controller, elements };
+  } catch (error) {
+    view.showDiagnostic(error instanceof Error ? error.message : String(error));
+    view.dispose();
+    throw error;
   }
 }

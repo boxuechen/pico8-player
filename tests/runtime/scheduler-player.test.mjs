@@ -13,7 +13,7 @@ import {
 } from "../../apps/web-player/dist/worker/compose-runtime.js";
 import {
   PlayerRuntimeClient,
-} from "../../apps/web-player/dist/main/player-runtime-client.js";
+} from "../../apps/web-player/dist/main/worker-client.js";
 import { RuntimeClientError } from "../../apps/web-player/dist/transport/runtime-error.js";
 import { makeP8Png } from "../fixtures/p8png/fixture-builder.mjs";
 

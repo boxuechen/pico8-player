@@ -3,9 +3,9 @@ import type { PicoInputSnapshot, SerializedRuntimeError } from "@pico8-web/contr
 import { isPicoInputSnapshot } from "../transport/validators.js";
 import type { SessionEvent } from "../transport/session-contract.js";
 import type { PlayerRuntimePort, PlayerLocalCartSource } from "../transport/runtime-port.js";
-import { createPlayerSession } from "../runtime/create-session.js";
-import { PlayerLifecycleQueue } from "../runtime/lifecycle-queue.js";
-import { decodePackedPicoFrame, PICO_RGBA_FRAME_BYTES } from "./render/pico-frame.js";
+import { createPlayerSession } from "./create-session.js";
+import { PlayerLifecycleQueue } from "./lifecycle-queue.js";
+import { decodePackedPicoFrame, PICO_RGBA_FRAME_BYTES } from "./pico-frame.js";
 
 export const PICO8_SESSION_API_VERSION = 1 as const;
 export interface Pico8SessionOptions {

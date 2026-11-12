@@ -27,5 +27,5 @@ export {
   type Pico8SessionOptions, type Pico8SessionLoadOptions,
   type Pico8SessionFrame, type Pico8SessionObservation,
   type Pico8AdvanceOptions, type Pico8AdvanceResult,
-} from "./standalone-session.js";
-export { createPico8SessionTool, PICO8_SESSION_TOOL } from "./session-tool.js";
+} from "../runtime/standalone-session.js";
+export { createPico8SessionTool, PICO8_SESSION_TOOL } from "../runtime/session-tool.js";

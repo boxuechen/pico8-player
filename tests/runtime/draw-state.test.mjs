@@ -13,7 +13,7 @@ import {
 import {
   decodePackedPicoFrame,
   PICO_RGBA_FRAME_BYTES,
-} from "../../apps/web-player/dist/main/render/pico-frame.js";
+} from "../../apps/web-player/dist/runtime/pico-frame.js";
 import {
   isPlayerRuntimeToHost,
 } from "../../apps/web-player/dist/transport/public.js";

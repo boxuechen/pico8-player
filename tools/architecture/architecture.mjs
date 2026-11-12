@@ -100,7 +100,7 @@ const REQUIRED_FILES = [
   "pnpm-workspace.yaml",
   "tsconfig.base.json",
   "tsconfig.json",
-  "apps/web-player/src/main/main.ts",
+  "apps/web-player/src/main/public.ts",
   "apps/web-player/src/main/compose-player.ts",
   "apps/web-player/src/worker/runtime-worker.ts",
   "apps/web-player/src/worker/compose-runtime.ts",

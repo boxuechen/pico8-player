@@ -86,12 +86,12 @@ test("integer scaling never stretches the 128x128 backing surface", () => {
 });
 
 test("the default shell is class-driven DOM with reduced-motion and accessibility hooks", async () => {
-  const [main, view, stylesheet] = await Promise.all([
-    readFile("apps/web-player/src/main/main.ts", "utf8"),
+  const [composition, view, stylesheet] = await Promise.all([
+    readFile("apps/web-player/src/main/compose-player.ts", "utf8"),
     readFile("apps/web-player/src/main/ui/player-shell-view.ts", "utf8"),
     readFile("apps/web-player/public/player.css", "utf8"),
   ]);
-  assert.doesNotMatch(main, /\.style\./u);
+  assert.doesNotMatch(composition, /\.style\./u);
   assert.doesNotMatch(view, /\.style\./u);
   assert.match(view, /role", "status/u);
   assert.match(view, /role", "alert/u);
