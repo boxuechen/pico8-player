@@ -166,7 +166,7 @@ function isSerializedRuntimeError(value: unknown): value is SerializedRuntimeErr
     "recoverable" in value && typeof value.recoverable === "boolean";
 }
 
-/** Stable Phase 1E composition: decode -> CartSession -> scheduler -> events. */
+/** Shared session composition: decode -> CartSession -> scheduler -> events. */
 export function createSessionController(
   module: FrameRuntimeModule,
   options: SessionControllerOptions = {},
@@ -602,7 +602,7 @@ export function createSessionController(
         staged.dispose();
         guestLoadFault(command, pending, {
           code: "E_FEATURE_UNSUPPORTED",
-          message: "a Phase 5D load target must boot directly into callback or custom mode",
+          message: "a load target must boot directly into callback or custom mode",
           phase: "host-call",
           recoverable: false,
         } satisfies SerializedRuntimeError);
@@ -929,7 +929,7 @@ export function createSessionController(
     session.stop();
     return fault(command, {
       code: "E_FEATURE_UNSUPPORTED",
-      message: "cart host requests are not supported by the Phase 1E player",
+      message: "cart host requests are not supported by the player",
       phase: "host-call",
       recoverable: false,
     });

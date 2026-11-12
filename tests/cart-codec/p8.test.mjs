@@ -270,8 +270,6 @@ test("decodeCart detects bytes magic and both formats share ParsedCart fields", 
   const textInput = makeP8Bytes();
   const text = decodeCart(textInput);
   assert.equal(text.format, "p8");
-  assert.equal(text.version, text.cartVersion);
-  assert.equal(text.code, text.luaSource);
 
   const pngManifest = JSON.parse(
     await readFile(new URL("../fixtures/p8png/manifest.json", import.meta.url), "utf8"),

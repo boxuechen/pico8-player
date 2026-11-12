@@ -8,7 +8,7 @@ import {
 } from "./main.js";
 import type { PlayerShellState, PlayerLifecycleActions } from "./player-controller.js";
 import type { PlayerShellMode } from "./ui/player-shell-view.js";
-import { RuntimeClientError } from "./runtime-client.js";
+import { RuntimeClientError } from "../transport/runtime-error.js";
 import {
   HostPersistenceFrontend,
   type Pico8CartDataCommit,
@@ -182,7 +182,7 @@ export class Pico8WebPlayer {
 
   loadCart(source: Uint8Array, options: Pico8LoadCartOptions = {}): Promise<void> {
     return this.#enqueue(async (actions) => {
-      let hostCartData: readonly import("./player-runtime-client.js").PlayerHostCartDataSeed[] |
+      let hostCartData: readonly import("../transport/runtime-port.js").PlayerHostCartDataSeed[] |
         undefined;
       if (this.#persistence !== undefined) {
         if (options.contentId === undefined) {

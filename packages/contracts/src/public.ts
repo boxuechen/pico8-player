@@ -27,7 +27,7 @@ export interface PicoMemoryLease {
   readonly leaseId: string;
 }
 
-/** Stable cross-domain failure codes introduced by the Phase 0E slice. */
+/** Stable cross-domain failure codes. */
 export type RuntimeErrorCode =
   | "E_VM_SYNTAX"
   | "E_VM_RUNTIME"

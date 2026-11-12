@@ -1,0 +1,56 @@
+# 当前架构
+
+## 一份 runtime，三种入口
+
+```text
+Web facade ── PlayerController / 生命周期队列 ── PlayerComposition
+                                                   │
+独立会话 / JSON tool ── 生命周期队列 ── PlayerSession ──┤
+                                                   ▼
+                                  runtime/compose-session.ts
+                                                   │
+                               RuntimeCore ← ports ← z8lua bridge → WASM
+```
+
+Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution: "worker"` 时，`PlayerRuntimeClient` 经消息协议连接 Worker，Worker 仍调用同一个 `compose-session.ts`。手动会话不创建 DOM、RAF、Worker 或音频设备。AudioWorklet 只负责设备 PCM 队列与重采样。
+
+## 源码归属
+
+| 目录 | 职责与依赖 |
+| --- | --- |
+| `packages/contracts` | 稳定值类型、输入快照、错误；无状态、无平台依赖 |
+| `packages/cart-codec` | `.p8` / `.p8.png` bytes 解码；仅依赖 contracts |
+| `packages/runtime-core` | RAM、graphics、audio、input、cart/session、frame scheduler、外部能力 ports；依赖 contracts/codec |
+| `packages/z8lua-bridge` | 实现 VM port，管理 WASM handle、内存 lease、host bindings；只以 type 引用 Core |
+| `apps/web-player/src/runtime` | 组合 Core/bridge/codec、执行会话、调度、PCM 输出、IndexedDB 和 caller cart adapters |
+| `apps/web-player/src/main` | 独立 API、Web facade、Canvas、音频设备、输入与 UI；通过 runtime/transport 访问执行层 |
+| `apps/web-player/src/transport` | 线程无关命令/事件、runtime port、错误、验证器；Worker wire 单独加版本和 worker generation |
+| `apps/web-player/src/worker` | 可选 Worker 入口与消息适配；无重复模拟实现 |
+| `apps/web-player/src/worklet` | PCM 消费、设备统计和重采样；不驱动模拟 |
+| `wasm` | 固定 z8lua 源码、项目 C++ bridge、补丁、许可证和构建锁 |
+
+Core 不使用 DOM、Worker、fetch、IndexedDB 或具体 WASM module。WASM handle/pointer 不暴露给 UI；物理 Pico RAM 的 lease 从 create 到 destroy 有效，逻辑寻址统一走 adapter mapper。`.p8.png` 不经过 Canvas 解码。
+
+TypeScript project references、package exports 和 `tests/architecture` 检查这些边界。生产代码不依赖 `ref/`。
+
+## 帧、输入与状态
+
+Core 拥有权威游戏状态，z8lua 负责 Lua parser/VM、Q16.16、协程与 GC。`FrameSliceRuntime` 在完整逻辑边界提交画面、输入、音频和存档；异步 host request 在原 transaction 中恢复。`CartSession` 管理载入、冷重置、generation 和故障恢复。
+
+实时播放由 RAF 提供时间，`FrameScheduler` 决定逻辑 tick；manual `advance` 按精确帧数直接 step，不依赖墙钟。主线程单次 WASM 调用受指令上限约束，不能被 timer 抢占；Worker 适配另有 watchdog/recovery。
+
+输入为八玩家快照与 devkit 瞬态。暂停、菜单、失焦和停止清理按键。手动批次内保持按钮，keypress/wheel/movement 只用于首帧。
+
+## 生命周期与资源
+
+每个 Web controller / 独立会话拥有自己的串行生命周期队列。API、DOM、文件载入和环境事件使用同一队列；复合操作不递归入队。实时帧回调独立运行，使 `start()` 能等待当前 generation 的首帧实际呈现到 Canvas。
+
+换卡先停止旧 producer 并 flush 旧身份，再验证并激活新存档。host 回应以 generation/request identity 检查，迟到结果不能写入新会话。解析失败、写入失败和取消均有明确返回，队列不会因一次失败失效。
+
+`dispose()` 立即关闭新的公共操作并取消未开始的操作；等待进行中的操作/必要存档提交后，释放 WASM 引用、监听器、RAF、AudioContext 和可选 Worker。重复 dispose 幂等。主线程无法抢占已进入的同步 WASM 调用。
+
+## 外部能力
+
+cart bytes/local bundle 由调用方显式提供；resolver 不推导 URL、文件系统或 BBS 权限。`load/reload/cstore` 的外部操作只从 runtime-owned root 恢复；nested guest coroutine 的 host suspension 拒绝且不产生外部副作用。
+
+内存 cartdata 在会话实例内保留；Web 默认 IndexedDB，可替换为 host persistence port。`flushPersistence` 的 durable 结果反映真实存储能力，不能把仅排队成功当作落盘成功。

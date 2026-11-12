@@ -1,30 +1,12 @@
 # Repository guidance
 
-This repository is implementing a Chrome/Chromium-only PICO-8 web player with
-z8lua WASM and a TypeScript runtime.
+Read [docs/README.md](docs/README.md) and [docs/architecture.md](docs/architecture.md) before changing production code. Work within the user's current task; completed phases are preserved in Git rather than separate approval documents.
 
-Before changing production code:
-
-1. Read [`docs/README.md`](docs/README.md).
-2. Follow the single active phase routed by `docs/README.md`. If no phase is
-   active, production implementation is not authorized.
-3. Read [`docs/08-source-layout-and-boundaries.md`](docs/08-source-layout-and-boundaries.md)
-   and only the contract sections routed by the current phase document.
-
-Repository rules:
-
-- `spec/` owns machine-readable contracts; `docs/adr/` owns accepted decisions;
-  `docs/evidence/` is immutable historical evidence.
-- RuntimeCore remains browser-neutral. Canvas/WebGL, AudioContext and
-  AudioWorklet belong to `apps/web-player`.
-- Do not import, build or test against `ref/`; it is ignored reference material.
-- Do not infer implementation status from a target architecture example. Check
-  the status labels and current source first.
+- RuntimeCore is browser-neutral. Canvas, AudioContext, AudioWorklet, storage and Worker adapters belong to `apps/web-player`.
+- Keep the default main-thread session and optional Worker on the same execution implementation.
+- `spec/` owns ABI, codec, release and API inventory contracts. Update the relevant current docs when public behavior or ownership changes.
+- Never import, build or test against ignored `ref/` or local external cart libraries.
 - Chrome/Chromium is the only browser gate. Do not add Firefox/WebKit scope.
-- Run verification proportional to the change and follow the active phase's
-  verification matrix. `pnpm test` and `pnpm run verify` are quick defaults; do not run
-  `verify:historical`, long soaks or an unrelated phase gate unless the active
-  phase explicitly owns it or a relevant regression is being diagnosed.
-
-Keep this file short. Detailed task requirements belong in the active phase
-document, not here.
+- Preserve third-party notices, source/patch provenance and reproducible WASM locks.
+- Run `pnpm test` for code changes; use `pnpm run verify:release` and `pnpm run test:browser` for component/transport changes. Build WASM first on a fresh checkout; see [development](docs/development.md).
+- Keep behavioral regressions. Do not restore historical phase gates, duplicate compatibility shims or archived validation output.

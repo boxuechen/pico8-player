@@ -20,7 +20,6 @@ const fixtures = await readJson(manifest.fixtures.manifest);
 const textFixtures = await readJson(manifest.textFixtures.manifest);
 const packageManifest = await readJson("packages/cart-codec/package.json");
 
-assert.equal(manifest.phase, "1B");
 assert.equal(manifest.target.pico8Version, contract.target.pico8Version);
 assert.equal(manifest.target.maximumCartVersion, contract.target.maximumCartVersion);
 assert.deepEqual(manifest.target.formats, contract.formats.map((format) => `.${format}`));
@@ -49,5 +48,5 @@ assert.ok(manifest.normativeSources.every((source) => source.startsWith("https:/
 assert.ok(manifest.referenceCrossChecks.every(({ use }) => use.includes("no source copied or imported")));
 
 process.stdout.write(
-  `Verified Phase 1B cart-codec manifest and ${manifest.productionSources.length} production sources\n`,
+  `Verified cart-codec manifest and ${manifest.productionSources.length} production sources\n`,
 );

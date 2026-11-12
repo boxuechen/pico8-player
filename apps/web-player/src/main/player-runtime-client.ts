@@ -20,7 +20,7 @@ import {
   type PlayerRuntimeControlCommand,
   type PlayerRuntimeToHost,
 } from "../transport/public.js";
-import { RuntimeClientError } from "./runtime-client.js";
+import { RuntimeClientError } from "../transport/runtime-error.js";
 
 export interface PlayerRuntimeWorkerPort {
   postMessage(
@@ -44,7 +44,6 @@ export interface PlayerRuntimeClientOptions {
   readonly commandTimeoutMs?: number;
 }
 
-export type { PlayerLocalCartSource, PlayerHostCartDataSeed } from "../transport/runtime-port.js";
 import type { PlayerLocalCartSource, PlayerHostCartDataSeed } from "../transport/runtime-port.js";
 
 interface PendingPlayerCommand {

@@ -54,8 +54,6 @@ const generatedBindings = JSON.parse(
   await readFile(join(projectRoot, manifest.generatedBindingsManifest), "utf8"),
 );
 
-assert.equal(manifest.phase, "4G");
-assert.equal(manifest.compatibilityRevision, "12A");
 assert.equal(manifest.limits.defaultSafetyInstructionLimit, 32_000_000);
 assert.equal(manifest.abiVersion, abi.abiVersion);
 assert.equal(generatedBindings.source, manifest.hostApiContract);

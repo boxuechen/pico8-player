@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "referenceInstructionsPerSecond": 4000000,
+  "accounting": {
+    "unit": "z8lua-vm-instruction",
+    "fractionFormat": "signed-q16.16",
+    "formula": "floor(cpuInstructions * accountingFps * 65536 / 4000000)",
+    "accountingFps": "30 for the 1/30-second startup transaction; otherwise logical target FPS",
+    "maximumFractionRaw": 2147483647,
+    "slowFrameThresholdRawExclusive": 65536,
+    "rounding": "floor",
+    "toleranceInstructions": 0,
+    "hostWallClockAffectsGuestCost": false,
+    "transactionScope": "boot or one committed logical frame, cumulative across host-request continuations"
+  },
+  "cadences": {
+    "30": {
+      "budgetFloor": 133333,
+      "budgetCeiling": 133334,
+      "firstSlowInstruction": 133336
+    },
+    "60": {
+      "budgetFloor": 66666,
+      "budgetCeiling": 66667,
+      "firstSlowInstruction": 66668
+    },
+    "custom": {
+      "targetFps": 30,
+      "boundary": "root-flip"
+    }
+  },
+  "cases": [
+    {
+      "id": "phase-4/cpu-budget-30",
+      "source": "tests/fixtures/integration/cpu-budget-30.p8",
+      "sourceSha256": "31b2ab75be18f33a436a9efbc816404dc844b7e346b1891f50f82f7a5d2412f7",
+      "cartSha256": "31b2ab75be18f33a436a9efbc816404dc844b7e346b1891f50f82f7a5d2412f7",
+      "instructionBudget": 1000000,
+      "mode": "callback",
+      "targetFps": 30,
+      "boot": {
+        "cpuInstructions": 6,
+        "cpuFractionRaw": 2,
+        "slowFrame": false,
+        "completedSlices": "1"
+      },
+      "frames": [
+        {
+          "classification": "below",
+          "cpuInstructions": 133329,
+          "cpuFractionRaw": 65533,
+          "stat1Raw": 65527,
+          "stat7Raw": 1966080,
+          "timeRaw": 4369,
+          "completedSlices": "2",
+          "slowFrame": false
+        },
+        {
+          "classification": "at",
+          "cpuInstructions": 133334,
+          "cpuFractionRaw": 65536,
+          "stat1Raw": 65529,
+          "stat7Raw": 1966080,
+          "timeRaw": 6553,
+          "completedSlices": "3",
+          "slowFrame": false
+        },
+        {
+          "classification": "above",
+          "cpuInstructions": 133336,
+          "cpuFractionRaw": 65537,
+          "stat1Raw": 65530,
+          "stat7Raw": 1966080,
+          "timeRaw": 8738,
+          "completedSlices": "4",
+          "slowFrame": true
+        }
+      ],
+      "observation": {
+        "address": 20480,
+        "length": 36,
+        "hex": "f7ff000000001e0011110000f9ff000000001e0099190000faff000000001e0022220000"
+      }
+    },
+    {
+      "id": "phase-4/cpu-budget-60",
+      "source": "tests/fixtures/integration/cpu-budget-60.p8",
+      "sourceSha256": "24dd488dbff6eeb970df4746400670570bf2f348bfdd4b2285e49c9db92c1ec1",
+      "cartSha256": "24dd488dbff6eeb970df4746400670570bf2f348bfdd4b2285e49c9db92c1ec1",
+      "instructionBudget": 1000000,
+      "mode": "callback",
+      "targetFps": 60,
+      "boot": {
+        "cpuInstructions": 6,
+        "cpuFractionRaw": 2,
+        "slowFrame": false,
+        "completedSlices": "2"
+      },
+      "frames": [
+        {
+          "classification": "below",
+          "cpuInstructions": 66665,
+          "cpuFractionRaw": 65534,
+          "stat1Raw": 65521,
+          "stat7Raw": 3932160,
+          "timeRaw": 3276,
+          "completedSlices": "3",
+          "slowFrame": false
+        },
+        {
+          "classification": "at",
+          "cpuInstructions": 66667,
+          "cpuFractionRaw": 65536,
+          "stat1Raw": 65523,
+          "stat7Raw": 3932160,
+          "timeRaw": 4369,
+          "completedSlices": "4",
+          "slowFrame": false
+        },
+        {
+          "classification": "above",
+          "cpuInstructions": 66669,
+          "cpuFractionRaw": 65538,
+          "stat1Raw": 65525,
+          "stat7Raw": 3932160,
+          "timeRaw": 5461,
+          "completedSlices": "5",
+          "slowFrame": true
+        }
+      ],
+      "observation": {
+        "address": 20480,
+        "length": 36,
+        "hex": "f1ff000000003c00cc0c0000f3ff000000003c0011110000f5ff000000003c0055150000"
+      }
+    },
+    {
+      "id": "phase-4/cpu-budget-custom",
+      "source": "tests/fixtures/integration/cpu-budget-custom.p8",
+      "sourceSha256": "987993c9ef9e5a842fa3b43449c40638b60d181fce6f91ef2acf86f670b552ff",
+      "cartSha256": "987993c9ef9e5a842fa3b43449c40638b60d181fce6f91ef2acf86f670b552ff",
+      "instructionBudget": 1000000,
+      "mode": "custom",
+      "targetFps": 30,
+      "boot": {
+        "cpuInstructions": 3033,
+        "cpuFractionRaw": 1490,
+        "slowFrame": false,
+        "completedSlices": "1"
+      },
+      "frames": [
+        {
+          "cpuInstructions": 3033,
+          "cpuFractionRaw": 1490,
+          "stat1Raw": 1483,
+          "stat7Raw": 1966080,
+          "timeRaw": 4369,
+          "completedSlices": "2",
+          "slowFrame": false
+        },
+        {
+          "cpuInstructions": 3033,
+          "cpuFractionRaw": 1490,
+          "stat1Raw": 1483,
+          "stat7Raw": 1966080,
+          "timeRaw": 6553,
+          "completedSlices": "3",
+          "slowFrame": false
+        },
+        {
+          "cpuInstructions": 3033,
+          "cpuFractionRaw": 1490,
+          "stat1Raw": 1483,
+          "stat7Raw": 1966080,
+          "timeRaw": 8738,
+          "completedSlices": "4",
+          "slowFrame": false
+        }
+      ],
+      "bootObservationHex": "cb05000000001e0088080000",
+      "observation": {
+        "address": 20480,
+        "length": 36,
+        "hex": "cb05000000001e0088080000cb05000000001e0011110000cb05000000001e0099190000"
+      }
+    }
+  ],
+  "transactionCase": {
+    "id": "phase-4/cpu-slow-transaction",
+    "source": "tests/fixtures/integration/cpu-slow-transaction.p8",
+    "sourceSha256": "a5861d3d61e9225fa63c5c60a2e9bd7e65c7dc0682a3d9a8e29bc93f1a6272f7",
+    "cartSha256": "a5861d3d61e9225fa63c5c60a2e9bd7e65c7dc0682a3d9a8e29bc93f1a6272f7",
+    "instructionBudget": 1000000,
+    "inputButtons": 16,
+    "expected": {
+      "cpuInstructions": 150074,
+      "cpuFractionRaw": 73764,
+      "slowFrame": true,
+      "completedSlices": "2",
+      "timeRaw": 4369,
+      "observationHex": "01010000111100002020010000001e00",
+      "screenSha256": "fbd6ef69b03b85540bdda8dcdef4f2f05dcd369d44c204798fc6effce4b88187",
+      "audioSha256": "4031623795db82a594c88db8ac94fd4b1cd9e72fc1fc8db533a8a66195b56514",
+      "cartDataSha256": "372d0d312ef656c2bbe87361eab1390c1877c66fcc956672d74a29b1c4927255"
+    }
+  },
+  "faultCase": {
+    "id": "phase-4/cpu-hard-cap-fault",
+    "source": "tests/fixtures/integration/cpu-hard-cap-fault.p8",
+    "sourceSha256": "1b8c1448870d0abd51d8438b880f58ef2c01e77060b5d27b90fec9bac06c468a",
+    "cartSha256": "1b8c1448870d0abd51d8438b880f58ef2c01e77060b5d27b90fec9bac06c468a",
+    "instructionBudget": 10000,
+    "expectedCode": "E_VM_INSTRUCTION_BUDGET",
+    "expectedPhase": "update"
+  }
+}

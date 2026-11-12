@@ -1,24 +1,15 @@
-# WASM source ownership
+# z8lua WASM
 
-`wasm/` contains the independently reproducible Phase 0A/0B/0C z8lua spikes and
-the Phase 0E production-named runtime v1 build. It never
-imports, includes, or symlinks local repositories from `ref/`.
+唯一生产产物为 `dist/z8lua-runtime-v1.mjs` 与 `.wasm`。早期 benchmark/probe ABI 不再构建。
 
-- `source.lock.json` pins the vendored upstream snapshot and its inventory.
-- `patches/manifest.json` owns the ordered local patch provenance.
-- `toolchain.lock.json` pins emsdk and Emscripten.
-- `manifest.lock.json` records the exact source set, flags, guest allowlist,
-  notices, imports, and expected artifact hashes.
-- `runtime-v1.manifest.lock.json` locks the production `p8w_*` frame runtime
-  separately from the benchmark artifact.
-- `bridge/` owns the bounded `p8w0a_*` language baseline, `p8w0b_*` Shared RAM
-  experiment, and isolated `p8w0c_bench_*` interop probes. Their phase prefixes
-  deliberately separate all three from the accepted production `p8w_*` ABI.
-- `bridge/p8w_frame_runtime.*` owns the accepted `p8w_*` v1 lifecycle, frame,
-  budget, error, HostRequest probe and minimal guest API. Its artifact contains
-  none of the three phase-prefixed symbol families.
-- `dist/` is generated and ignored; every build also emits the third-party
-  notice and license files.
+- `source.lock.json`：vendored upstream revision 与源文件 inventory。
+- `patches/manifest.json`：本地补丁来源、目的和 hash。
+- `toolchain.lock.json`：固定 emsdk/Emscripten。
+- `runtime-v1.manifest.lock.json`：生产 ABI、flags、固定内存及产物 hash。
+- `bridge/`：项目 bridge；`z8lua/`：固定第三方源码；均不依赖 `ref/`。
+- `THIRD_PARTY_NOTICES.md` / `licenses/`：来源和分发 notices，随构建复制。
+
+编译参数在 `tools/wasm/config.mjs`；只构建 production runtime。主线程、Worker 和 Node 共用 loader；主线程路径由 Chrome 门禁验证。构建后用 manifest 检查字节一致性；不要为了绕过失败而刷新 hash。
 
 Install the exact toolchain using the official emsdk manager:
 
@@ -36,4 +27,5 @@ version or version-commit mismatch.
 ```sh
 pnpm run build:wasm
 pnpm run verify:wasm
+pnpm run test:runtime
 ```

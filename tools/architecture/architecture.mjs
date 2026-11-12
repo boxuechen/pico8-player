@@ -111,7 +111,7 @@ const REQUIRED_FILES = [
   "spec/cart-codec-contract.json",
   "spec/abi/generated-bindings.manifest.json",
   "packages/cart-codec/manifest.lock.json",
-  "wasm/manifest.lock.json",
+  "wasm/runtime-v1.manifest.lock.json",
 ];
 
 function toPosix(filePath) {
@@ -767,14 +767,14 @@ function checkToolchainAndCi(repoRoot) {
         violation("ci-not-frozen", ".github/workflows/verify.yml", "CI must use the frozen lockfile"),
       );
     }
-    const phaseVerify = [...workflow.matchAll(/run:\s*pnpm run (verify:phase-\d+)/gu)]
+    const verify = [...workflow.matchAll(/run:\s*pnpm run (verify)\s*$/gmu)]
       .map((match) => match[1]);
-    if (phaseVerify.length !== 1 || !rootManifest.scripts?.[phaseVerify[0]]) {
+    if (verify.length !== 1 || !rootManifest.scripts?.[verify[0]]) {
       violations.push(
         violation(
           "ci-missing-verify",
           ".github/workflows/verify.yml",
-          "CI must run exactly one declared phase verify gate",
+          "CI must run the current verify gate",
         ),
       );
     }
@@ -813,7 +813,7 @@ export function auditRepository(repoRoot) {
   const violations = [];
   for (const relativePath of REQUIRED_FILES) {
     if (!existsSync(path.join(repoRoot, relativePath))) {
-      violations.push(violation("missing-scaffold", relativePath, "required Phase 0S artifact is missing"));
+      violations.push(violation("missing-scaffold", relativePath, "required architecture file is missing"));
     }
   }
   violations.push(...checkToolchainAndCi(repoRoot));

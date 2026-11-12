@@ -5,7 +5,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const productionContractPath = "spec/abi/pico-host-api-v1.json";
-const prototypeContractPath = "spec/abi/pico-host-binding-prototype.json";
 const tsOutputPath = "packages/z8lua-bridge/src/generated/pico-host-bindings.ts";
 const cppOutputPath = "wasm/bridge/generated/p8w_host_bindings.generated.h";
 const manifestPath = "spec/abi/generated-bindings.manifest.json";
@@ -39,7 +38,7 @@ export function validateBindingContract(contract, { runtimeExposed } = {}) {
     contract.dispatchAbi?.callFrame?.scalarSlots !== 12 ||
     contract.dispatchAbi?.callFrame?.byteStringArguments !== 1
   ) {
-    throw new Error("host binding contract must use the Phase 2 80-byte call frame");
+    throw new Error("host binding contract must use the 80-byte call frame");
   }
   if (runtimeExposed !== undefined && contract.runtimeExposed !== runtimeExposed) {
     throw new Error(`runtimeExposed must be ${runtimeExposed}`);
@@ -78,7 +77,7 @@ export function validateBindingContract(contract, { runtimeExposed } = {}) {
       }
     }
     if (byteStrings > 1) {
-      throw new Error("the Phase 2 call frame accepts one byte-string argument");
+      throw new Error("the call frame accepts one byte-string argument");
     }
     if (!resultKinds.has(binding.result)) {
       throw new Error(`unsupported result kind: ${binding.result}`);
@@ -176,12 +175,7 @@ export function renderCpp(contract, sourceHash = sha256(JSON.stringify(contract)
 export async function generateHostBindings(root = projectRoot) {
   const read = async (relativePath) => readFile(resolve(root, relativePath), "utf8");
   const productionText = await read(productionContractPath);
-  const prototypeText = await read(prototypeContractPath);
   const production = validateBindingContract(JSON.parse(productionText));
-  const prototype = validateBindingContract(JSON.parse(prototypeText), { runtimeExposed: false });
-  if (prototype.bindings.length < 5 || prototype.bindings.length > 12) {
-    throw new Error("binding prototype must contain five to twelve signatures");
-  }
   const productionHash = sha256(productionText);
   const outputs = [
     { path: tsOutputPath, text: renderTypeScript(production, productionHash) },
@@ -196,9 +190,6 @@ export async function generateHostBindings(root = projectRoot) {
     generator: "tools/wasm/generate-host-bindings.mjs",
     source: productionContractPath,
     sourceHash: productionHash,
-    prototype: prototypeContractPath,
-    prototypeHash: sha256(prototypeText),
-    prototypeSignatureCount: prototype.bindings.length,
     files: outputs.map((output) => ({ path: output.path, sha256: sha256(output.text) })),
   };
   await writeFile(resolve(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`);
@@ -207,5 +198,5 @@ export async function generateHostBindings(root = projectRoot) {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const manifest = await generateHostBindings();
-  process.stdout.write(`Generated ${manifest.files.length} host binding files from ${manifest.prototypeSignatureCount} prototype signatures\n`);
+  process.stdout.write(`Generated ${manifest.files.length} host binding files\n`);
 }

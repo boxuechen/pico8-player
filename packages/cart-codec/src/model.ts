@@ -24,11 +24,6 @@ export interface ParsedCart {
   readonly code: Uint8Array;
   readonly warnings: readonly CartWarning[];
   readonly sourceBytes: number;
-
-  /** Phase 0D compatibility alias; new code should use `version`. */
-  readonly cartVersion: number;
-  /** Phase 0D compatibility alias; new code should use `code`. */
-  readonly luaSource: Uint8Array;
 }
 
 interface ParsedCartFields<Format extends CartFormat> {
@@ -59,7 +54,5 @@ export function createParsedCart<Format extends CartFormat, Metadata extends obj
     code,
     warnings,
     sourceBytes: input.length,
-    cartVersion: fields.version,
-    luaSource: code,
   }) as ParsedCart & Readonly<{ format: Format }> & Metadata;
 }

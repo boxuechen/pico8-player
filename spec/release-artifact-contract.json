@@ -46,7 +46,7 @@
     "fallback": "falling back to ArrayBuffer instantiation"
   },
   "toolchain": {
-    "node": "22.22.0",
+    "node": "22.22.2",
     "pnpm": "10.8.0",
     "esbuild": "0.28.1",
     "emscripten": "6.0.5",
@@ -75,7 +75,6 @@
     "forbiddenJavaScriptPatterns": ["eval(", "new Function(", "//# sourceMappingURL="]
   },
   "provenance": {
-    "phaseContract": "spec/phase-13-mobile-host-ports-contract.json",
     "workspaceManifest": "package.json",
     "projectLicense": "LICENSE",
     "releaseNotes": "CHANGELOG.md",

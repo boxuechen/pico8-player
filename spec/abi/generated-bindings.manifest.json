@@ -3,9 +3,6 @@
   "generator": "tools/wasm/generate-host-bindings.mjs",
   "source": "spec/abi/pico-host-api-v1.json",
   "sourceHash": "d7e007c5f4dcbeb59040d9a9b7b3037976e0b5f55242f5e0ffc68beee00eab59",
-  "prototype": "spec/abi/pico-host-binding-prototype.json",
-  "prototypeHash": "54de3db8971608c0de749b8d67eb803f329afe63d1d98f2d27ef40a3fe7e8681",
-  "prototypeSignatureCount": 12,
   "files": [
     {
       "path": "packages/z8lua-bridge/src/generated/pico-host-bindings.ts",

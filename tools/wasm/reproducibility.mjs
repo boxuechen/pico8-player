@@ -7,7 +7,6 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  ARTIFACT_BASENAME,
   RUNTIME_ARTIFACT_BASENAME,
 } from "./config.mjs";
 
@@ -32,7 +31,7 @@ async function digest(path) {
   return createHash("sha256").update(await readFile(path)).digest("hex");
 }
 
-const temporaryRoot = await mkdtemp(join(tmpdir(), "p8w-phase-0c-repro-"));
+const temporaryRoot = await mkdtemp(join(tmpdir(), "p8w-runtime-repro-"));
 try {
   const first = join(temporaryRoot, "first");
   const second = join(temporaryRoot, "second");
@@ -41,8 +40,6 @@ try {
 
   const hashes = {};
   for (const filename of [
-    `${ARTIFACT_BASENAME}.mjs`,
-    `${ARTIFACT_BASENAME}.wasm`,
     `${RUNTIME_ARTIFACT_BASENAME}.mjs`,
     `${RUNTIME_ARTIFACT_BASENAME}.wasm`,
     "THIRD_PARTY_NOTICES.md",

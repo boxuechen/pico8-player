@@ -1,4 +1,4 @@
-import { PlayerLifecycleQueue } from "../../../apps/web-player/dist/main/player-lifecycle-queue.js";
+import { PlayerLifecycleQueue } from "../../../apps/web-player/dist/runtime/lifecycle-queue.js";
 
 /** Gives facade-only doubles the same admission/teardown contract as PlayerController. */
 export function withControllerLifecycle(controller) {

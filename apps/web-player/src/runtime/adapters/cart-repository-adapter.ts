@@ -69,8 +69,6 @@ function copyParsedCart(cart: ParsedCart): ParsedCart {
     code,
     warnings: copyWarnings(cart.warnings),
     sourceBytes: cart.sourceBytes,
-    cartVersion: cart.version,
-    luaSource: code,
   });
 }
 

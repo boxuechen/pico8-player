@@ -4,14 +4,7 @@ import { delimiter, join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 export const SOURCE_DATE_EPOCH = "1731622349";
-export const ARTIFACT_BASENAME = "z8lua-phase-0c";
 export const RUNTIME_ARTIFACT_BASENAME = "z8lua-runtime-v1";
-
-export const BRIDGE_SOURCES = [
-  "wasm/bridge/p8w_baseline.cpp",
-  "wasm/bridge/p8w_pico_memory.cpp",
-  "wasm/bridge/p8w_interop_bench.cpp",
-];
 
 export const RUNTIME_BRIDGE_SOURCES = [
   "wasm/bridge/p8w_pico_memory.cpp",
@@ -46,66 +39,6 @@ export const Z8LUA_SOURCES = [
   "ltablib.c",
   "lstrlib.c",
   "lpico8lib.c",
-];
-
-export const EXPORTED_FUNCTIONS = [
-  "_p8w0a_abi_version",
-  "_p8w0a_create",
-  "_p8w0a_destroy",
-  "_p8w0a_run",
-  "_p8w0a_result_count",
-  "_p8w0a_result_type",
-  "_p8w0a_result_number_bits",
-  "_p8w0a_result_boolean",
-  "_p8w0a_result_string_ptr",
-  "_p8w0a_result_string_length",
-  "_p8w0a_last_error_ptr",
-  "_p8w0a_last_error_length",
-  "_p8w0a_live_contexts",
-  "_p8w0a_live_lua_bytes",
-  "_p8w0a_alloc",
-  "_p8w0a_free",
-  "_p8w0b_abi_version",
-  "_p8w0b_create",
-  "_p8w0b_destroy",
-  "_p8w0b_run",
-  "_p8w0b_result_count",
-  "_p8w0b_result_type",
-  "_p8w0b_result_number_bits",
-  "_p8w0b_result_boolean",
-  "_p8w0b_result_string_ptr",
-  "_p8w0b_result_string_length",
-  "_p8w0b_last_error_ptr",
-  "_p8w0b_last_error_length",
-  "_p8w0b_live_contexts",
-  "_p8w0b_live_lua_bytes",
-  "_p8w0b_ram_ptr",
-  "_p8w0b_ram_size",
-  "_p8w0b_ram_reset",
-  "_p8w0b_map_address",
-  "_p8w0b_read8",
-  "_p8w0b_write8",
-  "_p8w0b_alloc",
-  "_p8w0b_free",
-  "_p8w0c_bench_abi_version",
-  "_p8w0c_bench_export_noop",
-  "_p8w0c_bench_export_raw3",
-  "_p8w0c_bench_export_bytes",
-  "_p8w0c_bench_export_pset",
-  "_p8w0c_bench_export_peek_poke",
-  "_p8w0c_bench_export_spr",
-  "_p8w0c_bench_import_noop",
-  "_p8w0c_bench_import_raw3",
-  "_p8w0c_bench_import_bytes",
-  "_p8w0c_bench_import_pset",
-  "_p8w0c_bench_import_peek_poke",
-  "_p8w0c_bench_import_spr",
-  "_p8w0c_bench_control_noop",
-  "_p8w0c_bench_control_raw3",
-  "_p8w0c_bench_control_bytes",
-  "_p8w0c_bench_control_pset",
-  "_p8w0c_bench_control_peek_poke",
-  "_p8w0c_bench_control_spr",
 ];
 
 export const RUNTIME_EXPORTED_FUNCTIONS = [
@@ -149,7 +82,7 @@ export const RUNTIME_EXPORTED_FUNCTIONS = [
   "_p8w_free",
 ];
 
-export const BUILD_FLAGS = [
+export const RUNTIME_BUILD_FLAGS = [
   "-O2",
   "-std=c++17",
   "-x",
@@ -162,7 +95,7 @@ export const BUILD_FLAGS = [
   "-sSTRICT=1",
   "-sMODULARIZE=1",
   "-sEXPORT_ES6=1",
-  "-sEXPORT_NAME=createZ8LuaPhase0CModule",
+  "-sEXPORT_NAME=createZ8LuaRuntimeV1Module",
   "-sENVIRONMENT=worker,node",
   "-sFILESYSTEM=0",
   "-sDYNAMIC_EXECUTION=0",
@@ -175,19 +108,9 @@ export const BUILD_FLAGS = [
   "-sASSERTIONS=0",
   "-sEXIT_RUNTIME=0",
   "-sINVOKE_RUN=0",
-  `-sEXPORTED_FUNCTIONS=${EXPORTED_FUNCTIONS.join(",")}`,
+  `-sEXPORTED_FUNCTIONS=${RUNTIME_EXPORTED_FUNCTIONS.join(",")}`,
   "-sEXPORTED_RUNTIME_METHODS=HEAPU8,wasmMemory",
 ];
-
-export const RUNTIME_BUILD_FLAGS = BUILD_FLAGS.map((flag) => {
-  if (flag === "-sEXPORT_NAME=createZ8LuaPhase0CModule") {
-    return "-sEXPORT_NAME=createZ8LuaRuntimeV1Module";
-  }
-  if (flag.startsWith("-sEXPORTED_FUNCTIONS=")) {
-    return `-sEXPORTED_FUNCTIONS=${RUNTIME_EXPORTED_FUNCTIONS.join(",")}`;
-  }
-  return flag;
-});
 
 const EXPECTED_VERSION = "6.0.5";
 const EXPECTED_VERSION_COMMIT = "1db513782be24469589d7cb8a1f1834e9a33f271";

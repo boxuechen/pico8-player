@@ -10,8 +10,7 @@
       "purpose": "Compile out stdout, filesystem-backed loaders, dynamic source loading, and guest GC controls from the base registration table.",
       "enabledBy": "P8W_BASELIB_SANDBOX=1",
       "tests": [
-        "tests/wasm/phase-0a.test.mjs: guest library allowlist",
-        "tests/wasm/phase-0a.test.mjs: wasm import surface"
+        "tests/runtime/sandbox.test.mjs"
       ],
       "upstreamStatus": "project-specific; not submitted"
     },
@@ -21,11 +20,9 @@
       "sha256": "d062cbc0ee2af76cbf969cbf4cf727fe9e5a003b3ec0bdcb3640fcb53722cd00",
       "target": "lvm.c",
       "purpose": "Route z8lua @/%/$ through the project-owned 16-bit, bytewise Pico address mapper instead of the upstream lower-32-KiB flat reader.",
-      "enabledBy": "Phase 0B build includes wasm/bridge/p8w_pico_memory.h",
+      "enabledBy": "build includes wasm/bridge/p8w_pico_memory.h",
       "tests": [
-        "tests/wasm/phase-0b.test.mjs: JS/Lua lower and upper RAM alias",
-        "tests/wasm/phase-0b.test.mjs: 16-bit wrap and little-endian multi-byte reads",
-        "tests/wasm/phase-0b.test.mjs: GFX/SCREEN remap mapper convergence"
+        "tests/runtime/memory-abi.test.mjs"
       ],
       "upstreamStatus": "project integration patch; not submitted"
     },
@@ -35,12 +32,12 @@
       "sha256": "f60323ef922b4aea93a59aba1ef264c3ac27767865a01954065f50ab4e49d35e",
       "target": "llex.h, llex.c, lparser.c, lvm.c",
       "purpose": "Preserve PICO-8 short-if semantics across swallowed long comments; accept conditional do, return-question print, single-token XOR, single-name local compound initialization and omitted argument slots; and fall back from local or captured replacement environments to original cart globals.",
-      "enabledBy": "Phase 8D and Phase 9B PICO-8 v0.2.7 language compatibility",
+      "enabledBy": "PICO-8 v0.2.7 language compatibility",
       "tests": [
-        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: short-if long-comment regression",
-        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: local compound initialization regression",
-        "tests/runtime/phase-8d-real-cart-gaps.test.mjs: omitted argument and original environment regressions",
-        "tests/runtime/phase-9b-language-compat.test.mjs: parser dialect and local environment regressions"
+        "tests/runtime/real-cart-gaps.test.mjs: short-if long-comment regression",
+        "tests/runtime/real-cart-gaps.test.mjs: local compound initialization regression",
+        "tests/runtime/real-cart-gaps.test.mjs: omitted argument and original environment regressions",
+        "tests/runtime/lua-language.test.mjs: parser dialect and local environment regressions"
       ],
       "upstreamStatus": "project compatibility patch; not submitted"
     },
@@ -50,9 +47,9 @@
       "sha256": "fe209b58ca396401ef0a2e3e1f2b2038e67b14dc33b1cd8c04424c8daf29a508",
       "target": "lvm.c",
       "purpose": "Compute the next Q16.16 numeric-for index without signed C++ overflow and terminate at either representable numeric boundary instead of wrapping indefinitely.",
-      "enabledBy": "Phase 9C timing compatibility",
+      "enabledBy": "timing compatibility",
       "tests": [
-        "tests/runtime/phase-9c-timing-compat.test.mjs: finite heavy work and Q16.16 boundary loop"
+        "tests/runtime/timing-compat.test.mjs: finite heavy work and Q16.16 boundary loop"
       ],
       "upstreamStatus": "project compatibility patch; not submitted"
     }

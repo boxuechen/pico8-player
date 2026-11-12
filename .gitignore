@@ -1,4 +1,4 @@
-# Dependencies and build output
+# Dependencies and reproducible output
 /node_modules/
 /.cache/
 **/node_modules/
@@ -6,20 +6,8 @@
 *.tsbuildinfo
 .DS_Store
 
-# Local reference source checkouts
+# Local reference sources and private cart libraries
 /ref/
-
-# Local benchmark smoke output; reviewed browser evidence is tracked explicitly.
-/benchmarks/interop/results/*-smoke.json
-/benchmarks/interop/results/node-full.json
-/benchmarks/phase-0f/results/*-smoke.json
-/benchmarks/phase-0f/results/*-smoke.png
-/benchmarks/phase-1/results/*-smoke.json
-/benchmarks/phase-2/results/*-smoke.json
-/benchmarks/phase-3/results/*-smoke.json
-/benchmarks/phase-4/results/*-smoke.json
-
-# Local-only external compatibility corpus. The tracked example contains schema only.
 /tests/conformance/local-corpus.json
 /tests/conformance/local-corpus/
 /tests/conformance/local-observations.json

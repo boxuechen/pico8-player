@@ -54,15 +54,9 @@ import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
   type FrameRuntimeModule,
-  Phase0BMemoryBinding,
-  type Phase0BMemoryModule,
 } from "@pico8-web/z8lua-bridge";
 
-declare const module: Phase0BMemoryModule;
-declare const handle: number;
-
-const binding = new Phase0BMemoryBinding(module, handle);
-const lease: PicoMemoryLease = binding.lease;
+declare const lease: PicoMemoryLease;
 const exactSize: 65536 = PICO_RAM_SIZE;
 const exactControllerCount: 8 = PICO_CONTROLLER_COUNT;
 const exactButtonCount: 6 = PICO_CONTROLLER_BUTTON_COUNT;

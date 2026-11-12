@@ -3,15 +3,15 @@ import type {
   SessionEvent as PlayerRuntimeToHost,
 } from "../transport/public.js";
 import type { PicoInputSnapshot } from "@pico8-web/contracts";
-import { RuntimeClientError } from "./runtime-client.js";
+import { RuntimeClientError } from "../transport/runtime-error.js";
 import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
 import { PlayerInputFrontend } from "./player-input.js";
-import { PlayerLifecycleQueue } from "./player-lifecycle-queue.js";
+import { PlayerLifecycleQueue } from "../runtime/lifecycle-queue.js";
 import type {
   PlayerHostCartDataSeed,
   PlayerLocalCartSource,
-} from "./player-runtime-client.js";
+} from "../transport/runtime-port.js";
 import {
   isActivelyPlaying,
   validateLocalCartSelection,

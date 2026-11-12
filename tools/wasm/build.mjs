@@ -4,9 +4,6 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 
 import {
-  ARTIFACT_BASENAME,
-  BRIDGE_SOURCES,
-  BUILD_FLAGS,
   RUNTIME_ARTIFACT_BASENAME,
   RUNTIME_BRIDGE_SOURCES,
   RUNTIME_BUILD_FLAGS,
@@ -45,7 +42,6 @@ export async function build(outputDirectory) {
   await verifySourceInventory(projectRoot);
   const { emxx, versionLine } = await resolveEmxx();
   const absoluteOutputDirectory = resolve(projectRoot, outputDirectory);
-  const artifactPath = join(absoluteOutputDirectory, `${ARTIFACT_BASENAME}.mjs`);
 
   await rm(absoluteOutputDirectory, { recursive: true, force: true });
   await mkdir(absoluteOutputDirectory, { recursive: true });
@@ -63,7 +59,6 @@ export async function build(outputDirectory) {
     cwd: projectRoot,
     env: { ...process.env, SOURCE_DATE_EPOCH },
   });
-  await compile(BUILD_FLAGS, BRIDGE_SOURCES, artifactPath);
   await compile(
     RUNTIME_BUILD_FLAGS,
     RUNTIME_BRIDGE_SOURCES,
@@ -88,7 +83,7 @@ export async function build(outputDirectory) {
     join(licenseOutputDirectory, "WTFPL-2.txt"),
   );
   process.stdout.write(
-    `Built ${artifactPath} and ${join(absoluteOutputDirectory, `${RUNTIME_ARTIFACT_BASENAME}.mjs`)}\nToolchain: ${versionLine}\n`,
+    `Built ${join(absoluteOutputDirectory, `${RUNTIME_ARTIFACT_BASENAME}.mjs`)}\nToolchain: ${versionLine}\n`,
   );
   return absoluteOutputDirectory;
 }

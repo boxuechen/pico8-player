@@ -61,16 +61,14 @@ test("project-owned raw/legacy/PXA vectors decode byte-exact across stored/fixed
     assert.equal(decoded.format, "p8.png");
     assert.equal(decoded.width, 160);
     assert.equal(decoded.height, 205);
-    assert.equal(decoded.cartVersion, vector.cartVersion);
     assert.equal(decoded.version, vector.cartVersion);
     assert.equal(decoded.codeCompression, vector.compression);
     assert.deepEqual(decoded.rom, fixture.rom, `${vector.id} ROM`);
-    assert.deepEqual(decoded.luaSource, fixture.code, `${vector.id} source`);
-    assert.equal(decoded.code, decoded.luaSource);
+    assert.deepEqual(decoded.code, fixture.code, `${vector.id} source`);
     assert.equal(decoded.identity.contentSha256, sha256(fixture.png));
     assert.deepEqual(decoded.warnings, []);
     assert.equal(sha256(decoded.rom), vector.romSha256, `${vector.id} ROM hash`);
-    assert.equal(sha256(decoded.luaSource), vector.luaSha256, `${vector.id} source hash`);
+    assert.equal(sha256(decoded.code), vector.luaSha256, `${vector.id} source hash`);
     assert.ok(decoded.pngChunkCount >= 4);
     assert.ok(decoded.pngIdatBytes > 0);
   }
@@ -84,7 +82,7 @@ test("all PNG filters and split IDAT preserve low-bit payload independently of c
   for (let highBitsVariant = 1; highBitsVariant <= 16; highBitsVariant += 1) {
     const decoded = decodeP8Png(makeP8Png(vector, { highBitsVariant }).png);
     assert.deepEqual(decoded.rom, reference.rom, `high-bit variant ${highBitsVariant}`);
-    assert.deepEqual(decoded.luaSource, reference.luaSource);
+    assert.deepEqual(decoded.code, reference.code);
   }
 });
 
@@ -93,7 +91,7 @@ test("decoder returns caller-owned snapshots and never exposes reserved payload 
   const first = decodeP8Png(makeP8Png(vector, { highBitsVariant: 1 }).png);
   const second = decodeP8Png(makeP8Png(vector, { highBitsVariant: 2 }).png);
   assert.notEqual(first.rom, second.rom);
-  assert.notEqual(first.luaSource, second.luaSource);
+  assert.notEqual(first.code, second.code);
   first.rom[0] ^= 0xff;
   assert.notEqual(first.rom[0], second.rom[0]);
   assert.equal("payload" in first, false);
@@ -267,9 +265,9 @@ test("raw NUL termination, cart version zero and PXA literal sequences preserve 
     cartVersion: 0,
     codeBlockOverride: rawCodeBlock,
   }).png, { limits: { maximumCartVersion: 0 } });
-  assert.deepEqual(decodedRaw.luaSource, Uint8Array.from([0x61, 0x62, 0x63]));
+  assert.deepEqual(decodedRaw.code, Uint8Array.from([0x61, 0x62, 0x63]));
   assert.equal(decodedRaw.compressedCodeBytes, 4);
-  assert.equal(decodedRaw.cartVersion, 0);
+  assert.equal(decodedRaw.version, 0);
 
   const pxa = fixtureManifest.vectors[2];
   const literalSource = Uint8Array.from([0xff, 0x20, 0x7e, 0x0a]);
@@ -277,14 +275,14 @@ test("raw NUL termination, cart version zero and PXA literal sequences preserve 
     codeBlockOverride: makePxaLiteralCode(literalSource),
   }).png);
   assert.equal(decodedPxa.codeCompression, "pxa");
-  assert.deepEqual(decodedPxa.luaSource, literalSource);
+  assert.deepEqual(decodedPxa.code, literalSource);
 });
 
 test("RFC 1951 dynamic literal-only blocks may declare no distance codes", () => {
   const decoded = decodeP8Png(makeLiteralOnlyDynamicPng());
-  assert.equal(decoded.cartVersion, 0);
+  assert.equal(decoded.version, 0);
   assert.equal(decoded.codeCompression, "raw");
-  assert.equal(decoded.luaSource.length, 0);
+  assert.equal(decoded.code.length, 0);
   assert.deepEqual(decoded.rom, new Uint8Array(0x8000));
 });
 

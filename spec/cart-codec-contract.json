@@ -15,10 +15,6 @@
     },
     "romBytes": 32768,
     "codeEncoding": "P8SCII bytes",
-    "compatibilityAliases": {
-      "cartVersion": "version",
-      "luaSource": "code"
-    },
     "ownership": "frozen records and independent caller-owned typed-array snapshots"
   },
   "text": {

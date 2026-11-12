@@ -1,4 +1,4 @@
-# Third-party notices: z8lua Phase 0A artifact
+# Third-party notices: z8lua runtime
 
 This artifact embeds selected sources from
 [z8lua](https://github.com/samhocevar/z8lua) at commit

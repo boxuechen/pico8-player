@@ -1,18 +1,15 @@
 import {
   isAudioPortAttachmentEnvelope,
   isPlayerHostToRuntime,
-  isPhase0EHostToRuntime,
   type PlayerRuntimeToHost,
-  type Phase0ERuntimeToHost,
 } from "../transport/public.js";
 import type {
-  Phase0EWorkerController,
   PlayerWorkerController,
 } from "./compose-runtime.js";
 import type {
-  WorkerAudioMessagePort,
-  WorkerPcmTransport,
-} from "./audio-transport.js";
+  RuntimeAudioMessagePort,
+  PcmOutput,
+} from "../runtime/audio-transport.js";
 
 export interface RuntimeWorkerScope {
   addEventListener(
@@ -20,7 +17,7 @@ export interface RuntimeWorkerScope {
     listener: (event: { readonly data: unknown }) => void,
   ): void;
   postMessage(
-    message: Phase0ERuntimeToHost | PlayerRuntimeToHost,
+    message: PlayerRuntimeToHost,
     transfer?: readonly ArrayBuffer[],
   ): void;
 }
@@ -43,9 +40,9 @@ function postPlayerResponse(
   scope.postMessage(response, transfer);
 }
 
-function isWorkerAudioPort(value: unknown): value is WorkerAudioMessagePort {
+function isWorkerAudioPort(value: unknown): value is RuntimeAudioMessagePort {
   if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<WorkerAudioMessagePort>;
+  const candidate = value as Partial<RuntimeAudioMessagePort>;
   return (
     typeof candidate.postMessage === "function" &&
     typeof candidate.close === "function"
@@ -54,7 +51,7 @@ function isWorkerAudioPort(value: unknown): value is WorkerAudioMessagePort {
 
 function attachAudioPort(
   value: unknown,
-  audioTransport: WorkerPcmTransport,
+  audioTransport: PcmOutput,
 ): boolean {
   if (!isAudioPortAttachmentEnvelope(value)) return false;
   const port = (value as { readonly port?: unknown }).port;
@@ -63,71 +60,11 @@ function attachAudioPort(
   return true;
 }
 
-function postResponse(
-  scope: RuntimeWorkerScope,
-  response: Phase0ERuntimeToHost,
-): void {
-  const transfer =
-    response.type === "frame"
-      ? [response.packedScreen]
-      : response.type === "hostRequest"
-        ? [response.bytes]
-        : [];
-  scope.postMessage(response, transfer);
-}
-
-export function installPhase0ERuntimeWorker(
-  scope: RuntimeWorkerScope,
-  controller: Phase0EWorkerController,
-): void {
-  scope.addEventListener("message", (event) => {
-    if (!isPhase0EHostToRuntime(event.data)) return;
-    postResponse(scope, controller.handle(event.data));
-  });
-}
-
-/**
- * Registers the message listener before async WASM startup. Commands are then
- * serialized through the eventual controller, so the first load cannot race
- * module instantiation and disappear.
- */
-export function installPhase0EAsyncRuntimeWorker(
-  scope: RuntimeWorkerScope,
-  controller: Promise<Phase0EWorkerController>,
-): void {
-  let queue = Promise.resolve();
-  scope.addEventListener("message", (event) => {
-    if (!isPhase0EHostToRuntime(event.data)) return;
-    const command = event.data;
-    queue = queue.then(async () => {
-      postResponse(scope, (await controller).handle(command));
-    });
-  });
-}
-
-export function installPhase0FAsyncRuntimeWorker(
-  scope: RuntimeWorkerScope,
-  controller: Promise<Phase0EWorkerController>,
-  audioTransport: WorkerPcmTransport,
-): void {
-  let queue = Promise.resolve();
-  scope.addEventListener("message", (event) => {
-    if (attachAudioPort(event.data, audioTransport)) return;
-    if (!isPhase0EHostToRuntime(event.data)) return;
-    const command = event.data;
-    queue = queue.then(async () => {
-      const response = (await controller).handle(command);
-      postResponse(scope, response);
-      if (response.type === "disposed") audioTransport.dispose();
-    });
-  });
-}
-
-/** Production Phase 1E Worker bootstrap with serialized command execution. */
+/** Worker bootstrap with serialized command execution. */
 export function installPlayerRuntimeWorker(
   scope: RuntimeWorkerScope,
   controller: Promise<PlayerWorkerController> | PlayerWorkerController,
-  audioTransport?: WorkerPcmTransport,
+  audioTransport?: PcmOutput,
 ): void {
   let queue = Promise.resolve();
   let activeController: PlayerWorkerController | undefined;
