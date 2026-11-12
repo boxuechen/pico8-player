@@ -1,3 +1,4 @@
+import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -77,7 +78,7 @@ class FakeController {
 
 function fakePlayer() {
   const runtime = new FakeRuntime();
-  const controller = new FakeController();
+  const controller = withControllerLifecycle(new FakeController());
   const presenter = { sessionGeneration: 1, lastFrameId: -1 };
   controller.startHook = () => {
     presenter.lastFrameId += 1;

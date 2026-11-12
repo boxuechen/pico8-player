@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "phase": "16",
+  "name": "unified-lifecycle-queue",
+  "status": "complete",
+  "activeWorkUnit": null,
+  "browserGate": "Chrome/Chromium desktop only",
+  "queueOwner": "PlayerController",
+  "queueScope": "one mounted player",
+  "producers": [
+    "embed-api",
+    "controller-api",
+    "dom-controls",
+    "local-file-load",
+    "environment",
+    "dispose"
+  ],
+  "semantics": [
+    "FIFO",
+    "failure-recovery",
+    "explicit-in-transaction-actions",
+    "terminal-dispose",
+    "cancel-not-started-operations",
+    "drain-in-flight-before-teardown"
+  ],
+  "outsideQueue": [
+    "frame-pump",
+    "input-sampling",
+    "runtime-events",
+    "trusted-audio-resume-probe"
+  ],
+  "verification": {
+    "quick": true,
+    "focusedNode": true,
+    "focusedChrome": true,
+    "historicalRuns": 0,
+    "soakRuns": 0,
+    "externalCorpusRuns": 0
+  },
+  "completedWorkUnits": [
+    "16A"
+  ],
+  "evidence": "docs/evidence/phase-16/171-phase-16-unified-lifecycle-queue-exit-evidence.md",
+  "result": {
+    "focusedNodeTests": 43,
+    "newQueueRegressionTests": 9,
+    "quickTests": 77,
+    "focusedChromePassingRuns": 2,
+    "chromeVersion": "Google Chrome 157.0.8103.51",
+    "workersReleased": 3,
+    "audioContextsClosed": 3,
+    "activeAnimationFrames": 0,
+    "unhandledRejections": 0,
+    "releaseFiles": 15,
+    "stableArtifactKeys": 6,
+    "packageFiles": 16
+  }
+}

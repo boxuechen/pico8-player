@@ -7,13 +7,16 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 15；[`Lifecycle and Persistence Hardening exit evidence`](./evidence/phase-15/161-phase-15-lifecycle-persistence-exit-evidence.md) |
+| 最近完成 | Phase 16；[`Unified lifecycle queue exit evidence`](./evidence/phase-16/171-phase-16-unified-lifecycle-queue-exit-evidence.md) |
 | 当前阶段 | None |
 | Active work unit | None |
-| 最近关闭的机器合同 | [`spec/phase-15-lifecycle-persistence-contract.json`](../spec/phase-15-lifecycle-persistence-contract.json) |
+| 最近关闭的机器合同 | [`spec/phase-16-unified-lifecycle-queue-contract.json`](../spec/phase-16-unified-lifecycle-queue-contract.json) |
+
+Phase 16 已关闭：API、DOM、文件加载与环境事件共享 Controller-owned lifecycle queue；
+复合操作、首帧 barrier 与 terminal dispose 已完成 Node/Chrome 并发回归。当前没有 active phase。
 
 Phase 15 已关闭：修复 cart-switch 存档归属、dispose commit drain、startup rejection 与真实
-durable flush reporting；回归用例已纳入默认 quick gate。结果见最近完成 evidence。
+durable flush reporting；回归用例已纳入默认 quick gate。
 
 Phase 14 已关闭：Embed API v2 的 `start()` 现在等待当前 session 的首帧实际提交到 Canvas；
 同 facade 连续双-cart 与 dispose 后 fresh facade 的 Chrome regression 均通过，Worker、AudioContext

@@ -1,3 +1,4 @@
+import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
@@ -18,8 +19,8 @@ test("Worker flush failure reaches the public result and a successful retry beco
   const worker = createPlayerWorkerController(module, { persistence });
   const replies = [];
   const player = Reflect.construct(Pico8WebPlayer, [{
-    controller: { state: "idle", onStateChange() { return () => {}; },
-      async stop() {}, async dispose() {} },
+    controller: withControllerLifecycle({ state: "idle", onStateChange() { return () => {}; },
+      async stop() {}, async dispose() {} }),
     composition: {
       runtime: { onEvent() { return () => {}; } },
       async flushPersistence() {

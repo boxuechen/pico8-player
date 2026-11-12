@@ -6,7 +6,7 @@ import {
   mountPico8Player,
   type MountedPlayer,
 } from "./main.js";
-import type { PlayerShellState } from "./player-controller.js";
+import type { PlayerShellState, PlayerLifecycleActions } from "./player-controller.js";
 import type { PlayerShellMode } from "./ui/player-shell-view.js";
 import { RuntimeClientError } from "./runtime-client.js";
 import {
@@ -102,7 +102,6 @@ export class Pico8WebPlayer {
   >();
   readonly #removeSubscriptions: (() => void)[];
   readonly #persistence: HostPersistenceFrontend | undefined;
-  #operation: Promise<void> = Promise.resolve();
   #disposeRequested = false;
   #disposePromise: Promise<void> | undefined;
   readonly #rejectFirstFrameWaiters = new Set<(reason: Error) => void>();
@@ -179,7 +178,7 @@ export class Pico8WebPlayer {
   }
 
   loadCart(source: Uint8Array, options: Pico8LoadCartOptions = {}): Promise<void> {
-    return this.#enqueue(async () => {
+    return this.#enqueue(async (actions) => {
       let hostCartData: readonly import("./player-runtime-client.js").PlayerHostCartDataSeed[] |
         undefined;
       if (this.#persistence !== undefined) {
@@ -189,14 +188,14 @@ export class Pico8WebPlayer {
         if (this.#persistence.active) {
           // Stop acknowledges all earlier Worker commands and cancels background
           // continuations before changing the host storage identity.
-          await this.#mounted.controller.stop();
+          await actions.stop();
           const flushed = await this.#flushPersistenceInternal("cart-switch");
           if (!flushed.durable) throw new Error(flushed.message ?? "Cart switch persistence failed");
         }
         hostCartData = await this.#persistence.activate(options.contentId);
         this.#assertActive();
       }
-      await this.#mounted.controller.loadCart(source, {
+      await actions.loadCart(source, {
         ...options,
         ...(hostCartData === undefined ? {} : { hostCartData }),
       });
@@ -204,9 +203,9 @@ export class Pico8WebPlayer {
   }
 
   start(): Promise<void> {
-    return this.#enqueue(async () => {
+    return this.#enqueue(async (actions) => {
       if (this.#mounted.controller.state !== "ready") {
-        await this.#mounted.controller.start();
+        await actions.start();
         return;
       }
       const sessionGeneration = this.#mounted.composition.runtime.sessionGeneration;
@@ -216,14 +215,14 @@ export class Pico8WebPlayer {
       // original promise still rejects when awaited below.
       void gate.promise.catch(() => undefined);
       try {
-        await this.#mounted.controller.start();
+        await actions.start();
         await gate.promise;
       } catch (error) {
         if (
           !this.#disposeRequested &&
           ["running", "audio-blocked"].includes(this.#mounted.controller.state)
         ) {
-          await this.#mounted.controller.stop().catch(() => undefined);
+          await actions.stop().catch(() => undefined);
         }
         throw error;
       } finally {
@@ -233,19 +232,19 @@ export class Pico8WebPlayer {
   }
 
   pause(): Promise<void> {
-    return this.#enqueue(() => this.#mounted.controller.pause());
+    return this.#enqueue(actions => actions.pause());
   }
 
   resume(): Promise<void> {
-    return this.#enqueue(() => this.#mounted.controller.resume());
+    return this.#enqueue(actions => actions.resume());
   }
 
   reset(): Promise<void> {
-    return this.#enqueue(() => this.#mounted.controller.reset());
+    return this.#enqueue(actions => actions.reset());
   }
 
   stop(): Promise<void> {
-    return this.#enqueue(() => this.#mounted.controller.stop());
+    return this.#enqueue(actions => actions.stop());
   }
 
   /** Replaces the caller-owned input snapshot without entering the lifecycle queue. */
@@ -261,11 +260,11 @@ export class Pico8WebPlayer {
   handleLifecycle(
     event: "inactive" | "background" | "active",
   ): Promise<Pico8PersistenceFlushResult | { readonly status: "handled"; readonly event: string }> {
-    return this.#enqueue(async () => {
+    return this.#enqueue(async (actions) => {
       if (event === "active") return { status: "handled", event } as const;
       this.#mounted.controller.clearInput();
       if (["running", "audio-blocked", "menu-open"].includes(this.#mounted.controller.state)) {
-        await this.#mounted.controller.pause();
+        await actions.pause();
       }
       if (event === "background") return this.#flushPersistenceInternal("background");
       return { status: "handled", event } as const;
@@ -284,41 +283,35 @@ export class Pico8WebPlayer {
       message: "Disposed",
     });
     this.#listeners.clear();
-    this.#disposePromise = this.#operation.catch(() => undefined).then(async () => {
-      try {
-        await this.#mounted.controller.stop().catch(() => undefined);
+    this.#disposePromise = this.#mounted.controller.dispose({
+      beforeDispose: async (actions) => {
+        await actions.stop().catch(() => undefined);
         if (this.#mounted.controller.state !== "idle") {
           await this.#mounted.composition.flushPersistence().catch(() => undefined);
         }
-      } finally {
+      },
+      afterDispose: async () => {
         try {
-          await this.#mounted.controller.dispose();
+          // Keep internal subscriptions through Worker teardown and final host writes.
+          await this.#persistence?.flush("dispose");
         } finally {
-          try {
-            // Worker disposal can deliver commits too. Keep the internal event
-            // subscription until all of them have reached the host write queue.
-            await this.#persistence?.flush("dispose");
-          } finally {
-            for (const remove of this.#removeSubscriptions.splice(0)) remove();
-          }
+          for (const remove of this.#removeSubscriptions.splice(0)) remove();
         }
-      }
+      },
     });
     return this.#disposePromise;
   }
 
-  #enqueue<T>(operation: () => Promise<T>): Promise<T> {
+  #enqueue<T>(operation: (actions: PlayerLifecycleActions) => Promise<T>): Promise<T> {
     if (this.#disposeRequested) {
       return Promise.reject(new Error("Pico8WebPlayer is disposed"));
     }
-    const result = this.#operation.then(async () => {
+    return this.#mounted.controller.runLifecycle(async (actions) => {
       this.#assertActive();
-      const value = await operation();
+      const value = await operation(actions);
       this.#assertActive();
       return value;
     });
-    this.#operation = result.then(() => undefined, () => undefined);
-    return result;
   }
 
   #onRuntimeEvent(event: PlayerRuntimeToHost): void {

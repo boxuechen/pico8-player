@@ -7,6 +7,7 @@ import { RuntimeClientError } from "./runtime-client.js";
 import type { PlayerComposition } from "./compose-player.js";
 import type { GamepadSource } from "./gamepad-input.js";
 import { PlayerInputFrontend } from "./player-input.js";
+import { PlayerLifecycleQueue } from "./player-lifecycle-queue.js";
 import type {
   PlayerHostCartDataSeed,
   PlayerLocalCartSource,
@@ -77,6 +78,16 @@ function decodeP8sciiLabel(bytes: Uint8Array): string {
   }).join("");
 }
 
+/** Internal capability supplied only within an admitted lifecycle transaction. */
+export type PlayerLifecycleActions = Pick<PlayerController,
+  "loadCart" | "start" | "pause" | "resume" | "reset" | "stop" |
+  "openPauseMenu" | "closePauseMenu" | "invokeMenuItem" | "retryAudio" | "toggleMute">;
+
+export interface PlayerDisposeHooks {
+  readonly beforeDispose?: (actions: PlayerLifecycleActions) => Promise<void>;
+  readonly afterDispose?: () => Promise<void>;
+}
+
 export class PlayerController {
   readonly #composition: PlayerComposition;
   readonly #view: PlayerShellView;
@@ -95,7 +106,20 @@ export class PlayerController {
   #menuWasAudioBlocked = false;
   #stateMessage = "Select a local .p8 or .p8.png cartridge";
   #disposed = false;
-  #operation = Promise.resolve();
+  readonly #lifecycle = new PlayerLifecycleQueue();
+  readonly #actions: PlayerLifecycleActions = {
+    loadCart: (source, options) => this.#loadCart(source, options),
+    start: (audioProbe) => this.#start(audioProbe),
+    pause: () => this.#pause(),
+    resume: (audioProbe) => this.#resume(audioProbe),
+    reset: () => this.#reset(),
+    stop: () => this.#stop(),
+    openPauseMenu: () => this.#openPauseMenu(),
+    closePauseMenu: () => this.#closePauseMenu(),
+    invokeMenuItem: (slot, button) => this.#invokeMenuItem(slot, button),
+    retryAudio: (audioProbe) => this.#retryAudio(audioProbe),
+    toggleMute: (audioProbe) => this.#toggleMute(audioProbe),
+  };
 
   constructor(
     composition: PlayerComposition,
@@ -129,9 +153,8 @@ export class PlayerController {
       const files = elements.fileInput.files === null
         ? []
         : Array.from(elements.fileInput.files);
-      void this.#loadLocalFiles(files).finally(() => {
-        elements.fileInput.value = "";
-      });
+      this.#loadLocalFiles(files);
+      elements.fileInput.value = "";
     });
     this.#bind(elements.dropZone, "dragenter", (event) => this.#drag(event as DragEvent));
     this.#bind(elements.dropZone, "dragover", (event) => this.#drag(event as DragEvent));
@@ -143,9 +166,10 @@ export class PlayerController {
       const files = dragEvent.dataTransfer === null
         ? []
         : Array.from(dragEvent.dataTransfer.files);
-      void this.#loadLocalFiles(files);
+      this.#loadLocalFiles(files);
     });
     this.#bind(elements.playButton, "click", () => {
+      if (this.#lifecycle.closed) return;
       if (this.#state === "audio-blocked") {
         void this.retryAudio().catch((error) => this.#showUiError(error));
         return;
@@ -155,13 +179,13 @@ export class PlayerController {
       const audioProbe = this.#muted
         ? Promise.resolve(true)
         : this.#composition.resumeAudio();
-      this.#enqueue(async () => {
-        if (this.#state === "paused") await this.resume(audioProbe);
-        else if (this.#state === "ready") await this.start(audioProbe);
+      this.#enqueue(async (actions) => {
+        if (this.#state === "paused") await actions.resume(audioProbe);
+        else if (this.#state === "ready") await actions.start(audioProbe);
       });
     });
-    this.#bind(elements.pauseButton, "click", () => this.#enqueue(() => this.pause()));
-    this.#bind(elements.menuButton, "click", () => this.#enqueue(() => this.openPauseMenu()));
+    this.#bind(elements.pauseButton, "click", () => this.#enqueue(actions => actions.pause()));
+    this.#bind(elements.menuButton, "click", () => this.#enqueue(actions => actions.openPauseMenu()));
     this.#bind(elements.pauseMenuItems, "click", (event) => {
       if (this.#state !== "menu-open") return;
       const target = event.target instanceof Element
@@ -169,20 +193,20 @@ export class PlayerController {
         : null;
       if (target === null) return;
       const slot = this.#menuSlot(target);
-      if (slot === undefined) this.#enqueue(() => this.closePauseMenu());
+      if (slot === undefined) this.#enqueue(actions => actions.closePauseMenu());
       else if (!this.#menuFiltered(target, 4)) {
-        this.#enqueue(() => this.invokeMenuItem(slot, 4));
+        this.#enqueue(actions => actions.invokeMenuItem(slot, 4));
       }
     });
     this.#bind(elements.pauseMenu, "keydown", (event) => {
       this.#onPauseMenuKeydown(event as KeyboardEvent);
     });
-    this.#bind(elements.resetButton, "click", () => this.#enqueue(async () => {
+    this.#bind(elements.resetButton, "click", () => this.#enqueue(async (actions) => {
       const restart = isActivelyPlaying(this.#state);
-      await this.reset();
-      if (restart) await this.start();
+      await actions.reset();
+      if (restart) await actions.start();
     }));
-    this.#bind(elements.stopButton, "click", () => this.#enqueue(() => this.stop()));
+    this.#bind(elements.stopButton, "click", () => this.#enqueue(actions => actions.stop()));
     this.#bind(elements.muteButton, "click", () => {
       void this.toggleMute().catch((error) => this.#showUiError(error));
     });
@@ -196,7 +220,7 @@ export class PlayerController {
       else this.#resumeFromEnvironment();
     });
     this.#bind(this.#window, "pagehide", (event) => {
-      void this.#composition.flushPersistence().catch(() => undefined);
+      this.#enqueue(async () => { await this.#composition.flushPersistence(); });
       if ((event as PageTransitionEvent).persisted) this.#pauseForEnvironment();
     });
     this.#bind(this.#window, "pageshow", (event) => {
@@ -238,7 +262,58 @@ export class PlayerController {
     return () => this.#stateListeners.delete(listener);
   }
 
-  async loadCart(
+  /** Serializes facade transactions and Controller entrypoints with DOM/environment intents. */
+  runLifecycle<T>(operation: (actions: PlayerLifecycleActions) => Promise<T>): Promise<T> {
+    return this.#lifecycle.run(() => operation(this.#actions));
+  }
+
+  loadCart(source: Uint8Array, options: string | PlayerControllerLoadOptions = {}): Promise<void> {
+    return this.runLifecycle(actions => actions.loadCart(source, options));
+  }
+
+  start(audioProbe?: Promise<boolean>): Promise<void> {
+    return this.runLifecycle(actions => actions.start(audioProbe));
+  }
+
+  pause(): Promise<void> { return this.runLifecycle(actions => actions.pause()); }
+  resume(audioProbe?: Promise<boolean>): Promise<void> {
+    return this.runLifecycle(actions => actions.resume(audioProbe));
+  }
+  reset(): Promise<void> { return this.runLifecycle(actions => actions.reset()); }
+  stop(): Promise<void> { return this.runLifecycle(actions => actions.stop()); }
+  openPauseMenu(): Promise<void> { return this.runLifecycle(actions => actions.openPauseMenu()); }
+  closePauseMenu(): Promise<void> { return this.runLifecycle(actions => actions.closePauseMenu()); }
+  invokeMenuItem(slot: 1 | 2 | 3 | 4 | 5, button: 1 | 2 | 4): Promise<void> {
+    return this.runLifecycle(actions => actions.invokeMenuItem(slot, button));
+  }
+
+  retryAudio(audioProbe?: Promise<boolean>): Promise<void> {
+    if (this.#lifecycle.closed) return Promise.reject(new Error("Player lifecycle is disposed"));
+    // Preserve the trusted event task for browser audio unlock only.
+    const probe = audioProbe ?? (this.#state === "audio-blocked" && !this.#muted
+      ? this.#composition.resumeAudio() : undefined);
+    return this.runLifecycle(actions => actions.retryAudio(probe));
+  }
+
+  toggleMute(audioProbe?: Promise<boolean>): Promise<void> {
+    if (this.#lifecycle.closed) return Promise.reject(new Error("Player lifecycle is disposed"));
+    const probe = audioProbe ?? (this.#muted && isActivelyPlaying(this.#state)
+      ? this.#composition.resumeAudio() : undefined);
+    return this.runLifecycle(actions => actions.toggleMute(probe));
+  }
+
+  dispose(hooks: PlayerDisposeHooks = {}): Promise<void> {
+    return this.#lifecycle.close(async () => {
+      try {
+        await hooks.beforeDispose?.(this.#actions);
+      } finally {
+        try { await this.#dispose(); }
+        finally { await hooks.afterDispose?.(); }
+      }
+    });
+  }
+
+  async #loadCart(
     source: Uint8Array,
     options: string | PlayerControllerLoadOptions = {},
   ): Promise<void> {
@@ -273,7 +348,7 @@ export class PlayerController {
     }
   }
 
-  async start(audioProbe?: Promise<boolean>): Promise<void> {
+  async #start(audioProbe?: Promise<boolean>): Promise<void> {
     this.#assertActive();
     if (this.#state !== "ready") return;
     try {
@@ -294,14 +369,14 @@ export class PlayerController {
     }
   }
 
-  async pause(): Promise<void> {
+  async #pause(): Promise<void> {
     this.#assertActive();
     if (!isActivelyPlaying(this.#state) && this.#state !== "menu-open") return;
     this.#environmentPaused = false;
     await this.#pauseInternal();
   }
 
-  async openPauseMenu(): Promise<void> {
+  async #openPauseMenu(): Promise<void> {
     this.#assertActive();
     if (!isActivelyPlaying(this.#state)) return;
     this.#menuWasAudioBlocked = this.#state === "audio-blocked";
@@ -324,7 +399,7 @@ export class PlayerController {
     }
   }
 
-  async closePauseMenu(): Promise<void> {
+  async #closePauseMenu(): Promise<void> {
     this.#assertActive();
     if (this.#state !== "menu-open") return;
     const event = await this.#composition.closePauseMenu();
@@ -335,7 +410,7 @@ export class PlayerController {
     await this.#resumeAfterMenu();
   }
 
-  async invokeMenuItem(
+  async #invokeMenuItem(
     slot: 1 | 2 | 3 | 4 | 5,
     button: 1 | 2 | 4,
   ): Promise<void> {
@@ -354,7 +429,7 @@ export class PlayerController {
     await this.#resumeAfterMenu();
   }
 
-  async resume(audioProbe?: Promise<boolean>): Promise<void> {
+  async #resume(audioProbe?: Promise<boolean>): Promise<void> {
     this.#assertActive();
     if (this.#state !== "paused") return;
     try {
@@ -374,7 +449,7 @@ export class PlayerController {
     }
   }
 
-  async reset(): Promise<void> {
+  async #reset(): Promise<void> {
     this.#assertActive();
     this.#cancelFrame();
     this.#input.setEnabled(false);
@@ -392,7 +467,7 @@ export class PlayerController {
     }
   }
 
-  async stop(): Promise<void> {
+  async #stop(): Promise<void> {
     this.#assertActive();
     if (["idle", "loading", "stopped", "disposed"].includes(this.#state)) return;
     this.#cancelFrame();
@@ -412,7 +487,7 @@ export class PlayerController {
     }
   }
 
-  async dispose(): Promise<void> {
+  async #dispose(): Promise<void> {
     if (this.#disposed) return;
     this.#disposed = true;
     this.#setState("disposed", "Disposed");
@@ -423,23 +498,23 @@ export class PlayerController {
     for (const remove of this.#removeListeners.splice(0)) remove();
     this.#stateListeners.clear();
     await this.#view.exitFullscreen().catch(() => undefined);
-    await this.#composition.dispose();
-    this.#view.dispose();
+    try { await this.#composition.dispose(); }
+    finally { this.#view.dispose(); }
   }
 
-  async retryAudio(): Promise<void> {
+  async #retryAudio(audioProbe?: Promise<boolean>): Promise<void> {
     this.#assertActive();
     if (this.#state !== "audio-blocked") return;
     if (this.#muted) {
       this.#setState("running", "Running · Muted");
       return;
     }
-    const audioReady = await this.#composition.resumeAudio();
+    const audioReady = await (audioProbe ?? this.#composition.resumeAudio());
     if (this.#disposed) return;
     this.#setPlayingState(audioReady);
   }
 
-  async toggleMute(): Promise<void> {
+  async #toggleMute(audioProbe?: Promise<boolean>): Promise<void> {
     this.#assertActive();
     this.#muted = !this.#muted;
     this.#composition.setMuted(this.#muted);
@@ -452,7 +527,7 @@ export class PlayerController {
       return;
     }
     if (isActivelyPlaying(this.#state)) {
-      const audioReady = await this.#composition.resumeAudio();
+      const audioReady = await (audioProbe ?? this.#composition.resumeAudio());
       if (this.#disposed) return;
       this.#setPlayingState(audioReady);
     } else {
@@ -503,25 +578,19 @@ export class PlayerController {
   }
 
   #pauseForEnvironment(): void {
-    if (
-      (!isActivelyPlaying(this.#state) && this.#state !== "menu-open") ||
-      this.#environmentPaused
-    ) return;
-    this.#environmentPaused = true;
     this.#enqueue(async () => {
-      if (
-        !this.#environmentPaused ||
-        (!isActivelyPlaying(this.#state) && this.#state !== "menu-open")
-      ) return;
+      if ((!isActivelyPlaying(this.#state) && this.#state !== "menu-open") ||
+        this.#environmentPaused) return;
+      this.#environmentPaused = true;
       await this.#pauseInternal();
     });
   }
 
   #resumeFromEnvironment(): void {
-    if (!this.#environmentPaused || this.#document.visibilityState === "hidden") return;
-    this.#environmentPaused = false;
-    this.#enqueue(async () => {
-      if (this.#state === "paused") await this.resume();
+    this.#enqueue(async (actions) => {
+      if (!this.#environmentPaused || this.#document.visibilityState === "hidden") return;
+      this.#environmentPaused = false;
+      if (this.#state === "paused") await actions.resume();
     });
   }
 
@@ -538,7 +607,9 @@ export class PlayerController {
       this.#input.setDevkitFlags(0);
       this.#composition.runtime.clearInput();
       this.#setState("stopped", "Cartridge stopped");
-      void this.#composition.suspendAudio().catch((error) => this.#fail(error));
+      this.#enqueue(async () => {
+        if (this.#state === "stopped") await this.#composition.suspendAudio();
+      });
       return;
     }
     if (event.type === "diagnostic") {
@@ -635,7 +706,7 @@ export class PlayerController {
       : -1;
     if (event.key === "Escape") {
       event.preventDefault();
-      this.#enqueue(() => this.closePauseMenu());
+      this.#enqueue(actions => actions.closePauseMenu());
       return;
     }
     if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
@@ -657,37 +728,34 @@ export class PlayerController {
       event.preventDefault();
       const intent = event.key === "ArrowLeft" ? 1 : 2;
       if (!this.#menuFiltered(target, intent)) {
-        this.#enqueue(() => this.invokeMenuItem(slot, intent));
+        this.#enqueue(actions => actions.invokeMenuItem(slot, intent));
       }
       return;
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      if (slot === undefined) this.#enqueue(() => this.closePauseMenu());
+      if (slot === undefined) this.#enqueue(actions => actions.closePauseMenu());
       else if (!this.#menuFiltered(target, 4)) {
-        this.#enqueue(() => this.invokeMenuItem(slot, 4));
+        this.#enqueue(actions => actions.invokeMenuItem(slot, 4));
       }
     }
   }
 
-  async #loadLocalFiles(files: readonly File[]): Promise<void> {
-    if (this.#disposed) return;
+  #loadLocalFiles(files: readonly File[]): void {
+    if (this.#lifecycle.closed) return;
     const validation = validateLocalCartSelection(files);
     if (!validation.ok) {
       this.#view.showDiagnostic(validation.message);
       return;
     }
     const file = files[0]!;
-    let bytes: Uint8Array;
-    try {
-      bytes = new Uint8Array(await file.arrayBuffer());
-    } catch (error) {
-      this.#showUiError(error);
-      return;
-    }
-    this.#enqueue(async () => {
-      await this.loadCart(bytes, file.name);
-      await this.start();
+    this.#enqueue(async (actions) => {
+      let bytes: Uint8Array;
+      try { bytes = new Uint8Array(await file.arrayBuffer()); }
+      catch (error) { this.#showUiError(error); return; }
+      if (this.#lifecycle.closed) return;
+      await actions.loadCart(bytes, file.name);
+      await actions.start();
     });
   }
 
@@ -704,9 +772,9 @@ export class PlayerController {
     this.#view.showDiagnostic(message);
   }
 
-  #enqueue(operation: () => Promise<void>): void {
-    this.#operation = this.#operation.then(operation, operation).catch((error) => {
-      this.#fail(error);
+  #enqueue(operation: (actions: PlayerLifecycleActions) => Promise<void>): void {
+    void this.runLifecycle(operation).catch((error) => {
+      if (!this.#lifecycle.closed) this.#fail(error);
     });
   }
 

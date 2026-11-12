@@ -80,7 +80,14 @@ cart discovery 或 implicit fetch。公开 embed lifecycle 为 `create/loadCart/
 默认 shell 另以 private versioned transport 提供 `openPauseMenu/closePauseMenu/invokeMenuItem`，
 公开事件只包含 copy-owned `state/frame/diagnostic/fault`，不把 app-owned Worker DTO 作为 consumer contract。
 
-所有 mutating lifecycle operation 在每个 facade 实例内串行化。`dispose()` 是 idempotent terminal
+所有 mutating lifecycle operation 在每个 mounted player 的 Controller-owned FIFO 中串行化。
+Embed API、Controller entrypoints、DOM controls、文件读取与 environment intents 使用同一队列；
+失败不阻塞后续操作，不同 player 互不等待。复合操作通过 transaction actions 调用内部动作，
+不得再次进入同一队列等待自身；存档 hydration/flush 与首帧 barrier 均在对应 transaction 内。
+RAF、input sampling 和 runtime event delivery 保持独立，以便首帧等待正常完成；trusted event
+中的 audio resume probe 同步发起，仅其后续状态变更排队。环境状态在 queued execution 时判断。
+
+`dispose()` 是 idempotent terminal
 barrier：立即拒绝新操作并关闭 public event 输出；尚未开始的操作 fail closed。内部 runtime
 订阅保留至 in-flight operation 完成、旧 producer stop/drain 和 Worker teardown，随后等待 host
 write queue 与最终 flush，再释放订阅。controller、presenter、audio 和 Worker 由 composition

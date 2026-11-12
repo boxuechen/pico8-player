@@ -1,3 +1,4 @@
+import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -60,7 +61,7 @@ function frame(sessionGeneration, frameId) {
 
 function fixture(timeoutMs = 100) {
   const runtime = new FakeRuntime();
-  const controller = new FakeController();
+  const controller = withControllerLifecycle(new FakeController());
   const presenter = { sessionGeneration: 1, lastFrameId: -1 };
   const mounted = {
     controller,

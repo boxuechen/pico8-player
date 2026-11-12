@@ -1,3 +1,4 @@
+import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -39,7 +40,7 @@ function fixture() {
     },
   };
   const player = Reflect.construct(Pico8WebPlayer, [
-    { controller, composition, elements: {} }, adapter,
+    { controller: withControllerLifecycle(controller), composition, elements: {} }, adapter,
   ]);
   function commit(revision) {
     runtime.emit({ type: "cartdata-commit", sessionGeneration: runtime.sessionGeneration,
@@ -106,7 +107,7 @@ test("dispose drains commits through teardown and awaits the final host flush", 
     f.commit(2);
     return { type: "persistence-flushed", durable: true };
   };
-  f.controller.dispose = async () => { f.commit(3); f.controller.state = "disposed"; };
+  f.controller.teardown = async () => { f.commit(3); f.controller.state = "disposed"; };
   f.adapter.flush = async () => { flushEntered.resolve(); await finalFlush.promise; };
   const events = [];
   f.player.on("persistence", (event) => events.push(event));
@@ -147,7 +148,7 @@ test("failed Worker teardown still flushes accepted host commits and removes sub
   const f = fixture();
   await f.player.loadCart(new Uint8Array([1]), { contentId: "cart-a" });
   f.controller.stop = async () => { throw new Error("stop watchdog"); };
-  f.controller.dispose = async () => { f.commit(1); throw new Error("dispose watchdog"); };
+  f.controller.teardown = async () => { f.commit(1); throw new Error("dispose watchdog"); };
   await assert.rejects(f.player.dispose(), /dispose watchdog/);
   assert.deepEqual(f.writes, [{ contentId: "cart-a", revision: 1 }]);
   assert.equal(f.operations.at(-1), "flush:cart-a");

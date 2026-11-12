@@ -6,10 +6,10 @@
 ## 当前状态
 
 - 当前 active phase：**None**。
-- 当前 work unit：**None**；新的 production implementation 需先激活独立 phase。
-- 最近完成：[Phase 15 — Lifecycle and Persistence Hardening](./evidence/phase-15/161-phase-15-lifecycle-persistence-exit-evidence.md)。
+- 当前 work unit：**None**；后续 production implementation 须先激活新 phase。
+- 最近完成：[Phase 16 — Unified lifecycle queue](./evidence/phase-16/171-phase-16-unified-lifecycle-queue-exit-evidence.md)。
 - 最近关闭的机器合同：
-  [`phase-15-lifecycle-persistence-contract.json`](../spec/phase-15-lifecycle-persistence-contract.json)。
+  [`phase-16-unified-lifecycle-queue-contract.json`](../spec/phase-16-unified-lifecycle-queue-contract.json)。
 - 当前发布口径、Known Differences 与默认验证入口由
   [`06-testing-compatibility.md`](./06-testing-compatibility.md) 维护。
 

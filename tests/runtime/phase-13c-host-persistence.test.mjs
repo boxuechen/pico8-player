@@ -1,3 +1,4 @@
+import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test, { before } from "node:test";
 
@@ -112,7 +113,7 @@ test("public adapter serializes writes, awaits flush and backgrounds without res
     async flush(contentId) { calls.push(["flush", contentId]); },
   };
   const runtime = new FakeRuntime();
-  const controller = new FakeController();
+  const controller = withControllerLifecycle(new FakeController());
   const presenter = { sessionGeneration: 1, lastFrameId: -1 };
   controller.startHook = () => {
     presenter.lastFrameId = 0;

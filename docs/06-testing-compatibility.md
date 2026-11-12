@@ -68,6 +68,7 @@ CU 不进入分母。报告必须给出 corpus、revision、player/WASM/Chrome �
 | --- | --- | --- |
 | 日常改动 | `pnpm run verify` | 默认 quick gate；architecture、codec、embed lifecycle/persistence 与 release exit integrity |
 | 当前测试别名 | `pnpm test` | 与 quick gate 相同 |
+| 生命周期并发 | `pnpm run test:lifecycle-queue` | API/UI/environment 顺序、terminal dispose、首帧、持久化和受影响 shell/input tests；部分需要既有锁定 WASM |
 | Phase 9 owner integrity | `pnpm run verify:phase-9` | 已关闭阶段的快速完整性入口，不读外部 corpus |
 | Focused release | `pnpm run verify:release` | release artifact + 短 Chrome player lifecycle |
 | 完整 release 诊断 | `pnpm run test:release` | 含历史 600 秒 30/60 Hz Chrome gate；仅按需手动运行 |

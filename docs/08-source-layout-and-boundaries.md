@@ -48,6 +48,7 @@ package；package 只用于强制真正的架构边界。
 │       │   │   ├── main.ts
 │       │   │   ├── compose-player.ts
 │       │   │   ├── player-controller.ts
+│       │   │   ├── player-lifecycle-queue.ts
 │       │   │   ├── player-runtime-client.ts
 │       │   │   ├── runtime-client.ts
 │       │   │   ├── input-frontend.ts
@@ -331,8 +332,12 @@ flowchart LR
 - `compose-player.ts` 是 Window adapter composition root，创建 package-owned relative Worker/Worklet
   assets、Worker client、presenter 和 AudioContext frontend；不得读取 WASM/Pico RAM。
 - `main/public.ts` 只 re-export versioned stable embed contract；`embed-player.ts` 只组合
-  `mountPico8Player`、串行 lifecycle 和 copy-owned typed events，不得创建 concrete Worker、Worklet、
+  `mountPico8Player`、lifecycle transactions 和 copy-owned typed events，不得创建 concrete Worker、Worklet、
   presenter 或 persistence adapter。
+- `player-controller.ts` 为每个 mounted player 持有唯一 `PlayerLifecycleQueue`；facade、DOM 和
+  environment 均提交到该队列。`PlayerLifecycleActions` 与 dispose hooks 只供 main 内部组合，
+  不新增 package export。`player-lifecycle-queue.ts` 只管理顺序、失败恢复与 terminal admission，
+  不持有 DOM、Worker 或 RuntimeCore；行为语义由 02 所有。
 - 每个 player session 使用独立 object graph；禁止用 module-level mutable singleton 保存 VM、RAM、cartdata 或 input state。
 - dispose 顺序必须由 composition root 显式管理，并测试 Worker、AudioWorklet、MessagePort、RAF 和事件监听器全部释放。
 
