@@ -241,7 +241,7 @@ export function createSessionController(
   let pendingExternalCartData: PendingExternalCartData | undefined;
   let activeMenuSnapshot: CartSessionMenuSnapshot | undefined;
   const externalCstoreTargetIdentities = new Set<string>();
-  const breadcrumbStack: Uint8Array[] = [];
+  let breadcrumbDepth = 0;
 
   function clearPendingDevkitEvents(): void {
     pendingWheelRaw = 0;
@@ -498,14 +498,7 @@ export function createSessionController(
     generation: number,
     next: PlayerRuntimeState,
   ): SessionEvent {
-    return {
-      ...playerBaseForGeneration(context, generation),
-      type: "state",
-      state: next,
-      mode,
-      targetFps,
-      devkitFlags,
-    };
+    return state({ ...context, sessionGeneration: generation }, next);
   }
 
   function cancelPendingHostRequest(): void {
@@ -621,7 +614,7 @@ export function createSessionController(
       session = staged;
       sessionGeneration = nextSessionGeneration;
       externalCstoreTargetIdentities.clear();
-      if (request.breadcrumb !== undefined) breadcrumbStack.push(request.breadcrumb.slice());
+      if (request.breadcrumb !== undefined) breadcrumbDepth++;
       inputSequence = -1;
       clearInputState();
       mode = boot.value.mode;
@@ -640,7 +633,7 @@ export function createSessionController(
         nextSessionGeneration,
         cartRef: loaded.ref,
         breadcrumb: breadcrumb.buffer,
-        breadcrumbDepth: breadcrumbStack.length,
+        breadcrumbDepth: breadcrumbDepth,
       }]);
       beginAudioGeneration(nextSessionGeneration);
       sendAudio(boot.value.audio);
@@ -1261,7 +1254,7 @@ export function createSessionController(
       localCartResolver = nextResolver;
       nextResolver = undefined;
       cartLoader = new CartLoader(localCartResolver, cartRepository);
-      breadcrumbStack.length = 0;
+      breadcrumbDepth = 0;
       externalCstoreTargetIdentities.clear();
       cartRepository.registerCart(cart);
       return acceptBoot(context, session.load(cart));
@@ -1286,7 +1279,7 @@ export function createSessionController(
     }
   }
 
-  function disposeSync(context: SessionContext): readonly SessionEvent[] {
+  function releaseResources(generation: number) {
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
     cancelPendingExternalCartData();
@@ -1301,7 +1294,12 @@ export function createSessionController(
     mode = "none";
     targetFps = 0;
     devkitFlags = 0;
-    resetAudioQueue(context.sessionGeneration);
+    if (generation > 0) resetAudioQueue(generation);
+    return result;
+  }
+
+  function disposeSync(context: SessionContext): readonly SessionEvent[] {
+    const result = releaseResources(context.sessionGeneration);
     return result.ok ? [state(context, "disposed")] : [fault(context, result.error)];
   }
 
@@ -1444,22 +1442,6 @@ export function createSessionController(
     return [state(context, "stopped")];
   }
 
-  function destroySync(): void {
-    cancelPendingHostRequest();
-    cancelPendingGuestLoad();
-    cancelPendingExternalCartData();
-    scheduler.reset();
-    clearInputState();
-    activeMenuSnapshot = undefined;
-    devkitFlags = 0;
-    session.dispose();
-    localCartResolver.dispose();
-    cartRepository.dispose();
-    externalCstoreTargetIdentities.clear();
-    lifecycle = "disposed";
-    if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
-  }
-
   function current(context: SessionContext, action: () => readonly SessionEvent[]): readonly SessionEvent[] {
     return context.sessionGeneration !== sessionGeneration || sessionGeneration === 0
       ? generationFault(context, "operation belongs to a stale or missing session")
@@ -1530,7 +1512,7 @@ export function createSessionController(
       ]);
     },
     async destroy() {
-      destroySync();
+      releaseResources(sessionGeneration);
       try { await persistence?.dispose(); } catch { /* Forced teardown has no caller. */ }
     },
   };
