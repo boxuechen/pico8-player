@@ -39,13 +39,15 @@ async function waitForPort(path, processHandle) {
 }
 
 async function stopProcess(processHandle) {
-  if (processHandle.exitCode !== null) return;
+  const hasExited = () => processHandle.exitCode !== null || processHandle.signalCode !== null;
+  if (hasExited()) return;
+  const exited = new Promise((resolve) => processHandle.once("exit", resolve));
   processHandle.kill("SIGTERM");
-  await Promise.race([
-    new Promise((resolve) => processHandle.once("exit", resolve)),
-    delay(3000),
-  ]);
-  if (processHandle.exitCode === null) processHandle.kill("SIGKILL");
+  await Promise.race([exited, delay(3000)]);
+  if (!hasExited()) {
+    processHandle.kill("SIGKILL");
+    await exited;
+  }
 }
 
 export class CdpConnection {
@@ -142,6 +144,12 @@ export async function launchChrome({
     { stdio: ["ignore", "ignore", "ignore"] },
   );
   let cdp;
+  async function close() {
+    cdp?.close();
+    await stopProcess(processHandle);
+    // Chrome child processes can still finish writing the profile after the browser exits.
+    await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  }
   try {
     const port = await waitForPort(join(profile, "DevToolsActivePort"), processHandle);
     const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
@@ -155,16 +163,10 @@ export async function launchChrome({
       cdp,
       executable,
       version,
-      async close() {
-        cdp.close();
-        await stopProcess(processHandle);
-        await rm(profile, { recursive: true, force: true });
-      },
+      close,
     };
   } catch (error) {
-    cdp?.close();
-    await stopProcess(processHandle);
-    await rm(profile, { recursive: true, force: true });
+    await close();
     throw error;
   }
 }
