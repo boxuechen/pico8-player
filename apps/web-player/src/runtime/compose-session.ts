@@ -1073,6 +1073,36 @@ export function createSessionController(
     };
   }
 
+  function acceptCompletedStep(
+    context: SessionContext,
+    result: Exclude<CartSessionStepResult, { readonly kind: "host-request" }>,
+  ): SessionEvent[] {
+    const events: SessionEvent[] = [];
+    if (result.kind === "stopped") {
+      if (result.cartDataCommit !== undefined) {
+        enqueueCartDataCommit(result.cartDataCommit);
+      }
+      scheduler.pause();
+      lifecycle = "stopped";
+      clearInputState();
+      devkitFlags = 0;
+      resetAudioQueue(context.sessionGeneration);
+      events.push(runtimeControlEvent(context, "stop", result.message));
+      events.push(state(context, "stopped"));
+    } else if (result.kind === "restart") {
+      if (result.cartDataCommit !== undefined) {
+        enqueueCartDataCommit(result.cartDataCommit);
+      }
+      clearInputState();
+      events.push(runtimeControlEvent(context, "run", result.parameter));
+      externalCstoreTargetIdentities.clear();
+      events.push(...acceptBoot(context, session.restart(result.parameter), true));
+    } else {
+      events.push(frameEvent(context, result));
+    }
+    return events;
+  }
+
   function acceptVsyncHostCompletion(
     context: SessionFrameContext,
     result: RuntimeResult<CartSessionStepResult>,
@@ -1097,31 +1127,11 @@ export function createSessionController(
     }
 
     const executedTicks = executedBefore + 1;
-    const events: SessionEvent[] = [];
-    if (result.value.kind === "stopped") {
-      if (result.value.cartDataCommit !== undefined) {
-        enqueueCartDataCommit(result.value.cartDataCommit);
-      }
-      scheduler.pause();
-      lifecycle = "stopped";
-      clearInputState();
-      devkitFlags = 0;
-      resetAudioQueue(context.sessionGeneration);
-      events.push(runtimeControlEvent(context, "stop", result.value.message));
-      events.push(state(context, "stopped"));
-    } else if (result.value.kind === "restart") {
-      if (result.value.cartDataCommit !== undefined) {
-        enqueueCartDataCommit(result.value.cartDataCommit);
-      }
-      clearInputState();
-      events.push(runtimeControlEvent(context, "run", result.value.parameter));
-      externalCstoreTargetIdentities.clear();
-      events.push(...acceptBoot(context, session.restart(result.value.parameter), true));
-    } else {
+    if (result.value.kind === "frame") {
       scheduler.resume();
       lifecycle = "running";
-      events.push(frameEvent(context, result.value));
     }
+    const events = acceptCompletedStep(context, result.value);
     events.push(heartbeatEvent(context, executedTicks, droppedTicks));
     return events;
   }
@@ -1174,34 +1184,8 @@ export function createSessionController(
           ))];
       }
       executedTicks += 1;
-      if (result.value.kind === "stopped") {
-        if (result.value.cartDataCommit !== undefined) {
-          enqueueCartDataCommit(result.value.cartDataCommit);
-        }
-        scheduler.pause();
-        lifecycle = "stopped";
-        clearInputState();
-        devkitFlags = 0;
-        resetAudioQueue(context.sessionGeneration);
-        events.push(runtimeControlEvent(context, "stop", result.value.message));
-        events.push(state(context, "stopped"));
-        break;
-      }
-      if (result.value.kind === "restart") {
-        if (result.value.cartDataCommit !== undefined) {
-          enqueueCartDataCommit(result.value.cartDataCommit);
-        }
-        clearInputState();
-        events.push(runtimeControlEvent(context, "run", result.value.parameter));
-        externalCstoreTargetIdentities.clear();
-        events.push(...acceptBoot(
-          context,
-          session.restart(result.value.parameter),
-          true,
-        ));
-        break;
-      }
-      events.push(frameEvent(context, result.value));
+      events.push(...acceptCompletedStep(context, result.value));
+      if (result.value.kind !== "frame") break;
     }
     events.push(heartbeatEvent(context, executedTicks, decision.droppedTicks));
     return events;
