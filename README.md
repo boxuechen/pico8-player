@@ -6,6 +6,8 @@
 - **Web Player**：Canvas、音频、键盘/手柄/触摸、暂停菜单与存档。
 - **执行方式**：默认主线程；可选 Worker 复用同一份 runtime。
 
+本项目采用 TypeScript RuntimeCore，提供浏览器播放器和供 agent 使用的独立会话。[pico8-runtime](https://github.com/boxuechen/pico8-runtime) 是独立的 C++ Core 项目，面向 Web 和原生桌面。两个项目各自构建和发布。
+
 ## 开发
 
 使用 `.node-version` 指定的 Node 和 `package.json` 固定的 pnpm。首次构建需要 [固定 Emscripten 工具链](wasm/README.md)。
