@@ -1,8 +1,5 @@
 import { createPlayerSession } from "../runtime/create-session.js";
-import type { PlayerRuntimePort, PlayerLocalCartSource, PlayerHostCartDataSeed } from "../transport/runtime-port.js";
-import type {
-  PicoInputSnapshot,
-} from "@pico8-web/contracts";
+import type { PlayerRuntimePort } from "../transport/runtime-port.js";
 import {
   DedicatedAudioFrontend,
   type AudioFrontendOptions,
@@ -30,7 +27,7 @@ export interface PlayerCompositionOptions {
 
 const AUDIO_RESUME_PROBE_TIMEOUT_MS = 250;
 
-/** Stable player composition; DOM policy remains in PlayerController. */
+/** Device composition and lifetime; runtime operations are called directly. */
 export class PlayerComposition {
   readonly runtime: PlayerRuntimePort & RuntimeAudioPortTarget;
   readonly presenter: Canvas2DFramePresenter;
@@ -106,74 +103,6 @@ export class PlayerComposition {
       await runtime.dispose().catch(() => undefined);
       throw error;
     }
-  }
-
-  resize(widthCssPixels: number, heightCssPixels: number): void {
-    this.#assertActive();
-    this.presenter.resize(widthCssPixels, heightCssPixels);
-  }
-
-  loadCart(
-    source: Uint8Array,
-    instructionBudget?: number,
-    localCartBundle: readonly PlayerLocalCartSource[] = [],
-    hostCartData?: readonly PlayerHostCartDataSeed[],
-  ) {
-    this.#assertActive();
-    return this.runtime.loadCart(source, instructionBudget, localCartBundle, hostCartData);
-  }
-
-  start() {
-    this.#assertActive();
-    return this.runtime.start();
-  }
-
-  pulse(timestampMs: number, input: PicoInputSnapshot) {
-    this.#assertActive();
-    return this.runtime.pulse(timestampMs, input);
-  }
-
-  pause() {
-    this.#assertActive();
-    return this.runtime.pause();
-  }
-
-  openPauseMenu() {
-    this.#assertActive();
-    return this.runtime.openPauseMenu();
-  }
-
-  closePauseMenu() {
-    this.#assertActive();
-    return this.runtime.closePauseMenu();
-  }
-
-  invokeMenuItem(
-    slot: 1 | 2 | 3 | 4 | 5,
-    button: 1 | 2 | 4,
-  ) {
-    this.#assertActive();
-    return this.runtime.invokeMenuItem(slot, button);
-  }
-
-  resume() {
-    this.#assertActive();
-    return this.runtime.resume();
-  }
-
-  reset() {
-    this.#assertActive();
-    return this.runtime.reset();
-  }
-
-  stop() {
-    this.#assertActive();
-    return this.runtime.stop();
-  }
-
-  flushPersistence() {
-    this.#assertActive();
-    return this.runtime.flushPersistence();
   }
 
   async resumeAudio(): Promise<boolean> {

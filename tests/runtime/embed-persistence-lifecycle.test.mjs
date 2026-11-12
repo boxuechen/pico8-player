@@ -32,12 +32,10 @@ function fixture() {
     async stop() { operations.push("stop"); this.state = "stopped"; },
     async dispose() { operations.push("dispose"); this.state = "disposed"; },
   };
-  const composition = {
-    runtime,
-    async flushPersistence() {
-      operations.push("worker-flush");
-      return { type: "persistence-flushed", durable: true };
-    },
+  const composition = { runtime };
+  runtime.flushPersistence = async () => {
+    operations.push("worker-flush");
+    return { type: "persistence-flushed", durable: true };
   };
   const player = Reflect.construct(Pico8WebPlayer, [
     { controller: withControllerLifecycle(controller), composition, elements: {} }, adapter,
@@ -103,7 +101,7 @@ test("dispose drains commits through teardown and awaits the final host flush", 
   const finalFlush = deferred();
   const flushEntered = deferred();
   f.controller.stop = async () => { f.commit(1); f.controller.state = "stopped"; };
-  f.composition.flushPersistence = async () => {
+  f.runtime.flushPersistence = async () => {
     f.commit(2);
     return { type: "persistence-flushed", durable: true };
   };

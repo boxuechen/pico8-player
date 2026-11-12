@@ -290,7 +290,7 @@ export class Pico8WebPlayer {
       beforeDispose: async (actions) => {
         await actions.stop().catch(() => undefined);
         if (this.#mounted.controller.state !== "idle") {
-          await this.#mounted.composition.flushPersistence().catch(() => undefined);
+          await this.#mounted.composition.runtime.flushPersistence().catch(() => undefined);
         }
       },
       afterDispose: async () => {
@@ -421,7 +421,7 @@ export class Pico8WebPlayer {
   }
 
   async #flushPersistenceInternal(reason: string): Promise<Pico8PersistenceFlushResult> {
-    const result = await this.#mounted.composition.flushPersistence();
+    const result = await this.#mounted.composition.runtime.flushPersistence();
     if (result.type !== "persistence-flushed" || !result.durable) {
       return {
         status: "failed", reason, durable: false,

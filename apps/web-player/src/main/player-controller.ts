@@ -220,7 +220,7 @@ export class PlayerController {
       else this.#resumeFromEnvironment();
     });
     this.#bind(this.#window, "pagehide", (event) => {
-      this.#enqueue(async () => { await this.#composition.flushPersistence(); });
+      this.#enqueue(async () => { await this.#composition.runtime.flushPersistence(); });
       if ((event as PageTransitionEvent).persisted) this.#pauseForEnvironment();
     });
     this.#bind(this.#window, "pageshow", (event) => {
@@ -328,7 +328,7 @@ export class PlayerController {
     this.#setState("loading", `Loading ${displayName}…`);
     this.#view.clearDiagnostic();
     try {
-      const loaded = await this.#composition.loadCart(
+      const loaded = await this.#composition.runtime.loadCart(
         source,
         normalized.instructionBudget,
         normalized.localCartBundle,
@@ -356,7 +356,7 @@ export class PlayerController {
         ? true
         : await (audioProbe ?? this.#composition.resumeAudio());
       if (this.#disposed) return;
-      await this.#composition.start();
+      await this.#composition.runtime.start();
       if (this.#disposed) return;
       this.#environmentPaused = false;
       this.#input.setEnabled(true);
@@ -384,7 +384,7 @@ export class PlayerController {
     this.#input.setEnabled(false);
     this.#composition.runtime.clearInput();
     try {
-      const event = await this.#composition.openPauseMenu();
+      const event = await this.#composition.runtime.openPauseMenu();
       if (this.#disposed) return;
       if (event.type !== "pause-menu" || !event.open) {
         throw new Error("Runtime did not open the cartridge pause menu");
@@ -402,7 +402,7 @@ export class PlayerController {
   async #closePauseMenu(): Promise<void> {
     this.#assertActive();
     if (this.#state !== "menu-open") return;
-    const event = await this.#composition.closePauseMenu();
+    const event = await this.#composition.runtime.closePauseMenu();
     if (this.#disposed) return;
     if (event.type !== "pause-menu" || event.open) {
       throw new Error("Runtime did not close the cartridge pause menu");
@@ -416,7 +416,7 @@ export class PlayerController {
   ): Promise<void> {
     this.#assertActive();
     if (this.#state !== "menu-open") return;
-    const event = await this.#composition.invokeMenuItem(slot, button);
+    const event = await this.#composition.runtime.invokeMenuItem(slot, button);
     if (this.#disposed) return;
     if (event.type !== "pause-menu") {
       throw new Error("Runtime returned an invalid menu invocation outcome");
@@ -437,7 +437,7 @@ export class PlayerController {
         ? true
         : await (audioProbe ?? this.#composition.resumeAudio());
       if (this.#disposed) return;
-      await this.#composition.resume();
+      await this.#composition.runtime.resume();
       if (this.#disposed) return;
       this.#input.setEnabled(true);
       this.#elements.canvas.focus();
@@ -457,7 +457,7 @@ export class PlayerController {
     this.#composition.runtime.clearInput();
     this.#view.hidePauseMenu(false);
     try {
-      await this.#composition.reset();
+      await this.#composition.runtime.reset();
       if (this.#disposed) return;
       this.#view.clearDiagnostic();
       this.#setState("ready", "Reset complete");
@@ -476,7 +476,7 @@ export class PlayerController {
     this.#composition.runtime.clearInput();
     this.#view.hidePauseMenu(false);
     try {
-      await this.#composition.stop();
+      await this.#composition.runtime.stop();
       if (this.#disposed) return;
       await this.#composition.suspendAudio();
       if (this.#disposed) return;
@@ -540,7 +540,7 @@ export class PlayerController {
     this.#frameHandle = this.#animationFrames.request((timestamp) => {
       this.#frameHandle = undefined;
       if (!isActivelyPlaying(this.#state)) return;
-      void this.#composition.pulse(timestamp, this.#input.takeSnapshot()).then(
+      void this.#composition.runtime.pulse(timestamp, this.#input.takeSnapshot()).then(
         () => this.#scheduleFrame(),
         (error) => {
           if (
@@ -565,7 +565,7 @@ export class PlayerController {
     this.#input.setEnabled(false);
     this.#composition.runtime.clearInput();
     try {
-      await this.#composition.pause();
+      await this.#composition.runtime.pause();
       if (this.#disposed) return;
       await this.#composition.suspendAudio();
       if (this.#disposed) return;

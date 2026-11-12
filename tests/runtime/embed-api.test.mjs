@@ -100,11 +100,10 @@ function fakePlayer() {
       displayPalette: new ArrayBuffer(16),
     });
   };
+  runtime.flushPersistence = async () => ({ type: "persistence-flushed", durable: true });
   const mounted = {
     controller,
-    composition: { runtime, presenter, async flushPersistence() {
-      return { type: "persistence-flushed", durable: true };
-    } },
+    composition: { runtime, presenter },
     elements: { root: { id: "root" }, canvas: { id: "canvas" } },
   };
   return {

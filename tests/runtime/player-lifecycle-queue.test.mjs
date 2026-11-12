@@ -38,6 +38,13 @@ function fixture() {
   }
   const composition = {
     runtime, presenter,
+    autoPresent: true,
+    async resumeAudio() { calls.push("audio-probe"); return true; },
+    async suspendAudio() {},
+    setMuted() {},
+    async dispose() { calls.push("dispose"); },
+  };
+  Object.assign(runtime, {
     async loadCart(source) {
       calls.push(`load:${source[0]}:begin`);
       await composition.loadGate?.promise;
@@ -46,17 +53,12 @@ function fixture() {
       return { type: "state", state: "ready" };
     },
     async start() { calls.push("start"); if (composition.autoPresent) present(); },
-    autoPresent: true,
     async reset() { calls.push("reset"); },
     async pause() { calls.push("pause"); },
     async resume() { calls.push("resume"); },
     async stop() { calls.push("stop"); },
-    async resumeAudio() { calls.push("audio-probe"); return true; },
-    async suspendAudio() {},
     async flushPersistence() { calls.push("flush"); return { type: "persistence-flushed", durable: true }; },
-    setMuted() {},
-    async dispose() { calls.push("dispose"); },
-  };
+  });
   const view = { elements, render() {}, hidePauseMenu() {}, clearDiagnostic() {},
     showDiagnostic() {}, dispose() {}, async exitFullscreen() {} };
   const controller = new PlayerController(composition, view, { window, document,
@@ -170,8 +172,8 @@ test("pagehide persistence flush cannot overtake an admitted load", async () => 
 
 test("a failed operation does not poison later loads from another producer", async () => {
   const f = fixture();
-  const load = f.composition.loadCart;
-  f.composition.loadCart = async source => {
+  const load = f.runtime.loadCart;
+  f.runtime.loadCart = async source => {
     if (source[0] === 1) throw new Error("injected load failure");
     return load(source);
   };

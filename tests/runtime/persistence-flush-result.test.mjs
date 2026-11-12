@@ -22,14 +22,14 @@ test("Worker flush failure reaches the public result and a successful retry beco
     controller: withControllerLifecycle({ state: "idle", onStateChange() { return () => {}; },
       async stop() {}, async dispose() {} }),
     composition: {
-      runtime: { onEvent() { return () => {}; } },
+      runtime: { onEvent() { return () => {}; } ,
       async flushPersistence() {
         const events = await worker.handle({ v: 1, type: "flushPersistence", requestId: 1,
           workerGeneration: 1, sessionGeneration: 1 });
         replies.push(...events);
         return events.at(-1);
       },
-    }, elements: {},
+    } }, elements: {},
   }]);
   const failed = await player.flushPersistence("quota-test");
   assert.equal(failed.status, "failed");

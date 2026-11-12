@@ -63,12 +63,12 @@ function fixture(timeoutMs = 100) {
   const runtime = new FakeRuntime();
   const controller = withControllerLifecycle(new FakeController());
   const presenter = { sessionGeneration: 1, lastFrameId: -1 };
+  runtime.flushPersistence = async () => {};
   const mounted = {
     controller,
     composition: {
       runtime,
       presenter,
-      async flushPersistence() {},
     },
     elements: { root: {}, canvas: {} },
   };

@@ -3,7 +3,7 @@
 ## 一份 runtime，三种入口
 
 ```text
-Web facade ── PlayerController / 生命周期队列 ── PlayerComposition
+Web facade ── PlayerController / 生命周期队列 ── runtime port
                                                    │
 独立会话 / JSON tool ── 生命周期队列 ── PlayerSession ──┤
                                                    ▼
@@ -11,6 +11,8 @@ Web facade ── PlayerController / 生命周期队列 ── PlayerComposition
                                                    │
                                RuntimeCore ← ports ← z8lua bridge → WASM
 ```
+
+`PlayerComposition` 仅创建、连接和销毁 runtime、Canvas 与音频设备；Controller/facade 直接调用 runtime port，没有 Composition 方法转发。
 
 Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution: "worker"` 时，`PlayerRuntimeClient` 经消息协议连接 Worker，Worker 仍调用同一个 `compose-session.ts`。手动会话不创建 DOM、RAF、Worker 或音频设备。AudioWorklet 只负责设备 PCM 队列与重采样。
 

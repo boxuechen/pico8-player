@@ -125,10 +125,11 @@ test("public adapter serializes writes, awaits flush and backgrounds without res
     runtime,
     presenter,
     flushes: 0,
-    async flushPersistence() {
-      this.flushes += 1;
-      return { type: "persistence-flushed", durable: true };
-    },
+
+  };
+  runtime.flushPersistence = async () => {
+    composition.flushes += 1;
+    return { type: "persistence-flushed", durable: true };
   };
   const mounted = {
     controller,
