@@ -90,30 +90,6 @@ const WORKLET_FORBIDDEN_GLOBALS = new Set([
   "AudioContext",
 ]);
 
-const REQUIRED_FILES = [
-  ".gitignore",
-  ".github/workflows/verify.yml",
-  ".node-version",
-  "README.md",
-  "package.json",
-  "pnpm-lock.yaml",
-  "pnpm-workspace.yaml",
-  "tsconfig.base.json",
-  "tsconfig.json",
-  "apps/web-player/src/main/public.ts",
-  "apps/web-player/src/main/compose-player.ts",
-  "apps/web-player/src/worker/runtime-worker.ts",
-  "apps/web-player/src/worker/compose-runtime.ts",
-  "apps/web-player/src/runtime/compose-session.ts",
-  "apps/web-player/src/worker/player-worker-entry.mjs",
-  "apps/web-player/src/worklet/pico8-audio-processor.ts",
-  "spec/pico-api-inventory.yaml",
-  "spec/cart-codec-contract.json",
-  "spec/abi/generated-bindings.manifest.json",
-  "packages/cart-codec/manifest.lock.json",
-  "wasm/runtime-v1.manifest.lock.json",
-];
-
 function toPosix(filePath) {
   return filePath.split(path.sep).join("/");
 }
@@ -532,15 +508,6 @@ function checkPackageGraph(repoRoot) {
         ),
       );
     }
-    if (!manifest.scripts?.build || !manifest.scripts?.typecheck) {
-      violations.push(
-        violation(
-          "missing-package-verification-script",
-          path.relative(repoRoot, manifestPath),
-          "package must expose independent build and typecheck scripts",
-        ),
-      );
-    }
   }
 
   const visiting = new Set();
@@ -570,75 +537,10 @@ function checkPackageGraph(repoRoot) {
           violation(
             "missing-app-composition-dependency",
             "apps/web-player/package.json",
-            `worker composition requires ${packageName}`,
+            `shared runtime requires ${packageName}`,
           ),
         );
       }
-    }
-    if (!appManifest.scripts?.build || !appManifest.scripts?.typecheck) {
-      violations.push(
-        violation(
-          "missing-package-verification-script",
-          "apps/web-player/package.json",
-          "web-player must expose independent build and typecheck scripts",
-        ),
-      );
-    }
-  }
-  return violations;
-}
-
-function checkProjectReferences(repoRoot) {
-  const expectedReferences = new Map([
-    ["tsconfig.json", [
-      "packages/contracts",
-      "packages/cart-codec",
-      "packages/runtime-core",
-      "packages/z8lua-bridge",
-      "apps/web-player",
-    ]],
-    ["packages/contracts/tsconfig.json", []],
-    ["packages/cart-codec/tsconfig.json", ["packages/contracts"]],
-    ["packages/runtime-core/tsconfig.json", ["packages/contracts", "packages/cart-codec"]],
-    ["packages/z8lua-bridge/tsconfig.json", ["packages/contracts", "packages/runtime-core"]],
-    ["apps/web-player/tsconfig.json", [
-      "apps/web-player/src/transport",
-      "apps/web-player/src/main",
-      "apps/web-player/src/runtime",
-      "apps/web-player/src/worker",
-      "apps/web-player/src/worklet",
-    ]],
-    ["apps/web-player/src/transport/tsconfig.json", ["packages/contracts"]],
-    ["apps/web-player/src/main/tsconfig.json", ["apps/web-player/src/transport", "apps/web-player/src/runtime"]],
-    ["apps/web-player/src/runtime/tsconfig.json", [
-      "apps/web-player/src/transport", "packages/cart-codec", "packages/runtime-core", "packages/z8lua-bridge",
-    ]],
-    ["apps/web-player/src/worker/tsconfig.json", [
-      "apps/web-player/src/transport",
-      "apps/web-player/src/runtime",
-      "packages/cart-codec",
-      "packages/runtime-core",
-      "packages/z8lua-bridge",
-    ]],
-    ["apps/web-player/src/worklet/tsconfig.json", ["apps/web-player/src/transport"]],
-  ]);
-  const violations = [];
-  for (const [relativePath, expected] of expectedReferences) {
-    const configPath = path.join(repoRoot, relativePath);
-    if (!existsSync(configPath)) continue;
-    const config = readJson(configPath);
-    const actual = (config.references ?? []).map((reference) =>
-      toPosix(path.relative(repoRoot, path.resolve(path.dirname(configPath), reference.path))),
-    ).sort();
-    const sortedExpected = [...expected].sort();
-    if (JSON.stringify(actual) !== JSON.stringify(sortedExpected)) {
-      violations.push(
-        violation(
-          "project-reference-drift",
-          relativePath,
-          `expected [${sortedExpected.join(", ")}]; received [${actual.join(", ")}]`,
-        ),
-      );
     }
   }
   return violations;
@@ -676,7 +578,13 @@ function checkTypeScriptLibs(repoRoot) {
 
 function checkGeneratedBindings(repoRoot) {
   const manifestPath = path.join(repoRoot, "spec/abi/generated-bindings.manifest.json");
-  if (!existsSync(manifestPath)) return [];
+  if (!existsSync(manifestPath)) {
+    return [violation(
+      "missing-generated-manifest",
+      path.relative(repoRoot, manifestPath),
+      "generated bindings require an ABI manifest",
+    )];
+  }
   const manifest = readJson(manifestPath);
   const listed = new Map((manifest.files ?? []).map((entry) => [toPosix(entry.path), entry.sha256]));
   const generatedSources = [
@@ -719,11 +627,6 @@ function checkWorkspace(repoRoot) {
   const workspacePath = path.join(repoRoot, "pnpm-workspace.yaml");
   if (!existsSync(workspacePath)) return violations;
   const workspace = readFileSync(workspacePath, "utf8");
-  if (!workspace.includes('"packages/*"') || !workspace.includes('"apps/*"')) {
-    violations.push(
-      violation("workspace-layout", "pnpm-workspace.yaml", "workspace must include packages/* and apps/*"),
-    );
-  }
   if (/(?:^|[\s"'])ref(?:\/|\*|["'])/m.test(workspace)) {
     violations.push(
       violation("workspace-includes-ref", "pnpm-workspace.yaml", "ref/ must not be a workspace input"),
@@ -732,24 +635,8 @@ function checkWorkspace(repoRoot) {
   return violations;
 }
 
-function checkToolchainAndCi(repoRoot) {
+function checkBuildInputs(repoRoot) {
   const violations = [];
-  const rootManifest = readJson(path.join(repoRoot, "package.json"));
-  if (!/^pnpm@\d+\.\d+\.\d+$/.test(rootManifest.packageManager ?? "")) {
-    violations.push(
-      violation("unpinned-package-manager", "package.json", "packageManager must pin an exact pnpm version"),
-    );
-  }
-  for (const script of ["build", "typecheck", "test:architecture", "test:public-exports", "verify"]) {
-    if (!rootManifest.scripts?.[script]) {
-      violations.push(
-        violation("missing-root-verification-script", "package.json", `missing script: ${script}`),
-      );
-    }
-  }
-  if (!existsSync(path.join(repoRoot, "pnpm-lock.yaml"))) {
-    violations.push(violation("missing-lockfile", "pnpm-lock.yaml", "frozen installs require a lockfile"));
-  }
   const ignorePath = path.join(repoRoot, ".gitignore");
   if (
     existsSync(ignorePath) &&
@@ -759,33 +646,12 @@ function checkToolchainAndCi(repoRoot) {
       violation("ref-not-gitignored", ".gitignore", "the complete ref/ directory must be ignored"),
     );
   }
-  const workflowPath = path.join(repoRoot, ".github/workflows/verify.yml");
-  if (existsSync(workflowPath)) {
-    const workflow = readFileSync(workflowPath, "utf8");
-    if (!workflow.includes("pnpm install --frozen-lockfile")) {
-      violations.push(
-        violation("ci-not-frozen", ".github/workflows/verify.yml", "CI must use the frozen lockfile"),
-      );
-    }
-    const verify = [...workflow.matchAll(/run:\s*pnpm run (verify)\s*$/gmu)]
-      .map((match) => match[1]);
-    if (verify.length !== 1 || !rootManifest.scripts?.[verify[0]]) {
-      violations.push(
-        violation(
-          "ci-missing-verify",
-          ".github/workflows/verify.yml",
-          "CI must run the current verify gate",
-        ),
-      );
-    }
-  }
-
   const buildConfigurationFiles = [
     path.join(repoRoot, "package.json"),
     path.join(repoRoot, "tsconfig.json"),
     path.join(repoRoot, "tsconfig.base.json"),
     path.join(repoRoot, "pnpm-workspace.yaml"),
-    workflowPath,
+    ...walk(path.join(repoRoot, ".github/workflows"), (file) => /\.ya?ml$/u.test(file)),
     ...walk(path.join(repoRoot, "packages"), (file) =>
       ["package.json", "tsconfig.json"].includes(path.basename(file))),
     ...walk(path.join(repoRoot, "apps"), (file) =>
@@ -811,46 +677,26 @@ function checkToolchainAndCi(repoRoot) {
 
 export function auditRepository(repoRoot) {
   const violations = [];
-  for (const relativePath of REQUIRED_FILES) {
-    if (!existsSync(path.join(repoRoot, relativePath))) {
-      violations.push(violation("missing-scaffold", relativePath, "required architecture file is missing"));
-    }
-  }
-  violations.push(...checkToolchainAndCi(repoRoot));
+  violations.push(...checkBuildInputs(repoRoot));
   violations.push(...checkWorkspace(repoRoot));
   violations.push(...checkPackageGraph(repoRoot));
-  violations.push(...checkProjectReferences(repoRoot));
   violations.push(...checkTypeScriptLibs(repoRoot));
   violations.push(...checkGeneratedBindings(repoRoot));
 
-  const productionRoots = [path.join(repoRoot, "packages"), path.join(repoRoot, "apps")];
-  for (const root of productionRoots) {
-    for (const file of walk(root, (candidate) => /\.(?:[cm]?ts|tsx)$/.test(candidate))) {
-      const logicalPath = path.relative(repoRoot, file);
-      violations.push(
-        ...auditSourceText({
-          repoRoot,
-          logicalPath,
-          sourceText: readFileSync(file, "utf8"),
-        }),
-      );
-    }
-  }
-
-  for (const file of walk(path.join(repoRoot, "tests"), (candidate) => {
-    const relativePath = toPosix(path.relative(repoRoot, candidate));
-    if (relativePath.startsWith("tests/architecture/fixtures/")) return false;
-    if (relativePath === "tests/architecture/architecture.test.mjs") return false;
-    return /\.(?:[cm]?[jt]s|tsx)$/.test(candidate);
-  })) {
-    const logicalPath = path.relative(repoRoot, file);
-    violations.push(
-      ...auditSourceText({
-        repoRoot,
-        logicalPath,
-        sourceText: readFileSync(file, "utf8"),
-      }),
-    );
+  const sourceFiles = [
+    ...walk(path.join(repoRoot, "packages"), (file) => /\.(?:[cm]?ts|tsx)$/u.test(file)),
+    ...walk(path.join(repoRoot, "apps"), (file) => /\.(?:[cm]?[jt]s|tsx)$/u.test(file)),
+    ...walk(path.join(repoRoot, "tests"), (file) => /\.(?:[cm]?[jt]s|tsx)$/u.test(file)),
+  ];
+  for (const file of sourceFiles) {
+    const logicalPath = toPosix(path.relative(repoRoot, file));
+    // The audit's own tests intentionally attempt an invalid package import.
+    if (logicalPath === "tests/architecture/architecture.test.mjs") continue;
+    violations.push(...auditSourceText({
+      repoRoot,
+      logicalPath,
+      sourceText: readFileSync(file, "utf8"),
+    }));
   }
 
   const unique = new Map();

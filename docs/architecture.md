@@ -33,7 +33,7 @@ Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution
 
 Core 不使用 DOM、Worker、fetch、IndexedDB 或具体 WASM module。WASM handle/pointer 不暴露给 UI；物理 Pico RAM 的 lease 从 create 到 destroy 有效，逻辑寻址统一走 adapter mapper。`.p8.png` 不经过 Canvas 解码。
 
-TypeScript project references、package exports 和 `tests/architecture` 检查这些边界。生产代码不依赖 `ref/`。
+TypeScript project references 管理构建顺序。`tests/architecture` 检查跨层导入、平台 API、包导出和生成绑定。发布验证检查组件产物。源码和构建配置均不得引用 `ref/`。
 
 ## 帧、输入与状态
 

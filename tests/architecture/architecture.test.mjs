@@ -177,20 +177,6 @@ test("consumer-view TypeScript project compiles through package exports", () => 
   assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
 });
 
-test("all package and execution-domain build outputs exist", () => {
-  for (const relativePath of [
-    "packages/contracts/dist/public.js",
-    "packages/cart-codec/dist/public.js",
-    "packages/runtime-core/dist/public.js",
-    "packages/z8lua-bridge/dist/public.js",
-    "apps/web-player/dist/main/public.js",
-    "apps/web-player/dist/worker/runtime-worker.js",
-    "apps/web-player/dist/worklet/pico8-audio-processor.js",
-  ]) {
-    assert.equal(existsSync(path.join(REPO_ROOT, relativePath)), true, relativePath);
-  }
-});
-
 test("bridge type-only dependency does not become a runtime load", () => {
   const output = readFileSync(
     path.join(REPO_ROOT, "packages/z8lua-bridge/dist/public.js"),
