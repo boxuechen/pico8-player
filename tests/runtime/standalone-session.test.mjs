@@ -100,7 +100,7 @@ test("direct session retains asynchronous root host completion without wire enve
   await new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(events.at(-1).state,'waiting-host');finish();
   const loaded=await loading;assert.equal(loaded.state,'ready');
-  assert.ok(events.every(e=>!('workerGeneration' in e)&&!('v' in e)));
+  assert.ok(events.every(e=>!('requestId' in e)&&!('workerGeneration' in e)&&!('v' in e)));
   await session.dispose();
 });
 
@@ -146,4 +146,48 @@ test("main-thread composition preserves command deadline admission validation be
   for(const commandTimeoutMs of [0,-1,NaN,Infinity]) {
     await assert.rejects(PlayerComposition.create({canvas:{},useDefaultAssets:true,commandTimeoutMs}),/commandTimeoutMs must be positive/);
   }
+});
+
+
+test("a suspended direct call cannot consume a concurrent flush result", { timeout: 2000 }, async () => {
+  let finish;
+  const session = new PlayerSession(await createModule(), { hostRequestHandler: {
+    handle: request => new Promise(resolve => {
+      finish = () => resolve({ generation: request.generation, requestId: request.requestId,
+        bytes: new Uint8Array(), isError: false });
+    }),
+  } });
+  try {
+    let loaded = false;
+    const loading = session.loadCart(cart('function _init() __p8w_probe_host_request("pending") end'))
+      .then(result => { loaded = true; return result; });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const flushed = await session.flushPersistence();
+    assert.equal(flushed.type, "persistence-flushed");
+    assert.equal(loaded, false);
+    assert.equal("requestId" in flushed, false);
+    finish();
+    assert.equal((await loading).state, "ready");
+  } finally { await session.dispose(); }
+});
+
+test("dispose cancels a suspended direct call and ignores its late host result", { timeout: 2000 }, async () => {
+  let finish;
+  const module = await createModule();
+  const session = new PlayerSession(module, { hostRequestHandler: {
+    handle: request => new Promise(resolve => {
+      finish = () => resolve({ generation: request.generation, requestId: request.requestId,
+        bytes: new Uint8Array(), isError: false });
+    }),
+  } });
+  const events = [];
+  session.onEvent(event => events.push(event));
+  const loading = session.loadCart(cart('function _init() __p8w_probe_host_request("pending") end'));
+  const rejected = assert.rejects(loading, /disposed/);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await session.dispose(); await rejected;
+  const count = events.length;
+  finish(); await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(events.length, count);
+  assert.equal(module._p8w_live_contexts(), 0);
 });

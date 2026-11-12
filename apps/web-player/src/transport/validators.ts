@@ -1,4 +1,4 @@
-import type { SessionCommand } from "./session-contract.js";
+import type { PicoInputSnapshot } from "@pico8-web/contracts";
 import {
   PICO_CART_INPUT_MAX_BYTES,
   PICO_CART_DATA_BYTES,
@@ -42,7 +42,7 @@ function isInt32(value: unknown): boolean {
     Number(value) <= 0x7fff_ffff;
 }
 
-export function isPicoInputSnapshot(value: unknown): boolean {
+export function isPicoInputSnapshot(value: unknown): value is PicoInputSnapshot {
   return isRecord(value) &&
     Array.isArray(value.controllers) &&
     value.controllers.length === PICO_CONTROLLER_COUNT &&
@@ -130,22 +130,25 @@ function utf8ByteLength(value: string): number {
   return length;
 }
 
-function isLocalCartBundle(value: unknown): boolean {
+function isLocalCartBundle(value: unknown, wire = false): boolean {
   if (value === undefined) return true;
   if (!Array.isArray(value) || value.length > PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES) return false;
   const refs = new Set<string>();
   for (const entry of value) {
-    if (!isRecord(entry) || typeof entry.ref !== "string" || entry.ref.length === 0 ||
+    if (!isRecord(entry)) return false;
+    const bytes = wire ? entry.cartBytes : entry.bytes;
+    if (typeof entry.ref !== "string" || entry.ref.length === 0 ||
       utf8ByteLength(entry.ref) > PICO_CART_REF_MAX_BYTES ||
-      entry.cartBytes instanceof ArrayBuffer === false || entry.cartBytes.byteLength === 0 ||
-      entry.cartBytes.byteLength > PICO_CART_INPUT_MAX_BYTES || !isCartAccess(entry.access) ||
+      !(wire ? bytes instanceof ArrayBuffer : bytes instanceof Uint8Array) ||
+      (bytes as ArrayBuffer | Uint8Array).byteLength === 0 ||
+      (bytes as ArrayBuffer | Uint8Array).byteLength > PICO_CART_INPUT_MAX_BYTES || !isCartAccess(entry.access) ||
       refs.has(entry.ref)) return false;
     refs.add(entry.ref);
   }
   return true;
 }
 
-function isHostCartData(value: unknown): boolean {
+function isHostCartData(value: unknown, wire = false): boolean {
   if (value === undefined) return true;
   if (!Array.isArray(value) || value.length > PICO_CART_DATA_MAX_RECORDS) return false;
   const ids = new Set<string>();
@@ -153,7 +156,8 @@ function isHostCartData(value: unknown): boolean {
     if (!isRecord(entry) || typeof entry.id !== "string" ||
       entry.id.length < 1 || utf8ByteLength(entry.id) > PICO_CART_DATA_ID_MAX_BYTES ||
       !/^[a-z0-9_-]+$/u.test(entry.id) || ids.has(entry.id) ||
-      !(entry.bytes instanceof ArrayBuffer) || entry.bytes.byteLength !== PICO_CART_DATA_BYTES) {
+      !(wire ? entry.bytes instanceof ArrayBuffer : entry.bytes instanceof Uint8Array) ||
+      (entry.bytes as ArrayBuffer | Uint8Array).byteLength !== PICO_CART_DATA_BYTES) {
       return false;
     }
     ids.add(entry.id);
@@ -161,11 +165,19 @@ function isHostCartData(value: unknown): boolean {
   });
 }
 
-export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
-  return isPlayerEnvelope(value) && isSessionCommand(value);
+/** Shared argument validation without constructing a protocol message. */
+export function isCartLoad(source: unknown, budget: unknown, bundle: unknown, host: unknown): boolean {
+  return source instanceof Uint8Array && source.byteLength > 0 &&
+    source.byteLength <= PICO_CART_INPUT_MAX_BYTES &&
+    (budget === undefined || isPositiveUint(budget)) &&
+    isLocalCartBundle(bundle) && isHostCartData(host);
 }
 
-export function isSessionCommand(value: unknown): value is SessionCommand {
+export function isPlayerHostToRuntime(value: unknown): value is PlayerHostToRuntime {
+  return isPlayerEnvelope(value) && isPlayerCommand(value);
+}
+
+function isPlayerCommand(value: unknown): boolean {
   if (!isRecord(value) || !isUint(value.sessionGeneration)) return false;
   if (value.type === "input") {
     return (
@@ -182,8 +194,8 @@ export function isSessionCommand(value: unknown): value is SessionCommand {
       value.cartBytes instanceof ArrayBuffer &&
       value.cartBytes.byteLength > 0 &&
       value.cartBytes.byteLength <= PICO_CART_INPUT_MAX_BYTES &&
-      isLocalCartBundle(value.localCartBundle) &&
-      isHostCartData(value.hostCartData) &&
+      isLocalCartBundle(value.localCartBundle, true) &&
+      isHostCartData(value.hostCartData, true) &&
       (value.instructionBudget === undefined ||
         (isPositiveUint(value.instructionBudget)))
     );

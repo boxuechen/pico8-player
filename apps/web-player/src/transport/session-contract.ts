@@ -1,7 +1,5 @@
 /** Execution data shared by local calls and the optional Worker wire adapter. */
 import type {
-  CartAccess,
-  PicoInputSnapshot,
   SerializedRuntimeError,
 } from "@pico8-web/contracts";
 
@@ -19,67 +17,7 @@ export {
   PICO_CART_DATA_MAX_RECORDS,
 } from "@pico8-web/contracts";
 
-interface SessionCommandContext {
-  readonly requestId: number;
-  readonly sessionGeneration: number;
-}
-
-export interface PlayerLocalCartBundleEntry {
-  readonly ref: string;
-  readonly cartBytes: ArrayBuffer;
-  readonly access: CartAccess;
-}
-
-export interface PlayerCartDataSeedEntry {
-  readonly id: string;
-  readonly bytes: ArrayBuffer;
-}
-
-export type SessionControlCommand =
-  | (SessionCommandContext & {
-      readonly type: "loadCart";
-      readonly cartBytes: ArrayBuffer;
-      /** Caller-authorized local-only targets. The Worker performs no discovery. */
-      readonly localCartBundle?: readonly PlayerLocalCartBundleEntry[];
-      /** Presence selects caller-owned persistence; an empty array is a valid fresh store. */
-      readonly hostCartData?: readonly PlayerCartDataSeedEntry[];
-      readonly instructionBudget?: number;
-    })
-  | (SessionCommandContext & { readonly type: "start" })
-  | (SessionCommandContext & { readonly type: "step"; readonly sequence: number })
-  | (SessionCommandContext & {
-      readonly type: "vsync";
-      readonly sequence: number;
-      readonly timestampMs: number;
-    })
-  | (SessionCommandContext & { readonly type: "pause" })
-  | (SessionCommandContext & { readonly type: "openPauseMenu" })
-  | (SessionCommandContext & { readonly type: "closePauseMenu" })
-  | (SessionCommandContext & {
-      readonly type: "invokeMenuItem";
-      readonly slot: 1 | 2 | 3 | 4 | 5;
-      readonly button: 1 | 2 | 4;
-    })
-  | (SessionCommandContext & { readonly type: "resume" })
-  | (SessionCommandContext & { readonly type: "reset" })
-  | (SessionCommandContext & { readonly type: "stop" })
-  | (SessionCommandContext & { readonly type: "flushPersistence" })
-  | (SessionCommandContext & { readonly type: "dispose" });
-
-export type SessionInputCommand = SessionCommandContext & {
-  readonly type: "input";
-  /** Requestless commands reserve request id zero. */
-  readonly requestId: 0;
-  readonly sequence: number;
-  readonly input: PicoInputSnapshot;
-};
-
-export type SessionCommand =
-  | SessionControlCommand
-  | SessionInputCommand;
-
 interface SessionEventContext {
-  readonly requestId: number;
   readonly sessionGeneration: number;
 }
 

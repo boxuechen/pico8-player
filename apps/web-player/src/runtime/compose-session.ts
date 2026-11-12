@@ -1,3 +1,4 @@
+import type { PlayerLocalCartSource } from "../transport/runtime-port.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import { CartCodecError, decodeCart } from "@pico8-web/cart-codec";
 import {
@@ -45,9 +46,6 @@ import { CartRepositoryAdapter } from "./adapters/cart-repository-adapter.js";
 import { LocalCartBundleResolver } from "./adapters/host-cart-resolver-adapter.js";
 import type { PcmOutput } from "./audio-transport.js";
 import type {
-  SessionCommand,
-  SessionControlCommand,
-  SessionInputCommand,
   PlayerRuntimeState,
   SessionEvent,
 } from "../transport/public.js";
@@ -61,23 +59,46 @@ function invariant(message: string): SerializedRuntimeError {
   };
 }
 
-export interface SessionController {
-  handle(
-    command: SessionCommand,
-  ): readonly SessionEvent[] | Promise<readonly SessionEvent[]>;
-  setEventSink(sink: SessionEventSink): void;
-  dispose(): void | Promise<void>;
+export type SessionBatch = readonly SessionEvent[] | Promise<readonly SessionEvent[]>;
+export interface SessionContext {
+  readonly sessionGeneration: number;
+  /** Completion of a suspended guest operation, delivered only to this call. */
+  readonly onResume: (events: readonly SessionEvent[]) => void;
 }
-
-export type SessionEventSink = (
-  events: readonly SessionEvent[],
-) => void;
+interface SessionFrameContext extends SessionContext { readonly sequence: number; }
+interface SessionMenuContext extends SessionContext {
+  readonly slot: 1 | 2 | 3 | 4 | 5;
+  readonly button: 1 | 2 | 4;
+}
+export interface SessionLoadOptions {
+  readonly source: Uint8Array;
+  readonly instructionBudget?: number;
+  readonly localCartBundle?: readonly PlayerLocalCartSource[];
+  readonly hostCartData?: readonly PicoCartDataSeed[];
+}
+export interface SessionController {
+  input(generation: number, sequence: number, input: PicoInputSnapshot): void;
+  loadCart(context: SessionContext, load: SessionLoadOptions): SessionBatch;
+  reset(context: SessionContext): SessionBatch;
+  start(context: SessionContext): SessionBatch;
+  pause(context: SessionContext): SessionBatch;
+  resume(context: SessionContext): SessionBatch;
+  stop(context: SessionContext): SessionBatch;
+  openPauseMenu(context: SessionContext): SessionBatch;
+  closePauseMenu(context: SessionContext): SessionBatch;
+  invokeMenuItem(context: SessionContext, slot: 1 | 2 | 3 | 4 | 5, button: 1 | 2 | 4): SessionBatch;
+  step(context: SessionContext, sequence: number): SessionBatch;
+  pulse(context: SessionContext, sequence: number, timestampMs: number): SessionBatch;
+  flushPersistence(context: SessionContext): SessionBatch;
+  dispose(context: SessionContext): SessionBatch;
+  destroy(): Promise<void>;
+}
 
 export interface SessionControllerOptions {
   readonly audioTransport?: PcmOutput;
   readonly persistence?: CartDataPersistencePort;
   readonly hostRequestHandler?: RootHostRequestHandlerPort;
-  /** Fixed per-VM diagnostic override; zero/undefined selects the 1 MiB production default. */
+  /** Fixed per-VM diagnostic override; zero/undefined selects the 2 MiB production default. */
   readonly luaHeapLimit?: number;
 }
 
@@ -97,6 +118,7 @@ interface PendingRootHostRequest {
   readonly runtimeGeneration: number;
   readonly requestId: number;
   readonly cancellation: CartCancellationSource;
+  readonly emit: (events: readonly SessionEvent[]) => void;
   readonly resume: (
     response: Uint8Array,
     isError: boolean,
@@ -115,6 +137,7 @@ interface PendingExternalCartData {
   readonly runtimeGeneration: number;
   readonly requestId: number;
   readonly cancellation: CartCancellationSource;
+  readonly emit: (events: readonly SessionEvent[]) => void;
   readonly resume: PendingRootHostRequest["resume"];
 }
 
@@ -123,18 +146,17 @@ function saturatingAddInt32(left: number, right: number): number {
   return Math.max(-0x8000_0000, Math.min(0x7fff_ffff, result)) | 0;
 }
 
-function playerBase(command: SessionCommand) {
+function playerBase(context: SessionContext) {
   return {
-    requestId: command.requestId,
-    sessionGeneration: command.sessionGeneration,
+    sessionGeneration: context.sessionGeneration,
   };
 }
 
 function playerBaseForGeneration(
-  command: SessionCommand,
+  context: SessionContext,
   generation: number,
 ) {
-  return { ...playerBase(command), sessionGeneration: generation };
+  return { ...playerBase(context), sessionGeneration: generation };
 }
 
 function playerLifecycleError(
@@ -214,7 +236,6 @@ export function createSessionController(
   let mode: "none" | "callback" | "custom" = "none";
   let targetFps: 0 | 30 | 60 = 0;
   let devkitFlags = 0;
-  let eventSink: SessionEventSink | undefined;
   let pendingHostRequest: PendingRootHostRequest | undefined;
   let pendingGuestLoad: PendingGuestLoad | undefined;
   let pendingExternalCartData: PendingExternalCartData | undefined;
@@ -338,10 +359,10 @@ export function createSessionController(
   }
 
   function takePersistenceEvents(
-    command: SessionCommand,
+    context: SessionContext,
   ): readonly SessionEvent[] {
     const commits = pendingHostCartDataCommits.splice(0).map((commit) => ({
-      ...playerBase(command),
+      ...playerBase(context),
       type: "cartdata-commit" as const,
       id: commit.id,
       revision: commit.revision,
@@ -349,7 +370,7 @@ export function createSessionController(
     }));
     if (persistence === undefined || hostPersistence) {
       const local = localPersistenceDiagnostics.splice(0).map((error) => ({
-        ...playerBase(command),
+        ...playerBase(context),
         type: "diagnostic" as const,
         error,
       }));
@@ -367,7 +388,7 @@ export function createSessionController(
     }
     const combined = [...localPersistenceDiagnostics.splice(0), ...diagnostics];
     return [...commits, ...combined.map((error) => ({
-      ...playerBase(command),
+      ...playerBase(context),
       type: "diagnostic" as const,
       error,
     }))];
@@ -408,23 +429,23 @@ export function createSessionController(
   }
 
   function useHostPersistence(
-    records: readonly { readonly id: string; readonly bytes: ArrayBuffer }[],
+    records: readonly PicoCartDataSeed[],
   ): void {
     const ids = new Set<string>();
     if (records.length > 4096) throw new RangeError("host cartdata exceeds 4096 records");
     cartDataSeeds = records.map((record) => {
       if (!/^[a-z0-9_-]{1,64}$/u.test(record.id) || ids.has(record.id) ||
-        !(record.bytes instanceof ArrayBuffer) || record.bytes.byteLength !== 256) {
+        !(record.bytes instanceof Uint8Array) || record.bytes.byteLength !== 256) {
         throw new RangeError("host cartdata contains an invalid record");
       }
       ids.add(record.id);
-      return { id: record.id, bytes: new Uint8Array(record.bytes).slice() };
+      return { id: record.id, bytes: record.bytes.slice() };
     });
     hostPersistence = true;
   }
 
   function fault(
-    command: SessionCommand,
+    context: SessionContext,
     error: SerializedRuntimeError,
   ): SessionEvent {
     cancelPendingHostRequest();
@@ -435,16 +456,16 @@ export function createSessionController(
     scheduler.pause();
     clearInputState();
     devkitFlags = 0;
-    resetAudioQueue(command.sessionGeneration);
-    return { ...playerBase(command), type: "fault", error };
+    resetAudioQueue(context.sessionGeneration);
+    return { ...playerBase(context), type: "fault", error };
   }
 
   function state(
-    command: SessionCommand,
+    context: SessionContext,
     next: PlayerRuntimeState,
   ): SessionEvent {
     return {
-      ...playerBase(command),
+      ...playerBase(context),
       type: "state",
       state: next,
       mode,
@@ -454,13 +475,13 @@ export function createSessionController(
   }
 
   function pauseMenuEvent(
-    command: SessionControlCommand,
+    context: SessionContext,
     open: boolean,
     outcome: "opened" | "keep-open" | "closed" | "removed",
     snapshot?: CartSessionMenuSnapshot,
   ): SessionEvent {
     return {
-      ...playerBase(command),
+      ...playerBase(context),
       type: "pause-menu",
       open,
       outcome,
@@ -473,36 +494,18 @@ export function createSessionController(
   }
 
   function stateForGeneration(
-    command: SessionCommand,
+    context: SessionContext,
     generation: number,
     next: PlayerRuntimeState,
   ): SessionEvent {
     return {
-      ...playerBaseForGeneration(command, generation),
+      ...playerBaseForGeneration(context, generation),
       type: "state",
       state: next,
       mode,
       targetFps,
       devkitFlags,
     };
-  }
-
-  function setEventSink(sink: SessionEventSink): void {
-    if (typeof sink !== "function") {
-      throw new TypeError("Player session event sink must be a function");
-    }
-    if (eventSink !== undefined && eventSink !== sink) {
-      throw new Error("Player session event sink is already installed");
-    }
-    eventSink = sink;
-  }
-
-  function emitBackground(events: readonly SessionEvent[]): void {
-    if (events.length === 0) return;
-    if (eventSink === undefined) {
-      throw new Error("Player session background event sink is not installed");
-    }
-    eventSink(events);
   }
 
   function cancelPendingHostRequest(): void {
@@ -527,7 +530,7 @@ export function createSessionController(
   }
 
   function guestLoadFault(
-    command: SessionControlCommand,
+    context: SessionContext,
     pending: PendingGuestLoad,
     error: unknown,
   ): void {
@@ -561,11 +564,11 @@ export function createSessionController(
               phase: "host-call",
               recoverable: false,
             };
-    emitBackground([fault(command, serialized)]);
+    context.onResume([fault(context, serialized)]);
   }
 
   async function completeGuestLoad(
-    command: SessionControlCommand,
+    context: SessionContext,
     pending: PendingGuestLoad,
     request: ReturnType<typeof decodeGuestCartLoadRequest>,
   ): Promise<void> {
@@ -586,12 +589,12 @@ export function createSessionController(
       const boot = staged.load(loaded.cart, request.parameter ?? new Uint8Array());
       if (!boot.ok) {
         staged.dispose();
-        guestLoadFault(command, pending, boot.error);
+        guestLoadFault(context, pending, boot.error);
         return;
       }
       if (boot.value.kind !== "ready") {
         staged.dispose();
-        guestLoadFault(command, pending, {
+        guestLoadFault(context, pending, {
           code: "E_FEATURE_UNSUPPORTED",
           message: "a load target must boot directly into callback or custom mode",
           phase: "host-call",
@@ -601,7 +604,7 @@ export function createSessionController(
       }
       if (sessionGeneration >= 0xffff_ffff) {
         staged.dispose();
-        guestLoadFault(command, pending, invariant("session generation space is exhausted"));
+        guestLoadFault(context, pending, invariant("session generation space is exhausted"));
         return;
       }
 
@@ -611,7 +614,7 @@ export function createSessionController(
       const oldDisposed = oldSession.dispose();
       if (!oldDisposed.ok) {
         staged.dispose();
-        guestLoadFault(command, pending, oldDisposed.error);
+        guestLoadFault(context, pending, oldDisposed.error);
         return;
       }
       pendingGuestLoad = undefined;
@@ -630,8 +633,8 @@ export function createSessionController(
       if (pending.continueRunning) scheduler.start();
 
       const breadcrumb = request.breadcrumb?.slice() ?? new Uint8Array();
-      emitBackground([{
-        ...playerBaseForGeneration(command, nextSessionGeneration),
+      context.onResume([{
+        ...playerBaseForGeneration(context, nextSessionGeneration),
         type: "session-replaced",
         previousSessionGeneration,
         nextSessionGeneration,
@@ -641,20 +644,20 @@ export function createSessionController(
       }]);
       beginAudioGeneration(nextSessionGeneration);
       sendAudio(boot.value.audio);
-      emitBackground([
+      context.onResume([
         stateForGeneration(
-          command,
+          context,
           nextSessionGeneration,
           pending.continueRunning ? "running" : "ready",
         ),
       ]);
     } catch (error) {
-      guestLoadFault(command, pending, error);
+      guestLoadFault(context, pending, error);
     }
   }
 
   function suspendGuestLoad(
-    command: SessionControlCommand,
+    context: SessionContext,
     request: CartSessionHostRequest,
     continueRunning: boolean,
   ): readonly SessionEvent[] {
@@ -662,7 +665,7 @@ export function createSessionController(
       pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
       pendingExternalCartData !== undefined
     ) {
-      return [fault(command, {
+      return [fault(context, {
         code: "E_HOST_REQUEST",
         message: "root HostRequest violates the bounded single-pending contract",
         phase: "host-call",
@@ -673,7 +676,7 @@ export function createSessionController(
     try {
       decoded = decodeGuestCartLoadRequest(request.bytes);
     } catch (error) {
-      return [fault(command, {
+      return [fault(context, {
         code: "E_HOST_REQUEST",
         message: error instanceof Error ? error.message : String(error),
         phase: "host-call",
@@ -690,8 +693,8 @@ export function createSessionController(
       continueRunning,
     };
     pendingGuestLoad = pending;
-    void completeGuestLoad(command, pending, decoded);
-    return [state(command, "waiting-host")];
+    void completeGuestLoad(context, pending, decoded);
+    return [state(context, "waiting-host")];
   }
 
   function externalCartDataIsCurrent(pending: PendingExternalCartData): boolean {
@@ -706,7 +709,7 @@ export function createSessionController(
   ): void {
     if (!externalCartDataIsCurrent(pending)) return;
     pendingExternalCartData = undefined;
-    emitBackground(pending.resume(new Uint8Array(), true));
+    pending.emit(pending.resume(new Uint8Array(), true));
   }
 
   async function completeExternalCartData(
@@ -763,14 +766,14 @@ export function createSessionController(
 
       if (!externalCartDataIsCurrent(pending)) return;
       pendingExternalCartData = undefined;
-      emitBackground(pending.resume(new Uint8Array(), false));
+      pending.emit(pending.resume(new Uint8Array(), false));
     } catch {
       failExternalCartData(pending);
     }
   }
 
   function suspendExternalCartData(
-    command: SessionControlCommand,
+    context: SessionContext,
     hostRequest: CartSessionHostRequest,
     resume: PendingRootHostRequest["resume"],
   ): readonly SessionEvent[] {
@@ -779,7 +782,7 @@ export function createSessionController(
       pendingExternalCartData !== undefined
     ) {
       session.stop();
-      return [fault(command, {
+      return [fault(context, {
         code: "E_HOST_REQUEST",
         message: "root HostRequest violates the bounded single-pending contract",
         phase: "host-call",
@@ -819,6 +822,7 @@ export function createSessionController(
         requestId: hostRequest.id,
         cancellation: new CartCancellationSource(),
         resume,
+        emit: context.onResume,
       };
       pendingExternalCartData = pending;
       void completeExternalCartData(
@@ -827,10 +831,10 @@ export function createSessionController(
         range,
         cstoreSnapshot?.value,
       );
-      return [state(command, "waiting-host")];
+      return [state(context, "waiting-host")];
     } catch (error) {
       session.stop();
-      return [fault(command, {
+      return [fault(context, {
         code: "E_HOST_REQUEST",
         message: error instanceof Error ? error.message : String(error),
         phase: "host-call",
@@ -858,29 +862,29 @@ export function createSessionController(
       typeof completion.isError === "boolean";
     const response = valid ? completion.bytes.slice() : new Uint8Array();
     const events = pending.resume(response, valid ? completion.isError : true);
-    emitBackground(events);
+    pending.emit(events);
   }
 
   function suspendHostRequest(
-    command: SessionControlCommand,
+    context: SessionContext,
     request: CartSessionHostRequest,
     resume: PendingRootHostRequest["resume"],
   ): readonly SessionEvent[] {
     if (isGuestCartRequestPayload(request.bytes)) {
-      return suspendGuestLoad(command, request, lifecycle === "running");
+      return suspendGuestLoad(context, request, lifecycle === "running");
     }
     if (isExternalCartDataRequestPayload(request.bytes)) {
-      return suspendExternalCartData(command, request, resume);
+      return suspendExternalCartData(context, request, resume);
     }
     if (hostRequestHandler === undefined) {
-      return [unsupportedHostRequest(command)];
+      return [unsupportedHostRequest(context)];
     }
     if (
       request.bytes.byteLength > PICO_HOST_REQUEST_MAX_BYTES ||
       pendingHostRequest !== undefined || pendingGuestLoad !== undefined ||
       pendingExternalCartData !== undefined
     ) {
-      return [fault(command, {
+      return [fault(context, {
         code: "E_HOST_REQUEST",
         message: "root HostRequest violates the bounded single-pending contract",
         phase: "host-call",
@@ -897,6 +901,7 @@ export function createSessionController(
       requestId: request.id,
       cancellation,
       resume,
+      emit: context.onResume,
     };
     pendingHostRequest = pending;
     const handlerRequest = Object.freeze({
@@ -911,14 +916,14 @@ export function createSessionController(
         (completion) => completePendingHostRequest(pending, completion),
         () => completePendingHostRequest(pending, undefined),
       );
-    return [state(command, "waiting-host")];
+    return [state(context, "waiting-host")];
   }
 
   function unsupportedHostRequest(
-    command: SessionCommand,
+    context: SessionContext,
   ): SessionEvent {
     session.stop();
-    return fault(command, {
+    return fault(context, {
       code: "E_FEATURE_UNSUPPORTED",
       message: "cart host requests are not supported by the player",
       phase: "host-call",
@@ -927,7 +932,7 @@ export function createSessionController(
   }
 
   function acceptBoot(
-    command: SessionControlCommand,
+    context: SessionContext,
     result: RuntimeResult<CartSessionBootResult>,
     continueRunning = false,
   ): readonly SessionEvent[] {
@@ -935,12 +940,12 @@ export function createSessionController(
     let current = result;
     const events: SessionEvent[] = [];
     for (let restartCount = 0; restartCount <= 8; restartCount += 1) {
-      if (!current.ok) return [...events, fault(command, current.error)];
+      if (!current.ok) return [...events, fault(context, current.error)];
       if (current.value.kind === "host-request") {
         const request = current.value.request;
-        return [...events, ...suspendHostRequest(command, request, (response, isError) =>
+        return [...events, ...suspendHostRequest(context, request, (response, isError) =>
           acceptBoot(
-            command,
+            context,
             session.completeHostRequest(
               request.generation,
               request.id,
@@ -960,17 +965,17 @@ export function createSessionController(
         mode = "none";
         targetFps = 0;
         devkitFlags = 0;
-        resetAudioQueue(command.sessionGeneration);
-        events.push(runtimeControlEvent(command, "stop", current.value.message));
-        events.push(state(command, "stopped"));
+        resetAudioQueue(context.sessionGeneration);
+        events.push(runtimeControlEvent(context, "stop", current.value.message));
+        events.push(state(context, "stopped"));
         return events;
       }
       if (current.value.kind === "restart") {
-        events.push(runtimeControlEvent(command, "run", current.value.parameter));
+        events.push(runtimeControlEvent(context, "run", current.value.parameter));
         if (restartCount === 8) {
-          events.push(fault(command, {
+          events.push(fault(context, {
             code: "E_VM_INSTRUCTION_BUDGET",
-            message: "guest run restart limit exceeded in one host command",
+            message: "guest run restart limit exceeded in one host context",
             phase: "none",
             recoverable: false,
             details: { restartCount: restartCount + 1 },
@@ -981,7 +986,7 @@ export function createSessionController(
         current = session.restart(current.value.parameter);
         continue;
       }
-      beginAudioGeneration(command.sessionGeneration);
+      beginAudioGeneration(context.sessionGeneration);
       sendAudio(current.value.audio);
       mode = current.value.mode;
       targetFps = current.value.targetFps;
@@ -990,38 +995,38 @@ export function createSessionController(
       if (continueRunning) {
         scheduler.start();
         lifecycle = "running";
-        events.push(state(command, "running"));
+        events.push(state(context, "running"));
         return events;
       }
       lifecycle = "ready";
-      events.push(state(command, "ready"));
+      events.push(state(context, "ready"));
       return events;
     }
-    return [...events, fault(command, invariant("unreachable guest restart loop"))];
+    return [...events, fault(context, invariant("unreachable guest restart loop"))];
   }
 
   function runtimeControlEvent(
-    command: SessionControlCommand,
+    context: SessionContext,
     control: "run" | "stop",
     payload: Uint8Array,
   ): SessionEvent {
     return {
-      ...playerBase(command),
+      ...playerBase(context),
       type: "runtime-control",
       control,
       payload: payload.slice().buffer,
     };
   }
 
-  function acceptInput(command: SessionInputCommand): void {
+  function acceptInput(context: { readonly sessionGeneration: number; readonly sequence: number; readonly input: PicoInputSnapshot }): void {
     if (
-      command.sessionGeneration !== sessionGeneration ||
-      command.sequence <= inputSequence ||
+      context.sessionGeneration !== sessionGeneration ||
+      context.sequence <= inputSequence ||
       lifecycle !== "running"
     ) return;
-    inputSequence = command.sequence;
-    inputControllers = command.input.controllers.slice();
-    const devkit = command.input.devkit;
+    inputSequence = context.sequence;
+    inputControllers = context.input.controllers.slice();
+    const devkit = context.input.devkit;
     inputMouseXRaw = devkit.mouseXRaw;
     inputMouseYRaw = devkit.mouseYRaw;
     inputMouseButtons = devkit.mouseButtons;
@@ -1035,7 +1040,7 @@ export function createSessionController(
   }
 
   function frameEvent(
-    command: SessionControlCommand,
+    context: SessionContext,
     result: Extract<CartSessionStepResult, { readonly kind: "frame" }>,
   ): SessionEvent {
     sendAudio(result.frame.audio);
@@ -1046,7 +1051,7 @@ export function createSessionController(
       enqueueCartDataCommit(result.frame.cartDataCommit);
     }
     return {
-      ...playerBase(command),
+      ...playerBase(context),
       type: "frame",
       frameId: result.frame.frameId,
       completedSlices: result.frame.completedSlices,
@@ -1062,31 +1067,31 @@ export function createSessionController(
   }
 
   function heartbeatEvent(
-    command: Extract<SessionControlCommand, { readonly type: "vsync" | "step" }>,
+    context: SessionFrameContext,
     tickCount: number,
     droppedTicks: number,
   ): SessionEvent {
     return {
-      ...playerBase(command),
+      ...playerBase(context),
       type: "heartbeat",
-      vsyncSequence: command.sequence,
+      vsyncSequence: context.sequence,
       tickCount,
       droppedTicks,
     };
   }
 
   function acceptVsyncHostCompletion(
-    command: Extract<SessionControlCommand, { readonly type: "vsync" | "step" }>,
+    context: SessionFrameContext,
     result: RuntimeResult<CartSessionStepResult>,
     executedBefore: number,
     droppedTicks: number,
   ): readonly SessionEvent[] {
-    if (!result.ok) return [fault(command, result.error)];
+    if (!result.ok) return [fault(context, result.error)];
     if (result.value.kind === "host-request") {
       const request = result.value.request;
-      return suspendHostRequest(command, request, (response, isError) =>
+      return suspendHostRequest(context, request, (response, isError) =>
         acceptVsyncHostCompletion(
-          command,
+          context,
           session.completeHostRequest(
             request.generation,
             request.id,
@@ -1108,39 +1113,38 @@ export function createSessionController(
       lifecycle = "stopped";
       clearInputState();
       devkitFlags = 0;
-      resetAudioQueue(command.sessionGeneration);
-      events.push(runtimeControlEvent(command, "stop", result.value.message));
-      events.push(state(command, "stopped"));
+      resetAudioQueue(context.sessionGeneration);
+      events.push(runtimeControlEvent(context, "stop", result.value.message));
+      events.push(state(context, "stopped"));
     } else if (result.value.kind === "restart") {
       if (result.value.cartDataCommit !== undefined) {
         enqueueCartDataCommit(result.value.cartDataCommit);
       }
       clearInputState();
-      events.push(runtimeControlEvent(command, "run", result.value.parameter));
+      events.push(runtimeControlEvent(context, "run", result.value.parameter));
       externalCstoreTargetIdentities.clear();
-      events.push(...acceptBoot(command, session.restart(result.value.parameter), true));
+      events.push(...acceptBoot(context, session.restart(result.value.parameter), true));
     } else {
       scheduler.resume();
       lifecycle = "running";
-      events.push(frameEvent(command, result.value));
+      events.push(frameEvent(context, result.value));
     }
-    events.push(heartbeatEvent(command, executedTicks, droppedTicks));
+    events.push(heartbeatEvent(context, executedTicks, droppedTicks));
     return events;
   }
 
-  function handleVsync(
-    command: Extract<SessionControlCommand, { readonly type: "vsync" | "step" }>,
+  function handleTicks(
+    context: SessionFrameContext,
+    decide: () => { tickCount: number; droppedTicks: number; discontinuity: boolean },
   ): readonly SessionEvent[] {
     if (lifecycle !== "running") {
-      return [heartbeatEvent(command, 0, 0)];
+      return [heartbeatEvent(context, 0, 0)];
     }
-    const decision = command.type === "step"
-      ? { tickCount: 1, droppedTicks: 0, discontinuity: false }
-      : scheduler.pulse(command.timestampMs);
+    const decision = decide();
     const events: SessionEvent[] = [];
     if (decision.discontinuity) {
       events.push({
-        ...playerBase(command),
+        ...playerBase(context),
         type: "diagnostic",
         error: {
           code: "E_TIME_DISCONTINUITY",
@@ -1158,14 +1162,14 @@ export function createSessionController(
       const result = session.step(simulationInput(index === 0));
       if (index === 0) clearPendingDevkitEvents();
       if (!result.ok) {
-        events.push(fault(command, result.error));
+        events.push(fault(context, result.error));
         return events;
       }
       if (result.value.kind === "host-request") {
         const request = result.value.request;
-        return [...events, ...suspendHostRequest(command, request, (response, isError) =>
+        return [...events, ...suspendHostRequest(context, request, (response, isError) =>
           acceptVsyncHostCompletion(
-            command,
+            context,
             session.completeHostRequest(
               request.generation,
               request.id,
@@ -1185,9 +1189,9 @@ export function createSessionController(
         lifecycle = "stopped";
         clearInputState();
         devkitFlags = 0;
-        resetAudioQueue(command.sessionGeneration);
-        events.push(runtimeControlEvent(command, "stop", result.value.message));
-        events.push(state(command, "stopped"));
+        resetAudioQueue(context.sessionGeneration);
+        events.push(runtimeControlEvent(context, "stop", result.value.message));
+        events.push(state(context, "stopped"));
         break;
       }
       if (result.value.kind === "restart") {
@@ -1195,242 +1199,237 @@ export function createSessionController(
           enqueueCartDataCommit(result.value.cartDataCommit);
         }
         clearInputState();
-        events.push(runtimeControlEvent(command, "run", result.value.parameter));
+        events.push(runtimeControlEvent(context, "run", result.value.parameter));
         externalCstoreTargetIdentities.clear();
         events.push(...acceptBoot(
-          command,
+          context,
           session.restart(result.value.parameter),
           true,
         ));
         break;
       }
-      events.push(frameEvent(command, result.value));
+      events.push(frameEvent(context, result.value));
     }
-    events.push(heartbeatEvent(command, executedTicks, decision.droppedTicks));
+    events.push(heartbeatEvent(context, executedTicks, decision.droppedTicks));
     return events;
   }
 
   function generationFault(
-    command: SessionControlCommand,
+    context: SessionContext,
     message: string,
   ): readonly SessionEvent[] {
-    return [{ ...playerBase(command), type: "fault", error: playerLifecycleError(message) }];
+    return [{ ...playerBase(context), type: "fault", error: playerLifecycleError(message) }];
   }
 
-  function handleSync(command: SessionCommand): readonly SessionEvent[] {
-    if (command.type === "input") {
-      acceptInput(command);
-      return [];
+  function loadCartSync(context: SessionContext, load: SessionLoadOptions): readonly SessionEvent[] {
+    if (context.sessionGeneration <= sessionGeneration) {
+      return generationFault(context, "loadCart requires a new session generation");
     }
-    if (command.type === "flushPersistence") {
-      return [
-        ...takePersistenceEvents(command),
-        { ...playerBase(command), type: "persistence-flushed", durable: hostPersistence },
-      ];
-    }
-    if (command.type === "loadCart") {
-      if (command.sessionGeneration <= sessionGeneration) {
-        return generationFault(command, "loadCart requires a new session generation");
-      }
-      cancelPendingHostRequest();
-      cancelPendingGuestLoad();
-      cancelPendingExternalCartData();
-      activeMenuSnapshot = undefined;
-      sessionGeneration = command.sessionGeneration;
-      instructionBudget = command.instructionBudget;
-      scheduler.reset();
-      inputSequence = -1;
-      clearInputState();
-      devkitFlags = 0;
-      if (command.hostCartData !== undefined) useHostPersistence(command.hostCartData);
-      let nextResolver: LocalCartBundleResolver | undefined;
-      try {
-        nextResolver = new LocalCartBundleResolver(
-          (command.localCartBundle ?? []).map((entry) => ({
-            ref: entry.ref,
-            bytes: new Uint8Array(entry.cartBytes),
-            access: entry.access,
-          })),
-        );
-        const cart = decodeCart(new Uint8Array(command.cartBytes), {
-          p8: {
-            includeResolver(specifier) {
-              try {
-                return nextResolver?.resolveImmediate(specifier, "include").bytes;
-              } catch (error) {
-                if (error instanceof CartResolutionError) return undefined;
-                throw error;
-              }
-            },
-          },
-        });
-        localCartResolver.dispose();
-        localCartResolver = nextResolver;
-        nextResolver = undefined;
-        cartLoader = new CartLoader(localCartResolver, cartRepository);
-        breadcrumbStack.length = 0;
-        externalCstoreTargetIdentities.clear();
-        cartRepository.registerCart(cart);
-        return acceptBoot(command, session.load(cart));
-      } catch (error) {
-        nextResolver?.dispose();
-        if (session.cart !== undefined) session.stop();
-        if (error instanceof CartCodecError) {
-          return [fault(command, {
-            code: "E_CART_PARSE",
-            message: `${error.code}: ${error.message}`,
-            phase: "none",
-            recoverable: true,
-            details: {
-              cartCodecCode: error.code,
-              ...(error.offset === undefined ? {} : { byteOffset: error.offset }),
-            },
-          })];
-        }
-        return [fault(command, invariant(
-          error instanceof Error ? error.message : String(error),
-        ))];
-      }
-    }
-    if (command.type === "dispose") {
-      cancelPendingHostRequest();
-      cancelPendingGuestLoad();
-      cancelPendingExternalCartData();
-      activeMenuSnapshot = undefined;
-      scheduler.reset();
-      clearInputState();
-      const result = session.dispose();
-      localCartResolver.dispose();
-      cartRepository.dispose();
-      externalCstoreTargetIdentities.clear();
-      lifecycle = "disposed";
-      mode = "none";
-      targetFps = 0;
-      devkitFlags = 0;
-      resetAudioQueue(command.sessionGeneration);
-      return result.ok ? [state(command, "disposed")] : [fault(command, result.error)];
-    }
-    if (command.type === "reset") {
-      if (lifecycle === "disposed" || command.sessionGeneration <= sessionGeneration) {
-        return generationFault(command, "reset requires a new session generation");
-      }
-      cancelPendingHostRequest();
-      cancelPendingGuestLoad();
-      cancelPendingExternalCartData();
-      activeMenuSnapshot = undefined;
-      sessionGeneration = command.sessionGeneration;
-      scheduler.reset();
-      inputSequence = -1;
-      clearInputState();
-      devkitFlags = 0;
-      externalCstoreTargetIdentities.clear();
-      return acceptBoot(command, session.reset());
-    }
-    if (command.sessionGeneration !== sessionGeneration || sessionGeneration === 0) {
-      return generationFault(command, "command belongs to a stale or missing session");
-    }
-    if (command.type === "vsync" || command.type === "step") return handleVsync(command);
-    if (command.type === "start") {
-      if (lifecycle !== "ready") {
-        return generationFault(command, "start requires a ready session");
-      }
-      scheduler.start();
-      lifecycle = "running";
-      return [state(command, "running")];
-    }
-    if (command.type === "openPauseMenu") {
-      if (lifecycle !== "running") {
-        return generationFault(command, "openPauseMenu requires a running session");
-      }
-      scheduler.pause();
-      clearInputState();
-      resetAudioQueue(command.sessionGeneration);
-      const snapshot = session.snapshotMenuItems(session.generation);
-      if (!snapshot.ok) return [fault(command, snapshot.error)];
-      activeMenuSnapshot = snapshot.value;
-      lifecycle = "menu-open";
-      return [pauseMenuEvent(command, true, "opened", snapshot.value)];
-    }
-    if (command.type === "closePauseMenu") {
-      if (lifecycle !== "menu-open" || activeMenuSnapshot === undefined) {
-        return generationFault(command, "closePauseMenu requires an open pause menu");
-      }
-      activeMenuSnapshot = undefined;
-      clearInputState();
-      scheduler.resume();
-      lifecycle = "running";
-      return [
-        pauseMenuEvent(command, false, "closed"),
-        state(command, "running"),
-      ];
-    }
-    if (command.type === "invokeMenuItem") {
-      const snapshot = activeMenuSnapshot;
-      if (lifecycle !== "menu-open" || snapshot === undefined ||
-        snapshot.generation !== session.generation) {
-        return generationFault(command, "invokeMenuItem requires the active pause menu");
-      }
-      const item = snapshot.items.find(({ slot }) => slot === command.slot);
-      if (item === undefined || ((item.filter >> 8) & command.button) !== 0) {
-        return generationFault(command, "menu item intent is missing or filtered");
-      }
-      const invoked = session.invokeMenuItem(
-        snapshot.generation,
-        command.slot,
-        command.button,
+    cancelPendingHostRequest();
+    cancelPendingGuestLoad();
+    cancelPendingExternalCartData();
+    activeMenuSnapshot = undefined;
+    sessionGeneration = context.sessionGeneration;
+    instructionBudget = load.instructionBudget;
+    scheduler.reset();
+    inputSequence = -1;
+    clearInputState();
+    devkitFlags = 0;
+    if (load.hostCartData !== undefined) useHostPersistence(load.hostCartData);
+    let nextResolver: LocalCartBundleResolver | undefined;
+    try {
+      nextResolver = new LocalCartBundleResolver(
+        (load.localCartBundle ?? []).map((entry) => ({
+          ref: entry.ref,
+          bytes: entry.bytes,
+          access: entry.access,
+        })),
       );
-      if (!invoked.ok) {
-        return invoked.error.code === "E_INVALID_STATE"
-          ? generationFault(command, invoked.error.message)
-          : [fault(command, invoked.error)];
+      const cart = decodeCart(load.source, {
+        p8: {
+          includeResolver(specifier) {
+            try {
+              return nextResolver?.resolveImmediate(specifier, "include").bytes;
+            } catch (error) {
+              if (error instanceof CartResolutionError) return undefined;
+              throw error;
+            }
+          },
+        },
+      });
+      localCartResolver.dispose();
+      localCartResolver = nextResolver;
+      nextResolver = undefined;
+      cartLoader = new CartLoader(localCartResolver, cartRepository);
+      breadcrumbStack.length = 0;
+      externalCstoreTargetIdentities.clear();
+      cartRepository.registerCart(cart);
+      return acceptBoot(context, session.load(cart));
+    } catch (error) {
+      nextResolver?.dispose();
+      if (session.cart !== undefined) session.stop();
+      if (error instanceof CartCodecError) {
+        return [fault(context, {
+          code: "E_CART_PARSE",
+          message: `${error.code}: ${error.message}`,
+          phase: "none",
+          recoverable: true,
+          details: {
+            cartCodecCode: error.code,
+            ...(error.offset === undefined ? {} : { byteOffset: error.offset }),
+          },
+        })];
       }
-      if (invoked.value.cartDataCommit !== undefined) {
-        enqueueCartDataCommit(invoked.value.cartDataCommit);
-      }
-      if (invoked.value.kind === "keep-open") {
-        activeMenuSnapshot = invoked.value.snapshot;
-        return [pauseMenuEvent(
-          command,
-          true,
-          "keep-open",
-          invoked.value.snapshot,
-        )];
-      }
-      activeMenuSnapshot = undefined;
-      clearInputState();
-      scheduler.resume();
-      lifecycle = "running";
-      return [
-        pauseMenuEvent(
-          command,
-          false,
-          invoked.value.kind === "removed" ? "removed" : "closed",
-        ),
-        state(command, "running"),
-      ];
+      return [fault(context, invariant(
+        error instanceof Error ? error.message : String(error),
+      ))];
     }
-    if (command.type === "pause") {
-      if (lifecycle !== "running" && lifecycle !== "paused" && lifecycle !== "menu-open") {
-        return generationFault(command, "pause requires a running session");
-      }
-      const closedMenu = lifecycle === "menu-open";
-      scheduler.pause();
-      lifecycle = "paused";
-      clearInputState();
-      activeMenuSnapshot = undefined;
-      return [
-        ...(closedMenu ? [pauseMenuEvent(command, false, "closed")] : []),
-        state(command, "paused"),
-      ];
+  }
+
+  function disposeSync(context: SessionContext): readonly SessionEvent[] {
+    cancelPendingHostRequest();
+    cancelPendingGuestLoad();
+    cancelPendingExternalCartData();
+    activeMenuSnapshot = undefined;
+    scheduler.reset();
+    clearInputState();
+    const result = session.dispose();
+    localCartResolver.dispose();
+    cartRepository.dispose();
+    externalCstoreTargetIdentities.clear();
+    lifecycle = "disposed";
+    mode = "none";
+    targetFps = 0;
+    devkitFlags = 0;
+    resetAudioQueue(context.sessionGeneration);
+    return result.ok ? [state(context, "disposed")] : [fault(context, result.error)];
+  }
+
+  function resetSync(context: SessionContext): readonly SessionEvent[] {
+    if (lifecycle === "disposed" || context.sessionGeneration <= sessionGeneration) {
+      return generationFault(context, "reset requires a new session generation");
     }
-    if (command.type === "resume") {
-      if (lifecycle !== "paused" && lifecycle !== "running") {
-        return generationFault(command, "resume requires a paused session");
-      }
-      scheduler.resume();
-      lifecycle = "running";
-      return [state(command, "running")];
+    cancelPendingHostRequest();
+    cancelPendingGuestLoad();
+    cancelPendingExternalCartData();
+    activeMenuSnapshot = undefined;
+    sessionGeneration = context.sessionGeneration;
+    scheduler.reset();
+    inputSequence = -1;
+    clearInputState();
+    devkitFlags = 0;
+    externalCstoreTargetIdentities.clear();
+    return acceptBoot(context, session.reset());
+  }
+
+  function startSync(context: SessionContext): readonly SessionEvent[] {
+    if (lifecycle !== "ready") {
+      return generationFault(context, "start requires a ready session");
     }
+    scheduler.start();
+    lifecycle = "running";
+    return [state(context, "running")];
+  }
+
+  function openPauseMenuSync(context: SessionContext): readonly SessionEvent[] {
+    if (lifecycle !== "running") {
+      return generationFault(context, "openPauseMenu requires a running session");
+    }
+    scheduler.pause();
+    clearInputState();
+    resetAudioQueue(context.sessionGeneration);
+    const snapshot = session.snapshotMenuItems(session.generation);
+    if (!snapshot.ok) return [fault(context, snapshot.error)];
+    activeMenuSnapshot = snapshot.value;
+    lifecycle = "menu-open";
+    return [pauseMenuEvent(context, true, "opened", snapshot.value)];
+  }
+
+  function closePauseMenuSync(context: SessionContext): readonly SessionEvent[] {
+    if (lifecycle !== "menu-open" || activeMenuSnapshot === undefined) {
+      return generationFault(context, "closePauseMenu requires an open pause menu");
+    }
+    activeMenuSnapshot = undefined;
+    clearInputState();
+    scheduler.resume();
+    lifecycle = "running";
+    return [
+      pauseMenuEvent(context, false, "closed"),
+      state(context, "running"),
+    ];
+  }
+
+  function invokeMenuItemSync(context: SessionMenuContext): readonly SessionEvent[] {
+    const snapshot = activeMenuSnapshot;
+    if (lifecycle !== "menu-open" || snapshot === undefined ||
+      snapshot.generation !== session.generation) {
+      return generationFault(context, "invokeMenuItem requires the active pause menu");
+    }
+    const item = snapshot.items.find(({ slot }) => slot === context.slot);
+    if (item === undefined || ((item.filter >> 8) & context.button) !== 0) {
+      return generationFault(context, "menu item intent is missing or filtered");
+    }
+    const invoked = session.invokeMenuItem(
+      snapshot.generation,
+      context.slot,
+      context.button,
+    );
+    if (!invoked.ok) {
+      return invoked.error.code === "E_INVALID_STATE"
+        ? generationFault(context, invoked.error.message)
+        : [fault(context, invoked.error)];
+    }
+    if (invoked.value.cartDataCommit !== undefined) {
+      enqueueCartDataCommit(invoked.value.cartDataCommit);
+    }
+    if (invoked.value.kind === "keep-open") {
+      activeMenuSnapshot = invoked.value.snapshot;
+      return [pauseMenuEvent(
+        context,
+        true,
+        "keep-open",
+        invoked.value.snapshot,
+      )];
+    }
+    activeMenuSnapshot = undefined;
+    clearInputState();
+    scheduler.resume();
+    lifecycle = "running";
+    return [
+      pauseMenuEvent(
+        context,
+        false,
+        invoked.value.kind === "removed" ? "removed" : "closed",
+      ),
+      state(context, "running"),
+    ];
+  }
+
+  function pauseSync(context: SessionContext): readonly SessionEvent[] {
+    if (lifecycle !== "running" && lifecycle !== "paused" && lifecycle !== "menu-open") {
+      return generationFault(context, "pause requires a running session");
+    }
+    const closedMenu = lifecycle === "menu-open";
+    scheduler.pause();
+    lifecycle = "paused";
+    clearInputState();
+    activeMenuSnapshot = undefined;
+    return [
+      ...(closedMenu ? [pauseMenuEvent(context, false, "closed")] : []),
+      state(context, "paused"),
+    ];
+  }
+
+  function resumeSync(context: SessionContext): readonly SessionEvent[] {
+    if (lifecycle !== "paused" && lifecycle !== "running") {
+      return generationFault(context, "resume requires a paused session");
+    }
+    scheduler.resume();
+    lifecycle = "running";
+    return [state(context, "running")];
+  }
+
+  function stopSync(context: SessionContext): readonly SessionEvent[] {
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
     cancelPendingExternalCartData();
@@ -1439,13 +1438,13 @@ export function createSessionController(
     clearInputState();
     activeMenuSnapshot = undefined;
     devkitFlags = 0;
-    if (!stopped.ok) return [fault(command, stopped.error)];
+    if (!stopped.ok) return [fault(context, stopped.error)];
     lifecycle = "stopped";
-    resetAudioQueue(command.sessionGeneration);
-    return [state(command, "stopped")];
+    resetAudioQueue(context.sessionGeneration);
+    return [state(context, "stopped")];
   }
 
-  function disposeSync(): void {
+  function destroySync(): void {
     cancelPendingHostRequest();
     cancelPendingGuestLoad();
     cancelPendingExternalCartData();
@@ -1461,64 +1460,78 @@ export function createSessionController(
     if (sessionGeneration > 0) resetAudioQueue(sessionGeneration);
   }
 
-  function isValidGenerationReplacement(command: SessionCommand): boolean {
-    if (command.type !== "loadCart" && command.type !== "reset") return false;
-    return command.sessionGeneration > sessionGeneration && lifecycle !== "disposed";
+  function current(context: SessionContext, action: () => readonly SessionEvent[]): readonly SessionEvent[] {
+    return context.sessionGeneration !== sessionGeneration || sessionGeneration === 0
+      ? generationFault(context, "operation belongs to a stale or missing session")
+      : action();
   }
 
-  async function handlePersistent(
-    command: SessionCommand,
-  ): Promise<readonly SessionEvent[]> {
-    if (command.type === "flushPersistence") {
-      const result = await flushPersistence();
-      return [
-        ...takePersistenceEvents(command),
-        { ...playerBase(command), type: "persistence-flushed", ...result },
-      ];
-    }
-    if (isValidGenerationReplacement(command)) {
-      await flushPersistence();
-      if (command.type === "loadCart" && command.hostCartData !== undefined) {
-        useHostPersistence(command.hostCartData);
-      } else if (!(command.type === "reset" && hostPersistence)) {
-        hostPersistence = false;
-        await hydratePersistence();
+  function perform(
+    context: SessionContext,
+    action: () => readonly SessionEvent[],
+    policy: "normal" | "load" | "reset" | "pause" | "stop" | "dispose" = "normal",
+    hostCartData?: readonly PicoCartDataSeed[],
+  ): SessionBatch {
+    if (persistence === undefined) return action();
+    return (async () => {
+      if ((policy === "load" || policy === "reset") &&
+        context.sessionGeneration > sessionGeneration && lifecycle !== "disposed") {
+        await flushPersistence();
+        if (hostCartData !== undefined) useHostPersistence(hostCartData);
+        else if (!(policy === "reset" && hostPersistence)) {
+          hostPersistence = false;
+          await hydratePersistence();
+        }
       }
-    }
-    const events = handleSync(command);
-    const hasFault = events.some((event) => event.type === "fault");
-    const hasGuestControl = events.some((event) => event.type === "runtime-control");
-    if (command.type === "dispose") {
-      try {
-        await persistence!.dispose();
-      } catch (error) {
-        recordPersistenceFailure(
-          "E_PERSISTENCE_WRITE",
-          "Unable to dispose cartdata persistence cleanly",
-          error,
-        );
+      const events = action();
+      if (policy === "dispose") {
+        try { await persistence.dispose(); }
+        catch (error) { recordPersistenceFailure("E_PERSISTENCE_WRITE", "Unable to dispose cartdata persistence cleanly", error); }
+      } else if (policy === "pause" || policy === "stop" ||
+        events.some(event => event.type === "fault" || event.type === "runtime-control")) {
+        await flushPersistence();
       }
-    } else if (
-      command.type === "pause" || command.type === "stop" || hasFault || hasGuestControl
-    ) {
-      await flushPersistence();
-    }
-    return [...takePersistenceEvents(command), ...events];
+      return [...takePersistenceEvents(context), ...events];
+    })();
   }
 
-  if (persistence === undefined) {
-    return { handle: handleSync, setEventSink, dispose: disposeSync };
-  }
   return {
-    handle: handlePersistent,
-    setEventSink,
-    async dispose() {
-      disposeSync();
-      try {
-        await persistence.dispose();
-      } catch {
-        // No host command exists to receive diagnostics during forced teardown.
-      }
+    input(generation, sequence, input) { acceptInput({ sessionGeneration: generation, sequence, input }); },
+    loadCart(context, load) { return perform(context, () => loadCartSync(context, load), "load", load.hostCartData); },
+    reset(context) { return perform(context, () => resetSync(context), "reset"); },
+    dispose(context) { return perform(context, () => disposeSync(context), "dispose"); },
+    start(context) { return perform(context, () => current(context, () => startSync(context))); },
+    pause(context) { return perform(context, () => current(context, () => pauseSync(context)), "pause"); },
+    resume(context) { return perform(context, () => current(context, () => resumeSync(context))); },
+    stop(context) { return perform(context, () => current(context, () => stopSync(context)), "stop"); },
+    openPauseMenu(context) { return perform(context, () => current(context, () => openPauseMenuSync(context))); },
+    closePauseMenu(context) { return perform(context, () => current(context, () => closePauseMenuSync(context))); },
+    invokeMenuItem(context, slot, button) {
+      return perform(context, () => current(context, () => invokeMenuItemSync({ ...context, slot, button })));
+    },
+    pulse(context, sequence, timestampMs) {
+      return perform(context, () => current(context, () => handleTicks(
+        { ...context, sequence }, () => scheduler.pulse(timestampMs),
+      )));
+    },
+    step(context, sequence) {
+      return perform(context, () => current(context, () => handleTicks(
+        { ...context, sequence }, () => ({ tickCount: 1, droppedTicks: 0, discontinuity: false }),
+      )));
+    },
+    flushPersistence(context) {
+      if (persistence === undefined) return [
+        ...takePersistenceEvents(context),
+        { ...playerBase(context), type: "persistence-flushed", durable: hostPersistence },
+      ];
+      return flushPersistence().then(result => [
+        ...takePersistenceEvents(context),
+        { ...playerBase(context), type: "persistence-flushed", ...result },
+      ]);
+    },
+    async destroy() {
+      destroySync();
+      try { await persistence?.dispose(); } catch { /* Forced teardown has no caller. */ }
     },
   };
 }

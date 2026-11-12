@@ -1,16 +1,18 @@
-import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
-import type { PicoInputSnapshot } from "@pico8-web/contracts";
-import type { SessionCommand, SessionControlCommand, SessionEvent } from "../transport/session-contract.js";
+import { PICO_EMPTY_INPUT, type PicoInputSnapshot } from "@pico8-web/contracts";
+import type { SessionEvent } from "../transport/session-contract.js";
 import type { PlayerRuntimePort, PlayerLocalCartSource, PlayerHostCartDataSeed, RuntimeAudioPort } from "../transport/runtime-port.js";
-import { isSessionCommand } from "../transport/validators.js";
+import { isCartLoad, isPicoInputSnapshot } from "../transport/validators.js";
 import { RuntimeClientError } from "../transport/runtime-error.js";
-import { createSessionController, type SessionController, type SessionControllerOptions } from "./compose-session.js";
+import { createSessionController, type SessionController, type SessionControllerOptions, type SessionContext, type SessionBatch } from "./compose-session.js";
 import { PcmOutput } from "./audio-transport.js";
 import type { FrameRuntimeModule } from "@pico8-web/z8lua-bridge";
 
-type Body<T = SessionControlCommand> = T extends unknown ? Omit<T, "requestId" | "sessionGeneration"> : never;
+function copyInput(input: PicoInputSnapshot): PicoInputSnapshot {
+  if (!isPicoInputSnapshot(input)) throw new TypeError("invalid input snapshot");
+  return { controllers: input.controllers.slice(), devkit: { ...input.devkit, keypresses: input.devkit.keypresses.slice() } };
+}
 
-/** Direct execution, with no Worker, wire envelopes, response map or watchdog. */
+/** Direct calls with per-operation continuations; no wire dispatch or request matching. */
 export class PlayerSession implements PlayerRuntimePort {
   #controller: SessionController | undefined;
   readonly #audio = new PcmOutput();
@@ -18,10 +20,7 @@ export class PlayerSession implements PlayerRuntimePort {
   readonly #generations = new Set<(generation: number) => void>();
   readonly #cancel = new Set<(error: Error) => void>();
   #tail: Promise<void> = Promise.resolve();
-  #handling = false;
-  readonly #background: SessionEvent[][] = [];
   #generation = 0;
-  #nextId = 0;
   #inputSequence = 0;
   #frameSequence = 0;
   #retained = false;
@@ -30,10 +29,6 @@ export class PlayerSession implements PlayerRuntimePort {
 
   constructor(module: FrameRuntimeModule, options: Omit<SessionControllerOptions, "audioTransport"> = {}) {
     this.#controller = createSessionController(module, { ...options, audioTransport: this.#audio });
-    this.#controller.setEventSink(events => {
-      if (this.#handling) this.#background.push([...events]);
-      else this.#emit(events);
-    });
   }
   get sessionGeneration(): number { return this.#generation; }
   get hasRetainedCart(): boolean { return this.#retained; }
@@ -56,41 +51,47 @@ export class PlayerSession implements PlayerRuntimePort {
   async loadCart(source: Uint8Array, instructionBudget?: number,
     bundle: readonly PlayerLocalCartSource[] = [], host?: readonly PlayerHostCartDataSeed[]): Promise<SessionEvent> {
     this.#assertActive();
-    if (!(source instanceof Uint8Array)) throw new TypeError("cart source must be Uint8Array");
-    const body = { type: "loadCart" as const, cartBytes: source.slice().buffer,
-      localCartBundle: bundle.map(entry => ({ ref: entry.ref, cartBytes: entry.bytes.slice().buffer, access: { ...entry.access } })),
-      ...(host === undefined ? {} : { hostCartData: host.map(entry => ({ id: entry.id, bytes: entry.bytes.slice().buffer })) }),
+    if (!isCartLoad(source, instructionBudget, bundle, host)) throw new TypeError("invalid cart load arguments");
+    const load = { source: source.slice(),
+      localCartBundle: bundle.map(entry => ({ ref: entry.ref, bytes: entry.bytes.slice(), access: { ...entry.access } })),
+      ...(host === undefined ? {} : { hostCartData: host.map(entry => ({ id: entry.id, bytes: entry.bytes.slice() })) }),
       ...(instructionBudget === undefined ? {} : { instructionBudget }),
     };
-    if (!isSessionCommand({ ...body, requestId: 1, sessionGeneration: 1 })) throw new TypeError("invalid cart load arguments");
     this.#advanceGeneration();
-    const event = await this.#call(body, "state");
+    const event = await this.#invoke(context => this.#controller!.loadCart(context, load), "state");
     this.#retained = event.type === "state" && event.state === "ready";
     return event;
   }
   reset(): Promise<SessionEvent> {
-    this.#assertActive(); this.#advanceGeneration(); return this.#call({ type: "reset" }, "state");
+    this.#assertActive(); this.#advanceGeneration();
+    return this.#invoke(context => this.#controller!.reset(context), "state");
   }
-  start() { return this.#call({ type: "start" }, "state"); }
-  pause() { this.clearInput(); return this.#call({ type: "pause" }, "state"); }
-  resume() { return this.#call({ type: "resume" }, "state"); }
-  stop() { this.clearInput(); return this.#call({ type: "stop" }, "state"); }
-  openPauseMenu() { this.clearInput(); return this.#call({ type: "openPauseMenu" }, "pause-menu"); }
-  closePauseMenu() { this.clearInput(); return this.#call({ type: "closePauseMenu" }, "pause-menu"); }
+  start() { return this.#invoke(context => this.#controller!.start(context), "state"); }
+  pause() { this.clearInput(); return this.#invoke(context => this.#controller!.pause(context), "state"); }
+  resume() { return this.#invoke(context => this.#controller!.resume(context), "state"); }
+  stop() { this.clearInput(); return this.#invoke(context => this.#controller!.stop(context), "state"); }
+  openPauseMenu() { this.clearInput(); return this.#invoke(context => this.#controller!.openPauseMenu(context), "pause-menu"); }
+  closePauseMenu() { this.clearInput(); return this.#invoke(context => this.#controller!.closePauseMenu(context), "pause-menu"); }
   invokeMenuItem(slot: 1 | 2 | 3 | 4 | 5, button: 1 | 2 | 4) {
-    return this.#call({ type: "invokeMenuItem", slot, button }, "pause-menu");
+    if (!Number.isInteger(slot) || slot < 1 || slot > 5 || ![1, 2, 4].includes(button)) {
+      return Promise.reject(new TypeError("invalid menu item intent"));
+    }
+    return this.#invoke(context => this.#controller!.invokeMenuItem(context, slot, button), "pause-menu");
   }
-  flushPersistence() { return this.#call({ type: "flushPersistence" }, "persistence-flushed"); }
+  flushPersistence() { return this.#invoke(context => this.#controller!.flushPersistence(context), "persistence-flushed"); }
   pulse(timestampMs: number, input: PicoInputSnapshot) {
-    return this.#call({ type: "vsync", timestampMs, sequence: ++this.#frameSequence }, "heartbeat", input);
+    if (!Number.isFinite(timestampMs) || timestampMs < 0) return Promise.reject(new TypeError("invalid frame timestamp"));
+    const sequence = ++this.#frameSequence;
+    return this.#invoke(context => this.#controller!.pulse(context, sequence, timestampMs), "heartbeat", input);
   }
   step(input: PicoInputSnapshot) {
-    return this.#call({ type: "step", sequence: ++this.#frameSequence }, "heartbeat", input);
+    const sequence = ++this.#frameSequence;
+    return this.#invoke(context => this.#controller!.step(context, sequence), "heartbeat", input);
   }
   clearInput(): void {
     if (this.#disposed || this.#generation === 0) return;
-    // Ordered with asynchronous persistence, without waiting for guest continuations.
-    void this.#execute(this.#input(PICO_EMPTY_INPUT)).catch(() => undefined);
+    const generation = this.#generation, sequence = ++this.#inputSequence;
+    void this.#enqueue(() => this.#controller!.input(generation, sequence, PICO_EMPTY_INPUT)).catch(() => undefined);
   }
   attachAudioPort(port: RuntimeAudioPort): void {
     this.#assertActive(); this.#audio.attach(port, this.#generation);
@@ -98,66 +99,64 @@ export class PlayerSession implements PlayerRuntimePort {
   dispose(): Promise<void> {
     if (this.#disposal !== undefined) return this.#disposal;
     this.#disposed = true;
-    for (const cancel of this.#cancel) cancel(new Error("PlayerSession is disposed"));
-    this.#disposal = this.#tail.then(async () => {
+    for (const cancel of [...this.#cancel]) cancel(new Error("PlayerSession is disposed"));
+    this.#disposal = this.#enqueue(async () => {
       try {
-        this.#emit(await this.#controller!.handle({ type: "dispose", requestId: ++this.#nextId,
-          sessionGeneration: this.#generation }));
+        this.#emit(await this.#controller!.dispose({ sessionGeneration: this.#generation, onResume: events => this.#emit(events) }));
       } catch (error) {
-        await this.#controller!.dispose();
+        await this.#controller!.destroy();
         throw error;
-      }
-      finally {
-        this.#controller = undefined; // Release the closure holding the WASM instance even if the caller retains this session.
+      } finally {
+        this.#controller = undefined;
         this.#audio.dispose(); this.#listeners.clear(); this.#generations.clear(); this.#retained = false;
       }
     });
     return this.#disposal;
   }
-  #input(input: PicoInputSnapshot): SessionCommand {
-    const command = { type: "input" as const, requestId: 0 as const, sessionGeneration: this.#generation,
-      sequence: ++this.#inputSequence, input };
-    if (!isSessionCommand(command)) throw new TypeError("invalid input snapshot");
-    return { ...command, input: { controllers: input.controllers.slice(), devkit: {
-      ...input.devkit, keypresses: input.devkit.keypresses.slice(),
-    } } };
+  #enqueue(operation: () => void | Promise<void>): Promise<void> {
+    const pending = this.#tail.then(operation);
+    this.#tail = pending.catch(() => undefined);
+    return pending;
   }
-  #execute(command: SessionCommand, input?: SessionCommand): Promise<void> {
-    const operation = this.#tail.then(async () => {
-      this.#handling = true;
-      try {
-        if (input !== undefined) this.#emit(await this.#controller!.handle(input));
-        this.#emit(await this.#controller!.handle(command));
-      } finally {
-        this.#handling = false;
-        for (const events of this.#background.splice(0)) this.#emit(events);
-      }
-    });
-    this.#tail = operation.catch(() => undefined);
-    return operation;
-  }
-  #call(body: Body, terminal: SessionEvent["type"], input?: PicoInputSnapshot): Promise<SessionEvent> {
+  #invoke(execute: (context: SessionContext) => SessionBatch, terminal: SessionEvent["type"], input?: PicoInputSnapshot): Promise<SessionEvent> {
     if (this.#disposed) return Promise.reject(new Error("PlayerSession is disposed"));
-    const command = { ...body, requestId: ++this.#nextId, sessionGeneration: this.#generation } as SessionControlCommand;
-    if (!isSessionCommand(command)) return Promise.reject(new TypeError("invalid session operation"));
-    let inputCommand: SessionCommand | undefined;
-    try { inputCommand = input === undefined ? undefined : this.#input(input); }
+    if (this.#generation === 0) return Promise.reject(new TypeError("no cart session is loaded"));
+    let snapshot: PicoInputSnapshot | undefined;
+    try { snapshot = input === undefined ? undefined : copyInput(input); }
     catch (error) { return Promise.reject(error); }
-    // A temporary continuation is needed only until the direct result or an async host completion.
+    const generation = this.#generation, inputSequence = ++this.#inputSequence;
     return new Promise((resolve, reject) => {
-      const cleanup = () => { this.#listeners.delete(receive); this.#cancel.delete(cancel); };
-      const cancel = (error: Error) => { cleanup(); reject(error); };
-      const receive = (event: SessionEvent) => {
-        if (event.requestId !== command.requestId) return;
-        if (event.type === "fault") { cancel(new RuntimeClientError(event.error)); return; }
-        if (event.type === "state" && event.state === "waiting-host") return;
-        if (event.type === terminal || (terminal === "heartbeat" && event.type === "state" &&
-          ["stopped", "ready", "running"].includes(event.state))) {
-          cleanup(); resolve(event);
+      let settled = false, handling = true;
+      const background: (readonly SessionEvent[])[] = [];
+      const finish = (error?: Error, result?: SessionEvent) => {
+        if (settled) return;
+        settled = true; this.#cancel.delete(cancel);
+        if (error !== undefined) reject(error); else resolve(result!);
+      };
+      const cancel = (error: Error) => finish(error);
+      const accept = (events: readonly SessionEvent[]) => {
+        this.#emit(events);
+        for (const event of events) {
+          if (event.type === "fault") { finish(new RuntimeClientError(event.error)); return; }
+          if (event.type === "state" && event.state === "waiting-host") continue;
+          if (event.type === terminal || (terminal === "heartbeat" && event.type === "state" &&
+            ["stopped", "ready", "running"].includes(event.state))) { finish(undefined, event); return; }
         }
       };
-      this.#listeners.add(receive); this.#cancel.add(cancel);
-      void this.#execute(command, inputCommand).catch(cancel);
+      const context: SessionContext = { sessionGeneration: generation, onResume(events) {
+        if (handling) background.push(events); else accept(events);
+      } };
+      this.#cancel.add(cancel);
+      void this.#enqueue(async () => {
+        if (settled) return;
+        try {
+          if (snapshot !== undefined) this.#controller!.input(generation, inputSequence, snapshot);
+          accept(await execute(context));
+        } finally {
+          handling = false;
+          for (const events of background.splice(0)) accept(events);
+        }
+      }).catch(cancel);
     });
   }
   #emit(events: readonly SessionEvent[]): void {
