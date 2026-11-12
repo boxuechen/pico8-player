@@ -7,15 +7,18 @@ Chrome/Chromium-only 的 PICO-8 player；不实现编辑器、命令行、SPLORE
 
 | 项目状态 | 唯一入口 |
 | --- | --- |
-| 最近完成 | Phase 13；[`Mobile Host Ports exit evidence`](./evidence/phase-13/141-phase-13-mobile-host-ports-exit-evidence.md) |
+| 最近完成 | Phase 15；[`Lifecycle and Persistence Hardening exit evidence`](./evidence/phase-15/161-phase-15-lifecycle-persistence-exit-evidence.md) |
 | 当前阶段 | None |
 | Active work unit | None |
-| 最近关闭的机器合同 | [`spec/phase-13-mobile-host-ports-contract.json`](../spec/phase-13-mobile-host-ports-contract.json) |
+| 最近关闭的机器合同 | [`spec/phase-15-lifecycle-persistence-contract.json`](../spec/phase-15-lifecycle-persistence-contract.json) |
 
-Phase 13 已关闭：Embed API v2 现在提供 hosted shell、copy-owned 外部输入、
-宿主 `cartdata()` adapter、可等待 flush 和 inactive/background/active lifecycle。默认 Web
-profile 仍使用完整 shell 与 Worker IndexedDB。项目自有 focused Chrome 与下游 iOS Simulator
-集成通过；external corpus、Top 200、historical matrix、真机和远程发布均未执行。
+Phase 15 已关闭：修复 cart-switch 存档归属、dispose commit drain、startup rejection 与真实
+durable flush reporting；回归用例已纳入默认 quick gate。结果见最近完成 evidence。
+
+Phase 14 已关闭：Embed API v2 的 `start()` 现在等待当前 session 的首帧实际提交到 Canvas；
+同 facade 连续双-cart 与 dispose 后 fresh facade 的 Chrome regression 均通过，Worker、AudioContext
+和 RAF 全部释放。`pico8-mobile` 与 official runtime 未修改；external corpus、Top 200、historical
+matrix、长测和远程发布均未执行。
 
 日常实现入口：本页 → active phase（若存在）→ 它明确链接的 contract 小节。不要把
 03/04/06/08 或历史 evidence 当作每个任务的整本必读集合。

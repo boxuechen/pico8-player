@@ -117,6 +117,9 @@ const input: PicoInputSnapshot = {
 declare const serializedError: SerializedRuntimeError;
 declare const cartDataCommit: PicoCartDataCommit;
 declare const cartDataPersistence: CartDataPersistencePort;
+const persistenceFlushResult: Promise<{ readonly durable: boolean; readonly message?: string }> =
+  cartDataPersistence.flush();
+void persistenceFlushResult;
 declare const currentCartRepository: CurrentCartDataRepositoryPort;
 declare const cartRepository: CartRepositoryPort;
 declare const cartResolver: CartResolverPort;

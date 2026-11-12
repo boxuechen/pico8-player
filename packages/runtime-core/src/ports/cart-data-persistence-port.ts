@@ -13,8 +13,8 @@ export interface CartDataPersistencePort {
   hydrate(): Promise<readonly PicoCartDataSeed[]>;
   /** Copies and coalesces a committed runtime snapshot without blocking simulation. */
   enqueue(commit: PicoCartDataCommit): void;
-  /** Best-effort durable write; failed snapshots remain pending for a later retry. */
-  flush(): Promise<void>;
+  /** Reports actual durability; failed snapshots remain pending for a later retry. */
+  flush(): Promise<{ readonly durable: boolean; readonly message?: string }>;
   /** Drains bounded, serialized persistence diagnostics. */
   takeDiagnostics(): readonly SerializedRuntimeError[];
   /** Performs a final best-effort flush and releases adapter resources. */

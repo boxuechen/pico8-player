@@ -7,9 +7,9 @@
 
 - 当前 active phase：**None**。
 - 当前 work unit：**None**；新的 production implementation 需先激活独立 phase。
-- 最近完成：[Phase 13 — Mobile Host Ports](./evidence/phase-13/141-phase-13-mobile-host-ports-exit-evidence.md)。
+- 最近完成：[Phase 15 — Lifecycle and Persistence Hardening](./evidence/phase-15/161-phase-15-lifecycle-persistence-exit-evidence.md)。
 - 最近关闭的机器合同：
-  [`phase-13-mobile-host-ports-contract.json`](../spec/phase-13-mobile-host-ports-contract.json)。
+  [`phase-15-lifecycle-persistence-contract.json`](../spec/phase-15-lifecycle-persistence-contract.json)。
 - 当前发布口径、Known Differences 与默认验证入口由
   [`06-testing-compatibility.md`](./06-testing-compatibility.md) 维护。
 

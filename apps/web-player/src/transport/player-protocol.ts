@@ -107,6 +107,9 @@ export type PlayerRuntimeToHost =
     })
   | (PlayerEventEnvelope & {
       readonly type: "persistence-flushed";
+      /** Worker durability, or completion of the host-owned commit drain. */
+      readonly durable: boolean;
+      readonly message?: string;
     })
   | (PlayerEventEnvelope & {
       /** Must be the first event published for an atomic guest load() commit. */

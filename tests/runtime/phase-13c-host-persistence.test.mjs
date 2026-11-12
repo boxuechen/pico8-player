@@ -74,6 +74,7 @@ function _draw() end`);
 });
 
 class FakeRuntime {
+  sessionGeneration = 1;
   listeners = new Set();
   onEvent(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   emit(event) { for (const listener of this.listeners) listener(event); }
@@ -85,9 +86,10 @@ class FakeController {
   loads = [];
   pauses = 0;
   clears = 0;
+  startHook;
   onStateChange(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
   async loadCart(_source, options) { this.loads.push(options); this.state = "ready"; }
-  async start() { this.state = "running"; }
+  async start() { this.state = "running"; this.startHook?.(); }
   async pause() { this.pauses += 1; this.state = "paused"; }
   async resume() { this.state = "running"; }
   async reset() {}
@@ -111,10 +113,21 @@ test("public adapter serializes writes, awaits flush and backgrounds without res
   };
   const runtime = new FakeRuntime();
   const controller = new FakeController();
+  const presenter = { sessionGeneration: 1, lastFrameId: -1 };
+  controller.startHook = () => {
+    presenter.lastFrameId = 0;
+    runtime.emit({ type: "frame", sessionGeneration: 1, frameId: 0,
+      targetFps: 60, cpuInstructions: 1, cpuFractionRaw: 0, slowFrame: false,
+      packedScreen: new ArrayBuffer(0x2000), displayPalette: new ArrayBuffer(16) });
+  };
   const composition = {
     runtime,
+    presenter,
     flushes: 0,
-    async flushPersistence() { this.flushes += 1; },
+    async flushPersistence() {
+      this.flushes += 1;
+      return { type: "persistence-flushed", durable: true };
+    },
   };
   const mounted = {
     controller,

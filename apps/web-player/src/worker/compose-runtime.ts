@@ -533,16 +533,23 @@ export function createPlayerWorkerController(
     }))];
   }
 
-  async function flushPersistence(): Promise<void> {
-    if (persistence === undefined || hostPersistence) return;
+  async function flushPersistence(): ReturnType<CartDataPersistencePort["flush"]> {
+    // Host mode only acknowledges the Worker drain. The facade must also await
+    // the host adapter before reporting durability to its caller.
+    if (hostPersistence) return { durable: true };
+    if (persistence === undefined) {
+      return { durable: false, message: "No durable persistence adapter is configured" };
+    }
     try {
-      await persistence.flush();
+      const result = await persistence.flush();
+      return result ?? { durable: false, message: "Persistence adapter did not confirm durability" };
     } catch (error) {
       recordPersistenceFailure(
         "E_PERSISTENCE_WRITE",
         "Unable to durably flush committed cartdata",
         error,
       );
+      return { durable: false, message: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -1382,7 +1389,10 @@ export function createPlayerWorkerController(
     }
     if (command.type === "flushPersistence") {
       if (workerGeneration === 0) workerGeneration = command.workerGeneration;
-      return [{ ...playerBase(command), type: "persistence-flushed" }];
+      return [
+        ...takePersistenceEvents(command),
+        { ...playerBase(command), type: "persistence-flushed", durable: hostPersistence },
+      ];
     }
     if (workerGeneration === 0) workerGeneration = command.workerGeneration;
     if (command.workerGeneration !== workerGeneration) {
@@ -1633,10 +1643,10 @@ export function createPlayerWorkerController(
     if (command.type === "flushPersistence") {
       if (workerGeneration === 0) workerGeneration = command.workerGeneration;
       if (command.workerGeneration !== workerGeneration) return [];
-      await flushPersistence();
+      const result = await flushPersistence();
       return [
         ...takePersistenceEvents(command),
-        { ...playerBase(command), type: "persistence-flushed" },
+        { ...playerBase(command), type: "persistence-flushed", ...result },
       ];
     }
     if (isValidGenerationReplacement(command)) {

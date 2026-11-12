@@ -81,10 +81,21 @@ cart discovery 或 implicit fetch。公开 embed lifecycle 为 `create/loadCart/
 公开事件只包含 copy-owned `state/frame/diagnostic/fault`，不把 app-owned Worker DTO 作为 consumer contract。
 
 所有 mutating lifecycle operation 在每个 facade 实例内串行化。`dispose()` 是 idempotent terminal
-barrier：立即拆除 public listener、controller listener、presenter 和 audio output path；尚未开始的操作
-fail closed，in-flight completion 不得再提交 frame、audio、state 或 diagnostic。每个 `create()` 构造独立
+barrier：立即拒绝新操作并关闭 public event 输出；尚未开始的操作 fail closed。内部 runtime
+订阅保留至 in-flight operation 完成、旧 producer stop/drain 和 Worker teardown，随后等待 host
+write queue 与最终 flush，再释放订阅。controller、presenter、audio 和 Worker 由 composition
+按顺序释放；即使 teardown 失败，已接收的 host commit 仍执行最终 flush 和订阅清理。每个 `create()` 构造独立
 Worker、presenter、input、AudioContext/Worklet 和 persistence adapter object graph；模块级不得保存 mutable
 player singleton。
+
+公开 `start()` 的成功边界是当前 `sessionGeneration` 的首帧已被 Canvas presenter 接受；Worker 的
+`running` acknowledgement 本身不足以 resolve。stale frame、未提交的 frame，以及首帧前的
+fault/stop/dispose/deadline 都必须 fail closed。这个 barrier 只定义 host readiness，不改变 Worker
+simulation state 名称；同一 facade 的 cart replacement 和 dispose 后的 fresh facade 都必须重新满足它。
+
+host persistence 换卡先 stop/drain 旧 session 并 flush 旧 contentId；失败时阻止替换。新 identity
+只在 hydrate 与记录校验全部成功后生效，hydrate 失败保留旧 binding。首帧 Promise 在创建时即
+观察 rejection，避免 command acknowledgement 尚未完成时的 fault/deadline/dispose 泄漏 rejection。
 
 ### Release artifact discovery
 

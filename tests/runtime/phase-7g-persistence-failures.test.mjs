@@ -49,11 +49,18 @@ class FakeTransaction extends EventTarget {
 
 class FakeDatabase extends EventTarget {
   closed = false;
+  failWrites = true;
+  writes = [];
 
   transaction(_store, mode) {
     const transaction = new FakeTransaction(mode);
     if (mode === "readwrite") {
-      transaction.abortWith(new DOMException("quota exhausted", "QuotaExceededError"));
+      if (this.failWrites) {
+        transaction.abortWith(new DOMException("quota exhausted", "QuotaExceededError"));
+      } else {
+        transaction.objectStore = () => ({ put: (record) => this.writes.push(record) });
+        setTimeout(() => transaction.dispatchEvent(new Event("complete")), 0);
+      }
     }
     return transaction;
   }
@@ -124,7 +131,8 @@ test("Phase 7G: quota abort preserves the copy-owned pending snapshot", async ()
   const bytes = new Uint8Array(256).fill(0x5a);
   adapter.enqueue({ id: "release", bytes });
   bytes.fill(0);
-  await adapter.flush();
+  const failed = await adapter.flush();
+  assert.equal(failed.durable, false);
   const diagnostics = adapter.takeDiagnostics();
   assert.equal(diagnostics.length, 1);
   assert.equal(diagnostics[0].code, "E_PERSISTENCE_WRITE");
@@ -137,6 +145,9 @@ test("Phase 7G: quota abort preserves the copy-owned pending snapshot", async ()
   assert.equal(hydrated.length, 1);
   assert.equal(hydrated[0].id, "release");
   assert.deepEqual(hydrated[0].bytes, new Uint8Array(256).fill(0x5a));
+  database.failWrites = false;
+  assert.deepEqual(await adapter.flush(), { durable: true });
+  assert.deepEqual(new Uint8Array(database.writes[0].bytes), new Uint8Array(256).fill(0x5a));
   await adapter.dispose();
   assert.equal(database.closed, true);
 });

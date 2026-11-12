@@ -66,7 +66,7 @@ CU 不进入分母。报告必须给出 corpus、revision、player/WASM/Chrome �
 
 | 场景 | 命令 | 预算与用途 |
 | --- | --- | --- |
-| 日常改动 | `pnpm run verify` | 默认 quick gate；architecture、codec 与最新 exit integrity |
+| 日常改动 | `pnpm run verify` | 默认 quick gate；architecture、codec、embed lifecycle/persistence 与 release exit integrity |
 | 当前测试别名 | `pnpm test` | 与 quick gate 相同 |
 | Phase 9 owner integrity | `pnpm run verify:phase-9` | 已关闭阶段的快速完整性入口，不读外部 corpus |
 | Focused release | `pnpm run verify:release` | release artifact + 短 Chrome player lifecycle |
@@ -129,6 +129,8 @@ Focused release gate 至少覆盖：
 - local file choose/drop、player state/ARIA、keyboard/touch、mute/fullscreen 与 audio unlock。
 - fault 后重新加载、pagehide/dispose、Worker/RAF/AudioContext teardown。
 - production Worker path、128×128 Canvas backing 与非 cross-origin-isolated 环境。
+- Embed `start()` 等待当前 session 的 accepted Canvas 首帧；同实例 cart replacement 与 dispose 后
+  fresh instance 分别验证像素和 Worker/RAF/AudioContext 隔离。
 - zero network cart authority；不得读取 BBS、`ref/` 或 external corpus。
 
 完整 600 秒 gate 仅用于 scheduler/audio/resource ownership 的相关回归或 release 明确要求；短 diagnostic

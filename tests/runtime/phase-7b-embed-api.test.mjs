@@ -19,6 +19,7 @@ function deferred() {
 
 class FakeRuntime {
   listeners = new Set();
+  sessionGeneration = 1;
 
   onEvent(listener) {
     this.listeners.add(listener);
@@ -36,6 +37,7 @@ class FakeController {
   operations = [];
   loadGate;
   disposeCount = 0;
+  startHook;
 
   onStateChange(listener) {
     this.listeners.add(listener);
@@ -58,6 +60,7 @@ class FakeController {
   async start() {
     this.operations.push({ type: "start" });
     this.emit("running", "Running");
+    this.startHook?.();
   }
 
   async pause() { this.operations.push({ type: "pause" }); }
@@ -75,13 +78,37 @@ class FakeController {
 function fakePlayer() {
   const runtime = new FakeRuntime();
   const controller = new FakeController();
+  const presenter = { sessionGeneration: 1, lastFrameId: -1 };
+  controller.startHook = () => {
+    presenter.lastFrameId += 1;
+    runtime.emit({
+      v: 1,
+      type: "frame",
+      requestId: 0,
+      workerGeneration: 1,
+      sessionGeneration: 1,
+      frameId: presenter.lastFrameId,
+      completedSlices: "1",
+      timeRawBeforeStep: 0,
+      targetFps: 60,
+      cpuInstructions: 1,
+      cpuFractionRaw: 0,
+      slowFrame: false,
+      devkitFlags: 0,
+      packedScreen: new ArrayBuffer(0x2000),
+      displayPalette: new ArrayBuffer(16),
+    });
+  };
   const mounted = {
     controller,
-    composition: { runtime },
+    composition: { runtime, presenter, async flushPersistence() {
+      return { type: "persistence-flushed", durable: true };
+    } },
     elements: { root: { id: "root" }, canvas: { id: "canvas" } },
   };
   return {
     runtime,
+    presenter,
     controller,
     player: Reflect.construct(Pico8WebPlayer, [mounted]),
   };

@@ -578,6 +578,10 @@ type StepResult = Readonly<{
 - 每 tick 比较完整 256 bytes 或计算稳定 hash，以捕获 direct poke；写入采用 debounce，并在主线程转发 `pagehide`、swap/fault 前 best-effort flush。
 - 提交必须 copy bytes，不能把会继续变化的 RAM view 交给 IndexedDB。
 - quota、事务失败必须上报 `E_PERSISTENCE_WRITE`，游戏可以继续但 UI 必须可见“存档未保存”；不得谎报成功。
+- `CartDataPersistencePort.flush()` 返回 `{ durable, message? }`，失败 snapshot 保留供 retry。
+  Worker 的 `persistence-flushed` 必须携带明确的 boolean durability；默认 profile 的公开 flush
+  透传该结果，不能把 acknowledgement 当作 durable success。Host profile 中该应答只表示
+  Worker commit drain 完成，公开成功还必须等待 host write queue 和 adapter flush。
 - schema migration 必须版本化、可回滚读取，并保留 256 bytes 原值。
 
 `cstore` 不得覆写用户本地原文件。Web Player 使用每 cart identity 的 copy-on-write ROM overlay，并可由 UI 另行提供导出；overlay 是否跨 session 持久化由产品配置决定，但同一次运行内 `cstore` 后的 `reload` 必须读取新值。

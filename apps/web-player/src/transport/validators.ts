@@ -234,7 +234,10 @@ export function isPlayerRuntimeToHost(value: unknown): value is PlayerRuntimeToH
       /^[a-z0-9_-]+$/u.test(value.id) && isPositiveUint(value.revision) &&
       value.bytes instanceof ArrayBuffer && value.bytes.byteLength === PLAYER_CART_DATA_BYTES;
   }
-  if (value.type === "persistence-flushed") return true;
+  if (value.type === "persistence-flushed") {
+    return typeof value.durable === "boolean" &&
+      (value.message === undefined || typeof value.message === "string");
+  }
   if (value.type === "session-replaced") {
     return isPositiveUint(value.previousSessionGeneration) &&
       isPositiveUint(value.nextSessionGeneration) &&

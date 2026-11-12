@@ -94,7 +94,7 @@ export class IndexedDbCartDataPersistenceAdapter implements CartDataPersistenceP
   readonly #pending = new Map<string, Uint8Array>();
   readonly #diagnostics: SerializedRuntimeError[] = [];
   #databasePromise: Promise<IDBDatabase> | undefined;
-  #flushInFlight: Promise<void> | undefined;
+  #flushInFlight: ReturnType<CartDataPersistencePort["flush"]> | undefined;
   #flushTimer: number | undefined;
   #disposed = false;
 
@@ -192,10 +192,10 @@ export class IndexedDbCartDataPersistenceAdapter implements CartDataPersistenceP
     this.#queueBytes(commit.id, commit.bytes);
   }
 
-  flush(): Promise<void> {
+  flush(): ReturnType<CartDataPersistencePort["flush"]> {
     this.#clearTimer();
     if (this.#disposed || this.#pending.size === 0) {
-      return this.#flushInFlight ?? Promise.resolve();
+      return this.#flushInFlight ?? Promise.resolve({ durable: this.#pending.size === 0 });
     }
     if (this.#flushInFlight !== undefined) return this.#flushInFlight;
     const flush = this.#drainPending();
@@ -276,7 +276,7 @@ export class IndexedDbCartDataPersistenceAdapter implements CartDataPersistenceP
     }, this.#debounceMs);
   }
 
-  async #drainPending(): Promise<void> {
+  async #drainPending(): ReturnType<CartDataPersistencePort["flush"]> {
     while (this.#pending.size > 0) {
       const batch = new Map(this.#pending);
       this.#pending.clear();
@@ -293,9 +293,10 @@ export class IndexedDbCartDataPersistenceAdapter implements CartDataPersistenceP
           if (!this.#pending.has(id)) this.#pending.set(id, bytes);
         }
         this.#writeDiagnostic("Unable to durably write cartdata; the latest snapshot remains pending", error);
-        return;
+        return { durable: false, message: errorMessage(error) };
       }
     }
+    return { durable: true };
   }
 
   #clearTimer(): void {

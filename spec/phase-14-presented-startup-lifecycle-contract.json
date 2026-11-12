@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "phase": "14",
+  "name": "presented-startup-lifecycle",
+  "status": "complete",
+  "browserGate": "Chrome/Chromium desktop only",
+  "activeWorkUnit": null,
+  "completedWorkUnits": ["14A"],
+  "publicApi": {
+    "version": 2,
+    "startResolution": "current-session-first-frame-presented",
+    "cartAuthority": "caller-provided-bytes"
+  },
+  "startupBarrier": {
+    "accepts": "current sessionGeneration frame accepted by Canvas presenter",
+    "rejects": ["stale-frame", "fault-before-first-frame", "stop-before-first-frame", "dispose-before-first-frame", "deadline"],
+    "stateAcknowledgementAloneIsSuccess": false
+  },
+  "sequentialLifecycle": {
+    "sameFacade": ["load-cart-a", "start-a", "stop-a", "load-cart-b", "start-b"],
+    "freshFacadeAfterDispose": true,
+    "sharedMutableRuntimeGlobalsAllowed": false
+  },
+  "contentBoundary": {
+    "projectOwnedFixturesOnly": true,
+    "externalCorpusRuns": 0,
+    "top200Runs": 0,
+    "thirdPartyCartBytesTracked": 0
+  },
+  "verificationBudget": {
+    "focusedChromeRunsMaximum": 1,
+    "quickGate": true,
+    "historicalMatrixRuns": 0,
+    "longSoakRuns": 0,
+    "FirefoxRuns": 0,
+    "WebKitRuns": 0,
+    "mobileProjectMutations": 0
+  },
+  "nonGoals": [
+    "modify pico8-mobile or official PICO-8 runtime",
+    "repair Pico8Kill or other external official-runtime globals",
+    "add runtime compatibility APIs",
+    "expand cart, network or filesystem authority",
+    "publish a release"
+  ],
+  "result": {
+    "activationTests": 1,
+    "focusedNodeTests": 7,
+    "focusedChromeRuns": 1,
+    "chromeVersion": "Google Chrome 151.0.7922.76",
+    "sameFacadeGenerations": [1, 2],
+    "presentedFrames": [1, 1, 1],
+    "workersReleased": 2,
+    "audioContextsClosed": 2,
+    "activeAnimationFramesAfterDispose": 0,
+    "screenshotTracked": false,
+    "externalCorpusRuns": 0,
+    "historicalMatrixRuns": 0,
+    "longSoakRuns": 0,
+    "mobileProjectMutations": 0,
+    "evidence": "docs/evidence/phase-14/151-phase-14-presented-startup-lifecycle-exit-evidence.md"
+  }
+}

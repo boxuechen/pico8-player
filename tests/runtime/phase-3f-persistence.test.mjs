@@ -239,7 +239,7 @@ test("persistence flush uses a request and waits for Worker acknowledgement", as
           }
         : message.type === "flushPersistence"
           ? {
-              v: 1, type: "persistence-flushed", requestId: message.requestId,
+              v: 1, type: "persistence-flushed", durable: true, requestId: message.requestId,
               workerGeneration: message.workerGeneration,
               sessionGeneration: message.sessionGeneration,
             }

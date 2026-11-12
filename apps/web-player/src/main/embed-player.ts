@@ -8,6 +8,7 @@ import {
 } from "./main.js";
 import type { PlayerShellState } from "./player-controller.js";
 import type { PlayerShellMode } from "./ui/player-shell-view.js";
+import { RuntimeClientError } from "./runtime-client.js";
 import {
   HostPersistenceFrontend,
   type Pico8CartDataCommit,
@@ -94,6 +95,7 @@ export type Pico8WebPlayerEventListener<T extends Pico8WebPlayerEventType> =
 
 export class Pico8WebPlayer {
   readonly #mounted: MountedPlayer;
+  readonly #firstFrameTimeoutMs: number;
   readonly #listeners = new Map<
     Pico8WebPlayerEventType,
     Set<(event: never) => void>
@@ -103,9 +105,15 @@ export class Pico8WebPlayer {
   #operation: Promise<void> = Promise.resolve();
   #disposeRequested = false;
   #disposePromise: Promise<void> | undefined;
+  readonly #rejectFirstFrameWaiters = new Set<(reason: Error) => void>();
 
-  private constructor(mounted: MountedPlayer, persistence?: Pico8HostPersistenceAdapter) {
+  private constructor(
+    mounted: MountedPlayer,
+    persistence?: Pico8HostPersistenceAdapter,
+    firstFrameTimeoutMs = 1000,
+  ) {
     this.#mounted = mounted;
+    this.#firstFrameTimeoutMs = firstFrameTimeoutMs;
     this.#persistence = persistence === undefined
       ? undefined
       : new HostPersistenceFrontend(persistence, (event) => this.#emit({
@@ -136,7 +144,11 @@ export class Pico8WebPlayer {
       ...(options.audio === undefined ? {} : { audio: options.audio }),
       ...(options.shell === undefined ? {} : { shell: options.shell }),
     });
-    return new Pico8WebPlayer(mounted, options.persistence);
+    return new Pico8WebPlayer(
+      mounted,
+      options.persistence,
+      options.commandTimeoutMs ?? 1000,
+    );
   }
 
   get state(): PlayerShellState {
@@ -174,8 +186,15 @@ export class Pico8WebPlayer {
         if (options.contentId === undefined) {
           throw new TypeError("contentId is required with a host persistence adapter");
         }
-        if (this.#persistence.active) await this.#flushPersistenceInternal("cart-switch");
+        if (this.#persistence.active) {
+          // Stop acknowledges all earlier Worker commands and cancels background
+          // continuations before changing the host storage identity.
+          await this.#mounted.controller.stop();
+          const flushed = await this.#flushPersistenceInternal("cart-switch");
+          if (!flushed.durable) throw new Error(flushed.message ?? "Cart switch persistence failed");
+        }
         hostCartData = await this.#persistence.activate(options.contentId);
+        this.#assertActive();
       }
       await this.#mounted.controller.loadCart(source, {
         ...options,
@@ -185,7 +204,32 @@ export class Pico8WebPlayer {
   }
 
   start(): Promise<void> {
-    return this.#enqueue(() => this.#mounted.controller.start());
+    return this.#enqueue(async () => {
+      if (this.#mounted.controller.state !== "ready") {
+        await this.#mounted.controller.start();
+        return;
+      }
+      const sessionGeneration = this.#mounted.composition.runtime.sessionGeneration;
+      const gate = this.#waitForPresentedFrame(sessionGeneration);
+      // The gate can reject while the command/audio acknowledgement is pending,
+      // or alongside a rejected start command. Observe it immediately; the
+      // original promise still rejects when awaited below.
+      void gate.promise.catch(() => undefined);
+      try {
+        await this.#mounted.controller.start();
+        await gate.promise;
+      } catch (error) {
+        if (
+          !this.#disposeRequested &&
+          ["running", "audio-blocked"].includes(this.#mounted.controller.state)
+        ) {
+          await this.#mounted.controller.stop().catch(() => undefined);
+        }
+        throw error;
+      } finally {
+        gate.release();
+      }
+    });
   }
 
   pause(): Promise<void> {
@@ -231,19 +275,34 @@ export class Pico8WebPlayer {
   dispose(): Promise<void> {
     if (this.#disposePromise !== undefined) return this.#disposePromise;
     this.#disposeRequested = true;
+    const disposed = new Error("Pico8WebPlayer was disposed before its first frame");
+    for (const reject of [...this.#rejectFirstFrameWaiters]) reject(disposed);
     this.#emit({
       v: PICO8_WEB_PLAYER_API_VERSION,
       type: "state",
       state: "disposed",
       message: "Disposed",
     });
-    for (const remove of this.#removeSubscriptions.splice(0)) remove();
     this.#listeners.clear();
     this.#disposePromise = this.#operation.catch(() => undefined).then(async () => {
-      if (this.#mounted.controller.state !== "idle") {
-        await this.#flushPersistenceInternal("dispose").catch(() => undefined);
+      try {
+        await this.#mounted.controller.stop().catch(() => undefined);
+        if (this.#mounted.controller.state !== "idle") {
+          await this.#mounted.composition.flushPersistence().catch(() => undefined);
+        }
+      } finally {
+        try {
+          await this.#mounted.controller.dispose();
+        } finally {
+          try {
+            // Worker disposal can deliver commits too. Keep the internal event
+            // subscription until all of them have reached the host write queue.
+            await this.#persistence?.flush("dispose");
+          } finally {
+            for (const remove of this.#removeSubscriptions.splice(0)) remove();
+          }
+        }
       }
-      await this.#mounted.controller.dispose();
     });
     return this.#disposePromise;
   }
@@ -296,8 +355,85 @@ export class Pico8WebPlayer {
     }
   }
 
+  #waitForPresentedFrame(sessionGeneration: number): {
+    readonly promise: Promise<void>;
+    readonly release: () => void;
+  } {
+    let settled = false;
+    let removeRuntimeListener: () => void = () => {};
+    let removeStateListener: () => void = () => {};
+    let timeout: number | undefined;
+    let resolvePromise!: () => void;
+    let rejectPromise!: (reason: Error) => void;
+    const promise = new Promise<void>((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
+    const cleanup = () => {
+      if (timeout !== undefined) globalThis.clearTimeout(timeout);
+      removeRuntimeListener();
+      removeStateListener();
+      this.#rejectFirstFrameWaiters.delete(reject);
+    };
+    const resolve = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolvePromise();
+    };
+    const reject = (reason: Error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      rejectPromise(reason);
+    };
+    const release = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+    };
+
+    this.#rejectFirstFrameWaiters.add(reject);
+    removeRuntimeListener = this.#mounted.composition.runtime.onEvent((event) => {
+      if (event.sessionGeneration !== sessionGeneration) return;
+      if (event.type === "frame") {
+        const frameId = event.frameId;
+        globalThis.queueMicrotask(() => {
+          if (
+            this.#mounted.composition.presenter.sessionGeneration === sessionGeneration &&
+            this.#mounted.composition.presenter.lastFrameId >= frameId
+          ) resolve();
+        });
+      } else if (event.type === "fault") {
+        reject(new RuntimeClientError(event.error));
+      }
+    });
+    removeStateListener = this.#mounted.controller.onStateChange(({ state }) => {
+      if (["faulted", "stopped", "disposed"].includes(state)) {
+        reject(new Error(`Pico8WebPlayer entered ${state} before its first frame`));
+      }
+    });
+    timeout = globalThis.setTimeout(() => reject(new RuntimeClientError({
+      code: "E_VM_WATCHDOG",
+      message: "PICO-8 Web Player did not present its first frame before the command deadline",
+      phase: "none",
+      recoverable: true,
+      details: { sessionGeneration },
+    })), this.#firstFrameTimeoutMs);
+
+    return { promise, release };
+  }
+
   async #flushPersistenceInternal(reason: string): Promise<Pico8PersistenceFlushResult> {
-    await this.#mounted.composition.flushPersistence();
+    const result = await this.#mounted.composition.flushPersistence();
+    if (result.type !== "persistence-flushed" || !result.durable) {
+      return {
+        status: "failed", reason, durable: false,
+        message: result.type === "persistence-flushed"
+          ? result.message ?? "Persistence was not durably flushed"
+          : "Runtime did not acknowledge persistence flush",
+      };
+    }
     if (this.#persistence === undefined) {
       return { status: "flushed", reason, durable: true };
     }

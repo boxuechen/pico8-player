@@ -75,20 +75,23 @@ export class HostPersistenceFrontend {
     if (!CONTENT_ID_PATTERN.test(contentId)) {
       throw new RangeError("contentId must be a stable 1..128 character identifier");
     }
-    this.#contentId = contentId;
-    this.#lastFailure = undefined;
-    this.#writesSinceFlush = 0;
     const hydrated = await this.#adapter.hydrate(contentId);
     if (!Array.isArray(hydrated) || hydrated.length > 4096) {
       throw new RangeError("host persistence hydration exceeds 4096 records");
     }
     const ids = new Set<string>();
-    return hydrated.map((entry) => {
+    const seeds = hydrated.map((entry) => {
       const copied = copySeed(entry);
       if (ids.has(copied.id)) throw new RangeError("host persistence returned duplicate ids");
       ids.add(copied.id);
       return copied;
     });
+    // Hydration and validation are preparatory: failure must retain the old
+    // binding, including the destination used by any outstanding commits.
+    this.#contentId = contentId;
+    this.#lastFailure = undefined;
+    this.#writesSinceFlush = 0;
+    return seeds;
   }
 
   enqueue(commit: Pico8CartDataCommit): void {
