@@ -1,8 +1,8 @@
 {
   "name": "pico8-web-player-workspace",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0-alpha.2",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@10.8.0",
   "engines": {

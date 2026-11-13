@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased — 2026-11-12
+## 0.2.0-alpha.2 — 2026-11-13
+
+- License project-owned source and compiled components under MIT; retain all third-party notices and license files.
+- Publish complete static builds on GitHub Pages in immutable source-commit directories. No GitHub Release is required.
+- Expose `decodeP8` through the public standalone session facade so hosts need no internal source checkout.
+- Keep runtime behavior, session API and WASM ABI unchanged.
+
+## Earlier integration changes — 2026-11-12
 
 - Default execution uses the shared session on the main thread; `execution: "worker"` retains optional isolation.
 - Standalone session API v1 and JSON tool adapter support Lua/cart loading, 1–600 exact frames per batch, copied pixels and diagnostics, reset and disposal. No UI/audio device is needed.
@@ -11,4 +18,4 @@
 
 ## 0.2.0-alpha.1
 
-Local integration package; project license remains UNLICENSED. Distribution includes z8lua, Emscripten and font notices. Previous release details and verification records remain in Git history.
+Historical local integration package; its published artifacts were marked UNLICENSED. Distribution includes z8lua, Emscripten and font notices. Previous release details and verification records remain in Git history.

@@ -5,9 +5,9 @@ import { dirname, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RELEASE_ROOT = dirname(fileURLToPath(import.meta.url));
-const EXPECTED_VERSION = "0.2.0-alpha.1";
+const EXPECTED_VERSION = "0.2.0-alpha.2";
 const EXPECTED_API_VERSION = 2;
-const EXPECTED_LICENSE = "UNLICENSED";
+const EXPECTED_LICENSE = "MIT";
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");

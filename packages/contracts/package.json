@@ -2,7 +2,7 @@
   "name": "@pico8-web/contracts",
   "version": "0.1.0-rc.1",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.json --pretty false",

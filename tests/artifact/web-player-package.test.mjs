@@ -13,7 +13,7 @@ test("artifact declares API v2 host ports without publication authority", async 
     channel: manifest.channel,
   }, {
     schemaVersion: 3,
-    version: "0.2.0-alpha.1",
+    version: "0.2.0-alpha.2",
     apiVersion: 2,
     channel: "mobile-integration",
   });

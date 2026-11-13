@@ -36,3 +36,9 @@ try {
 [组件与工具接入](docs/standalone-session.md) · [Web 接入](docs/web-player.md) · [架构](docs/architecture.md) · [开发与验证](docs/development.md) · [兼容范围](docs/compatibility.md)
 
 本项目不包含编辑器、BBS 下载器或宿主插件注册。cart 由调用方提供；项目授权见 [LICENSE](LICENSE)，第三方来源见 [WASM notices](wasm/THIRD_PARTY_NOTICES.md) 和 [RuntimeCore notices](packages/runtime-core/THIRD_PARTY_NOTICES.md)。
+
+## License
+
+Project-owned source code and compiled components are licensed under [MIT](LICENSE), copyright © 2026 boxuechen, starting with the `0.2.0-alpha.2` static build. Third-party components retain their own licenses and notices; the project license does not relicense z8lua, Lua, Emscripten, or upstream font/audio material. Complete notices are included in every static build.
+
+This is an independent PICO-8-compatible implementation, not an official Lexaloffle product.
