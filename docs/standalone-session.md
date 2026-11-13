@@ -1,7 +1,5 @@
 # Standalone sessions and tools
 
-English · [简体中文](standalone-session.zh-CN.md)
-
 The browser player and manual sessions share the same app runtime, RuntimeCore and z8lua VM. Import from the complete static component's `main/player.mjs` (also recorded in `manifest.artifacts.main.path`). Workspace consumers can use the `@pico8-player/player` package root.
 
 Node.js can import an extracted component without DOM, Worker, repository source or `node_modules`. Keep the component's sibling WASM/assets directories intact.

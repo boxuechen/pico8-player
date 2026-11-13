@@ -1,7 +1,5 @@
 # Embed the browser player
 
-English · [简体中文](player.zh-CN.md)
-
 Import `main/player.mjs` from a complete static component and load `player.css`. Keep the WASM, Worker and Worklet paths relative to the component. Serve it over HTTP(S); the [artifact contract](../spec/release-artifact-contract.json) defines its files, MIME types and CSP profile.
 
 ## Create, load and start

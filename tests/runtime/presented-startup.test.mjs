@@ -1,6 +1,7 @@
 import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { setImmediate as nextTurn } from "node:timers/promises";
 
 import { Pico8Player } from "../../apps/player/dist/main/public.js";
 
@@ -84,11 +85,13 @@ async function stillPending(promise) {
   const marker = Symbol("pending");
   assert.equal(await Promise.race([
     promise.then(() => "resolved", () => "rejected"),
-    new Promise((resolve) => setTimeout(() => resolve(marker), 5)),
+    nextTurn(marker),
   ]), marker);
 }
 
-test("start waits for a current-generation frame accepted by the presenter", async () => {
+test("start waits for a current-generation frame accepted by the presenter", async (t) => {
+  // Frame acceptance is independent of wall-clock load; deadline behavior is tested below.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
   const { player, runtime, presenter } = fixture();
   const starting = player.start();
   await stillPending(starting);

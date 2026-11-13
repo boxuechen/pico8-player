@@ -1,7 +1,5 @@
 # z8lua WebAssembly
 
-English · [简体中文](README.zh-CN.md)
-
 The production outputs are `dist/z8lua-runtime-v1.mjs` and `dist/z8lua-runtime-v1.wasm`. Main-thread, Worker and Node sessions share the loader. The earlier benchmark/probe ABI is not built.
 
 ## Set up the compiler

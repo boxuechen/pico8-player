@@ -46,7 +46,7 @@
     "fallback": "falling back to ArrayBuffer instantiation"
   },
   "toolchain": {
-    "node": "22.22.2",
+    "node": "24.22.2",
     "pnpm": "10.8.0",
     "esbuild": "0.28.1",
     "emscripten": "6.0.5",

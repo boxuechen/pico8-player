@@ -1,6 +1,6 @@
 # Repository guidance
 
-Read [docs/README.md](docs/README.md) and [docs/architecture.md](docs/architecture.md) before changing production code. Work within the user's current task; completed phases are preserved in Git rather than separate approval documents.
+Read [README.md](README.md) and [docs/architecture.md](docs/architecture.md) before changing production code. Work within the user's current task; completed phases are preserved in Git rather than separate approval documents.
 
 - RuntimeCore is browser-neutral. Canvas, AudioContext, AudioWorklet, storage and Worker adapters belong to `apps/player`.
 - Keep the default main-thread session and optional Worker on the same execution implementation.

@@ -1,7 +1,5 @@
 # Architecture
 
-English · [简体中文](architecture.zh-CN.md)
-
 ## One execution implementation
 
 ```text

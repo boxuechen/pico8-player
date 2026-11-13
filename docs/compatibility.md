@@ -1,7 +1,5 @@
 # Compatibility
 
-English · [简体中文](compatibility.zh-CN.md)
-
 The target is the **PICO-8 v0.2.7 cartridge runtime**. Supported inputs are `.p8`, `.p8.png`, and Lua source through the standalone API. Chrome/Chromium is the browser verification target; Node.js supports sessions and tools without device output.
 
 The [API inventory](../spec/pico-api-inventory.yaml) records implementation status and supported profiles. Behavioral evidence lives in `tests/runtime` and `tests/fixtures`. A tested compatibility profile is not a claim of universal cartridge support or bit-exact official output.

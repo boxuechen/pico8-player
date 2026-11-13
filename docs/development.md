@@ -1,12 +1,10 @@
 # Development
 
-English · [简体中文](development.zh-CN.md)
-
 ## Toolchain
 
 | Tool | Version | Source of truth |
 | --- | --- | --- |
-| Node.js | 22.22.2 | [`.node-version`](../.node-version) |
+| Node.js | 24.22.2 | [`.node-version`](../.node-version) |
 | pnpm | 10.8.0 | [`package.json`](../package.json) |
 | Emscripten | 6.0.5, pinned revision | [`wasm/toolchain.lock.json`](../wasm/toolchain.lock.json) |
 
@@ -59,7 +57,7 @@ The complete component is `apps/player/dist/release/`; the archive and checksum 
 
 Serve files over HTTP(S). Use JavaScript MIME types for `.js`/`.mjs` and `application/wasm` for `.wasm`. The [artifact contract](../spec/release-artifact-contract.json) records the exact paths, MIME values and CSP profile. An embedding site's policy must allow WebAssembly compilation and the required same-origin scripts, workers and requests.
 
-The demo includes a strict CSP. If you adapt the README's inline module example for that policy, move the script into a separate module file or authorize it with your site's CSP mechanism.
+The demo uses a strict CSP. Put integration code in a separate module file or authorize it with your site's CSP mechanism.
 
 ## Publish static assets
 
@@ -81,7 +79,3 @@ The command verifies and publishes the complete component to the `gh-pages` bran
 Maker downloads the full component into its build and serves those assets from its own site; gameplay does not require a live cross-origin Pages import. Integration details are in [Maker's development guide](https://github.com/boxuechen/pico8-maker/blob/main/docs/development.md#player-updates).
 
 Documentation-only changes do not require republishing static assets or changing Maker's pinned runtime.
-
-## Current names
-
-Workspace packages use `@pico8-player/*`; the browser app is in `apps/player`. The public player entry points are `createPico8Player` and `Pico8Player`. The artifact identifier and IndexedDB database are named `pico8-player`. There are no aliases or storage migrations for earlier project names.
