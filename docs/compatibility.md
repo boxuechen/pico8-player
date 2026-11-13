@@ -1,20 +1,24 @@
-# 兼容范围
+# Compatibility
 
-目标是 PICO-8 v0.2.7 cart runtime，接受 `.p8`、`.p8.png` 和独立会话 Lua 源码。浏览器支持 Chrome/Chromium；Node 仅提供无设备 session/tool 使用路径。不包含编辑器、SPLORE、系统控制台和导出工具。
+English · [简体中文](compatibility.zh-CN.md)
 
-[API inventory](../spec/pico-api-inventory.yaml) 逐项记录实现状态与兼容范围，行为向量在 `tests/runtime` 和 `tests/fixtures`。兼容标签描述受测试的 profile，不等于所有官方 cart 都可以逐位复现；旧外部 corpus 的通过率不作为当前默认主线程的性能承诺。
+The target is the **PICO-8 v0.2.7 cartridge runtime**. Supported inputs are `.p8`, `.p8.png`, and Lua source through the standalone API. Chrome/Chromium is the browser verification target; Node.js supports sessions and tools without device output.
 
-| 差异 | 当前行为 |
+The [API inventory](../spec/pico-api-inventory.yaml) records implementation status and supported profiles. Behavioral evidence lives in `tests/runtime` and `tests/fixtures`. A tested compatibility profile is not a claim of universal cartridge support or bit-exact official output.
+
+| Area | Current boundary |
 | --- | --- |
-| 主线程执行 | 有 VM instruction cap；没有抢占式墙钟 watchdog，长同步 WASM 调用会占用 UI 线程 |
-| `stat` | 支持的 deterministic selectors 返回对应类型；其他 selector 返回 false |
-| timed P8SCII | delay 控制不挂起 guest；文本时间由逻辑帧推进 |
-| fractional power | z8lua 浮点路径不承诺 official bit-exact |
-| screen/bitplane | 支持 standard packed 4bpp；高级模式超出当前范围 |
-| guest nested coroutine | `flip/run/stop/load`、外部 `reload/cstore` 和 HostRequest 仅 root 可恢复；nested suspension 拒绝且无外部副作用 |
-| nested custom loop | CPU 持续计数，frame commit 等待 root 返回；永不返回时达到 hard cap |
-| 观察与调试 | 提供画面和结构化 diagnostics；提供有界 `printh` 日志捕获；尚无断点或 live eval |
+| Main-thread execution | Deterministic VM instruction cap; no preemptive wall-clock watchdog. A long synchronous WASM call occupies the UI thread. |
+| `stat` | Supported deterministic selectors return their defined values; unsupported selectors return `false`. |
+| Timed P8SCII | Delay controls do not suspend the guest; text time advances with logical frames. |
+| Fractional powers | z8lua's floating-point path is not claimed to be bit-exact with the official runtime. |
+| Screen modes | Standard packed 4bpp; advanced bitplane modes are outside the current scope. |
+| Nested guest coroutines | Root-only resumable operations include `flip/run/stop/load`, external `reload/cstore`, and host requests. Nested suspension is rejected without external side effects. |
+| Nested custom loops | CPU accounting continues; frame commit waits for the root to return. A non-returning loop reaches the hard cap. |
+| Debugging | Copied frames, structured diagnostics, bounded `printh` logs and opt-in standalone inspection/debug chunks. No breakpoint debugger or unrestricted live evaluation. |
 
-`flip`、`printh`、`stat`、`print`、`extcmd` 存在部分支持模式；`save/folder/ls/resume/reboot/info/serial` 属于未支持的 console/平台能力。精确模式以 inventory 和当前实现为准。
+`flip`, `printh`, `stat`, `print` and `extcmd` have bounded support profiles. Console/platform capabilities such as `save/folder/ls/resume/reboot/info/serial` are unsupported. Check the inventory for exact modes rather than inferring full support from the presence of a function name.
 
-仅执行 caller-provided/caller-authorized bytes。没有自动访问 BBS、任意 URL cart loader 或宿主文件系统。WASM/字体来源及许可分别保存在 [WASM notices](../wasm/THIRD_PARTY_NOTICES.md) 和 [RuntimeCore notices](../packages/runtime-core/THIRD_PARTY_NOTICES.md)。
+The component does not include the PICO-8 editor, SPLORE, system console or export toolchain. It executes caller-provided or explicitly authorized bytes; it has no automatic BBS access, arbitrary-URL cartridge loader or guest host-filesystem access.
+
+Source and license ownership are documented in [third-party notices](../THIRD_PARTY_NOTICES.md). The project is independent of Lexaloffle.

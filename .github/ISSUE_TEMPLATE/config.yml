@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability / 安全问题
+    url: https://github.com/boxuechen/pico8-player/security/advisories/new
+    about: Report suspected vulnerabilities privately.
+  - name: Maker authoring and model integration / Maker 创作与模型接入
+    url: https://github.com/boxuechen/pico8-maker/issues
+    about: Report authoring UI and model-provider issues in Maker.

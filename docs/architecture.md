@@ -1,66 +1,66 @@
-# 当前架构
+# Architecture
 
-## 一份 runtime，三种入口
+English · [简体中文](architecture.zh-CN.md)
+
+## One execution implementation
 
 ```text
-Web facade ── PlayerController / 生命周期队列 ── runtime port
-                                                   │
-独立会话 / JSON tool ── 生命周期队列 ── PlayerSession ──┤
-                                                   ▼
-                                  runtime/compose-session.ts
-                                                   │
-                               RuntimeCore ← ports ← z8lua bridge → WASM
+Browser facade ── controller / lifecycle queue ── runtime port
+                                                       │
+Standalone session / JSON tool ── lifecycle queue ──────┤
+                                                       ▼
+                                          compose-session.ts
+                                                       │
+                              RuntimeCore ← ports ← z8lua bridge → WASM
 ```
 
-`compose-player.ts` 负责挂载 Web 播放器。`PlayerComposition` 创建、连接和销毁 runtime、Canvas 与音频设备；Controller/facade 直接调用 runtime port，没有 Composition 方法转发。
+`compose-player.ts` connects the runtime, Canvas, input, audio and host lifecycle. The browser's default main-thread player calls the shared session directly. With `execution: "worker"`, a Worker client reaches the same session implementation through bounded messages; command dispatch, request IDs and Worker generations belong to that adapter.
 
-Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution: "worker"` 时，`main/worker-client.ts` 中的 `PlayerRuntimeClient` 经消息协议连接 Worker，Worker 仍调用同一个 `compose-session.ts` 的类型化方法。命令分发、wire requestId 和 worker generation 仅由 Worker 适配维护；主线程不构造协议消息。手动会话不创建 DOM、RAF、Worker 或音频设备。AudioWorklet 只负责设备 PCM 队列与重采样。
+Manual sessions do not create a DOM tree, animation loop or audio device. AudioWorklet handles device PCM queues and resampling; it does not advance the simulation.
 
-## 源码归属
+## Ownership
 
-| 目录 | 职责与依赖 |
+| Location | Owns |
 | --- | --- |
-| `packages/contracts` | 稳定值类型、输入快照、错误；无状态、无平台依赖 |
-| `packages/cart-codec` | `.p8` / `.p8.png` bytes 解码；仅依赖 contracts |
-| `packages/runtime-core` | RAM、graphics、audio、input、cart/session、frame scheduler、外部能力 ports；依赖 contracts/codec |
-| `packages/z8lua-bridge` | 实现 VM port，管理 WASM handle、内存 lease、host bindings；只以 type 引用 Core |
-| `apps/player/src/runtime` | 组合 Core/bridge/codec、执行会话、独立会话 API、JSON tool、像素解码、调度、PCM 输出、IndexedDB 和 caller cart adapters |
-| `apps/player/src/main` | 公共导出、Web facade、Canvas、音频设备、输入、UI 与宿主侧 Worker client |
-| `apps/player/src/transport` | 执行事件、runtime port、错误、参数验证；Worker 协议单独拥有命令、requestId、版本和 worker generation |
-| `apps/player/src/worker` | 可选 Worker 入口与消息适配；无重复模拟实现 |
-| `apps/player/src/worklet` | PCM 消费、设备统计和重采样；不驱动模拟 |
-| `wasm` | 固定 z8lua 源码、项目 C++ bridge、补丁、许可证和构建锁 |
+| `packages/contracts` | Stable value types, input snapshots and errors; no state or platform dependencies |
+| `packages/cart-codec` | Cartridge bytes, P8SCII and code decoding; depends on contracts |
+| `packages/runtime-core` | RAM, graphics, audio, input, cartridge/session state, frame scheduling and host capability ports |
+| `packages/z8lua-bridge` | VM port, WASM handles, memory leases and host bindings; Core imports are type-only |
+| `apps/player/src/runtime` | Shared session composition, standalone API, JSON tool, frame decoding, PCM output and host adapters |
+| `apps/player/src/main` | Browser API, Canvas, audio devices, input, UI and Worker client |
+| `apps/player/src/transport` | Validated runtime commands/events; optional Worker protocol |
+| `apps/player/src/worker` | Worker entry point and message adapter |
+| `apps/player/src/worklet` | PCM consumption, resampling and device statistics |
+| `wasm` | Pinned z8lua source, project bridge, patches, license records and build locks |
 
-Core 不使用 DOM、Worker、fetch、IndexedDB 或具体 WASM module。WASM handle/pointer 不暴露给 UI；物理 Pico RAM 的 lease 从 create 到 destroy 有效，逻辑寻址统一走 adapter mapper。`.p8.png` 不经过 Canvas 解码。
+Core does not use DOM, Worker, fetch, IndexedDB or a concrete WASM module. WASM handles and pointers are not exposed to UI consumers. The physical RAM lease lasts from VM creation to destruction; logical addressing goes through the memory adapter. PNG cartridge decoding does not use Canvas.
 
-TypeScript project references 管理构建顺序。`tests/architecture` 检查跨层导入、平台 API、包导出和生成绑定。发布验证检查组件产物。源码和构建配置均不得引用 `ref/`。
+TypeScript project references define build order. Architecture tests check import boundaries, platform APIs, package exports and generated bindings. Production source and build configuration must not depend on ignored `ref/` checkouts.
 
-## 帧、输入与状态
+## Frames and state
 
-Core 拥有权威游戏状态，z8lua 负责 Lua parser/VM、Q16.16、协程与 GC。`FrameSliceRuntime` 在完整逻辑边界提交画面、输入、音频和存档；异步 host request 在原 transaction 中恢复。`CartSession` 管理载入、冷重置、generation 和故障恢复。
+Core owns the authoritative game state. z8lua supplies the Lua parser/VM, Q16.16 arithmetic, coroutines and garbage collection. The frame runtime commits screen, input, audio and persistence at complete logical boundaries; asynchronous host requests resume within their original transaction.
 
-实时播放由 RAF 提供时间，`FrameScheduler` 决定逻辑 tick；manual `advance` 按精确帧数直接 step，不依赖墙钟。主线程单次 WASM 调用受指令上限约束，不能被 timer 抢占；Worker 适配另有 watchdog/recovery。
+Real-time playback uses animation callbacks to schedule logical ticks. Manual `advance` executes a requested frame count without relying on wall-clock time. Default execution has a deterministic instruction cap, but a same-thread timer cannot preempt an in-progress synchronous WASM call.
 
-输入、cart 和存档的跨层常量由 `packages/contracts` 唯一定义，transport 直接 re-export；空输入使用同处的深度冻结快照。
+Input is an eight-player snapshot plus a devkit batch. In a manual batch, held buttons apply throughout, while keypress, wheel and movement transients apply only to the first frame. Pause, menu, focus loss and stop release controls.
 
-普通帧与异步 host 恢复共用执行结果处理。`PcmOutput` 统一维护音频序号、样本位置和传输复制，无音频端口时仅推进传输状态。
+## Lifecycle
 
-输入为八玩家快照与 devkit 瞬态。暂停、菜单、失焦和停止清理按键。手动批次内保持按钮，keypress/wheel/movement 只用于首帧。
+Each browser player or standalone session has a serial lifecycle queue. API calls, controls and environment events use that queue. A browser `start()` resolves after the current generation's first frame is actually presented to Canvas, rather than merely after a state change to running.
 
-## 生命周期与资源
+Changing cartridges stops the previous producer and flushes its persistence identity before hydrating the next one. Host requests carry generation and request identity, so stale completions cannot write into a replacement session. Failures do not permanently poison the lifecycle queue.
 
-每个 Web controller / 独立会话拥有自己的串行生命周期队列。API、DOM、文件载入和环境事件使用同一队列；复合操作不递归入队。实时帧回调独立运行，使 `start()` 能等待当前 generation 的首帧实际呈现到 Canvas。
+`dispose()` rejects queued work that has not started, finishes required persistence work, and releases VM references, listeners, animation callbacks, audio resources and the optional Worker. Disposal is idempotent. It cannot interrupt a single synchronous WASM call already executing on the main thread.
 
-换卡先停止旧 producer 并 flush 旧身份，再验证并激活新存档。执行器使用单个带类型标记的 pending request 管理 host 调用、guest load 和外部 cartdata，统一取消请求。共享执行器通过每次调用持有的续体交付异步结果，普通结果直接返回，不经公共事件监听器匹配。VM host 回应仍以 generation/request identity 检查，迟到结果不能写入新会话。解析失败、写入失败和取消均有明确返回，队列不会因一次失败失效。
+## Explicit host capabilities
 
-`dispose()` 立即关闭新的公共操作并取消未开始的操作；等待进行中的操作/必要存档提交后，释放 WASM 引用、监听器、RAF、AudioContext 和可选 Worker。重复 dispose 幂等。主线程无法抢占已进入的同步 WASM 调用。
+Cartridge bytes and local bundles are supplied by the caller. A resolver does not infer filesystem, BBS or network authority from a cartridge name. Guest `load/reload/cstore` operations resume only from an authorized root; nested coroutine suspension is rejected without external side effects.
 
-## 外部能力
+Manual sessions retain memory cartdata within their instance. Browser players use IndexedDB by default, with an optional host persistence adapter. A flush result distinguishes durable storage from a queued or failed write.
 
-cart bytes/local bundle 由调用方显式提供；resolver 不推导 URL、文件系统或 BBS 权限。`load/reload/cstore` 的外部操作只从 runtime-owned root 恢复；nested guest coroutine 的 host suspension 拒绝且不产生外部副作用。
+## Observation and inspection
 
-内存 cartdata 在会话实例内保留；Web 默认 IndexedDB，可替换为 host persistence port。`flushPersistence` 的 durable 结果反映真实存储能力，不能把仅排队成功当作落盘成功。
+Observers receive copied snapshots; reading them does not execute guest code. Structured diagnostics, bounded logs and opt-in inspection serve automated tests and agent loops.
 
-## 测试观察边界
-
-Core 的 InspectionRequest/Result 与 prepareInspection 定义有界数据契约。只读路径不执行 guest Lua；debug 的安全边界、指令预算与 host 入口限制由 VM 实现。standalone 显式 opt-in 后通过串行生命周期队列调用相同执行器；Web facade 与可选实时 Worker RPC 不新增调试入口。normal/debug 用途、证据序号与图像编码属于调用方，VM 不了解卡带编辑版本。
+Read inspection uses raw access and does not invoke metamethods. Debug inspection has its own bounded execution rules and can mutate state; it is distinct from normal gameplay. Inspection is opt-in on standalone memory sessions and is not exposed through the real-time browser facade. Details and failure semantics are in the [session guide](standalone-session.md#inspection-and-debugging).

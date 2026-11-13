@@ -1,52 +1,87 @@
-# 开发与验证
+# Development
 
-## 环境与构建
+English · [简体中文](development.zh-CN.md)
 
-Node 版本见 `.node-version`，pnpm 版本见 `package.json`；依赖使用冻结 lockfile。首次或 WASM 源码变化后，按 [WASM 指南](../wasm/README.md) 安装固定 Emscripten，再运行：
+## Toolchain
+
+| Tool | Version | Source of truth |
+| --- | --- | --- |
+| Node.js | 22.22.2 | [`.node-version`](../.node-version) |
+| pnpm | 10.8.0 | [`package.json`](../package.json) |
+| Emscripten | 6.0.5, pinned revision | [`wasm/toolchain.lock.json`](../wasm/toolchain.lock.json) |
+
+Follow the [WASM setup guide](../wasm/README.md) to install and select the exact compiler. Use Chrome/Chromium for browser verification.
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm run build:wasm
 pnpm test
+pnpm run build:release
 ```
 
-`build` 编译 TypeScript；`build:wasm` 单独生成生产 `p8w` runtime 与 notices。普通 TS 改动不重编 WASM。`build:release` 使用已有 WASM，校验锁定产物后生成静态目录和确定性归档。
+`build` compiles TypeScript. `build:wasm` generates the production VM and its notices. Ordinary TypeScript changes do not require recompiling WASM. `build:release` verifies the existing WASM against its lock, then creates the static component and deterministic archive.
 
-## 验证入口
+## Verification
 
-| 命令 | 覆盖 |
+| Command | Coverage |
 | --- | --- |
-| `pnpm test` / `pnpm run verify` | bindings、TypeScript、公共导出、架构、codec、全部 runtime/device 单元与集成回归、gallery、source/artifact hashes |
-| `pnpm run test:runtime` | Lua、RAM、图形、音频、输入、存档、生命周期和 agent loop 的行为回归 |
-| `pnpm run verify:release` | 构建、文件白名单/hash/许可、归档、解压后独立消费 |
-| `pnpm run test:browser` | Chrome 中 agent loop、默认主线程 UI、可选 Worker、存档切换和资源释放 |
-| `pnpm run test:wasm:repro` | 两次干净 WASM 构建逐字节比较；仅工具链/bridge 变更需要 |
+| `pnpm test` | Generated bindings, architecture, codec, runtime/device regressions, tooling and source integrity |
+| `pnpm run test:architecture` | Module boundaries and public exports |
+| `pnpm run test:runtime` | Execution, graphics, audio, input, persistence, lifecycle and sessions |
+| `pnpm run verify:release` | Manifest, file allowlist, hashes, notices, archive and extracted-package use |
+| `pnpm run test:browser` | Chrome session loops, default UI, optional Worker, persistence and resource cleanup |
+| `pnpm run test:wasm:repro` | Two clean WASM builds compared byte for byte; use for compiler or bridge changes |
 
-浏览器由 CDP 启动独立临时 profile；可用 `P8W_CHROMIUM` 指定 Chrome/Chromium 路径。CI 从固定工具链构建 WASM，再运行默认、release 和 browser 门禁。没有 Firefox/WebKit、外部 cart 抓取或长时间 soak 的默认门禁。
+Browser tests launch a separate temporary Chrome profile. Set `P8W_CHROMIUM` to choose a Chrome/Chromium executable. CI builds WASM with the pinned toolchain, then runs the default, release and browser gates. Firefox, WebKit, external cartridge downloads and long-running soak tests are outside those gates.
 
-`tests/runtime` 按功能命名；`tests/fixtures` 保存项目自写 cart/输入向量和所需预期；`tests/golden` 保存确定性结果。测试应验证当前行为，不再检查历史阶段完成状态。引入新兼容行为时同步更新 [API inventory](../spec/pico-api-inventory.yaml) 与相关回归。
+Tests are organized by observable behavior. Use original minimal fixtures, retain behavioral regressions, and update the [API inventory](../spec/pico-api-inventory.yaml) when compatibility changes.
 
-## 本地体验
+## Local preview
 
 ```sh
 pnpm run build:release
 node tools/browser/server.mjs
-# 打开命令打印的 demo 地址，选择本地 cart。
-
-pnpm run gallery --cart-root /absolute/path/to/carts
-# gallery 仅绑定 127.0.0.1；cart 库留在仓库和发布包之外。
 ```
 
-构建物在 `dist/`，临时数据放 `.cache/`；不提交截图、机器运行报告或历史基准产物。需要了解之前的设计或验证，查 Git 历史。
+Open the printed URL and choose a local cartridge. The server binds to an available loopback port and prints the complete `/apps/player/dist/release/demo/` URL.
 
-## GitHub Pages 静态组件
+To explore a local cartridge directory:
 
-维护者提交源码后运行 `pnpm run publish:pages`。该命令构建组件，将完整文件发布到 `gh-pages` 分支的 `<source-commit>/` 目录，仅保留当前构建目录，不创建 GitHub Release。首次使用需在仓库 Pages 设置中选择 `gh-pages` 分支根目录。本项目源码仓库公开，Pages 提供编译产物。
+```sh
+pnpm run gallery --cart-root /absolute/path/to/carts
+```
 
-静态入口为 https://boxuechen.github.io/pico8-player/ 。消费者下载固定 commit 目录的 `manifest.json` 及其列出的文件，保留目录结构与许可文件。`main/player.mjs` 同时公开 `decodeP8`，可供宿主验证导出的卡带，无需读取内部 workspace 包。Maker 在构建时下载到本地，运行时不依赖跨域模块或 Pages 在线状态。
+The gallery binds to loopback; cartridge collections stay outside the repository and distribution. Keep generated output in ignored `dist/` directories and temporary evidence in `.cache/`.
 
-## 当前发布约定
+## Use the static component
 
-工作区使用 `@pico8-player/*`，播放器位于 `apps/player`，公开入口为 `createPico8Player` / `Pico8Player`。静态 manifest 的 `artifactId` 为 `pico8-player`，浏览器存档数据库名称也为 `pico8-player`。
+The complete component is `apps/player/dist/release/`; the archive and checksum file are in `apps/player/dist/package/`. Preserve every manifest-listed file and its relative path, including WASM, Worker, Worklet, styles and licenses.
 
-Pages 仅保留本次发布的源码 commit 目录。发布后同步更新 Maker 的版本锁定并部署；旧静态地址不再提供，旧数据库不会被读取或迁移。WASM ABI 与第三方来源锁定不变。
+Serve files over HTTP(S). Use JavaScript MIME types for `.js`/`.mjs` and `application/wasm` for `.wasm`. The [artifact contract](../spec/release-artifact-contract.json) records the exact paths, MIME values and CSP profile. An embedding site's policy must allow WebAssembly compilation and the required same-origin scripts, workers and requests.
+
+The demo includes a strict CSP. If you adapt the README's inline module example for that policy, move the script into a separate module file or authorize it with your site's CSP mechanism.
+
+## Publish static assets
+
+After committing and validating the source:
+
+```sh
+pnpm run publish:pages
+```
+
+The command verifies and publishes the complete component to the `gh-pages` branch under `<source-commit>/`, updates the index and removes previous build directories. Configure GitHub Pages to use the root of `gh-pages`. Publishing does not create a GitHub Release or publish an npm package.
+
+**Only the current published build is retained.** Coordinate Player publication with downstream lock updates:
+
+1. Wait for [Pages](https://boxuechen.github.io/pico8-player/) deployment to finish.
+2. Obtain the new directory's `manifest.json` and its SHA-256.
+3. Update Maker's `app/player.lock.json` with the directory URL, source commit and manifest hash.
+4. Run Maker's tests/build/deployment checks and deploy it.
+
+Maker downloads the full component into its build and serves those assets from its own site; gameplay does not require a live cross-origin Pages import. Integration details are in [Maker's development guide](https://github.com/boxuechen/pico8-maker/blob/main/docs/development.md#player-updates).
+
+Documentation-only changes do not require republishing static assets or changing Maker's pinned runtime.
+
+## Current names
+
+Workspace packages use `@pico8-player/*`; the browser app is in `apps/player`. The public player entry points are `createPico8Player` and `Pico8Player`. The artifact identifier and IndexedDB database are named `pico8-player`. There are no aliases or storage migrations for earlier project names.

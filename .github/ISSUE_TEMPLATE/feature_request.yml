@@ -1,0 +1,22 @@
+name: Feature request / 功能建议
+description: Propose a use case or a bounded compatibility improvement.
+body:
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case / 使用场景
+      description: What are you trying to build, and what blocks it today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior / 期望行为
+      description: Describe the observable result and whether it belongs to the player, session API or runtime.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and evidence / 替代方案与依据
+      description: Link relevant documentation or a minimal example where useful.

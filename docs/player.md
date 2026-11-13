@@ -1,47 +1,72 @@
-# Web Player 接入
+# Embed the browser player
 
-从完整 release 的 `main/player.mjs` 导入；同时加载 `player.css`。WASM、Worker、Worklet 保持发布目录中的相对位置。浏览器以 HTTP 服务提供文件；CSP/MIME 和文件列表见 `spec/release-artifact-contract.json`。
+English · [简体中文](player.zh-CN.md)
+
+Import `main/player.mjs` from a complete static component and load `player.css`. Keep the WASM, Worker and Worklet paths relative to the component. Serve it over HTTP(S); the [artifact contract](../spec/release-artifact-contract.json) defines its files, MIME types and CSP profile.
+
+## Create, load and start
 
 ```js
-import { createPico8Player } from "./main/player.mjs";
+import { createPico8Player } from "./player/main/player.mjs";
+
 const player = await createPico8Player({
   root: document.querySelector("#player"),
-  // execution: "worker", // 可选；默认主线程
-  // shell: "hosted",     // 宿主管理选卡与控制按钮
+  // execution: "worker", // Optional; defaults to the main thread.
+  // shell: "hosted",     // Your application owns selection and controls.
 });
 const unsubscribe = player.on("fault", ({ error }) => console.error(error));
-try {
-  await player.loadCart(cartBytes, { displayName: "my-game.p8" });
-  await player.start(); // 当前 generation 的首帧已实际绘制到 Canvas
-} catch (error) {
-  console.error(error);
+
+async function openCartridge(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  await player.loadCart(bytes, { displayName: file.name });
+  await player.start(); // The first frame has actually reached the Canvas.
 }
-// 退出宿主页面/组件时：
-// unsubscribe(); await player.dispose();
+
+// Call from your framework's unmount/teardown hook.
+async function disposePlayer() {
+  unsubscribe();
+  await player.dispose();
+}
 ```
 
-`loadCart` 接受调用方拥有的 Uint8Array；`localCartBundle` 显式授予每个 ref 的 load/reloadData/cstoreData/include 权限。没有任意 URL loader。
+Call `openCartridge` with a `File` selected by the user, or supply your own caller-owned `Uint8Array`. The player does not fetch a cartridge from an arbitrary URL. A `localCartBundle` grants explicit `load/reloadData/cstoreData/include` permissions for each reference.
 
-API v2：`loadCart/start/pause/resume/reset/stop/flushPersistence/handleLifecycle/dispose` 返回 Promise；`setInput` 更新八玩家/devkit 输入。`state/root/canvas` 为只读属性；`on(type, listener)` 返回取消订阅函数，事件类型为 `state/frame/diagnostic/fault/persistence`。frame 包含 copy-owned packedScreen/displayPalette、frameId、generation 和 CPU 统计。
+Browser audio requires a user gesture. The built-in shell activates audio from trusted interaction; successful frame presentation alone does not guarantee audible output. Manual sessions are intended for stepping and observation, not real-time device playback.
 
-API、UI 和环境事件共用生命周期队列。`start()` 可能因 fault、取消或首帧超时而拒绝；这与单纯收到 running 状态不同。`handleLifecycle("inactive" | "background" | "active")` 用于宿主生命周期。`dispose` 后不再发送公共事件，资源与必要存档提交会完成清理。
+## API and lifecycle
 
-浏览器音频仍受用户手势限制；Web shell 在可信手势中启动音频。不要用 manual session 代替实时声音播放。
+| Surface | Behavior |
+| --- | --- |
+| `loadCart`, `start`, `pause`, `resume`, `reset`, `stop` | Awaitable lifecycle operations |
+| `flushPersistence`, `handleLifecycle`, `dispose` | Awaitable persistence, host lifecycle and teardown |
+| `setInput` | Update the eight-player/devkit input snapshot |
+| `state`, `root`, `canvas` | Read-only properties |
+| `on(type, listener)` | Subscribe; returns an unsubscribe function |
 
-## 存档
+Events are `state`, `frame`, `diagnostic`, `fault` and `persistence`. Frame events contain copied packed screen/palette data, frame ID, generation and CPU statistics.
 
-默认 Web 路径使用 IndexedDB。宿主可通过 create options 提供：
+API calls, UI controls and environment events use the same lifecycle queue. `start()` can reject on a fault, cancellation or first-frame deadline. `handleLifecycle("inactive" | "background" | "active")` connects application lifecycle events. After disposal, public events stop and required persistence/resource cleanup completes.
+
+The exact options, events and methods are exported from [`public.ts`](../apps/player/src/main/public.ts). The browser facade uses API version 2.
+
+## Persistence
+
+The default browser player uses IndexedDB. To supply storage, pass a `persistence` adapter when creating the player:
 
 ```ts
 interface HostPersistence {
   hydrate(contentId: string): Promise<readonly { id: string; bytes: Uint8Array }[]>;
-  write(contentId: string, commit: { id: string; bytes: Uint8Array; revision: number }): Promise<void>;
+  write(contentId: string, commit: {
+    id: string;
+    bytes: Uint8Array;
+    revision: number;
+  }): Promise<void>;
   flush(contentId: string): Promise<void>;
 }
 ```
 
-此时每次 `loadCart` 必须提供稳定 `contentId`（1–128 字符，`[a-z0-9][a-z0-9:._-]*`）。每条 cartdata 为 256 bytes，id 使用 1–64 个 `[a-z0-9_-]` 字符。宿主必须使失败写入可在后续 flush 重试。
+With a host adapter, every `loadCart` needs a stable `contentId`: 1–128 characters matching `[a-z0-9][a-z0-9:._-]*`. Each cartdata record is 256 bytes; its ID uses 1–64 characters from `[a-z0-9_-]`. The host must allow failed writes to be retried by a later flush.
 
-换卡先停止并 flush 旧身份，再 hydrate 新身份；失败不会误写新身份。`flushPersistence(reason?)` 返回 `status/reason/durable`，失败还可含 message；不能仅凭 `saved` 事件假定底层 durable。disposal 会等待必要的最终提交。
+Switching cartridges stops and flushes the old identity before hydrating the new one. Failure cannot silently write under the new identity. `flushPersistence(reason?)` returns `status`, `reason` and `durable`, with an optional failure message. A queued or saved event alone does not prove durable storage. Disposal waits for required final commits.
 
-需要不挂载 UI 的 Lua→执行→观察循环，使用 [独立会话](standalone-session.md)。精确 TypeScript 类型由 `apps/player/src/main/public.ts` 导出。
+For a Lua → execute → observe loop without a UI, use [standalone sessions](standalone-session.md).

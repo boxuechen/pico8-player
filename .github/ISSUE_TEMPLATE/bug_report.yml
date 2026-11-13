@@ -1,0 +1,29 @@
+name: Bug report / 问题反馈
+description: Report a reproducible execution, integration or build problem.
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment / 环境
+      description: Source commit or static-build URL, OS, browser or Node version, and execution mode.
+      placeholder: "Commit: …\nOS: …\nChrome / Node: …\nMode: browser main / Worker / standalone"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction / 最小复现
+      description: Include exact steps and a small original Lua example, cartridge or API call sequence.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior / 预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and checks / 日志与验证
+      description: Include relevant errors and commands tried. Remove credentials and private data.
