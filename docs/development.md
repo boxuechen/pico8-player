@@ -41,6 +41,12 @@ pnpm run gallery --cart-root /absolute/path/to/carts
 
 ## GitHub Pages 静态组件
 
-维护者提交源码后运行 `pnpm run publish:pages`。该命令构建组件，将完整文件发布到 `gh-pages` 分支的 `<source-commit>/` 目录，保留旧目录，不创建 GitHub Release。首次使用需在仓库 Pages 设置中选择 `gh-pages` 分支根目录。源码仓库可保持私有；Pages 上的编译产物可公开访问。
+维护者提交源码后运行 `pnpm run publish:pages`。该命令构建组件，将完整文件发布到 `gh-pages` 分支的 `<source-commit>/` 目录，保留旧目录，不创建 GitHub Release。首次使用需在仓库 Pages 设置中选择 `gh-pages` 分支根目录。本项目源码仓库公开，Pages 提供编译产物。
 
-静态入口为 https://boxuechen.github.io/pico8-web-player/ 。消费者下载固定 commit 目录的 `manifest.json` 及其列出的文件，保留目录结构与许可文件。`main/player.mjs` 同时公开 `decodeP8`，可供宿主验证导出的卡带，无需读取内部 workspace 包。Maker 在构建时下载到本地，运行时不依赖跨域模块或 Pages 在线状态。
+静态入口为 https://boxuechen.github.io/pico8-player/ 。消费者下载固定 commit 目录的 `manifest.json` 及其列出的文件，保留目录结构与许可文件。`main/player.mjs` 同时公开 `decodeP8`，可供宿主验证导出的卡带，无需读取内部 workspace 包。Maker 在构建时下载到本地，运行时不依赖跨域模块或 Pages 在线状态。
+
+## 仓库更名兼容
+
+仓库名称与静态站点路径已由 `pico8-web-player` 改为 `pico8-player`。消费者应更新静态资源地址；历史 commit 目录保留在新站点下。已有本地 checkout 可通过 `git remote set-url origin https://github.com/boxuechen/pico8-player.git` 更新远端，目录名不必修改。
+
+此次仅调整项目名称、展示文字和发布地址。`apps/web-player`、`@pico8-web/*`、现有 manifest 的 `artifactId: "pico8-web-player"`、归档名称及 IndexedDB 数据库名称保留，以兼容既有接口、消费者与存档。历史版本文件与 WASM 锁定值不变。

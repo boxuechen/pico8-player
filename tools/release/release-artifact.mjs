@@ -75,7 +75,7 @@ async function combinedThirdPartyNotices() {
     readFile(join(PROJECT_ROOT, CONTRACT.provenance.wasmNotices), "utf8"),
   ]);
   return [
-    `# Third-party notices: PICO-8 Web Player ${CONTRACT.version}`,
+    `# Third-party notices: PICO-8 Player ${CONTRACT.version}`,
     "",
     "This generated notice combines the two tracked provenance owners used by the release artifact.",
     "",

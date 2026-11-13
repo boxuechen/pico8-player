@@ -1,10 +1,12 @@
-# PICO-8 Web Player
+# PICO-8 Player
 
 基于 z8lua WASM 和 TypeScript 的 PICO-8 运行组件。支持 Chrome/Chromium；无设备的独立会话也可在 Node 中运行。
 
 - **独立会话**：加载 Lua 或 cart、按帧输入、观察像素和诊断，供 agent loop 使用。
 - **Web Player**：Canvas、音频、键盘/手柄/触摸、暂停菜单与存档。
 - **执行方式**：默认主线程；可选 Worker 复用同一份 runtime。
+
+仓库已由 `pico8-web-player` 更名为 `pico8-player`，与 `pico8-maker` 对应。
 
 ## 与 Maker 的关系
 
@@ -19,7 +21,7 @@ pico8-maker
 
 运行所需的源码都在本仓库，不需要另一个运行时仓库。卡带执行、绘图、声音及兼容性由本仓库维护；创作体验和 Agent 工作流由 Maker 维护。z8lua 等第三方源码继续保留其来源记录和许可证。
 
-Maker 通过 [GitHub Pages](https://boxuechen.github.io/pico8-web-player/) 获取固定源码版本的静态构建，校验后打包到自己的站点。接入与升级步骤见 [Maker 开发指南](https://github.com/boxuechen/pico8-maker/blob/main/docs/development.md#player-updates)，不要求使用者编译播放器，也不需要 GitHub Releases。
+Maker 通过 [GitHub Pages](https://boxuechen.github.io/pico8-player/) 获取固定源码版本的静态构建，校验后打包到自己的站点。接入与升级步骤见 [Maker 开发指南](https://github.com/boxuechen/pico8-maker/blob/main/docs/development.md#player-updates)，不要求使用者编译播放器，也不需要 GitHub Releases。
 
 ## 开发
 

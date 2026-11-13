@@ -411,7 +411,7 @@ export class Pico8WebPlayer {
     });
     timeout = globalThis.setTimeout(() => reject(new RuntimeClientError({
       code: "E_VM_WATCHDOG",
-      message: "PICO-8 Web Player did not present its first frame before the command deadline",
+      message: "PICO-8 Player did not present its first frame before the command deadline",
       phase: "none",
       recoverable: true,
       details: { sessionGeneration },
