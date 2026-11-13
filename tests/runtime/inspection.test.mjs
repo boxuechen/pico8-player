@@ -146,3 +146,42 @@ test("raw values truncate cycles, depth, entries and byte size with valid JSON",
   assert.deepEqual(deep, { type: "truncated", reason: "depth" });
   assert.equal((await read(s, ["text"])).truncated, "bytes");
 });
+test("inspection sessions report guest sfx/music starts with the voice used", async (t) => {
+  const source = `function _init()
+ for id=0,1 do local b=0x3200+id*68 poke(b,24,10) poke(b+65,32) end
+ poke(0x3100,0,0x41,0x42,0x43) music(0)
+end
+n=0
+function _update() n+=1
+ if n==2 then sfx(1,3) end
+ if n==4 then sfx(1,0) end
+ if n==6 then music(-1) end
+end
+function _draw() cls() end`;
+  const s = await setup(t, source),
+    plain = await setup(t, source, false);
+  assert.equal((await plain.advance({ frames: 2 })).audio, undefined);
+  // The one-frame setup advance already drained the boot music() call.
+  const r = await s.advance({ frames: 6 });
+  assert.equal(r.audio.dropped, 0);
+  assert.deepEqual(
+    r.audio.events.map(({ frameId, ...e }) => e),
+    [
+      { sfx: 1, channel: 3, overMusic: false },
+      { sfx: 1, channel: 0, overMusic: true },
+      { music: -1 },
+    ],
+  );
+  const ids = r.audio.events.map((e) => e.frameId);
+  assert.ok(ids[0] < ids[1] && ids[1] < ids[2], "events carry their frame");
+  const boot = await createPico8Session({ inspection: true });
+  t.after(() => boot.dispose());
+  await boot.loadSource(source);
+  const first = await boot.advance({ frames: 1 });
+  assert.deepEqual(first.audio.events.map(({ frameId, ...e }) => e), [{ music: 0 }]);
+  // Bounded: a flood reports dropped events instead of growing results.
+  const flood = await setup(t, "function _update() for i=1,40 do sfx(0) end end function _draw() end");
+  const f = await flood.advance({ frames: 2 });
+  assert.equal(f.audio.events.length, 32);
+  assert.ok(f.audio.dropped > 0);
+});

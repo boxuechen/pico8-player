@@ -26,7 +26,7 @@ export {
   createPico8Session, Pico8Session, PICO8_SESSION_API_VERSION,
   type Pico8SessionOptions, type Pico8SessionLoadOptions,
   type Pico8SessionFrame, type Pico8SessionObservation,
-  type Pico8AdvanceOptions, type Pico8AdvanceResult,
+  type Pico8AdvanceOptions, type Pico8AdvanceResult, type Pico8AudioEvent, type Pico8AudioEvents,
 } from "../runtime/standalone-session.js";
 export { createPico8SessionTool, PICO8_SESSION_TOOL } from "../runtime/session-tool.js";
 export { INSPECTION_LIMITS, prepareInspection, type InspectionRequest, type InspectionResult, type InspectedValue } from "../runtime/standalone-session.js";

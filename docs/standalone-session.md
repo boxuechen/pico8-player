@@ -79,6 +79,10 @@ Agent 手动步进不需要创建 Web facade。Worker 使用同一执行实现�
 `session.readLogs(after = 0)` 非破坏性返回 `{cursor, dropped, entries}`，entry 含 sequence、frameId、text、truncated。序号属于本次载入的 VM，换卡/reset 后调用方清 cursor；按成功交付结果的 cursor 继续读取。缓冲最多 64 条、8 KiB 原始字节，每条 1 KiB。frameId 表示尝试执行的帧，启动日志为 null；故障可能阻止该帧提交。非 ASCII P8 字节使用 `\xNN` 转义，避免误用 UTF-8 解码丢失内容。读取不推进帧，不改变存档；故障销毁 VM 前保留最后的日志快照。文件名参数不开放文件系统访问。该 API 属于手动 standalone session，不加入实时 Web UI 的控制接口。
 
 
+## 音频调用事件
+
+`createPico8Session({inspection:true})` 的 `advance` 结果额外包含 `audio: {events, dropped}`：本次推进期间 guest 实际启动声音的 `sfx()` 调用（`{frameId, sfx, channel, overMusic}`，channel 为实际使用的声道，overMusic 表示占用了正在播放音乐的声道）和 `music()` 调用（`{frameId, music}`，-1 表示停止）。载入时 `_init` 的调用随第一次 advance 返回。每次结果最多 32 条，超出计入 dropped。只记录调用和声道分配，不代表听感；music 按 pattern 自动推进不产生事件。非 inspection session 不返回该字段。
+
 ## 测试状态查询与调试
 
 创建 `createPico8Session({inspection: true})` 后，在至少一个完成帧的安全边界调用：

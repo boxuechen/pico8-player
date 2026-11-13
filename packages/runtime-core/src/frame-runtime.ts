@@ -17,6 +17,7 @@ import {
   createPicoApiHost,
   type CurrentCartDataContext,
   type PicoApiHost,
+  type PicoAudioEventLog,
 } from "./pico-api/pico-api-host.js";
 import { PicoRam } from "./memory/pico-ram.js";
 
@@ -339,6 +340,8 @@ export class FrameSliceRuntime {
     return this.#vm.inspect(request);
   }
   snapshotLogs(): VmLogSnapshot { return this.#vm.snapshotLogs(); }
+  /** Drain guest sfx()/music() starts since the last call. Does not run guest code. */
+  takeAudioEvents(): PicoAudioEventLog { return this.#picoApiHost.takeAudioEvents(); }
   readonly #vm: FrameVmPort;
   readonly #picoApiHost: PicoApiHost;
   readonly #ram: PicoRam;

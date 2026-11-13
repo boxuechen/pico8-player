@@ -1,5 +1,5 @@
 import type { PreparedInspection, InspectionResult } from "@pico8-web/runtime-core";
-import type { VmLogSnapshot } from "@pico8-web/runtime-core";
+import type { PicoAudioEventLog, VmLogSnapshot } from "@pico8-web/runtime-core";
 import type { PlayerLocalCartSource } from "../transport/runtime-port.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import { CartCodecError, decodeCart } from "@pico8-web/cart-codec";
@@ -84,6 +84,7 @@ export interface SessionLoadOptions {
 export interface SessionController {
   inspect(request: PreparedInspection): InspectionResult;
   snapshotLogs(): VmLogSnapshot;
+  takeAudioEvents(): PicoAudioEventLog;
   input(generation: number, sequence: number, input: PicoInputSnapshot): void;
   loadCart(context: SessionContext, load: SessionLoadOptions): SessionBatch;
   reset(context: SessionContext): SessionBatch;
@@ -1429,6 +1430,7 @@ export function createSessionController(
       return session.inspect(request);
     },
     snapshotLogs() { return session.snapshotLogs(); },
+    takeAudioEvents() { return session.takeAudioEvents(); },
     input(generation, sequence, input) { acceptInput({ sessionGeneration: generation, sequence, input }); },
     loadCart(context, load) {
       return replaceSession(context, () => loadCartSync(context, load), async () => {

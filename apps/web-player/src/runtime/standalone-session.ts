@@ -46,11 +46,22 @@ export interface Pico8AdvanceOptions {
   /** Held controller buttons; transient devkit events apply only to the first frame. */
   readonly input?: PicoInputSnapshot;
 }
+/** Guest sfx()/music() starts during an advance; only for inspection sessions. */
+export type Pico8AudioEvent =
+  | { readonly frameId: number | null; readonly sfx: number; readonly channel: number; readonly overMusic: boolean }
+  | { readonly frameId: number | null; readonly music: number };
+export interface Pico8AudioEvents {
+  readonly events: readonly Pico8AudioEvent[];
+  readonly dropped: number;
+}
+export const PICO8_AUDIO_EVENT_LIMIT = 32;
 export interface Pico8AdvanceResult {
   readonly requestedFrames: number;
   readonly completedFrames: number;
   readonly outcome: "completed" | "stopped" | "faulted" | "session-replaced" | "interrupted";
   readonly observation: Pico8SessionObservation;
+  /** Present for inspection sessions: audio calls made during these frames (including pending boot calls). */
+  readonly audio?: Pico8AudioEvents;
 }
 
 /** A standalone manual session: no DOM, RAF, Worker or audio device is created. */
@@ -65,8 +76,10 @@ export class Pico8Session {
   #diagnostics: SerializedRuntimeError[] = [];
   #frameCount = 0;
   #disposal: Promise<void> | undefined;
-  private constructor(runtime: PlayerSession) {
+  readonly #inspection: boolean;
+  private constructor(runtime: PlayerSession, inspection: boolean) {
     this.#runtime = runtime;
+    this.#inspection = inspection;
     this.#remove = [runtime.onSessionGenerationChange(() => { this.#frame = undefined; }),
       runtime.onEvent(event => {
         if (event.type === "state") this.#state = event.state;
@@ -83,7 +96,8 @@ export class Pico8Session {
     if (options.persistence !== undefined && !["memory", "indexeddb"].includes(options.persistence)) {
       throw new TypeError("unknown persistence profile");
     }
-    return new Pico8Session(await createPlayerSession(options.persistence === "indexeddb", options.inspection === true));
+    return new Pico8Session(await createPlayerSession(options.persistence === "indexeddb", options.inspection === true),
+      options.inspection === true);
   }
   loadCart(bytes: Uint8Array, options: Pico8SessionLoadOptions = {}): Promise<Pico8SessionObservation> {
     if (!(bytes instanceof Uint8Array)) return Promise.reject(new TypeError("cart bytes must be Uint8Array"));
@@ -127,6 +141,20 @@ export class Pico8Session {
       const generation = this.#runtime.sessionGeneration;
       const before = this.#frameCount;
       let outcome: Pico8AdvanceResult["outcome"] = "completed";
+      const audio: Pico8AudioEvent[] = [];
+      let audioDropped = 0;
+      const collectAudio = () => {
+        if (!this.#inspection || this.#runtime.sessionGeneration !== generation) return;
+        const log = this.#runtime.takeAudioEvents();
+        const frameId = this.#frame?.frameId ?? null;
+        audioDropped += log.dropped;
+        for (const event of log.events) {
+          if (audio.length >= PICO8_AUDIO_EVENT_LIMIT) { audioDropped++; continue; }
+          audio.push("sfx" in event
+            ? { frameId, sfx: event.sfx, channel: event.channel, overMusic: event.music }
+            : { frameId, music: event.music });
+        }
+      };
       if (!["ready", "paused"].includes(this.#state)) throw new Error("advance requires a ready or paused session");
       try {
         if (this.#state === "ready") await this.#runtime.start();
@@ -138,6 +166,7 @@ export class Pico8Session {
             wheelRaw: 0, movementXRaw: 0, movementYRaw: 0, keypresses: [],
           } };
           await this.#runtime.step(snapshot);
+          collectAudio();
           if (this.#runtime.sessionGeneration !== generation) { outcome = "session-replaced"; break; }
           if (this.#state === "stopped") { outcome = "stopped"; break; }
           if (this.#frameCount === framesBefore) { outcome = "interrupted"; break; }
@@ -151,7 +180,10 @@ export class Pico8Session {
         if (this.#state === "running") await this.#runtime.pause();
         this.#runtime.clearInput();
       }
-      return { requestedFrames, completedFrames: this.#frameCount - before, outcome, observation: this.observe() };
+      // Calls made before a fault are still evidence; a torn-down runtime has none.
+      if (outcome === "faulted") { try { collectAudio(); } catch { /* no runtime left */ } }
+      return { requestedFrames, completedFrames: this.#frameCount - before, outcome, observation: this.observe(),
+        ...(this.#inspection ? { audio: { events: audio, dropped: audioDropped } } : {}) };
     });
   }
   inspect(request: InspectionRequest): Promise<InspectionResult> {

@@ -1,5 +1,6 @@
 import type { PreparedInspection, InspectionResult } from "../inspection.js";
 import type { VmLogSnapshot } from "../frame-runtime.js";
+import type { PicoAudioEventLog } from "../pico-api/pico-api-host.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { CartFormat, ParsedCart } from "@pico8-web/cart-codec";
 import {
@@ -42,6 +43,7 @@ export interface CartSessionCartMetadata {
 export interface CartSessionRuntimePort {
   inspect(request: PreparedInspection): InspectionResult;
   snapshotLogs(): VmLogSnapshot;
+  takeAudioEvents?(): PicoAudioEventLog;
   readonly state: RuntimeSessionState;
   boot(
     cart: Pick<ParsedCart, "rom" | "code">,
@@ -262,6 +264,7 @@ export class CartSession {
   }
   #retiredLogs: VmLogSnapshot = { sequence: 0, entries: [] };
   snapshotLogs(): VmLogSnapshot { return this.#runtime?.snapshotLogs() ?? this.#retiredLogs; }
+  takeAudioEvents(): PicoAudioEventLog { return this.#runtime?.takeAudioEvents?.() ?? { events: [], dropped: 0 }; }
   readonly #createRuntime: CartSessionOptions["createRuntime"];
   readonly #usedRuntimes = new WeakSet<object>();
   #state: CartSessionState = "empty";

@@ -184,9 +184,23 @@ export interface PicoApiHost {
     lengthRaw?: number,
   ): void;
   music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void;
+  /** Drain guest sfx()/music() starts recorded since the previous call (bounded). */
+  takeAudioEvents(): PicoAudioEventLog;
 }
 
+/** A guest audio call that started sound; channel is the voice actually used. */
+export type PicoAudioEvent =
+  | { readonly sfx: number; readonly channel: number; readonly music: boolean }
+  | { readonly music: number };
+export interface PicoAudioEventLog {
+  readonly events: readonly PicoAudioEvent[];
+  readonly dropped: number;
+}
+const AUDIO_EVENT_LIMIT = 64;
+
 class RuntimePicoApiHost implements PicoApiHost {
+  #audioEvents: PicoAudioEvent[] = [];
+  #audioDropped = 0;
   readonly memoryLeaseId: string;
   readonly #graphics: L1Graphics;
   readonly #input: L1Input;
@@ -510,11 +524,35 @@ class RuntimePicoApiHost implements PicoApiHost {
     offsetRaw?: number,
     lengthRaw?: number,
   ): void {
+    const before = this.#audio.snapshotChannels();
+    const musicChannels = this.#audio.snapshotMusic().musicChannels;
     this.#audio.sfx(sfxRaw, channelRaw, offsetRaw, lengthRaw);
+    const id = sfxRaw >> 16; // Q16.16 integer part, as the synth reads it
+    if (!(id >= 0)) return;
+    // Record the voice that started this sfx and whether it displaced music.
+    const after = this.#audio.snapshotChannels();
+    const started = after.find((voice, channel) => voice.sfx === id &&
+      (before[channel]!.sfx !== id || voice.offset < before[channel]!.offset || voice.offset === 0));
+    if (started !== undefined)
+      this.#recordAudio({ sfx: id, channel: started.channel, music: musicChannels[started.channel] === true });
   }
 
   music(patternRaw: number, fadeLengthRaw?: number, channelMaskRaw?: number): void {
     this.#audio.music(patternRaw, fadeLengthRaw, channelMaskRaw);
+    const pattern = patternRaw >> 16;
+    this.#recordAudio({ music: pattern >= 0 && this.#audio.snapshotMusic().playing ? pattern : -1 });
+  }
+
+  takeAudioEvents(): PicoAudioEventLog {
+    const log = { events: this.#audioEvents, dropped: this.#audioDropped };
+    this.#audioEvents = [];
+    this.#audioDropped = 0;
+    return log;
+  }
+
+  #recordAudio(event: PicoAudioEvent): void {
+    if (this.#audioEvents.length < AUDIO_EVENT_LIMIT) this.#audioEvents.push(event);
+    else this.#audioDropped++;
   }
 
   stat(selectorRaw: number): number {

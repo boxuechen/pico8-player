@@ -1,5 +1,5 @@
 import type { PreparedInspection, InspectionResult } from "@pico8-web/runtime-core";
-import type { VmLogSnapshot } from "@pico8-web/runtime-core";
+import type { PicoAudioEventLog, VmLogSnapshot } from "@pico8-web/runtime-core";
 import { PICO_EMPTY_INPUT, type PicoInputSnapshot } from "@pico8-web/contracts";
 import type { SessionEvent } from "../transport/session-contract.js";
 import type { PlayerRuntimePort, PlayerLocalCartSource, PlayerHostCartDataSeed, RuntimeAudioPort } from "../transport/runtime-port.js";
@@ -42,6 +42,7 @@ export class PlayerSession implements PlayerRuntimePort {
     });
   }
   snapshotLogs(): VmLogSnapshot { this.#assertActive(); return this.#controller!.snapshotLogs(); }
+  takeAudioEvents(): PicoAudioEventLog { this.#assertActive(); return this.#controller!.takeAudioEvents(); }
   get sessionGeneration(): number { return this.#generation; }
   get hasRetainedCart(): boolean { return this.#retained; }
   onEvent(listener: (event: SessionEvent) => void): () => void {
