@@ -20,7 +20,7 @@
     "awaitablePersistenceFlush": true
   },
   "toolchain": {
-    "node": "22.22.2",
+    "node": "24.22.2",
     "pnpm": "10.8.0",
     "esbuild": "0.28.1",
     "emscripten": "6.0.5",
@@ -29,7 +29,7 @@
   "inputs": {
     "CHANGELOG.md": "915d240f170f31a3a8ccad2eb8fbfb612877fc8f2808502354441add9e0dddf6",
     "LICENSE": "3e0c554e0875548335fd6d78171e661b5cef9dca34a45161eaaa1ba47d109a31",
-    "package.json": "94d7a0558a1a91891fa91f7061abfc4e5bbe1ff9d8af03d42ea6085bfe9038a3",
+    "package.json": "f13ba9ff06cea348f4a1bbe10340b64e3cd2e73a9eafa3c6d519070fc15db5d8",
     "packages/runtime-core/THIRD_PARTY_NOTICES.md": "62d200a193c6f319042f46643d7b44c2220ba43fee76295b4150dc4270898df1",
     "tools/release/portable-verify.mjs": "18c0fbdf2356c5c30d1df35232306db202f437713c281705ee359b520f52cd3c",
     "wasm/THIRD_PARTY_NOTICES.md": "346f914d7a7c205174b4b9ab903d992a048fe064846a966e842a3068a2dd8b73",
@@ -68,15 +68,15 @@
     "styles": {
       "path": "player.css",
       "mime": "text/css; charset=utf-8",
-      "bytes": 7998,
-      "sha256": "9e823f74ceb3c7ab28fe03d0735dcb5cfc7a5cff69161f9f76c6d283c2748bbf",
+      "bytes": 9406,
+      "sha256": "f525d24a44f0ff5f0a0a76c19d71a97627a4c7184857c22c30942a3227dc8083",
       "provenance": "project-source"
     },
     "demo": {
       "path": "demo/index.html",
       "mime": "text/html; charset=utf-8",
-      "bytes": 899,
-      "sha256": "f506cbf86a12cb2cece5857007e1d49d2a4d2f650e13acc277257a932511bf05",
+      "bytes": 2066,
+      "sha256": "127dce04e2b673d988978cc4084efd39be6d70982dfc0ca0cd66302d198abd9f",
       "provenance": "project-source"
     }
   },
@@ -119,8 +119,8 @@
     {
       "path": "demo/index.html",
       "mime": "text/html; charset=utf-8",
-      "bytes": 899,
-      "sha256": "f506cbf86a12cb2cece5857007e1d49d2a4d2f650e13acc277257a932511bf05",
+      "bytes": 2066,
+      "sha256": "127dce04e2b673d988978cc4084efd39be6d70982dfc0ca0cd66302d198abd9f",
       "provenance": "project-source"
     },
     {
@@ -154,8 +154,8 @@
     {
       "path": "player.css",
       "mime": "text/css; charset=utf-8",
-      "bytes": 7998,
-      "sha256": "9e823f74ceb3c7ab28fe03d0735dcb5cfc7a5cff69161f9f76c6d283c2748bbf",
+      "bytes": 9406,
+      "sha256": "f525d24a44f0ff5f0a0a76c19d71a97627a4c7184857c22c30942a3227dc8083",
       "provenance": "project-source"
     },
     {
