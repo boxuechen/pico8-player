@@ -51,6 +51,7 @@ export const RUNTIME_EXPORTED_FUNCTIONS = [
   "_p8w_boot",
   "_p8w_step",
   "_p8w_complete_host_request",
+  "_p8w_log_snapshot",
   "_p8w_menu_snapshot",
   "_p8w_menu_invoke",
   "_p8w_menu_outcome",

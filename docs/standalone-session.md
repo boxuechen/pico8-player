@@ -74,3 +74,7 @@ Agent 手动步进不需要创建 Web facade。Worker 使用同一执行实现�
 
 主线程模式保留 deterministic VM instruction cap，没有外部强制终止能力；这里没有承诺所有 cart
 的 UI 延迟。部署仍以 Chrome/Chromium 为浏览器范围，Node 覆盖无设备的会话/tool loop。
+
+## 日志快照
+
+`session.readLogs(after = 0)` 非破坏性返回 `{cursor, dropped, entries}`，entry 含 sequence、frameId、text、truncated。序号属于本次载入的 VM，换卡/reset 后调用方清 cursor；按成功交付结果的 cursor 继续读取。缓冲最多 64 条、8 KiB 原始字节，每条 1 KiB。frameId 表示尝试执行的帧，启动日志为 null；故障可能阻止该帧提交。非 ASCII P8 字节使用 `\xNN` 转义，避免误用 UTF-8 解码丢失内容。读取不推进帧，不改变存档；故障销毁 VM 前保留最后的日志快照。文件名参数不开放文件系统访问。该 API 属于手动 standalone session，不加入实时 Web UI 的控制接口。

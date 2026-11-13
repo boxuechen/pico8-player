@@ -1,3 +1,4 @@
+import type { VmLogSnapshot } from "@pico8-web/runtime-core";
 import type { PlayerLocalCartSource } from "../transport/runtime-port.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import { CartCodecError, decodeCart } from "@pico8-web/cart-codec";
@@ -80,6 +81,7 @@ export interface SessionLoadOptions {
   readonly hostCartData?: readonly PicoCartDataSeed[];
 }
 export interface SessionController {
+  snapshotLogs(): VmLogSnapshot;
   input(generation: number, sequence: number, input: PicoInputSnapshot): void;
   loadCart(context: SessionContext, load: SessionLoadOptions): SessionBatch;
   reset(context: SessionContext): SessionBatch;
@@ -1418,6 +1420,7 @@ export function createSessionController(
 
 
   return {
+    snapshotLogs() { return session.snapshotLogs(); },
     input(generation, sequence, input) { acceptInput({ sessionGeneration: generation, sequence, input }); },
     loadCart(context, load) {
       return replaceSession(context, () => loadCartSync(context, load), async () => {

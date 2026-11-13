@@ -17,7 +17,7 @@
 
 namespace {
 
-constexpr uint32_t kAbiVersion = 0x00010004u;
+constexpr uint32_t kAbiVersion = 0x00010005u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
@@ -64,7 +64,18 @@ struct AllocationStats {
   bool denied = false;
 };
 
+struct LogEntry {
+  uint32_t sequence = 0;
+  int32_t frame = -1;
+  uint32_t length = 0;
+  uint32_t truncated = 0;
+  uint8_t bytes[1024] = {};
+};
+
 struct Context {
+  LogEntry logs[64];
+  uint32_t log_count = 0, log_bytes = 0, log_sequence = 0;
+  int32_t log_frame = -1;
   lua_State *main = nullptr;
   lua_State *active = nullptr;
   int active_ref = LUA_NOREF;
@@ -522,8 +533,7 @@ int p8_camera(lua_State *state) {
 }
 
 int p8_printh(lua_State *state) {
-  // The browser player exposes no cart-selected filesystem. Preserve PICO-8's
-  // tostr conversion and route the result to a bounded null diagnostic sink.
+  // Keep PICO-8 conversion; filename parameters never grant file access.
   lua_getglobal(state, "tostr");
   if (lua_gettop(state) == 1) {
     lua_pushnil(state);
@@ -532,8 +542,23 @@ int p8_printh(lua_State *state) {
   }
   lua_call(state, 1, 1);
   size_t length = 0;
-  static_cast<void>(lua_tolstring(state, -1, &length));
-  static_cast<void>(length > kMaxHostBytes ? kMaxHostBytes : length);
+  const char *bytes = lua_tolstring(state, -1, &length);
+  Context *context = context_from_lua(state);
+  if (context == nullptr || context->log_sequence == UINT32_MAX) return 0;
+  const uint32_t retained = static_cast<uint32_t>(length > 1024 ? 1024 : length);
+  while (context->log_count != 0 &&
+         (context->log_count == 64 || context->log_bytes + retained > 8192)) {
+    context->log_bytes -= context->logs[0].length;
+    --context->log_count;
+    std::memmove(context->logs, context->logs + 1, context->log_count * sizeof(LogEntry));
+  }
+  LogEntry &entry = context->logs[context->log_count++];
+  entry.sequence = ++context->log_sequence;
+  entry.frame = context->log_frame;
+  entry.length = retained;
+  entry.truncated = length > retained ? 1 : 0;
+  if (retained != 0) std::memcpy(entry.bytes, bytes, retained);
+  context->log_bytes += retained;
   return 0;
 }
 
@@ -1339,6 +1364,26 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_destroy(uint32_t handle) {
   return P8W_STATUS_OK;
 }
 
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_log_snapshot(uint32_t handle, uint8_t *destination, uint32_t capacity) {
+  Context *context = context_from_handle(handle);
+  if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  constexpr uint32_t size = 12 + 64 * 1040;
+  if (destination == nullptr || capacity < size) return P8W_STATUS_BAD_ARGUMENT;
+  std::memset(destination, 0, size);
+  const auto put = [destination](uint32_t offset, uint32_t value) {
+    for (uint32_t i = 0; i < 4; ++i) destination[offset + i] = static_cast<uint8_t>(value >> (8 * i));
+  };
+  put(0, 1); put(4, context->log_count); put(8, context->log_sequence);
+  for (uint32_t i = 0; i < context->log_count; ++i) {
+    const LogEntry &entry = context->logs[i];
+    const uint32_t offset = 12 + i * 1040;
+    put(offset, entry.sequence); put(offset + 4, static_cast<uint32_t>(entry.frame));
+    put(offset + 8, entry.length); put(offset + 12, entry.truncated);
+    std::memcpy(destination + offset + 16, entry.bytes, entry.length);
+  }
+  return P8W_STATUS_OK;
+}
+
 EMSCRIPTEN_KEEPALIVE uint32_t p8w_lua_live_bytes(uint32_t handle) {
   Context *context = context_from_handle(handle);
   return context == nullptr ? 0 : context->allocations.live_bytes;
@@ -1451,6 +1496,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_step(uint32_t handle,
     return P8W_STATUS_INVALID_STATE;
   if (!begin_budget(context, instruction_budget, false))
     return P8W_STATUS_BAD_ARGUMENT;
+  if (context->log_frame < INT32_MAX) ++context->log_frame;
   context->accounting_fps = context->target_fps;
   context->button_mask = button_mask & 0x3fu;
   context->time_raw = time_raw;

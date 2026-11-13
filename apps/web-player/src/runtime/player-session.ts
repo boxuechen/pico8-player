@@ -1,3 +1,4 @@
+import type { VmLogSnapshot } from "@pico8-web/runtime-core";
 import { PICO_EMPTY_INPUT, type PicoInputSnapshot } from "@pico8-web/contracts";
 import type { SessionEvent } from "../transport/session-contract.js";
 import type { PlayerRuntimePort, PlayerLocalCartSource, PlayerHostCartDataSeed, RuntimeAudioPort } from "../transport/runtime-port.js";
@@ -30,6 +31,7 @@ export class PlayerSession implements PlayerRuntimePort {
   constructor(module: FrameRuntimeModule, options: Omit<SessionControllerOptions, "audioTransport"> = {}) {
     this.#controller = createSessionController(module, { ...options, audioTransport: this.#audio });
   }
+  snapshotLogs(): VmLogSnapshot { this.#assertActive(); return this.#controller!.snapshotLogs(); }
   get sessionGeneration(): number { return this.#generation; }
   get hasRetainedCart(): boolean { return this.#retained; }
   onEvent(listener: (event: SessionEvent) => void): () => void {

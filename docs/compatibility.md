@@ -13,7 +13,7 @@
 | screen/bitplane | 支持 standard packed 4bpp；高级模式超出当前范围 |
 | guest nested coroutine | `flip/run/stop/load`、外部 `reload/cstore` 和 HostRequest 仅 root 可恢复；nested suspension 拒绝且无外部副作用 |
 | nested custom loop | CPU 持续计数，frame commit 等待 root 返回；永不返回时达到 hard cap |
-| 观察与调试 | 提供画面和结构化 diagnostics；没有 `printh` stdout 捕获、断点或 live eval |
+| 观察与调试 | 提供画面和结构化 diagnostics；提供有界 `printh` 日志捕获；尚无断点或 live eval |
 
 `flip`、`printh`、`stat`、`print`、`extcmd` 存在部分支持模式；`save/folder/ls/resume/reboot/info/serial` 属于未支持的 console/平台能力。精确模式以 inventory 和当前实现为准。
 

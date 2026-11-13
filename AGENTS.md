@@ -8,5 +8,5 @@ Read [docs/README.md](docs/README.md) and [docs/architecture.md](docs/architectu
 - Never import, build or test against ignored `ref/` or local external cart libraries.
 - Chrome/Chromium is the only browser gate. Do not add Firefox/WebKit scope.
 - Preserve third-party notices, source/patch provenance and reproducible WASM locks.
-- Run `pnpm test` for code changes; use `pnpm run verify:release` and `pnpm run test:browser` for component/transport changes. Build WASM first on a fresh checkout; see [development](docs/development.md).
+- Run focused behavioral tests first. Expand to `test:runtime` for shared VM execution changes and to `pnpm test` when failures have unclear scope. Use `pnpm run verify:release` and `pnpm run test:browser` for component/transport changes. Build WASM first on a fresh checkout; see [development](docs/development.md).
 - Keep behavioral regressions. Do not restore historical phase gates, duplicate compatibility shims or archived validation output.

@@ -1,3 +1,4 @@
+import { PlayerSession } from "./player-session.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { PicoInputSnapshot, SerializedRuntimeError } from "@pico8-web/contracts";
 import { isPicoInputSnapshot } from "../transport/validators.js";
@@ -51,7 +52,7 @@ export interface Pico8AdvanceResult {
 
 /** A standalone manual session: no DOM, RAF, Worker or audio device is created. */
 export class Pico8Session {
-  readonly #runtime: PlayerRuntimePort;
+  readonly #runtime: PlayerSession;
   readonly #queue = new PlayerLifecycleQueue();
   readonly #id = globalThis.crypto.randomUUID();
   readonly #remove: (() => void)[];
@@ -61,7 +62,7 @@ export class Pico8Session {
   #diagnostics: SerializedRuntimeError[] = [];
   #frameCount = 0;
   #disposal: Promise<void> | undefined;
-  private constructor(runtime: PlayerRuntimePort) {
+  private constructor(runtime: PlayerSession) {
     this.#runtime = runtime;
     this.#remove = [runtime.onSessionGenerationChange(() => { this.#frame = undefined; }),
       runtime.onEvent(event => {
@@ -149,6 +150,19 @@ export class Pico8Session {
       return { requestedFrames, completedFrames: this.#frameCount - before, outcome, observation: this.observe() };
     });
   }
+  /** Non-destructive log snapshot. Cursor is local to this loaded VM generation. */
+  readLogs(after = 0) {
+    if (!Number.isInteger(after) || after < 0 || after > 0xffffffff) throw new TypeError("invalid log cursor");
+    const snapshot = this.#runtime.snapshotLogs();
+    const first = snapshot.entries[0]?.sequence ?? snapshot.sequence + 1;
+    return { cursor: snapshot.sequence, dropped: Math.max(0, first - after - 1),
+      entries: snapshot.entries.filter(entry => entry.sequence > after).map(entry => ({
+        sequence: entry.sequence, frameId: entry.frameId,
+        text: Array.from(entry.bytes, byte => byte >= 32 && byte <= 126 || byte === 10 || byte === 9
+          ? String.fromCharCode(byte) : "\\x" + byte.toString(16).padStart(2, "0")).join(""), truncated: entry.truncated,
+      })) };
+  }
+
   /** Pure snapshot: does not run guest code or consume diagnostic/input events. */
   observe(): Pico8SessionObservation {
     const frame = this.#frame;

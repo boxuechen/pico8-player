@@ -1,3 +1,4 @@
+import type { VmLogSnapshot } from "../frame-runtime.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { CartFormat, ParsedCart } from "@pico8-web/cart-codec";
 import {
@@ -38,6 +39,7 @@ export interface CartSessionCartMetadata {
 
 /** RuntimeCore-owned port for one generation's complete frame runtime graph. */
 export interface CartSessionRuntimePort {
+  snapshotLogs(): VmLogSnapshot;
   readonly state: RuntimeSessionState;
   boot(
     cart: Pick<ParsedCart, "rom" | "code">,
@@ -252,6 +254,8 @@ function isRuntimePort(value: unknown): value is CartSessionRuntimePort {
  * adapter implementations. Every load/reset transaction replaces its runtime.
  */
 export class CartSession {
+  #retiredLogs: VmLogSnapshot = { sequence: 0, entries: [] };
+  snapshotLogs(): VmLogSnapshot { return this.#runtime?.snapshotLogs() ?? this.#retiredLogs; }
   readonly #createRuntime: CartSessionOptions["createRuntime"];
   readonly #usedRuntimes = new WeakSet<object>();
   #state: CartSessionState = "empty";
@@ -857,6 +861,7 @@ export class CartSession {
     this.#runtime = undefined;
     if (runtime === undefined) return undefined;
     try {
+      try { this.#retiredLogs = runtime.snapshotLogs(); } catch { /* Preserve the primary fault during teardown. */ }
       runtime.dispose();
       return undefined;
     } catch (error) {

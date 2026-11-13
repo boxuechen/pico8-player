@@ -109,7 +109,20 @@ export interface PicoLogicalMemoryPort {
   mapAddress(logicalAddress: number): number;
 }
 
+export interface VmLogEntry {
+  readonly sequence: number;
+  /** Attempted frame, null for boot; a fault can prevent this frame from committing. */
+  readonly frameId: number | null;
+  readonly bytes: Uint8Array;
+  readonly truncated: boolean;
+}
+export interface VmLogSnapshot {
+  readonly sequence: number;
+  readonly entries: readonly VmLogEntry[];
+}
+
 export interface FrameVmPort {
+  snapshotLogs(): VmLogSnapshot;
   readonly memory: PicoMemoryLease;
   readonly logicalMemory: PicoLogicalMemoryPort;
   readonly hostBindingState: "unbound" | "bound" | "released";
@@ -319,6 +332,7 @@ export function logicalTimeRaw(completedSlices: bigint, targetFps: 30 | 60): num
 }
 
 export class FrameSliceRuntime {
+  snapshotLogs(): VmLogSnapshot { return this.#vm.snapshotLogs(); }
   readonly #vm: FrameVmPort;
   readonly #picoApiHost: PicoApiHost;
   readonly #ram: PicoRam;

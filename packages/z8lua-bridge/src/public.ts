@@ -3,6 +3,7 @@ import {
   type PicoMemoryLease,
 } from "@pico8-web/contracts";
 import type {
+  VmLogSnapshot,
   FrameVmMode,
   FrameVmPort,
   FrameVmState,
@@ -86,6 +87,7 @@ export interface FrameRuntimeModule {
     isError: number,
     budget: number,
   ): number;
+  _p8w_log_snapshot(handle: number, destination: number, capacity: number): number;
   _p8w_menu_snapshot(handle: number, destination: number, capacity: number): number;
   _p8w_menu_invoke(
     handle: number,
@@ -126,7 +128,7 @@ export interface Z8LuaFrameVmOptions {
   readonly luaHeapLimit?: number;
 }
 
-const FRAME_ABI_VERSION = 0x0001_0004;
+const FRAME_ABI_VERSION = 0x0001_0005;
 const STATUS_OK = 0;
 const STATUS_YIELDED = 1;
 const STATUS_INVALID_HANDLE = 2;
@@ -625,6 +627,30 @@ export class Z8LuaFrameVm implements FrameVmPort {
       ),
     );
     return this.#outcome(status, "complete-host");
+  }
+
+  snapshotLogs(): VmLogSnapshot {
+    this.#assertLive();
+    const size = 12 + 64 * 1040;
+    const pointer = this.#module._p8w_alloc(size) >>> 0;
+    if (pointer === 0) throw new Error("unable to allocate log snapshot");
+    try {
+      const status = this.#module._p8w_log_snapshot(this.#handle, pointer, size);
+      if (status !== STATUS_OK) throw new Error(`log snapshot rejected: ${status}`);
+      const bytes = this.#module.HEAPU8.slice(pointer, pointer + size);
+      const view = new DataView(bytes.buffer);
+      const count = view.getUint32(4, true);
+      if (view.getUint32(0, true) !== 1 || count > 64) throw new Error("invalid log snapshot");
+      const entries = [];
+      for (let i = 0; i < count; i++) {
+        const offset = 12 + i * 1040, length = view.getUint32(offset + 8, true);
+        if (length > 1024) throw new Error("invalid log length");
+        const frame = view.getInt32(offset + 4, true);
+        entries.push({ sequence: view.getUint32(offset, true), frameId: frame < 0 ? null : frame,
+          bytes: bytes.slice(offset + 16, offset + 16 + length), truncated: view.getUint32(offset + 12, true) !== 0 });
+      }
+      return { sequence: view.getUint32(8, true), entries };
+    } finally { this.#module._p8w_free(pointer); }
   }
 
   snapshotMenuItems(): MenuSnapshot {

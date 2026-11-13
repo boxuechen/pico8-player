@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "abiName": "p8w",
-  "abiVersion": 65540,
+  "abiVersion": 65541,
   "numberEncoding": "signed-q16.16-raw-int32",
   "stringEncoding": "byte-string-pointer-length",
   "memory": {
@@ -73,6 +73,7 @@
     { "name": "p8w_boot", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_step", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_complete_host_request", "parameters": ["u32:handle", "u32:request_id", "ptr:u8:response", "u32:length", "u32:is_error", "u32:budget"], "result": "status" },
+    { "name": "p8w_log_snapshot", "parameters": ["u32:handle", "ptr:u8:destination", "u32:capacity"], "result": "status" },
     { "name": "p8w_menu_snapshot", "parameters": ["u32:handle", "ptr:u8:destination", "u32:capacity"], "result": "status" },
     { "name": "p8w_menu_invoke", "parameters": ["u32:handle", "u32:slot", "u32:button_mask", "u32:budget"], "result": "status" },
     { "name": "p8w_menu_outcome", "parameters": ["u32:handle"], "result": "menuOutcome" },
