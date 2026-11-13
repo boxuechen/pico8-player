@@ -6,7 +6,20 @@
 - **Web Player**：Canvas、音频、键盘/手柄/触摸、暂停菜单与存档。
 - **执行方式**：默认主线程；可选 Worker 复用同一份 runtime。
 
-本项目采用 TypeScript RuntimeCore，提供浏览器播放器和供 agent 使用的独立会话。[pico8-runtime](https://github.com/boxuechen/pico8-runtime) 是独立的 C++ Core 项目，面向 Web 和原生桌面。两个项目各自构建和发布。
+## 与 Maker 的关系
+
+[pico8-maker](https://github.com/boxuechen/pico8-maker) 是面向用户的创作工具；本仓库提供它所使用的播放器与独立会话。公开维护重点是这两个仓库。
+
+```text
+pico8-maker
+    └── 固定版本的 Web Player 静态资源
+            ├── packages/runtime-core：TypeScript 运行时
+            └── wasm/z8lua + wasm/bridge：C/C++ 编译的 WASM
+```
+
+运行所需的源码都在本仓库，不需要另一个运行时仓库。卡带执行、绘图、声音及兼容性由本仓库维护；创作体验和 Agent 工作流由 Maker 维护。z8lua 等第三方源码继续保留其来源记录和许可证。
+
+Maker 通过 [GitHub Pages](https://boxuechen.github.io/pico8-web-player/) 获取固定源码版本的静态构建，校验后打包到自己的站点。接入与升级步骤见 [Maker 开发指南](https://github.com/boxuechen/pico8-maker/blob/main/docs/development.md#player-updates)，不要求使用者编译播放器，也不需要 GitHub Releases。
 
 ## 开发
 
