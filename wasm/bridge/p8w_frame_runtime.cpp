@@ -1531,7 +1531,13 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_inspect(uint32_t handle, uint32_t debug,
     const uint8_t *input, uint32_t length, char *destination, uint32_t capacity) {
   Context *context = context_from_handle(handle);
   if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
-  if (!at_menu_boundary(context)) return P8W_STATUS_INVALID_STATE;
+  // A failed debug execution may leave partial writes. Further execution needs
+  // a reset, but a raw read runs no Lua and may inspect those writes.
+  const bool failed_debug = context->inspect_failed;
+  if (debug == 0) context->inspect_failed = false;
+  const bool boundary = at_menu_boundary(context);
+  context->inspect_failed = failed_debug;
+  if (!boundary) return P8W_STATUS_INVALID_STATE;
   if (debug > 1 || input == nullptr || length == 0 || length > 4096 || destination == nullptr || capacity < 16384)
     return P8W_STATUS_BAD_ARGUMENT;
   lua_State *main = context->main;
@@ -1571,7 +1577,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_inspect(uint32_t handle, uint32_t debug,
       size_t n=0;const char *message=lua_tolstring(main,-1,&n);output.string(message,n>512?512:n);
     } else output.string("inspection failed",17);
     output.append("}");
-    context->inspect_failed = request.executed;
+    context->inspect_failed = context->inspect_failed || request.executed;
   } else if (output.overflow) {
     std::strcpy(destination, debug ? "{\"ok\":true,\"executed\":true,\"values\":[],\"truncated\":\"bytes\"}" : "{\"ok\":true,\"executed\":false,\"values\":[],\"truncated\":\"bytes\"}");
   }

@@ -82,7 +82,7 @@ test("debug changes live globals but leaves the completed frame unchanged, inclu
     assert.equal((await read(s, ["g", "n"])).values[0], 10);
   }
 });
-test("failed debug is bounded and requires reset after possible writes; syntax failure can recover", async (t) => {
+test("failed debug is bounded; reads remain available but execution requires reset; syntax failure can recover", async (t) => {
   const s = await setup(t);
   let result = await s.inspect({ mode: "debug", code: "if" });
   assert.equal(result.ok, false);
@@ -113,8 +113,19 @@ test("failed debug is bounded and requires reset after possible writes; syntax f
     assert.equal(result.ok, false, code);
     if (code.includes("32000")) assert.match(result.error, /memory/);
     assert.equal(result.executed, true, code);
-    await assert.rejects(() => read(s, ["g"]), /boundary|reset|state/i, code);
+    // Raw reads run no Lua, so they can inspect partial writes after failure.
+    assert.equal((await read(s, ["g", "n"])).ok, true, code);
+    await assert.rejects(
+      () => s.inspect({ mode: "debug", code: "return 1" }),
+      /boundary|reset|state/i,
+      code,
+    );
+    assert.equal((await s.advance({ frames: 1 })).outcome, "faulted", code);
   }
+  await s.loadSource(fixture);
+  await s.advance({ frames: 1 });
+  await s.inspect({ mode: "debug", code: 'g.n=99; error("expected")' });
+  assert.equal((await read(s, ["g", "n"])).values[0], 99, "partial write is readable");
   await s.loadSource(fixture);
   await s.advance({ frames: 1 });
   assert.equal((await read(s, ["g", "n"])).values[0], 1);

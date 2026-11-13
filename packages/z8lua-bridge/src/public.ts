@@ -640,7 +640,7 @@ export class Z8LuaFrameVm implements FrameVmPort {
     try {
       this.#module.HEAPU8.set(request.payload,pointer);
       const status = this.#module._p8w_inspect(this.#handle, request.mode === "debug" ? 1 : 0, pointer, request.payload.length, pointer+4096, 16384);
-      if (status !== STATUS_OK) throw new Error(`inspection rejected: p8w status ${status}; reset after a failed debug execution`);
+      if (status !== STATUS_OK) throw new Error(`inspection rejected: p8w status ${status}; reads remain available after a failed debug execution; reset before more input or debug`);
       const bytes = this.#module.HEAPU8.subarray(pointer+4096,pointer+size);
       const end = bytes.indexOf(0);
       if (end < 0) throw new Error("unterminated inspection response");

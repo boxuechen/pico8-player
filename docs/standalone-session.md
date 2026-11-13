@@ -94,6 +94,6 @@ const debug = await session.inspect({mode: "debug", code: "g.moves=1; return g.m
 
 结果 `{ok, executed, values, error?, truncated?}` 是拥有自己数据的 JSON 快照。布尔/数值/字节字符串直接编码，nil/function/userdata/thread 等返回 type 标签，不暴露地址。table 使用 `{type:"table", entries:[{key,value}]}`，保留稀疏项和键类型；循环、4 层深度、512 总 entry 和 16 KiB 字节上限均明确标记。字节溢出返回空 values 与 truncated:"bytes"，调用方应缩小路径范围。只读查询使用 raw 访问，暂停 GC，避免运行元方法或 finalizer，不改变模拟时间、随机数、输入和 RAM。
 
-debug 在受保护执行边界运行，保留 callback/custom-loop 的暂停 root 和原预算，不触发隐式帧、update/draw。禁用 run/stop/reset/load/reload/cstore/cartdata/dset/extcmd/flip/yield 与 host suspension；缓存别名、pcall、嵌套协程不能绕过入口保护。printh 写入同一有界日志缓冲。成功或编译失败不会改变上一张完成帧；下一次 advance 才产生新画面。已执行错误或超预算不回滚部分写入，VM 要求 reset/load 后继续。宿主在调用前记录 debug 用途；中断、丢失响应或 Worker watchdog 后不能把该轮当成 normal。需要清掉调试影响和内存存档时，销毁并创建新 session。
+debug 在受保护执行边界运行，保留 callback/custom-loop 的暂停 root 和原预算，不触发隐式帧、update/draw。禁用 run/stop/reset/load/reload/cstore/cartdata/dset/extcmd/flip/yield 与 host suspension；缓存别名、pcall、嵌套协程不能绕过入口保护。printh 写入同一有界日志缓冲。成功或编译失败不会改变上一张完成帧；下一次 advance 才产生新画面。已执行错误或超预算不回滚部分写入：此后 raw read 仍可用于查看这些写入（不运行 Lua），但再次 debug 或 advance 会被拒绝，需 reset/load 后继续。宿主在调用前记录 debug 用途；中断、丢失响应或 Worker watchdog 后不能把该轮当成 normal。需要清掉调试影响和内存存档时，销毁并创建新 session。
 
 ABI `0x00010006` 新增 `p8w_inspect`。输入为 raw 路径二进制或 debug 字节，输出为 16 KiB NUL 结尾 JSON；参数布局见 `spec/abi/p8w-v1.json`。日志 ABI 同时保留。源码、WASM hashes 和导出集合由锁文件与可复现构建校验。

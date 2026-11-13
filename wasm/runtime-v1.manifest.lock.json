@@ -45,8 +45,8 @@
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 206494,
-        "sha256": "7ef1752f3b07d6c07b2b6cd165df248034ae6df52f914353fb879ee345967be0"
+        "bytes": 206511,
+        "sha256": "8ada075489450bb85996708a910ab31acc28f04a0bc103f77d26236f3c7cd912"
       }
     ]
   },
