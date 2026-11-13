@@ -1,3 +1,4 @@
+export { decodeP8, type DecodedP8Cart } from "@pico8-web/cart-codec";
 export {
   createPico8WebPlayer,
   Pico8WebPlayer,

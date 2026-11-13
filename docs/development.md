@@ -38,3 +38,9 @@ pnpm run gallery --cart-root /absolute/path/to/carts
 ```
 
 构建物在 `dist/`，临时数据放 `.cache/`；不提交截图、机器运行报告或历史基准产物。需要了解之前的设计或验证，查 Git 历史。
+
+## GitHub Pages 静态组件
+
+维护者提交源码后运行 `pnpm run publish:pages`。该命令构建组件，将完整文件发布到 `gh-pages` 分支的 `<source-commit>/` 目录，保留旧目录，不创建 GitHub Release。首次使用需在仓库 Pages 设置中选择 `gh-pages` 分支根目录。源码仓库可保持私有；Pages 上的编译产物可公开访问。
+
+静态入口为 https://boxuechen.github.io/pico8-web-player/ 。消费者下载固定 commit 目录的 `manifest.json` 及其列出的文件，保留目录结构与许可文件。`main/player.mjs` 同时公开 `decodeP8`，可供宿主验证导出的卡带，无需读取内部 workspace 包。Maker 在构建时下载到本地，运行时不依赖跨域模块或 Pages 在线状态。

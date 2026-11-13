@@ -25,7 +25,8 @@
     "verify:wasm": "node tools/wasm/verify-source.mjs && node tools/wasm/verify-runtime-manifest.mjs",
     "verify:release": "pnpm run build:release && node tools/release/verify-release.mjs && node --test tests/artifact/*.test.mjs",
     "test:wasm:repro": "node tools/wasm/reproducibility.mjs",
-    "gallery": "node tools/local-gallery/server.mjs"
+    "gallery": "node tools/local-gallery/server.mjs",
+    "publish:pages": "pnpm run build:release && node tools/release/publish-pages.mjs"
   },
   "devDependencies": {
     "@babel/parser": "8.0.4",
