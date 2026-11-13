@@ -35,7 +35,15 @@ try {
   await mkdir(destination, { recursive: true });
   await cp(source, destination, { recursive: true });
   await writeFile(join(staging, ".nojekyll"), "");
-  await writeFile(join(staging, "index.html"), `<!doctype html><html lang="en"><meta charset="utf-8"><title>PICO-8 Player</title><h1>PICO-8 Player</h1><p><a href="${revision}/demo/">Open player demo</a></p><p>Static build: <code>${revision}</code></p><p><a href="${revision}/manifest.json">File manifest</a> · <a href="${revision}/THIRD_PARTY_NOTICES.md">Third-party notices</a></p></html>\n`);
+  await writeFile(join(staging, "index.html"), `<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="0; url=${revision}/demo/">
+<title>PICO-8 Player</title>
+<link rel="canonical" href="${revision}/demo/">
+<p><a href="${revision}/demo/">Open PICO-8 Player</a></p>
+</html>\n`);
   git(["add", "."], staging);
   if (git(["status", "--porcelain"], staging)) {
     git(["commit", "-m", `Publish static player ${revision}`], staging);
