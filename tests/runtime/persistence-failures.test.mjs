@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   IndexedDbCartDataPersistenceAdapter,
-} from "../../apps/web-player/dist/runtime/adapters/indexeddb-persistence-adapter.js";
+} from "../../apps/player/dist/runtime/adapters/indexeddb-persistence-adapter.js";
 
 class FakeRequest extends EventTarget {
   result;

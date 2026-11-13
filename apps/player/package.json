@@ -1,0 +1,23 @@
+{
+  "name": "@pico8-player/player",
+  "version": "0.2.0-alpha.3",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/main/public.d.ts",
+      "import": "./dist/main/public.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json --pretty false",
+    "typecheck": "tsc -b tsconfig.json --pretty false"
+  },
+  "dependencies": {
+    "@pico8-player/cart-codec": "workspace:*",
+    "@pico8-player/contracts": "workspace:*",
+    "@pico8-player/runtime-core": "workspace:*",
+    "@pico8-player/z8lua-bridge": "workspace:*"
+  }
+}

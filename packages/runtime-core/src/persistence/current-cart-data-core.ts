@@ -1,4 +1,4 @@
-import { type CartIdentity } from "@pico8-web/contracts";
+import { type CartIdentity } from "@pico8-player/contracts";
 
 import { normalizeCstoreRange, normalizeReloadRange } from "../cart/cart-data-range.js";
 import { PicoRam } from "../memory/pico-ram.js";

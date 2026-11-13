@@ -1,6 +1,6 @@
 import type { PreparedInspection, InspectionResult } from "./inspection.js";
-import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
-import type { ParsedCart } from "@pico8-web/cart-codec";
+import { PICO_EMPTY_INPUT } from "@pico8-player/contracts";
+import type { ParsedCart } from "@pico8-player/cart-codec";
 import {
   PICO_CART_DATA_ROM_SIZE,
   type PicoInputSnapshot,
@@ -10,7 +10,7 @@ import {
   type RuntimeErrorCode,
   type RuntimePhase,
   type SerializedRuntimeError,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import { normalizeInputSnapshot } from "./input/l1-input.js";
 import type { CanonicalAudioSlice } from "./audio/sfx-synth.js";
 import {
@@ -868,4 +868,4 @@ export type {
   RuntimeErrorCode,
   RuntimePhase,
   SerializedRuntimeError,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";

@@ -1,4 +1,4 @@
-import { createPico8WebPlayer, createPico8Session, createPico8SessionTool } from "../../apps/web-player/dist/release/main/player.mjs";
+import { createPico8Player, createPico8Session, createPico8SessionTool } from "../../apps/player/dist/release/main/player.mjs";
 
 const mount = document.querySelector("#mount");
 const contexts = [];
@@ -67,7 +67,7 @@ function _draw() cls(0) pset(x,0,8) end`});
   check(session.observe().revision === 3, "revision not advanced");
   await session.dispose();
   const gates = new Map(["cart-b", "cart-c"].map(id => [id, { entered: deferred(), release: deferred() }]));
-  const player = await createPico8WebPlayer({ root: mount, shell: "full", audio,
+  const player = await createPico8Player({ root: mount, shell: "full", audio,
     persistence: {
       async hydrate(id) {
         const gate = gates.get(id);
@@ -134,7 +134,7 @@ function _draw() cls(0) pset(x,0,8) end`});
   check(workers === 0 && terminated === 0 && frames.size === 0 &&
     contexts.every(context => context.state === "closed"), "resource teardown failed");
   mount.replaceChildren();
-  const isolated = await createPico8WebPlayer({root: mount, shell: "hosted", execution: "worker", audio});
+  const isolated = await createPico8Player({root: mount, shell: "hosted", execution: "worker", audio});
   await isolated.loadCart(cart(70,3)); await isolated.start();
   check(pixel(isolated) === "0,135,81,255", "optional Worker did not present matching pixels");
   await isolated.dispose();

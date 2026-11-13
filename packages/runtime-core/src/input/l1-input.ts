@@ -5,7 +5,7 @@ import {
   PICO_DEVKIT_KEYPRESS_BATCH_LIMIT,
   type PicoDevkitInputBatch,
   type PicoInputSnapshot,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 const DEVKIT_MODE = 0x5f2d;
 const PLAYER_ZERO_BUTTONS = 0x5f4c;

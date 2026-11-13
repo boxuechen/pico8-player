@@ -4,7 +4,7 @@ import {
   PICO_CART_DATA_NUMBER_COUNT,
   type PicoCartDataCommit,
   type PicoCartDataSeed,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import { PicoRam } from "../memory/pico-ram.js";
 
 export const PICO_CART_DATA_ADDRESS = 0x5e00;

@@ -2,7 +2,7 @@ import {
   PICO_CART_INPUT_MAX_BYTES,
   PICO_CART_REF_MAX_BYTES,
   type CartAccess,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 import type {
   CartCancellationToken,

@@ -1,4 +1,4 @@
-import type { CartIdentity } from "@pico8-web/contracts";
+import type { CartIdentity } from "@pico8-player/contracts";
 
 import { sha256Hex } from "./sha256.js";
 

@@ -13,7 +13,7 @@ import {
   P8PNG_USED_PAYLOAD_BYTES,
   P8PNG_WIDTH,
   decodeP8Png,
-} from "@pico8-web/cart-codec";
+} from "@pico8-player/cart-codec";
 import {
   chunkOffsets,
   corruptByte,

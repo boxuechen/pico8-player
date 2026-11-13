@@ -4,11 +4,11 @@ import test, { before } from "node:test";
 import {
   createPicoApiHost,
   FrameSliceRuntime,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 import { inputSnapshot } from "../helpers/input.mjs";
 

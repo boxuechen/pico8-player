@@ -102,7 +102,7 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
   await mkdir(output, { recursive: true });
 
   await build({
-    entryPoints: [join(PROJECT_ROOT, "apps/web-player/dist/main/public.js")],
+    entryPoints: [join(PROJECT_ROOT, "apps/player/dist/main/public.js")],
     outfile: join(output, CONTRACT.artifacts.main),
     bundle: true,
     format: "esm",
@@ -117,7 +117,7 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
     } }],
   });
   await build({
-    entryPoints: [join(PROJECT_ROOT, "apps/web-player/src/worker/player-worker-entry.mjs")],
+    entryPoints: [join(PROJECT_ROOT, "apps/player/src/worker/player-worker-entry.mjs")],
     outfile: join(output, CONTRACT.artifacts.worker),
     bundle: true,
     format: "esm",
@@ -138,7 +138,7 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
   await build({
     entryPoints: [join(
       PROJECT_ROOT,
-      "apps/web-player/src/worklet/pico8-audio-processor.ts",
+      "apps/player/src/worklet/pico8-audio-processor.ts",
     )],
     outfile: join(output, CONTRACT.artifacts.worklet),
     bundle: true,
@@ -152,9 +152,9 @@ export async function buildReleaseArtifact({ outputDirectory = DEFAULT_OUTPUT } 
   for (const [source, destination] of [
     ["wasm/dist/z8lua-runtime-v1.mjs", "wasm/z8lua-runtime-v1.mjs"],
     ["wasm/dist/z8lua-runtime-v1.wasm", CONTRACT.artifacts.wasm],
-    ["apps/web-player/public/player.css", CONTRACT.artifacts.styles],
-    ["apps/web-player/public/demo/index.html", CONTRACT.artifacts.demo],
-    ["apps/web-player/public/demo/demo.mjs", "demo/demo.mjs"],
+    ["apps/player/public/player.css", CONTRACT.artifacts.styles],
+    ["apps/player/public/demo/index.html", CONTRACT.artifacts.demo],
+    ["apps/player/public/demo/demo.mjs", "demo/demo.mjs"],
     ["tools/release/portable-verify.mjs", "verify.mjs"],
     ["LICENSE", "LICENSE"],
     ["CHANGELOG.md", "RELEASE_NOTES.md"],

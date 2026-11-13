@@ -24,11 +24,11 @@ Web 默认通过 `PlayerSession` 直接调用共享执行层。显式 `execution
 | `packages/cart-codec` | `.p8` / `.p8.png` bytes 解码；仅依赖 contracts |
 | `packages/runtime-core` | RAM、graphics、audio、input、cart/session、frame scheduler、外部能力 ports；依赖 contracts/codec |
 | `packages/z8lua-bridge` | 实现 VM port，管理 WASM handle、内存 lease、host bindings；只以 type 引用 Core |
-| `apps/web-player/src/runtime` | 组合 Core/bridge/codec、执行会话、独立会话 API、JSON tool、像素解码、调度、PCM 输出、IndexedDB 和 caller cart adapters |
-| `apps/web-player/src/main` | 公共导出、Web facade、Canvas、音频设备、输入、UI 与宿主侧 Worker client |
-| `apps/web-player/src/transport` | 执行事件、runtime port、错误、参数验证；Worker 协议单独拥有命令、requestId、版本和 worker generation |
-| `apps/web-player/src/worker` | 可选 Worker 入口与消息适配；无重复模拟实现 |
-| `apps/web-player/src/worklet` | PCM 消费、设备统计和重采样；不驱动模拟 |
+| `apps/player/src/runtime` | 组合 Core/bridge/codec、执行会话、独立会话 API、JSON tool、像素解码、调度、PCM 输出、IndexedDB 和 caller cart adapters |
+| `apps/player/src/main` | 公共导出、Web facade、Canvas、音频设备、输入、UI 与宿主侧 Worker client |
+| `apps/player/src/transport` | 执行事件、runtime port、错误、参数验证；Worker 协议单独拥有命令、requestId、版本和 worker generation |
+| `apps/player/src/worker` | 可选 Worker 入口与消息适配；无重复模拟实现 |
+| `apps/player/src/worklet` | PCM 消费、设备统计和重采样；不驱动模拟 |
 | `wasm` | 固定 z8lua 源码、项目 C++ bridge、补丁、许可证和构建锁 |
 
 Core 不使用 DOM、Worker、fetch、IndexedDB 或具体 WASM module。WASM handle/pointer 不暴露给 UI；物理 Pico RAM 的 lease 从 create 到 destroy 有效，逻辑寻址统一走 adapter mapper。`.p8.png` 不经过 Canvas 解码。

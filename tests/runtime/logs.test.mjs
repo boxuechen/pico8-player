@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createPico8Session } from "../../apps/web-player/dist/main/public.js";
+import { createPico8Session } from "../../apps/player/dist/main/public.js";
 
 test("printh logs are bounded, non-destructive, frame tagged and session-local", async t => {
   const a = await createPico8Session(), b = await createPico8Session();

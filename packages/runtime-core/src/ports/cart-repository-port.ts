@@ -1,5 +1,5 @@
-import type { ParsedCart } from "@pico8-web/cart-codec";
-import type { CartIdentity } from "@pico8-web/contracts";
+import type { ParsedCart } from "@pico8-player/cart-codec";
+import type { CartIdentity } from "@pico8-player/contracts";
 
 import type { CurrentCartDataRepositoryPort } from "./current-cart-data-repository-port.js";
 

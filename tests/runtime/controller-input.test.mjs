@@ -8,34 +8,34 @@ import {
   PICO_CONTROLLER_BUTTON_COUNT,
   PICO_CONTROLLER_BUTTON_MASK,
   PICO_CONTROLLER_COUNT,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import {
   createPicoApiHost,
   FrameSliceRuntime,
   L1Input,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { isPlayerHostToRuntime } from "../../apps/web-player/dist/transport/public.js";
-import * as transport from "../../apps/web-player/dist/transport/public.js";
+import { isPlayerHostToRuntime } from "../../apps/player/dist/transport/public.js";
+import * as transport from "../../apps/player/dist/transport/public.js";
 import {
   GamepadInputFrontend,
-} from "../../apps/web-player/dist/main/gamepad-input.js";
+} from "../../apps/player/dist/main/gamepad-input.js";
 import {
   KeyboardInputFrontend,
-} from "../../apps/web-player/dist/main/input-frontend.js";
+} from "../../apps/player/dist/main/input-frontend.js";
 import {
   PlayerInputFrontend,
-} from "../../apps/web-player/dist/main/player-input.js";
+} from "../../apps/player/dist/main/player-input.js";
 import {
   TouchInputFrontend,
-} from "../../apps/web-player/dist/main/touch-input.js";
+} from "../../apps/player/dist/main/touch-input.js";
 import {
   createPlayerWorkerController,
-} from "../../apps/web-player/dist/worker/compose-runtime.js";
+} from "../../apps/player/dist/worker/compose-runtime.js";
 
 const encoder = new TextEncoder();
 const ZERO = Object.freeze(new Array(8).fill(0));

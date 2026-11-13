@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyReleaseArtifact } from "./release-artifact.mjs";
 
+import { removePreviousBuilds } from "./pages-retention.mjs";
+
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const git = (args, cwd = root) => execFileSync("git", args, { cwd, encoding: "utf8" }).trim();
 if (git(["status", "--porcelain"])) throw new Error("Commit source changes before publishing Pages.");
@@ -20,7 +22,7 @@ try {
     git(["fetch", "--depth=1", "origin", "gh-pages"], staging);
     git(["reset", "--hard", "FETCH_HEAD"], staging);
   }
-  const source = join(root, "apps/web-player/dist/release");
+  const source = join(root, "apps/player/dist/release");
   const destination = join(staging, revision);
   let previous;
   try { previous = await readFile(join(destination, "manifest.json")); }
@@ -28,6 +30,8 @@ try {
   if (previous && !previous.equals(await readFile(join(source, "manifest.json")))) {
     throw new Error("This source revision already has different published files.");
   }
+  const removed = await removePreviousBuilds(staging, revision);
+  console.log(`Removed ${removed.length} previous static builds.`);
   await mkdir(destination, { recursive: true });
   await cp(source, destination, { recursive: true });
   await writeFile(join(staging, ".nojekyll"), "");

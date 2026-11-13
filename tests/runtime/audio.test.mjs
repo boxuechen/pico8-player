@@ -5,14 +5,14 @@ import {
   isAudioDeviceStatsMessage,
   isAudioPortAttachmentEnvelope,
   isAudioTransportMessage,
-} from "../../apps/web-player/dist/transport/public.js";
+} from "../../apps/player/dist/transport/public.js";
 import {
   PcmOutput,
-} from "../../apps/web-player/dist/runtime/audio-transport.js";
+} from "../../apps/player/dist/runtime/audio-transport.js";
 import {
   Pcm16Queue,
   PcmDeviceRenderer,
-} from "../../apps/web-player/dist/worklet/pcm-queue.js";
+} from "../../apps/player/dist/worklet/pcm-queue.js";
 
 function pcm16le(samples) {
   const buffer = new ArrayBuffer(samples.length * 2);

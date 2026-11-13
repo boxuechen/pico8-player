@@ -2,7 +2,7 @@ import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { Pico8WebPlayer } from "../../apps/web-player/dist/main/public.js";
+import { Pico8Player } from "../../apps/player/dist/main/public.js";
 
 class FakeRuntime {
   sessionGeneration = 1;
@@ -76,7 +76,7 @@ function fixture(timeoutMs = 100) {
     runtime,
     controller,
     presenter,
-    player: Reflect.construct(Pico8WebPlayer, [mounted, undefined, timeoutMs]),
+    player: Reflect.construct(Pico8Player, [mounted, undefined, timeoutMs]),
   };
 }
 

@@ -8,7 +8,7 @@ import {
   type ParsedCart,
   type P8DecodeOptions,
   type P8PngDecodeOptions,
-} from "@pico8-web/cart-codec";
+} from "@pico8-player/cart-codec";
 import {
   PICO_CONTROLLER_BUTTON_COUNT,
   PICO_CONTROLLER_BUTTON_MASK,
@@ -29,7 +29,7 @@ import {
   type PicoInputSnapshot,
   type PicoMemoryLease,
   type SerializedRuntimeError,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import {
   CartCancellationSource,
   CartLoader,
@@ -49,12 +49,12 @@ import {
   type CartSessionRuntimePort,
   type FrameVmPort,
   type PicoApiHost,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
   type FrameRuntimeModule,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 
 declare const lease: PicoMemoryLease;
 const exactSize: 65536 = PICO_RAM_SIZE;

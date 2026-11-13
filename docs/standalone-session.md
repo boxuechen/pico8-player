@@ -2,7 +2,7 @@
 
 Web Player 和 manual session 复用同一份 app runtime、RuntimeCore 与 z8lua。
 以下入口均来自独立 release 的 `manifest.artifacts.main.path`；仓库 workspace 构建也可从
-`@pico8-web/web-player` package root 导入。release 需要完整保留同级 WASM/assets 目录。
+`@pico8-player/player` package root 导入。release 需要完整保留同级 WASM/assets 目录。
 Node 可直接 import 解压后的 `main/player.mjs`，不要求 DOM、Worker 或仓库 node_modules。
 
 ## 最小开发循环
@@ -62,9 +62,9 @@ observation 提供 runtime diagnostics；日志通过 readLogs 单独读取。�
 ## Web UI 与可选 Worker
 
 ```js
-import { createPico8WebPlayer } from "./main/player.mjs";
-const player = await createPico8WebPlayer({ root }); // 默认主线程
-const isolated = await createPico8WebPlayer({ root: anotherRoot, execution: "worker" });
+import { createPico8Player } from "./main/player.mjs";
+const player = await createPico8Player({ root }); // 默认主线程
+const isolated = await createPico8Player({ root: anotherRoot, execution: "worker" });
 ```
 
 Web facade 保持 API v2 和实时播放/首帧契约；standalone session 使用独立 API version 1。

@@ -2,24 +2,24 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { decodeCart } from "@pico8-web/cart-codec";
+import { decodeCart } from "@pico8-player/cart-codec";
 import {
   PICO_CART_INPUT_MAX_BYTES,
   PICO_CART_REF_MAX_BYTES,
   PICO_LOCAL_CART_BUNDLE_MAX_ENTRIES,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import {
   CART_RESOLUTION_ERROR_CODES,
   CartCancellationSource,
   CartLoader,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   CartRepositoryAdapter,
   CURRENT_CART_REPOSITORY_MAX_CARTS,
-} from "../../apps/web-player/dist/runtime/adapters/cart-repository-adapter.js";
+} from "../../apps/player/dist/runtime/adapters/cart-repository-adapter.js";
 import {
   LocalCartBundleResolver,
-} from "../../apps/web-player/dist/runtime/adapters/host-cart-resolver-adapter.js";
+} from "../../apps/player/dist/runtime/adapters/host-cart-resolver-adapter.js";
 
 const ALLOW_ALL = Object.freeze({
   load: true,
@@ -306,7 +306,7 @@ test("repository caches parsed carts by identity and preserves protected COW iso
 
 test("local resolver production source contains no discovery or I/O primitive", async () => {
   const source = await readFile(new URL(
-    "../../apps/web-player/src/runtime/adapters/host-cart-resolver-adapter.ts",
+    "../../apps/player/src/runtime/adapters/host-cart-resolver-adapter.ts",
     import.meta.url,
   ), "utf8");
   for (const forbidden of ["fetch(", "XMLHttpRequest", "FileReader", "importScripts(", "indexedDB"]) {

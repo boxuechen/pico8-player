@@ -1,7 +1,7 @@
 import {
   PICO_CART_REF_MAX_BYTES,
   PICO_HOST_REQUEST_MAX_BYTES,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 import { decodeCartRequestRef, invalidCartRequest } from "./cart-request-codec.js";
 

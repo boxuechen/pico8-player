@@ -1,4 +1,4 @@
-# `@pico8-web/cart-codec`
+# `@pico8-player/cart-codec`
 
 Runtime-neutral decoding of PICO-8 0.2.7 text `.p8` and lossless `.p8.png`
 bytes. The public surface is deliberately one-way and synchronous:

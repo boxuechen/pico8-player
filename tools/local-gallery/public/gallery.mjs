@@ -144,7 +144,7 @@ async function boot() {
   const playerModule = await import(
     new URL(manifest.artifacts.main.path, new URL("/release/", location.href)).href
   );
-  state.player = await playerModule.createPico8WebPlayer({ root: elements.mount });
+  state.player = await playerModule.createPico8Player({ root: elements.mount });
   state.player.on("state", (event) => {
     const light = event.state === "faulted"
       ? "fault"

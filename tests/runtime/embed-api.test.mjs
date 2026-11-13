@@ -5,10 +5,10 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
-  createPico8WebPlayer,
-  Pico8WebPlayer,
+  createPico8Player,
+  Pico8Player,
   PICO8_WEB_PLAYER_API_VERSION,
-} from "../../apps/web-player/dist/main/public.js";
+} from "../../apps/player/dist/main/public.js";
 
 function deferred() {
   let resolve;
@@ -110,33 +110,33 @@ function fakePlayer() {
     runtime,
     presenter,
     controller,
-    player: Reflect.construct(Pico8WebPlayer, [mounted]),
+    player: Reflect.construct(Pico8Player, [mounted]),
   };
 }
 
 test("the versioned package root is bytes-first and has no URL/fetch cart authority", async () => {
   assert.equal(PICO8_WEB_PLAYER_API_VERSION, 2);
-  assert.equal(typeof createPico8WebPlayer, "function");
+  assert.equal(typeof createPico8Player, "function");
   for (const method of [
     "create", "loadCart", "start", "pause", "resume", "reset", "stop", "setInput", "dispose",
   ]) {
-    assert.equal(typeof Pico8WebPlayer[method] === "function" ||
-      typeof Pico8WebPlayer.prototype[method] === "function", true, method);
+    assert.equal(typeof Pico8Player[method] === "function" ||
+      typeof Pico8Player.prototype[method] === "function", true, method);
   }
-  const manifest = JSON.parse(await readFile("apps/web-player/package.json", "utf8"));
+  const manifest = JSON.parse(await readFile("apps/player/package.json", "utf8"));
   assert.deepEqual(manifest.exports["."], {
     types: "./dist/main/public.d.ts",
     import: "./dist/main/public.js",
   });
-  const declaration = await readFile("apps/web-player/dist/main/embed-player.d.ts", "utf8");
+  const declaration = await readFile("apps/player/dist/main/embed-player.d.ts", "utf8");
   assert.match(declaration, /source: Uint8Array/u);
   assert.doesNotMatch(declaration, /loadCart\([^)]*(?:URL|string)/u);
-  const publicModule = await readFile("apps/web-player/dist/main/public.js", "utf8");
+  const publicModule = await readFile("apps/player/dist/main/public.js", "utf8");
   assert.doesNotMatch(publicModule, /\bfetch\s*\(/u);
   const selfImport = spawnSync(
     process.execPath,
-    ["--input-type=module", "-e", "const m=await import('@pico8-web/web-player');process.stdout.write(String(m.PICO8_WEB_PLAYER_API_VERSION))"],
-    { cwd: "apps/web-player", encoding: "utf8" },
+    ["--input-type=module", "-e", "const m=await import('@pico8-player/player');process.stdout.write(String(m.PICO8_WEB_PLAYER_API_VERSION))"],
+    { cwd: "apps/player", encoding: "utf8" },
   );
   assert.equal(selfImport.status, 0, selfImport.stderr);
   assert.equal(selfImport.stdout, "2");

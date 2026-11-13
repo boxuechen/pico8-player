@@ -1,7 +1,7 @@
 import {
   PICO_RAM_SIZE,
   type PicoMemoryLease,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import type {
   PreparedInspection, InspectionResult,
   VmLogSnapshot,
@@ -16,7 +16,7 @@ import type {
   VmFaultRecord,
   VmOperationOutcome,
   VmMenuInvocationOutcome,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   dispatchPicoHostCall,
   PICO_HOST_CALL_FRAME,
@@ -62,7 +62,7 @@ function moduleId(module: object): number {
   return assigned;
 }
 
-export type { PicoMemoryLease } from "@pico8-web/contracts";
+export type { PicoMemoryLease } from "@pico8-player/contracts";
 
 /** Runtime v1 ABI surface. */
 export interface FrameRuntimeModule {

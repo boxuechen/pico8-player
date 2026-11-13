@@ -9,8 +9,8 @@ import { pathToFileURL } from "node:url";
 test("extracted standalone release runs a tool loop without repository or node_modules imports", async () => {
   const dir=await mkdtemp(join(tmpdir(),'p8-session-consumer-'));
   try {
-    execFileSync('tar',['-xzf',resolve('apps/web-player/dist/package/pico8-web-player-0.2.0-alpha.2.tar.gz'),'-C',dir]);
-    const root=join(dir,'pico8-web-player-0.2.0-alpha.2');
+    execFileSync('tar',['-xzf',resolve('apps/player/dist/package/pico8-player-0.2.0-alpha.3.tar.gz'),'-C',dir]);
+    const root=join(dir,'pico8-player-0.2.0-alpha.3');
     execFileSync(process.execPath,['verify.mjs'],{cwd:root});
     const {createPico8Session,createPico8SessionTool}=await import(pathToFileURL(join(root,'main/player.mjs')));
     const s=await createPico8Session();

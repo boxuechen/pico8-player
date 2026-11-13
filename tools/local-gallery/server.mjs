@@ -25,7 +25,7 @@ export const DEFAULT_LIMITS = Object.freeze({
 });
 
 const PUBLIC_ROOT = fileURLToPath(new URL("./public/", import.meta.url));
-const DEFAULT_RELEASE_ROOT = resolve("apps/web-player/dist/release");
+const DEFAULT_RELEASE_ROOT = resolve("apps/player/dist/release");
 const CART_SUFFIXES = [".p8.png", ".p8"];
 const STATIC_FILES = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],

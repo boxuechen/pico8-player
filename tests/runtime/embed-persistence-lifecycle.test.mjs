@@ -2,7 +2,7 @@ import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { Pico8WebPlayer } from "../../apps/web-player/dist/main/public.js";
+import { Pico8Player } from "../../apps/player/dist/main/public.js";
 
 function deferred() {
   let resolve, reject;
@@ -37,7 +37,7 @@ function fixture() {
     operations.push("worker-flush");
     return { type: "persistence-flushed", durable: true };
   };
-  const player = Reflect.construct(Pico8WebPlayer, [
+  const player = Reflect.construct(Pico8Player, [
     { controller: withControllerLifecycle(controller), composition, elements: {} }, adapter,
   ]);
   function commit(revision) {

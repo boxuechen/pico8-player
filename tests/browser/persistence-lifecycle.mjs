@@ -1,4 +1,4 @@
-import { createPico8WebPlayer } from "../../apps/web-player/dist/release/main/player.mjs";
+import { createPico8Player } from "../../apps/player/dist/release/main/player.mjs";
 
 const mount = document.querySelector("#mount");
 const contexts = [];
@@ -73,7 +73,7 @@ async function run() {
     },
     async flush(contentId) { flushes.push(contentId); },
   };
-  const player = await createPico8WebPlayer({ root: mount, shell: "hosted", audio,
+  const player = await createPico8Player({ root: mount, shell: "hosted", audio,
     persistence: adapter });
   const generations = [];
   player.on("frame", event => generations.push(event.sessionGeneration));
@@ -107,7 +107,7 @@ async function run() {
     "host facade leaked resources");
 
   mount.replaceChildren();
-  const fresh = await createPico8WebPlayer({ root: mount, shell: "hosted", audio });
+  const fresh = await createPico8Player({ root: mount, shell: "hosted", audio });
   await fresh.loadCart(cart(70, 3));
   await fresh.start();
   check(pixel(fresh) !== secondPixel, "fresh facade retained old pixels");

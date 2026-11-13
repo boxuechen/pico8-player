@@ -1,5 +1,5 @@
-import { decodeCart, type ParsedCart } from "@pico8-web/cart-codec";
-import type { CartAccess } from "@pico8-web/contracts";
+import { decodeCart, type ParsedCart } from "@pico8-player/cart-codec";
+import type { CartAccess } from "@pico8-player/contracts";
 
 import {
   CART_RESOLUTION_ERROR_CODES,

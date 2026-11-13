@@ -9,7 +9,7 @@
       "observableFailure": "WebAssembly.Memory.grow throws RangeError without detaching the original buffer"
     },
     "picoRam": {
-      "owner": "@pico8-web/contracts PICO_RAM_SIZE",
+      "owner": "@pico8-player/contracts PICO_RAM_SIZE",
       "bytes": 65536,
       "observableFailure": "logical copy/map ranges outside 64 KiB fail closed"
     },
@@ -21,7 +21,7 @@
       "observableFailure": "E_VM_OOM with liveLuaBytes and luaHeapLimit details"
     },
     "audioQueue": {
-      "owner": "apps/web-player/src/worklet/pcm-queue.ts",
+      "owner": "apps/player/src/worklet/pcm-queue.ts",
       "capacityFrames": 66150,
       "prebufferFrames": 11025,
       "lowWaterFrames": 5512,
@@ -29,7 +29,7 @@
       "observableFailure": "bounded overrun and droppedSourceFrames counters"
     },
     "cartdataHydration": {
-      "owner": "apps/web-player/src/runtime/adapters/indexeddb-persistence-adapter.ts",
+      "owner": "apps/player/src/runtime/adapters/indexeddb-persistence-adapter.ts",
       "maximumRecords": 4096,
       "maximumBytes": 1048576,
       "observableFailure": "recoverable E_PERSISTENCE_READ diagnostic and empty durable mirror"

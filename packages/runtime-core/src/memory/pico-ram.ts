@@ -1,7 +1,7 @@
 import {
   PICO_RAM_SIZE,
   type PicoMemoryLease,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import type { PicoLogicalMemoryPort } from "../frame-runtime.js";
 
 /** RuntimeCore-owned logical view over a stable physical Base RAM lease. */

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-alpha.3 — 2026-11-13
+
+- Standardize the workspace, app directory, distribution and persistence database on Player naming.
+- Export `createPico8Player` / `Pico8Player` and their renamed option/event types, without legacy aliases.
+- Publish only the current source-commit directory on Pages; Maker must update its pinned build together.
+- Old database names are not read or migrated. WASM ABI and third-party source locks are unchanged.
+
 ## 0.2.0-alpha.2 — 2026-11-13
 
 - License project-owned source and compiled components under MIT; retain all third-party notices and license files.

@@ -10,7 +10,7 @@ import {
   P8_SECTION_NAMES,
   decodeCart,
   decodeP8,
-} from "@pico8-web/cart-codec";
+} from "@pico8-player/cart-codec";
 import {
   allSectionsFixture,
   makeP8Bytes,

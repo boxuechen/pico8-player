@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test, { before } from "node:test";
 
-import { PICO_HOST_REQUEST_MAX_BYTES } from "@pico8-web/contracts";
+import { PICO_HOST_REQUEST_MAX_BYTES } from "@pico8-player/contracts";
 import {
   createPlayerWorkerController,
-} from "../../apps/web-player/dist/worker/compose-runtime.js";
+} from "../../apps/player/dist/worker/compose-runtime.js";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 
 const encoder = new TextEncoder();

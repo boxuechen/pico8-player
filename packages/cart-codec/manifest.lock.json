@@ -28,11 +28,11 @@
     },
     {
       "path": "packages/cart-codec/src/model.ts",
-      "sha256": "fd53d05c67834571e9ce90740750461a0b3b751b9dfbd324447b2ef55a92d84f"
+      "sha256": "49a91a0afed97887136126e9b33c92f76e497d6fdb9c6df429c5864c0fbad2c5"
     },
     {
       "path": "packages/cart-codec/src/p8.ts",
-      "sha256": "4e6609ca3ce413106f537edf2b34350b510f5d44b4b0f276edb56cc030a5744e"
+      "sha256": "b27af5143516b50f9dd10e65e93ef376d4eeb3cd1df3e6efacac20f8aeb70a6e"
     },
     {
       "path": "packages/cart-codec/src/p8scii.ts",
@@ -44,7 +44,7 @@
     },
     {
       "path": "packages/cart-codec/src/public.ts",
-      "sha256": "576015bf44c73d64467e5ab7513bc082226c76b6ebe3021dd52cf58ee5913d0c"
+      "sha256": "9239732d1a0371ebae2b8f68636f52858470612506f26708884a100b6f77c4d9"
     },
     {
       "path": "packages/cart-codec/src/sha256.ts",
@@ -52,7 +52,7 @@
     }
   ],
   "runtimeDependencies": [
-    "@pico8-web/contracts"
+    "@pico8-player/contracts"
   ],
   "thirdPartyCodeIncorporated": false,
   "fixtures": {

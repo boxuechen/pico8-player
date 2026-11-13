@@ -1,5 +1,5 @@
 {
-  "name": "@pico8-web/cart-codec",
+  "name": "@pico8-player/cart-codec",
   "version": "0.1.0-rc.1",
   "private": true,
   "license": "MIT",
@@ -15,6 +15,6 @@
     }
   },
   "dependencies": {
-    "@pico8-web/contracts": "workspace:*"
+    "@pico8-player/contracts": "workspace:*"
   }
 }

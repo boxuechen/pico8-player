@@ -1,8 +1,8 @@
 import type { PreparedInspection, InspectionResult } from "../inspection.js";
 import type { VmLogSnapshot } from "../frame-runtime.js";
 import type { PicoAudioEventLog } from "../pico-api/pico-api-host.js";
-import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
-import type { CartFormat, ParsedCart } from "@pico8-web/cart-codec";
+import { PICO_EMPTY_INPUT } from "@pico8-player/contracts";
+import type { CartFormat, ParsedCart } from "@pico8-player/cart-codec";
 import {
   PICO_CART_ROM_SIZE,
   PICO_RAM_SIZE,
@@ -10,7 +10,7 @@ import {
   type PicoCartDataCommit,
   type PicoInputSnapshot,
   type SerializedRuntimeError,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 import type {
   RuntimeBootResult,

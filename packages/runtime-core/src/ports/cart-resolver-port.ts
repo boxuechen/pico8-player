@@ -1,4 +1,4 @@
-import type { CartAccess, CartIdentity } from "@pico8-web/contracts";
+import type { CartAccess, CartIdentity } from "@pico8-player/contracts";
 
 export type CartResolvePurpose = "load" | "reload" | "cstore" | "include";
 

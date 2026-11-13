@@ -3,13 +3,13 @@ import test from "node:test";
 
 import {
   Canvas2DFramePresenter,
-} from "../../apps/web-player/dist/main/render/canvas2d-frame-presenter.js";
+} from "../../apps/player/dist/main/render/canvas2d-frame-presenter.js";
 import {
   decodePackedPicoFrame,
   PICO8_DEFAULT_PALETTE_RGBA,
   PICO_PACKED_FRAME_BYTES,
   PICO_RGBA_FRAME_BYTES,
-} from "../../apps/web-player/dist/runtime/pico-frame.js";
+} from "../../apps/player/dist/runtime/pico-frame.js";
 
 function createCanvasDouble() {
   const state = {

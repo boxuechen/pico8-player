@@ -6,7 +6,7 @@
   "files": [
     {
       "path": "packages/z8lua-bridge/src/generated/pico-host-bindings.ts",
-      "sha256": "c624c643df79c3bb112236363da8524bff8efd4691018dbeb902f0137078e157"
+      "sha256": "61d23ed34abcc3e09d6c9c9f7aaefc0b24ec2d9bafe957ea9a3f3d7b9139065f"
     },
     {
       "path": "wasm/bridge/generated/p8w_host_bindings.generated.h",

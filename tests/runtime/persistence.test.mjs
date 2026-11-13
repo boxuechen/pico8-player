@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test, { before } from "node:test";
 
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
 import {
   isPlayerHostToRuntime,
   isPlayerRuntimeToHost,
-} from "../../apps/web-player/dist/transport/public.js";
-import { PlayerRuntimeClient } from "../../apps/web-player/dist/main/worker-client.js";
+} from "../../apps/player/dist/transport/public.js";
+import { PlayerRuntimeClient } from "../../apps/player/dist/main/worker-client.js";
 
 const encoder = new TextEncoder();
 let module;

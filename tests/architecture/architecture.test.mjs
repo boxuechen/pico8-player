@@ -43,7 +43,7 @@ test("declared package cycles and illegal edges are rejected", () => {
     }
     const contractsManifestPath = path.join(temporaryRoot, "packages/contracts/package.json");
     const contractsManifest = JSON.parse(readFileSync(contractsManifestPath, "utf8"));
-    contractsManifest.dependencies = { "@pico8-web/z8lua-bridge": "workspace:*" };
+    contractsManifest.dependencies = { "@pico8-player/z8lua-bridge": "workspace:*" };
     writeFileSync(contractsManifestPath, `${JSON.stringify(contractsManifest, null, 2)}\n`);
 
     const rules = new Set(auditPackageGraph(temporaryRoot).map(({ rule }) => rule));
@@ -96,25 +96,25 @@ const negativeCases = [
     name: "bridge-runtime-import",
     logicalPath: "packages/z8lua-bridge/src/illegal.ts",
     expectedRule: "bridge-runtime-core-runtime-import",
-    sourceText: "import \"@pico8-web/runtime-core\";",
+    sourceText: "import \"@pico8-player/runtime-core\";",
   },
   {
     name: "deep-import",
     logicalPath: "packages/runtime-core/src/illegal.ts",
     expectedRule: "deep-package-import",
-    sourceText: "import \"@pico8-web/cart-codec/src/public.js\";",
+    sourceText: "import \"@pico8-player/cart-codec/src/public.js\";",
   },
   {
     name: "main-to-runtime",
-    logicalPath: "apps/web-player/src/main/illegal.ts",
+    logicalPath: "apps/player/src/main/illegal.ts",
     expectedRule: "main-imports-runtime",
-    sourceText: "import \"@pico8-web/runtime-core\";",
+    sourceText: "import \"@pico8-player/runtime-core\";",
   },
   {
     name: "packages-to-apps",
     logicalPath: "packages/runtime-core/src/illegal.ts",
     expectedRule: "package-imports-app",
-    sourceText: "import \"../../../apps/web-player/src/main/public.js\";",
+    sourceText: "import \"../../../apps/player/src/main/public.js\";",
   },
   {
     name: "platform-leak",
@@ -130,9 +130,9 @@ const negativeCases = [
   },
   {
     name: "worklet-to-z8lua",
-    logicalPath: "apps/web-player/src/worklet/illegal.ts",
+    logicalPath: "apps/player/src/worklet/illegal.ts",
     expectedRule: "worklet-imports-runtime",
-    sourceText: "import \"@pico8-web/z8lua-bridge\";",
+    sourceText: "import \"@pico8-player/z8lua-bridge\";",
   },
 ];
 
@@ -150,10 +150,10 @@ for (const { name, logicalPath, sourceText, expectedRule } of negativeCases) {
 
 test("public package exports resolve for an external consumer", async () => {
   for (const packageName of [
-    "@pico8-web/contracts",
-    "@pico8-web/cart-codec",
-    "@pico8-web/runtime-core",
-    "@pico8-web/z8lua-bridge",
+    "@pico8-player/contracts",
+    "@pico8-player/cart-codec",
+    "@pico8-player/runtime-core",
+    "@pico8-player/z8lua-bridge",
   ]) {
     await assert.doesNotReject(import(packageName), packageName);
   }
@@ -161,7 +161,7 @@ test("public package exports resolve for an external consumer", async () => {
 
 test("internal package paths are not exported", async () => {
   await assert.rejects(
-    import("@pico8-web/cart-codec/src/public.js"),
+    import("@pico8-player/cart-codec/src/public.js"),
     (error) => error?.code === "ERR_PACKAGE_PATH_NOT_EXPORTED",
   );
 });
@@ -182,7 +182,7 @@ test("bridge type-only dependency does not become a runtime load", () => {
     path.join(REPO_ROOT, "packages/z8lua-bridge/dist/public.js"),
     "utf8",
   );
-  assert.equal(output.includes("@pico8-web/runtime-core"), false, output);
+  assert.equal(output.includes("@pico8-player/runtime-core"), false, output);
 });
 
 test("shared session layer rejects host-specific imports and Worker/UI globals", () => {
@@ -193,11 +193,11 @@ test("shared session layer rejects host-specific imports and Worker/UI globals",
     'globalThis.document.createElement("canvas");',
   ]) {
     const violations = auditSourceText({ repoRoot: REPO_ROOT,
-      logicalPath: "apps/web-player/src/runtime/negative.ts", sourceText });
+      logicalPath: "apps/player/src/runtime/negative.ts", sourceText });
     assert.ok(violations.length > 0, sourceText);
   }
   const valid = auditSourceText({repoRoot: REPO_ROOT,
-    logicalPath: "apps/web-player/src/runtime/positive.ts",
-    sourceText: 'import { CartSession } from "@pico8-web/runtime-core";'});
+    logicalPath: "apps/player/src/runtime/positive.ts",
+    sourceText: 'import { CartSession } from "@pico8-player/runtime-core";'});
   assert.deepEqual(valid, []);
 });

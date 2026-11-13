@@ -2,7 +2,7 @@
 
 Read [docs/README.md](docs/README.md) and [docs/architecture.md](docs/architecture.md) before changing production code. Work within the user's current task; completed phases are preserved in Git rather than separate approval documents.
 
-- RuntimeCore is browser-neutral. Canvas, AudioContext, AudioWorklet, storage and Worker adapters belong to `apps/web-player`.
+- RuntimeCore is browser-neutral. Canvas, AudioContext, AudioWorklet, storage and Worker adapters belong to `apps/player`.
 - Keep the default main-thread session and optional Worker on the same execution implementation.
 - `spec/` owns ABI, codec, release and API inventory contracts. Update the relevant current docs when public behavior or ownership changes.
 - Never import, build or test against ignored `ref/` or local external cart libraries.

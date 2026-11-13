@@ -3,18 +3,18 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 
-import { decodeCart } from "@pico8-web/cart-codec";
+import { decodeCart } from "@pico8-player/cart-codec";
 import {
   CartSession,
   FrameSliceRuntime,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
-import { PcmOutput } from "../../apps/web-player/dist/runtime/audio-transport.js";
-import { CartRepositoryAdapter } from "../../apps/web-player/dist/runtime/adapters/cart-repository-adapter.js";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
+} from "@pico8-player/z8lua-bridge";
+import { PcmOutput } from "../../apps/player/dist/runtime/audio-transport.js";
+import { CartRepositoryAdapter } from "../../apps/player/dist/runtime/adapters/cart-repository-adapter.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
 import { inputSnapshot } from "../helpers/input.mjs";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 

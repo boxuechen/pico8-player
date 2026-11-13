@@ -1,7 +1,7 @@
 import {
   PICO_CART_DATA_ROM_SIZE,
   PICO_RAM_SIZE,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 export interface NormalizedReloadRange {
   readonly destination: number;

@@ -3,23 +3,23 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 
-import { decodeCart } from "@pico8-web/cart-codec";
-import { PICO_RAM_SIZE } from "@pico8-web/contracts";
-import { CartSession, FrameSliceRuntime } from "@pico8-web/runtime-core";
-import { createPicoApiHostRouter, Z8LuaFrameVm } from "@pico8-web/z8lua-bridge";
+import { decodeCart } from "@pico8-player/cart-codec";
+import { PICO_RAM_SIZE } from "@pico8-player/contracts";
+import { CartSession, FrameSliceRuntime } from "@pico8-player/runtime-core";
+import { createPicoApiHostRouter, Z8LuaFrameVm } from "@pico8-player/z8lua-bridge";
 import {
   PICO_AUDIO_QUEUE_CAPACITY_FRAMES,
   PICO_AUDIO_QUEUE_HIGH_WATER_FRAMES,
   PICO_AUDIO_QUEUE_LOW_WATER_FRAMES,
   PICO_AUDIO_QUEUE_PREBUFFER_FRAMES,
   Pcm16Queue,
-} from "../../apps/web-player/dist/worklet/pcm-queue.js";
+} from "../../apps/player/dist/worklet/pcm-queue.js";
 import {
   CART_DATA_MAX_HYDRATED_BYTES,
   CART_DATA_MAX_HYDRATED_RECORDS,
-} from "../../apps/web-player/dist/runtime/adapters/indexeddb-persistence-adapter.js";
-import { CartRepositoryAdapter } from "../../apps/web-player/dist/runtime/adapters/cart-repository-adapter.js";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
+} from "../../apps/player/dist/runtime/adapters/indexeddb-persistence-adapter.js";
+import { CartRepositoryAdapter } from "../../apps/player/dist/runtime/adapters/cart-repository-adapter.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 
 const projectRoot = new URL("../../", import.meta.url);

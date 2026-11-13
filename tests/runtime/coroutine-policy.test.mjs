@@ -3,17 +3,17 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 
-import { decodeCart } from "@pico8-web/cart-codec";
+import { decodeCart } from "@pico8-player/cart-codec";
 import {
   FrameSliceRuntime,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 import {
   createPlayerWorkerController,
-} from "../../apps/web-player/dist/worker/compose-runtime.js";
+} from "../../apps/player/dist/worker/compose-runtime.js";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 
 const encoder = new TextEncoder();

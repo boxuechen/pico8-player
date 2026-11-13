@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createPico8Session, createPico8SessionTool } from "../../apps/web-player/dist/main/public.js";
-import { PlayerSession } from "../../apps/web-player/dist/runtime/player-session.js";
+import { createPico8Session, createPico8SessionTool } from "../../apps/player/dist/main/public.js";
+import { PlayerSession } from "../../apps/player/dist/runtime/player-session.js";
 import createModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 const lua = `x=0
 function _update60() if btn(1) then x+=1 end end
@@ -142,7 +142,7 @@ test("replacement cancels a suspended direct operation and discards its late com
 });
 
 test("main-thread composition preserves command deadline admission validation before allocating resources",async()=>{
-  const {PlayerComposition}=await import('../../apps/web-player/dist/main/compose-player.js');
+  const {PlayerComposition}=await import('../../apps/player/dist/main/compose-player.js');
   for(const commandTimeoutMs of [0,-1,NaN,Infinity]) {
     await assert.rejects(PlayerComposition.create({canvas:{},useDefaultAssets:true,commandTimeoutMs}),/commandTimeoutMs must be positive/);
   }

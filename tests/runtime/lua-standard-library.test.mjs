@@ -3,9 +3,9 @@ import { createHash } from "node:crypto";
 import { access, readFile } from "node:fs/promises";
 import test, { before } from "node:test";
 
-import { decodeCart } from "@pico8-web/cart-codec";
-import { CartSession, FrameSliceRuntime } from "@pico8-web/runtime-core";
-import { createPicoApiHostRouter, Z8LuaFrameVm } from "@pico8-web/z8lua-bridge";
+import { decodeCart } from "@pico8-player/cart-codec";
+import { CartSession, FrameSliceRuntime } from "@pico8-player/runtime-core";
+import { createPicoApiHostRouter, Z8LuaFrameVm } from "@pico8-player/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 
 const projectRoot = new URL("../../", import.meta.url);

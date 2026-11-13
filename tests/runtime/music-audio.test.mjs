@@ -7,14 +7,14 @@ import {
   createPicoApiHost,
   FrameSliceRuntime,
   PicoSfxSynth,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
-import { PcmOutput } from "../../apps/web-player/dist/runtime/audio-transport.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
+import { PcmOutput } from "../../apps/player/dist/runtime/audio-transport.js";
 
 const encoder = new TextEncoder();
 const SFX_BASE = 0x3200;

@@ -4,22 +4,22 @@ import path from "node:path";
 import { parse } from "@babel/parser";
 
 const PACKAGE_BY_DIRECTORY = new Map([
-  ["contracts", "@pico8-web/contracts"],
-  ["cart-codec", "@pico8-web/cart-codec"],
-  ["runtime-core", "@pico8-web/runtime-core"],
-  ["z8lua-bridge", "@pico8-web/z8lua-bridge"],
+  ["contracts", "@pico8-player/contracts"],
+  ["cart-codec", "@pico8-player/cart-codec"],
+  ["runtime-core", "@pico8-player/runtime-core"],
+  ["z8lua-bridge", "@pico8-player/z8lua-bridge"],
 ]);
 
 const ALLOWED_PACKAGE_DEPENDENCIES = new Map([
-  ["@pico8-web/contracts", new Set()],
-  ["@pico8-web/cart-codec", new Set(["@pico8-web/contracts"])],
+  ["@pico8-player/contracts", new Set()],
+  ["@pico8-player/cart-codec", new Set(["@pico8-player/contracts"])],
   [
-    "@pico8-web/runtime-core",
-    new Set(["@pico8-web/contracts", "@pico8-web/cart-codec"]),
+    "@pico8-player/runtime-core",
+    new Set(["@pico8-player/contracts", "@pico8-player/cart-codec"]),
   ],
   [
-    "@pico8-web/z8lua-bridge",
-    new Set(["@pico8-web/contracts", "@pico8-web/runtime-core"]),
+    "@pico8-player/z8lua-bridge",
+    new Set(["@pico8-player/contracts", "@pico8-player/runtime-core"]),
   ],
 ]);
 
@@ -124,7 +124,7 @@ function layerFor(relativePath) {
     };
   }
   const domainMatch = normalized.match(
-    /^apps\/web-player\/src\/(transport|main|runtime|worker|worklet)(?:\/|$)/,
+    /^apps\/player\/src\/(transport|main|runtime|worker|worklet)(?:\/|$)/,
   );
   if (domainMatch) return { kind: "app", name: domainMatch[1] };
   if (normalized === "ref" || normalized.startsWith("ref/")) {
@@ -137,7 +137,7 @@ function layerFor(relativePath) {
 }
 
 function packageSpecifier(specifier) {
-  const match = specifier.match(/^(@pico8-web\/[^/]+)(?:\/(.+))?$/);
+  const match = specifier.match(/^(@pico8-player\/[^/]+)(?:\/(.+))?$/);
   if (!match) return null;
   return { packageName: match[1], subpath: match[2] ?? null };
 }
@@ -213,7 +213,7 @@ function identifierIsName(identifier, parent) {
 
 function forbiddenGlobalsFor(layer) {
   if (layer.kind === "package") {
-    return layer.name === "@pico8-web/z8lua-bridge"
+    return layer.name === "@pico8-player/z8lua-bridge"
       ? BRIDGE_FORBIDDEN_GLOBALS
       : NEUTRAL_GLOBALS;
   }
@@ -256,8 +256,8 @@ export function auditSourceText({ repoRoot, logicalPath, sourceText }) {
     let targetLayer = { kind: "other", name: "external" };
 
     if (scoped) {
-      targetLayer = scoped.packageName === "@pico8-web/web-player"
-        ? { kind: "app", name: "web-player" }
+      targetLayer = scoped.packageName === "@pico8-player/player"
+        ? { kind: "app", name: "player" }
         : { kind: "package", name: scoped.packageName };
       if (scoped.subpath) {
         const exportKey = `./${scoped.subpath}`;
@@ -337,9 +337,9 @@ export function auditSourceText({ repoRoot, logicalPath, sourceText }) {
 
     if (
       sourceLayer.kind === "package" &&
-      sourceLayer.name === "@pico8-web/z8lua-bridge" &&
+      sourceLayer.name === "@pico8-player/z8lua-bridge" &&
       targetLayer.kind === "package" &&
-      targetLayer.name === "@pico8-web/runtime-core" &&
+      targetLayer.name === "@pico8-player/runtime-core" &&
       !reference.typeOnly
     ) {
       violations.push(
@@ -354,9 +354,9 @@ export function auditSourceText({ repoRoot, logicalPath, sourceText }) {
 
     if (sourceLayer.kind === "app") {
       const forbiddenForMainOrWorklet = new Set([
-        "@pico8-web/cart-codec",
-        "@pico8-web/runtime-core",
-        "@pico8-web/z8lua-bridge",
+        "@pico8-player/cart-codec",
+        "@pico8-player/runtime-core",
+        "@pico8-player/z8lua-bridge",
       ]);
       if (
         sourceLayer.name === "main" &&
@@ -473,7 +473,7 @@ function checkPackageGraph(repoRoot) {
       ...(manifest.dependencies ?? {}),
       ...(manifest.peerDependencies ?? {}),
     };
-    const internal = Object.keys(productionDependencies).filter((name) => name.startsWith("@pico8-web/"));
+    const internal = Object.keys(productionDependencies).filter((name) => name.startsWith("@pico8-player/"));
     graph.set(expectedName, internal);
     const allowed = ALLOWED_PACKAGE_DEPENDENCIES.get(expectedName) ?? new Set();
     for (const dependency of internal) {
@@ -527,7 +527,7 @@ function checkPackageGraph(repoRoot) {
   }
   for (const name of graph.keys()) visit(name, []);
 
-  const appManifestPath = path.join(repoRoot, "apps/web-player/package.json");
+  const appManifestPath = path.join(repoRoot, "apps/player/package.json");
   if (existsSync(appManifestPath)) {
     const appManifest = readJson(appManifestPath);
     const appDependencies = new Set(Object.keys(appManifest.dependencies ?? {}));
@@ -536,7 +536,7 @@ function checkPackageGraph(repoRoot) {
         violations.push(
           violation(
             "missing-app-composition-dependency",
-            "apps/web-player/package.json",
+            "apps/player/package.json",
             `shared runtime requires ${packageName}`,
           ),
         );
@@ -552,11 +552,11 @@ function checkTypeScriptLibs(repoRoot) {
     ["packages/cart-codec/tsconfig.json", ["ES2022"]],
     ["packages/runtime-core/tsconfig.json", ["ES2022"]],
     ["packages/z8lua-bridge/tsconfig.json", ["ES2022"]],
-    ["apps/web-player/src/transport/tsconfig.json", ["ES2022"]],
-    ["apps/web-player/src/main/tsconfig.json", ["DOM", "DOM.Iterable", "ES2022"]],
-    ["apps/web-player/src/worker/tsconfig.json", ["ES2022", "WebWorker"]],
-    ["apps/web-player/src/runtime/tsconfig.json", ["ES2022", "WebWorker"]],
-    ["apps/web-player/src/worklet/tsconfig.json", ["ES2022"]],
+    ["apps/player/src/transport/tsconfig.json", ["ES2022"]],
+    ["apps/player/src/main/tsconfig.json", ["DOM", "DOM.Iterable", "ES2022"]],
+    ["apps/player/src/worker/tsconfig.json", ["ES2022", "WebWorker"]],
+    ["apps/player/src/runtime/tsconfig.json", ["ES2022", "WebWorker"]],
+    ["apps/player/src/worklet/tsconfig.json", ["ES2022"]],
   ]);
   const violations = [];
   for (const [relativePath, expected] of expectations) {

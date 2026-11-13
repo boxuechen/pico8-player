@@ -19,7 +19,7 @@ export async function startTestServer() {
   const server = createHttpServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
-      const requestedPath = url.pathname === "/" ? "/apps/web-player/dist/release/demo/" : url.pathname;
+      const requestedPath = url.pathname === "/" ? "/apps/player/dist/release/demo/" : url.pathname;
       const pathname = requestedPath.endsWith("/") ? `${requestedPath}index.html` : requestedPath;
       const path = resolve(projectRoot, `.${decodeURIComponent(pathname)}`);
       if (path !== projectRoot && !path.startsWith(rootPrefix)) {
@@ -51,5 +51,5 @@ export async function startTestServer() {
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const testServer = await startTestServer();
-  process.stdout.write(`${testServer.origin}/apps/web-player/dist/release/demo/\n`);
+  process.stdout.write(`${testServer.origin}/apps/player/dist/release/demo/\n`);
 }

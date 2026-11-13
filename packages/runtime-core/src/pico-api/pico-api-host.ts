@@ -5,7 +5,7 @@ import {
   type PicoInputSnapshot,
   type PicoMemoryLease,
   type CartIdentity,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 import {
   PicoSfxSynth,
   type AudioChannelSnapshot,

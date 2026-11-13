@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { PlayerInputFrontend } from "../../apps/web-player/dist/main/player-input.js";
+import { PlayerInputFrontend } from "../../apps/player/dist/main/player-input.js";
 
 class FakeDocument extends EventTarget {
   activeElement;
@@ -74,9 +74,9 @@ test("host input rejects malformed snapshots", () => {
 
 test("hosted shell is opt-in and hides app-owned chrome without inline style policy", async () => {
   const [view, stylesheet, embed] = await Promise.all([
-    readFile("apps/web-player/src/main/ui/player-shell-view.ts", "utf8"),
-    readFile("apps/web-player/public/player.css", "utf8"),
-    readFile("apps/web-player/src/main/embed-player.ts", "utf8"),
+    readFile("apps/player/src/main/ui/player-shell-view.ts", "utf8"),
+    readFile("apps/player/public/player.css", "utf8"),
+    readFile("apps/player/src/main/embed-player.ts", "utf8"),
   ]);
   assert.match(view, /options\.shell \?\? "full"/u);
   assert.match(stylesheet, /data-shell-mode="hosted"/u);

@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import test, { before } from "node:test";
 
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
 import {
   isPlayerHostToRuntime,
   isPlayerRuntimeToHost,
-} from "../../apps/web-player/dist/transport/public.js";
-import { Pico8WebPlayer } from "../../apps/web-player/dist/main/public.js";
+} from "../../apps/player/dist/transport/public.js";
+import { Pico8Player } from "../../apps/player/dist/main/public.js";
 
 const encoder = new TextEncoder();
 let module;
@@ -136,7 +136,7 @@ test("public adapter serializes writes, awaits flush and backgrounds without res
     composition,
     elements: { root: {}, canvas: {} },
   };
-  const player = Reflect.construct(Pico8WebPlayer, [mounted, adapter]);
+  const player = Reflect.construct(Pico8Player, [mounted, adapter]);
   const statuses = [];
   player.on("persistence", (event) => statuses.push(event.status));
 

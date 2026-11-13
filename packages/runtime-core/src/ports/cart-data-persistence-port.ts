@@ -2,7 +2,7 @@ import type {
   PicoCartDataCommit,
   PicoCartDataSeed,
   SerializedRuntimeError,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 /**
  * Browser-neutral asynchronous port consumed by the Runtime Worker composer.

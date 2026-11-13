@@ -2,9 +2,9 @@ import { withControllerLifecycle } from "./support/controller-lifecycle.mjs";
 import assert from "node:assert/strict";
 import test from "node:test";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
-import { Pico8WebPlayer } from "../../apps/web-player/dist/main/public.js";
-import { isPlayerRuntimeToHost } from "../../apps/web-player/dist/transport/public.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
+import { Pico8Player } from "../../apps/player/dist/main/public.js";
+import { isPlayerRuntimeToHost } from "../../apps/player/dist/transport/public.js";
 
 test("Worker flush failure reaches the public result and a successful retry becomes durable", async () => {
   const module = await createZ8LuaModule();
@@ -18,7 +18,7 @@ test("Worker flush failure reaches the public result and a successful retry beco
   };
   const worker = createPlayerWorkerController(module, { persistence });
   const replies = [];
-  const player = Reflect.construct(Pico8WebPlayer, [{
+  const player = Reflect.construct(Pico8Player, [{
     controller: withControllerLifecycle({ state: "idle", onStateChange() { return () => {}; },
       async stop() {}, async dispose() {} }),
     composition: {

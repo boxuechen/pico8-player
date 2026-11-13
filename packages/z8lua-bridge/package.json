@@ -1,5 +1,5 @@
 {
-  "name": "@pico8-web/z8lua-bridge",
+  "name": "@pico8-player/z8lua-bridge",
   "version": "0.1.0-rc.1",
   "private": true,
   "license": "MIT",
@@ -15,7 +15,7 @@
     }
   },
   "dependencies": {
-    "@pico8-web/contracts": "workspace:*",
-    "@pico8-web/runtime-core": "workspace:*"
+    "@pico8-player/contracts": "workspace:*",
+    "@pico8-player/runtime-core": "workspace:*"
   }
 }

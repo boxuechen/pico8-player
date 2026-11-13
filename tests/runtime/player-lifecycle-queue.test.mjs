@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PlayerController } from "../../apps/web-player/dist/main/player-controller.js";
-import { Pico8WebPlayer } from "../../apps/web-player/dist/main/public.js";
+import { PlayerController } from "../../apps/player/dist/main/player-controller.js";
+import { Pico8Player } from "../../apps/player/dist/main/public.js";
 
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 function deferred() {
@@ -63,7 +63,7 @@ function fixture() {
     showDiagnostic() {}, dispose() {}, async exitFullscreen() {} };
   const controller = new PlayerController(composition, view, { window, document,
     gamepadSource: { getGamepads: () => [] }, animationFrames: { request() { return 1; }, cancel() {} } });
-  const player = Reflect.construct(Pico8WebPlayer, [{ controller, composition, elements }]);
+  const player = Reflect.construct(Pico8Player, [{ controller, composition, elements }]);
   return { player, controller, composition, runtime, window, document, elements, calls, present };
 }
 

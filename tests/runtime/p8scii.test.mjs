@@ -6,11 +6,11 @@ import test, { before } from "node:test";
 import {
   createPicoApiHost,
   FrameSliceRuntime,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
 
 const encoder = new TextEncoder();
@@ -482,11 +482,11 @@ test("10,000 deterministic arbitrary byte arrays are bounded and never access ou
 
 test("Canvas presenter and Worker transport contain no text or glyph API", async () => {
   const presenter = await readFile(new URL(
-    "../../apps/web-player/src/main/render/canvas2d-frame-presenter.ts",
+    "../../apps/player/src/main/render/canvas2d-frame-presenter.ts",
     import.meta.url,
   ), "utf8");
   const workerProtocol = await readFile(new URL(
-    "../../apps/web-player/src/transport/session-contract.ts",
+    "../../apps/player/src/transport/session-contract.ts",
     import.meta.url,
   ), "utf8");
   assert.doesNotMatch(presenter, /fillText|measureText|glyph|p8scii/iu);

@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   createPico8Session,
   prepareInspection,
-} from "../../apps/web-player/dist/main/public.js";
+} from "../../apps/player/dist/main/public.js";
 const fixture = `g={n=0, board={[1]=false,[7]=1.5}, text=chr(128)}
 setmetatable(g,{__index=function() error("metamethod ran") end})
 g.self=g g.saved=dset

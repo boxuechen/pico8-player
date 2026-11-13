@@ -1,4 +1,4 @@
-import type { CartIdentity } from "@pico8-web/contracts";
+import type { CartIdentity } from "@pico8-player/contracts";
 
 /**
  * Browser-neutral synchronous access to one Worker's effective current-cart

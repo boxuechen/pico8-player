@@ -8,7 +8,7 @@ import {
   isActivelyPlaying,
   MAX_LOCAL_CART_BYTES,
   validateLocalCartSelection,
-} from "../../apps/web-player/dist/main/ui/player-shell-policy.js";
+} from "../../apps/player/dist/main/ui/player-shell-policy.js";
 
 const STATES = [
   "idle",
@@ -87,9 +87,9 @@ test("integer scaling never stretches the 128x128 backing surface", () => {
 
 test("the default shell is class-driven DOM with reduced-motion and accessibility hooks", async () => {
   const [composition, view, stylesheet] = await Promise.all([
-    readFile("apps/web-player/src/main/compose-player.ts", "utf8"),
-    readFile("apps/web-player/src/main/ui/player-shell-view.ts", "utf8"),
-    readFile("apps/web-player/public/player.css", "utf8"),
+    readFile("apps/player/src/main/compose-player.ts", "utf8"),
+    readFile("apps/player/src/main/ui/player-shell-view.ts", "utf8"),
+    readFile("apps/player/public/player.css", "utf8"),
   ]);
   assert.doesNotMatch(composition, /\.style\./u);
   assert.doesNotMatch(view, /\.style\./u);

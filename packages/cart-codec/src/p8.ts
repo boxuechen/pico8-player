@@ -1,7 +1,7 @@
 import {
   PICO8_0_2_7_CART_VERSION,
   PICO_CART_ROM_SIZE,
-} from "@pico8-web/contracts";
+} from "@pico8-player/contracts";
 
 import { codecFailure } from "./errors.js";
 import type { CartWarning } from "./model.js";

@@ -11,16 +11,16 @@ importers:
       '@babel/parser':
         specifier: 8.0.4
         version: 8.0.4
-      '@pico8-web/cart-codec':
+      '@pico8-player/cart-codec':
         specifier: workspace:*
         version: link:packages/cart-codec
-      '@pico8-web/contracts':
+      '@pico8-player/contracts':
         specifier: workspace:*
         version: link:packages/contracts
-      '@pico8-web/runtime-core':
+      '@pico8-player/runtime-core':
         specifier: workspace:*
         version: link:packages/runtime-core
-      '@pico8-web/z8lua-bridge':
+      '@pico8-player/z8lua-bridge':
         specifier: workspace:*
         version: link:packages/z8lua-bridge
       esbuild:
@@ -30,24 +30,24 @@ importers:
         specifier: 7.0.2
         version: 7.0.2
 
-  apps/web-player:
+  apps/player:
     dependencies:
-      '@pico8-web/cart-codec':
+      '@pico8-player/cart-codec':
         specifier: workspace:*
         version: link:../../packages/cart-codec
-      '@pico8-web/contracts':
+      '@pico8-player/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@pico8-web/runtime-core':
+      '@pico8-player/runtime-core':
         specifier: workspace:*
         version: link:../../packages/runtime-core
-      '@pico8-web/z8lua-bridge':
+      '@pico8-player/z8lua-bridge':
         specifier: workspace:*
         version: link:../../packages/z8lua-bridge
 
   packages/cart-codec:
     dependencies:
-      '@pico8-web/contracts':
+      '@pico8-player/contracts':
         specifier: workspace:*
         version: link:../contracts
 
@@ -55,19 +55,19 @@ importers:
 
   packages/runtime-core:
     dependencies:
-      '@pico8-web/cart-codec':
+      '@pico8-player/cart-codec':
         specifier: workspace:*
         version: link:../cart-codec
-      '@pico8-web/contracts':
+      '@pico8-player/contracts':
         specifier: workspace:*
         version: link:../contracts
 
   packages/z8lua-bridge:
     dependencies:
-      '@pico8-web/contracts':
+      '@pico8-player/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@pico8-web/runtime-core':
+      '@pico8-player/runtime-core':
         specifier: workspace:*
         version: link:../runtime-core
 

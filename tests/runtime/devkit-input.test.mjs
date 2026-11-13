@@ -6,18 +6,18 @@ import {
   createPicoApiHost,
   FrameSliceRuntime,
   L1Input,
-} from "@pico8-web/runtime-core";
+} from "@pico8-player/runtime-core";
 import {
   createPicoApiHostRouter,
   Z8LuaFrameVm,
-} from "@pico8-web/z8lua-bridge";
+} from "@pico8-player/z8lua-bridge";
 import createZ8LuaModule from "../../wasm/dist/z8lua-runtime-v1.mjs";
-import { DevkitInputFrontend } from "../../apps/web-player/dist/main/devkit-input.js";
+import { DevkitInputFrontend } from "../../apps/player/dist/main/devkit-input.js";
 import {
   isPlayerHostToRuntime,
   isPlayerRuntimeToHost,
-} from "../../apps/web-player/dist/transport/public.js";
-import { createPlayerWorkerController } from "../../apps/web-player/dist/worker/compose-runtime.js";
+} from "../../apps/player/dist/transport/public.js";
+import { createPlayerWorkerController } from "../../apps/player/dist/worker/compose-runtime.js";
 import { inputSnapshot } from "../helpers/input.mjs";
 
 const encoder = new TextEncoder();
