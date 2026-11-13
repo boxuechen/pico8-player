@@ -1,4 +1,4 @@
-export { decodeP8, type DecodedP8Cart } from "@pico8-web/cart-codec";
+export { decodeP8, type DecodedP8Cart } from "../runtime/standalone-session.js";
 export {
   createPico8WebPlayer,
   Pico8WebPlayer,

@@ -1,3 +1,4 @@
+export { decodeP8, type DecodedP8Cart } from "@pico8-web/cart-codec";
 import { prepareInspection, type InspectionRequest, type InspectionResult } from "@pico8-web/runtime-core";
 export { INSPECTION_LIMITS, prepareInspection, type InspectionRequest, type InspectionResult, type InspectedValue } from "@pico8-web/runtime-core";
 import { PlayerSession } from "./player-session.js";
