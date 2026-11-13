@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 3,
+  "artifactId": "pico8-player",
+  "version": "0.2.0-alpha.3",
+  "apiVersion": 2,
+  "channel": "mobile-integration",
+  "projectLicense": "MIT",
+  "target": "desktop Chrome/Chromium",
+  "base": "./",
+  "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; worker-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+  "capabilities": {
+    "cartAuthority": "caller-provided Uint8Array or caller-authorized local bundle only",
+    "networkCartAccess": false,
+    "arbitraryUrlAccess": false,
+    "crossOriginIsolationRequired": false,
+    "publicationPerformed": false,
+    "hostedShell": true,
+    "externalInput": true,
+    "hostPersistence": true,
+    "awaitablePersistenceFlush": true
+  },
+  "toolchain": {
+    "node": "22.22.2",
+    "pnpm": "10.8.0",
+    "esbuild": "0.28.1",
+    "emscripten": "6.0.5",
+    "sourceDateEpoch": "1731622349"
+  },
+  "inputs": {
+    "CHANGELOG.md": "915d240f170f31a3a8ccad2eb8fbfb612877fc8f2808502354441add9e0dddf6",
+    "LICENSE": "3e0c554e0875548335fd6d78171e661b5cef9dca34a45161eaaa1ba47d109a31",
+    "package.json": "94d7a0558a1a91891fa91f7061abfc4e5bbe1ff9d8af03d42ea6085bfe9038a3",
+    "packages/runtime-core/THIRD_PARTY_NOTICES.md": "62d200a193c6f319042f46643d7b44c2220ba43fee76295b4150dc4270898df1",
+    "tools/release/portable-verify.mjs": "18c0fbdf2356c5c30d1df35232306db202f437713c281705ee359b520f52cd3c",
+    "wasm/THIRD_PARTY_NOTICES.md": "346f914d7a7c205174b4b9ab903d992a048fe064846a966e842a3068a2dd8b73",
+    "wasm/runtime-v1.manifest.lock.json": "3b1ccee189684e24a94fafc72851fd8eea8540d455340bce32bb327e4d8d0bcc",
+    "wasm/source.lock.json": "5cd1e92a7cae28be85f55098d1215f165fe1f907c93c9cb35e2370532e4d2892"
+  },
+  "artifacts": {
+    "main": {
+      "path": "main/player.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 470820,
+      "sha256": "294c50573d2c6343bbbb77cdf93fe4847451d8e10f5d28af9f90f023d86d5672",
+      "provenance": "project-source"
+    },
+    "worker": {
+      "path": "browser/player-worker.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 341598,
+      "sha256": "dfa47b777d019ae8dfc6e7dbafdd4bfb1af03f2211c015540292dacfd79ec0ed",
+      "provenance": "project-source"
+    },
+    "worklet": {
+      "path": "worklet/pico8-audio-processor.js",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 11368,
+      "sha256": "79ffd6a4f5d125fae93e900a83924d678da00a1724ffe7e00f88124bf1842ea0",
+      "provenance": "project-source"
+    },
+    "wasm": {
+      "path": "wasm/z8lua-runtime-v1.wasm",
+      "mime": "application/wasm",
+      "bytes": 206511,
+      "sha256": "8ada075489450bb85996708a910ab31acc28f04a0bc103f77d26236f3c7cd912",
+      "provenance": "z8lua-runtime-lock"
+    },
+    "styles": {
+      "path": "player.css",
+      "mime": "text/css; charset=utf-8",
+      "bytes": 7998,
+      "sha256": "9e823f74ceb3c7ab28fe03d0735dcb5cfc7a5cff69161f9f76c6d283c2748bbf",
+      "provenance": "project-source"
+    },
+    "demo": {
+      "path": "demo/index.html",
+      "mime": "text/html; charset=utf-8",
+      "bytes": 899,
+      "sha256": "f506cbf86a12cb2cece5857007e1d49d2a4d2f650e13acc277257a932511bf05",
+      "provenance": "project-source"
+    }
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "mime": "text/plain; charset=utf-8",
+      "bytes": 1066,
+      "sha256": "3e0c554e0875548335fd6d78171e661b5cef9dca34a45161eaaa1ba47d109a31",
+      "provenance": "project-license"
+    },
+    {
+      "path": "RELEASE_NOTES.md",
+      "mime": "text/markdown; charset=utf-8",
+      "bytes": 2073,
+      "sha256": "915d240f170f31a3a8ccad2eb8fbfb612877fc8f2808502354441add9e0dddf6",
+      "provenance": "project-source"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "mime": "text/markdown; charset=utf-8",
+      "bytes": 4127,
+      "sha256": "88918345ccf98c56d6bf86e95d1a450c5837ed4fc12650e8b38e859526fb20c7",
+      "provenance": "third-party-license"
+    },
+    {
+      "path": "browser/player-worker.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 341598,
+      "sha256": "dfa47b777d019ae8dfc6e7dbafdd4bfb1af03f2211c015540292dacfd79ec0ed",
+      "provenance": "project-source"
+    },
+    {
+      "path": "demo/demo.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 1503,
+      "sha256": "d2779e74a2a2701e1502be7d00a11f4b9117338b2eb684b3ce4cc8524d36bedf",
+      "provenance": "project-source"
+    },
+    {
+      "path": "demo/index.html",
+      "mime": "text/html; charset=utf-8",
+      "bytes": 899,
+      "sha256": "f506cbf86a12cb2cece5857007e1d49d2a4d2f650e13acc277257a932511bf05",
+      "provenance": "project-source"
+    },
+    {
+      "path": "licenses/Emscripten.txt",
+      "mime": "text/plain; charset=utf-8",
+      "bytes": 5091,
+      "sha256": "2fd38dc06e484cdd7a3f1e2f6577f5d53062052a2fd85131b56b89fbd673731c",
+      "provenance": "third-party-license"
+    },
+    {
+      "path": "licenses/Lua-5.2.txt",
+      "mime": "text/plain; charset=utf-8",
+      "bytes": 1066,
+      "sha256": "7cd641a360b8c28f13fc32e186c0664aaa4ad2391452d9ca3e643500273be8b2",
+      "provenance": "third-party-license"
+    },
+    {
+      "path": "licenses/WTFPL-2.txt",
+      "mime": "text/plain; charset=utf-8",
+      "bytes": 430,
+      "sha256": "97f447536de3b0d1a2df792f749459a67ab613e7b877e9494ae6d45eca383a28",
+      "provenance": "third-party-license"
+    },
+    {
+      "path": "main/player.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 470820,
+      "sha256": "294c50573d2c6343bbbb77cdf93fe4847451d8e10f5d28af9f90f023d86d5672",
+      "provenance": "project-source"
+    },
+    {
+      "path": "player.css",
+      "mime": "text/css; charset=utf-8",
+      "bytes": 7998,
+      "sha256": "9e823f74ceb3c7ab28fe03d0735dcb5cfc7a5cff69161f9f76c6d283c2748bbf",
+      "provenance": "project-source"
+    },
+    {
+      "path": "verify.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 2904,
+      "sha256": "18c0fbdf2356c5c30d1df35232306db202f437713c281705ee359b520f52cd3c",
+      "provenance": "project-source"
+    },
+    {
+      "path": "wasm/z8lua-runtime-v1.mjs",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 9027,
+      "sha256": "872289aba55300b41c4ac1d621ab7dceff95f6321a8b60e0d01aa8a00de3e9c5",
+      "provenance": "z8lua-runtime-lock"
+    },
+    {
+      "path": "wasm/z8lua-runtime-v1.wasm",
+      "mime": "application/wasm",
+      "bytes": 206511,
+      "sha256": "8ada075489450bb85996708a910ab31acc28f04a0bc103f77d26236f3c7cd912",
+      "provenance": "z8lua-runtime-lock"
+    },
+    {
+      "path": "worklet/pico8-audio-processor.js",
+      "mime": "text/javascript; charset=utf-8",
+      "bytes": 11368,
+      "sha256": "79ffd6a4f5d125fae93e900a83924d678da00a1724ffe7e00f88124bf1842ea0",
+      "provenance": "project-source"
+    }
+  ]
+}
