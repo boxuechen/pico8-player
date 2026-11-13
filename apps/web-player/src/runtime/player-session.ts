@@ -1,3 +1,4 @@
+import type { PreparedInspection, InspectionResult } from "@pico8-web/runtime-core";
 import type { VmLogSnapshot } from "@pico8-web/runtime-core";
 import { PICO_EMPTY_INPUT, type PicoInputSnapshot } from "@pico8-web/contracts";
 import type { SessionEvent } from "../transport/session-contract.js";
@@ -30,6 +31,15 @@ export class PlayerSession implements PlayerRuntimePort {
 
   constructor(module: FrameRuntimeModule, options: Omit<SessionControllerOptions, "audioTransport"> = {}) {
     this.#controller = createSessionController(module, { ...options, audioTransport: this.#audio });
+  }
+  inspect(request: PreparedInspection): Promise<InspectionResult> {
+    this.#assertActive();
+    const generation = this.#generation;
+    return this.#enqueue(() => {
+      this.#assertActive();
+      if (generation !== this.#generation) throw new Error("inspection session was replaced");
+      return this.#controller!.inspect(request);
+    });
   }
   snapshotLogs(): VmLogSnapshot { this.#assertActive(); return this.#controller!.snapshotLogs(); }
   get sessionGeneration(): number { return this.#generation; }
@@ -115,9 +125,9 @@ export class PlayerSession implements PlayerRuntimePort {
     });
     return this.#disposal;
   }
-  #enqueue(operation: () => void | Promise<void>): Promise<void> {
+  #enqueue<T>(operation: () => T | Promise<T>): Promise<T> {
     const pending = this.#tail.then(operation);
-    this.#tail = pending.catch(() => undefined);
+    this.#tail = pending.then(() => undefined, () => undefined);
     return pending;
   }
   #invoke(execute: (context: SessionContext) => SessionBatch, terminal: SessionEvent["type"], input?: PicoInputSnapshot): Promise<SessionEvent> {

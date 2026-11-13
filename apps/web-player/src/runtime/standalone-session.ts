@@ -1,3 +1,5 @@
+import { prepareInspection, type InspectionRequest, type InspectionResult } from "@pico8-web/runtime-core";
+export { INSPECTION_LIMITS, prepareInspection, type InspectionRequest, type InspectionResult, type InspectedValue } from "@pico8-web/runtime-core";
 import { PlayerSession } from "./player-session.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { PicoInputSnapshot, SerializedRuntimeError } from "@pico8-web/contracts";
@@ -10,6 +12,7 @@ import { decodePackedPicoFrame, PICO_RGBA_FRAME_BYTES } from "./pico-frame.js";
 
 export const PICO8_SESSION_API_VERSION = 1 as const;
 export interface Pico8SessionOptions {
+  readonly inspection?: boolean;
   /** Ephemeral sessions are the default for repeatable tool runs. */
   readonly persistence?: "memory" | "indexeddb";
 }
@@ -76,10 +79,11 @@ export class Pico8Session {
       })];
   }
   static async create(options: Pico8SessionOptions = {}): Promise<Pico8Session> {
+    if (options.inspection && options.persistence === "indexeddb") throw new TypeError("inspection requires memory persistence");
     if (options.persistence !== undefined && !["memory", "indexeddb"].includes(options.persistence)) {
       throw new TypeError("unknown persistence profile");
     }
-    return new Pico8Session(await createPlayerSession(options.persistence === "indexeddb"));
+    return new Pico8Session(await createPlayerSession(options.persistence === "indexeddb", options.inspection === true));
   }
   loadCart(bytes: Uint8Array, options: Pico8SessionLoadOptions = {}): Promise<Pico8SessionObservation> {
     if (!(bytes instanceof Uint8Array)) return Promise.reject(new TypeError("cart bytes must be Uint8Array"));
@@ -150,6 +154,14 @@ export class Pico8Session {
       return { requestedFrames, completedFrames: this.#frameCount - before, outcome, observation: this.observe() };
     });
   }
+  inspect(request: InspectionRequest): Promise<InspectionResult> {
+    const prepared = prepareInspection(request);
+    return this.#queue.run(async () => {
+      if (!this.#frame || !["ready","paused"].includes(this.#state)) throw new Error("inspect requires a completed frame");
+      return this.#runtime.inspect(prepared);
+    });
+  }
+
   /** Non-destructive log snapshot. Cursor is local to this loaded VM generation. */
   readLogs(after = 0) {
     if (!Number.isInteger(after) || after < 0 || after > 0xffffffff) throw new TypeError("invalid log cursor");

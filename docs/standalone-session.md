@@ -57,8 +57,7 @@ transport 和图片内容格式由外部插件负责；本组件不安装插件�
 
 默认 persistence 为 `"memory"`，各实例独立；`{ persistence: "indexeddb" }` 显式启用浏览器 durable
 storage。不要把 reset 当作清空存档；需要空环境时创建新 memory session。
-目前 observation 提供 runtime diagnostics，**没有新增 guest `printh` stdout 捕获、断点或 live eval**。
-修改代码通过 loadSource/loadCart 开始新 revision。
+observation 提供 runtime diagnostics；日志通过 readLogs 单独读取。修改 authored code 通过 loadSource/loadCart 开始新 revision。临时测试状态使用显式启用的 inspect，不创建新源码版本。
 
 ## Web UI 与可选 Worker
 
@@ -78,3 +77,23 @@ Agent 手动步进不需要创建 Web facade。Worker 使用同一执行实现�
 ## 日志快照
 
 `session.readLogs(after = 0)` 非破坏性返回 `{cursor, dropped, entries}`，entry 含 sequence、frameId、text、truncated。序号属于本次载入的 VM，换卡/reset 后调用方清 cursor；按成功交付结果的 cursor 继续读取。缓冲最多 64 条、8 KiB 原始字节，每条 1 KiB。frameId 表示尝试执行的帧，启动日志为 null；故障可能阻止该帧提交。非 ASCII P8 字节使用 `\xNN` 转义，避免误用 UTF-8 解码丢失内容。读取不推进帧，不改变存档；故障销毁 VM 前保留最后的日志快照。文件名参数不开放文件系统访问。该 API 属于手动 standalone session，不加入实时 Web UI 的控制接口。
+
+
+## 测试状态查询与调试
+
+创建 `createPico8Session({inspection: true})` 后，在至少一个完成帧的安全边界调用：
+
+```js
+const snapshot = await session.inspect({mode: "read", paths: [["g", "board"], ["g", "moves"]]});
+const debug = await session.inspect({mode: "debug", code: "g.moves=1; return g.moves"});
+```
+
+默认关闭；启用 inspection 的 session 仅使用 memory persistence，不能同时启用 IndexedDB。实时 Web facade 不暴露此方法。主线程/测试 Worker 的 standalone 共用同一个 Core 和 bridge。手动 JSON session tool 保持原有输入集合；宿主通过公开 session API 注册自己的状态工具。
+
+`prepareInspection` 和 `INSPECTION_LIMITS` 是公开参数校验与限额定义；宿主可在发送 Worker 消息前使用。read 接收 1–16 条路径，每条 1–16 段，首段全局字符串，后续字符串或有符号 16-bit 整数；字符串键最多 128 bytes。总输入 4 KiB。debug 是 1–4096 字节 Lua chunk，指令预算 50,000，不接受调用方扩大限额。字符串和代码按 code points 0–255 映射 Lua byte string，不经过 Unicode/P8SCII glyph 转换。
+
+结果 `{ok, executed, values, error?, truncated?}` 是拥有自己数据的 JSON 快照。布尔/数值/字节字符串直接编码，nil/function/userdata/thread 等返回 type 标签，不暴露地址。table 使用 `{type:"table", entries:[{key,value}]}`，保留稀疏项和键类型；循环、4 层深度、512 总 entry 和 16 KiB 字节上限均明确标记。字节溢出返回空 values 与 truncated:"bytes"，调用方应缩小路径范围。只读查询使用 raw 访问，暂停 GC，避免运行元方法或 finalizer，不改变模拟时间、随机数、输入和 RAM。
+
+debug 在受保护执行边界运行，保留 callback/custom-loop 的暂停 root 和原预算，不触发隐式帧、update/draw。禁用 run/stop/reset/load/reload/cstore/cartdata/dset/extcmd/flip/yield 与 host suspension；缓存别名、pcall、嵌套协程不能绕过入口保护。printh 写入同一有界日志缓冲。成功或编译失败不会改变上一张完成帧；下一次 advance 才产生新画面。已执行错误或超预算不回滚部分写入，VM 要求 reset/load 后继续。宿主在调用前记录 debug 用途；中断、丢失响应或 Worker watchdog 后不能把该轮当成 normal。需要清掉调试影响和内存存档时，销毁并创建新 session。
+
+ABI `0x00010006` 新增 `p8w_inspect`。输入为 raw 路径二进制或 debug 字节，输出为 16 KiB NUL 结尾 JSON；参数布局见 `spec/abi/p8w-v1.json`。日志 ABI 同时保留。源码、WASM hashes 和导出集合由锁文件与可复现构建校验。

@@ -1,3 +1,4 @@
+import type { PreparedInspection, InspectionResult } from "@pico8-web/runtime-core";
 import type { VmLogSnapshot } from "@pico8-web/runtime-core";
 import type { PlayerLocalCartSource } from "../transport/runtime-port.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
@@ -81,6 +82,7 @@ export interface SessionLoadOptions {
   readonly hostCartData?: readonly PicoCartDataSeed[];
 }
 export interface SessionController {
+  inspect(request: PreparedInspection): InspectionResult;
   snapshotLogs(): VmLogSnapshot;
   input(generation: number, sequence: number, input: PicoInputSnapshot): void;
   loadCart(context: SessionContext, load: SessionLoadOptions): SessionBatch;
@@ -100,6 +102,7 @@ export interface SessionController {
 }
 
 export interface SessionControllerOptions {
+  readonly inspection?: boolean;
   readonly audioTransport?: PcmOutput;
   readonly persistence?: CartDataPersistencePort;
   readonly hostRequestHandler?: RootHostRequestHandlerPort;
@@ -1420,6 +1423,11 @@ export function createSessionController(
 
 
   return {
+    inspect(request) {
+      if (!options.inspection) throw new Error("inspection is disabled for this session");
+      if (!["ready","paused"].includes(lifecycle) || pendingRequest !== undefined) throw new Error("inspection requires a paused frame boundary");
+      return session.inspect(request);
+    },
     snapshotLogs() { return session.snapshotLogs(); },
     input(generation, sequence, input) { acceptInput({ sessionGeneration: generation, sequence, input }); },
     loadCart(context, load) {

@@ -1,3 +1,4 @@
+import type { PreparedInspection, InspectionResult } from "../inspection.js";
 import type { VmLogSnapshot } from "../frame-runtime.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { CartFormat, ParsedCart } from "@pico8-web/cart-codec";
@@ -39,6 +40,7 @@ export interface CartSessionCartMetadata {
 
 /** RuntimeCore-owned port for one generation's complete frame runtime graph. */
 export interface CartSessionRuntimePort {
+  inspect(request: PreparedInspection): InspectionResult;
   snapshotLogs(): VmLogSnapshot;
   readonly state: RuntimeSessionState;
   boot(
@@ -254,6 +256,10 @@ function isRuntimePort(value: unknown): value is CartSessionRuntimePort {
  * adapter implementations. Every load/reset transaction replaces its runtime.
  */
 export class CartSession {
+  inspect(request: PreparedInspection): InspectionResult {
+    if (this.#state !== "ready" || this.#runtime === undefined || this.#pendingRequest !== undefined) throw new Error("inspection requires a ready session");
+    return this.#runtime.inspect(request);
+  }
   #retiredLogs: VmLogSnapshot = { sequence: 0, entries: [] };
   snapshotLogs(): VmLogSnapshot { return this.#runtime?.snapshotLogs() ?? this.#retiredLogs; }
   readonly #createRuntime: CartSessionOptions["createRuntime"];

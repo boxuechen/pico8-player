@@ -14,3 +14,5 @@ export type * from "./ports/current-cart-data-repository-port.js";
 export type * from "./ports/root-host-request-handler-port.js";
 export * from "./scheduler/frame-scheduler.js";
 export * from "./session/cart-session.js";
+
+export * from "./inspection.js";

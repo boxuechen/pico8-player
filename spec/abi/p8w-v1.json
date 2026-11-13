@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "abiName": "p8w",
-  "abiVersion": 65541,
+  "abiVersion": 65542,
   "numberEncoding": "signed-q16.16-raw-int32",
   "stringEncoding": "byte-string-pointer-length",
   "memory": {
@@ -73,6 +73,7 @@
     { "name": "p8w_boot", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_step", "parameters": ["u32:handle", "u32:budget", "u32:button_mask", "i32:time_raw"], "result": "status" },
     { "name": "p8w_complete_host_request", "parameters": ["u32:handle", "u32:request_id", "ptr:u8:response", "u32:length", "u32:is_error", "u32:budget"], "result": "status" },
+    { "name": "p8w_inspect", "parameters": ["u32:handle", "u32:debug", "ptr:u8:input", "u32:length", "ptr:u8:destination", "u32:capacity"], "result": "status" },
     { "name": "p8w_log_snapshot", "parameters": ["u32:handle", "ptr:u8:destination", "u32:capacity"], "result": "status" },
     { "name": "p8w_menu_snapshot", "parameters": ["u32:handle", "ptr:u8:destination", "u32:capacity"], "result": "status" },
     { "name": "p8w_menu_invoke", "parameters": ["u32:handle", "u32:slot", "u32:button_mask", "u32:budget"], "result": "status" },
@@ -104,6 +105,20 @@
     { "name": "p8w_alloc", "parameters": ["u32:size"], "result": "ptr:u8" },
     { "name": "p8w_free", "parameters": ["ptr:u8"], "result": "void" }
   ],
+  "inspection": {
+    "inputBytes": 4096,
+    "outputBytes": 16384,
+    "instructionLimit": 50000,
+    "paths": 16,
+    "segments": 16,
+    "keyBytes": 128,
+    "depth": 4,
+    "entries": 512,
+    "readEncoding": "LE u32 pathCount; per path u32 segmentCount; per key u32 tag (0=byte string,1=i16 integer), u32 length/value; tag 0 followed by length bytes; first key is a string",
+    "debugEncoding": "raw Lua source byte string",
+    "resultEncoding": "NUL-terminated JSON: ok, executed, values, optional error/truncated; table entries preserve key/value types",
+    "failure": "executed errors require new VM before step or inspection; partial writes are not rolled back"
+  },
   "invariants": [
     "one p8w_step completes at most one simulation slice",
     "p8w_compile is invalid until a nonzero host binding is installed exactly once",

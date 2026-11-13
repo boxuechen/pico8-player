@@ -60,3 +60,7 @@ Core 拥有权威游戏状态，z8lua 负责 Lua parser/VM、Q16.16、协程与 
 cart bytes/local bundle 由调用方显式提供；resolver 不推导 URL、文件系统或 BBS 权限。`load/reload/cstore` 的外部操作只从 runtime-owned root 恢复；nested guest coroutine 的 host suspension 拒绝且不产生外部副作用。
 
 内存 cartdata 在会话实例内保留；Web 默认 IndexedDB，可替换为 host persistence port。`flushPersistence` 的 durable 结果反映真实存储能力，不能把仅排队成功当作落盘成功。
+
+## 测试观察边界
+
+Core 的 InspectionRequest/Result 与 prepareInspection 定义有界数据契约。只读路径不执行 guest Lua；debug 的安全边界、指令预算与 host 入口限制由 VM 实现。standalone 显式 opt-in 后通过串行生命周期队列调用相同执行器；Web facade 与可选实时 Worker RPC 不新增调试入口。normal/debug 用途、证据序号与图像编码属于调用方，VM 不了解卡带编辑版本。

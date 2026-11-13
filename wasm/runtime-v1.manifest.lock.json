@@ -3,7 +3,7 @@
   "abiContract": "spec/abi/p8w-v1.json",
   "hostApiContract": "spec/abi/pico-host-api-v1.json",
   "generatedBindingsManifest": "spec/abi/generated-bindings.manifest.json",
-  "abiVersion": 65541,
+  "abiVersion": 65542,
   "upstream": {
     "repository": "https://github.com/samhocevar/z8lua.git",
     "commit": "8575dfbc524003c869c0aa05e109819302c576f9",
@@ -15,7 +15,7 @@
     "wasm/bridge/p8w_frame_runtime.cpp"
   ],
   "z8luaSourceInventorySha256": "a1fdf06e85812e71517e3c6987759cd62637220aa3935b2420b45ca7d221981f",
-  "buildFlagsSha256": "d8ec1f64a45c867d52f11d86882e0c5e693a093d681f28076614b98fd539fc5d",
+  "buildFlagsSha256": "6b422fd89eb0e0ec82a9d11837801d01ea16cbb6e50563136fdf329ad4e9b244",
   "productionExportPrefix": "p8w_",
   "forbiddenExportPrefixes": [
     "p8w0a_",
@@ -40,13 +40,13 @@
     "files": [
       {
         "path": "z8lua-runtime-v1.mjs",
-        "bytes": 8951,
-        "sha256": "bc48813b9bbac5ba9354c2eb04ee9a65cd92cf16016a74e83e408a3ef9ceda85"
+        "bytes": 9027,
+        "sha256": "872289aba55300b41c4ac1d621ab7dceff95f6321a8b60e0d01aa8a00de3e9c5"
       },
       {
         "path": "z8lua-runtime-v1.wasm",
-        "bytes": 198607,
-        "sha256": "d75c8f867a0fce451e3634efdb0359449a2d8a6f05930cd45a6a3b6bee3a6b79"
+        "bytes": 206494,
+        "sha256": "7ef1752f3b07d6c07b2b6cd165df248034ae6df52f914353fb879ee345967be0"
       }
     ]
   },

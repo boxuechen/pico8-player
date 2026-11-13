@@ -1,3 +1,4 @@
+import type { PreparedInspection, InspectionResult } from "./inspection.js";
 import { PICO_EMPTY_INPUT } from "@pico8-web/contracts";
 import type { ParsedCart } from "@pico8-web/cart-codec";
 import {
@@ -122,6 +123,7 @@ export interface VmLogSnapshot {
 }
 
 export interface FrameVmPort {
+  inspect(request: PreparedInspection): InspectionResult;
   snapshotLogs(): VmLogSnapshot;
   readonly memory: PicoMemoryLease;
   readonly logicalMemory: PicoLogicalMemoryPort;
@@ -332,6 +334,10 @@ export function logicalTimeRaw(completedSlices: bigint, targetFps: 30 | 60): num
 }
 
 export class FrameSliceRuntime {
+  inspect(request: PreparedInspection): InspectionResult {
+    if (this.#state !== "ready" || this.#pending !== undefined) throw new Error("inspection requires a ready frame boundary");
+    return this.#vm.inspect(request);
+  }
   snapshotLogs(): VmLogSnapshot { return this.#vm.snapshotLogs(); }
   readonly #vm: FrameVmPort;
   readonly #picoApiHost: PicoApiHost;

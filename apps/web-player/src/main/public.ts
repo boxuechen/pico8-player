@@ -29,3 +29,4 @@ export {
   type Pico8AdvanceOptions, type Pico8AdvanceResult,
 } from "../runtime/standalone-session.js";
 export { createPico8SessionTool, PICO8_SESSION_TOOL } from "../runtime/session-tool.js";
+export { INSPECTION_LIMITS, prepareInspection, type InspectionRequest, type InspectionResult, type InspectedValue } from "../runtime/standalone-session.js";

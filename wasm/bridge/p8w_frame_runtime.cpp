@@ -1,6 +1,7 @@
 #include "p8w_frame_runtime.h"
 
 #include <climits>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <new>
@@ -17,7 +18,7 @@
 
 namespace {
 
-constexpr uint32_t kAbiVersion = 0x00010005u;
+constexpr uint32_t kAbiVersion = 0x00010006u;
 constexpr uint32_t kMaxContexts = 32;
 constexpr uint32_t kHandleIndexBits = 8;
 constexpr uint32_t kHandleIndexMask = (1u << kHandleIndexBits) - 1u;
@@ -73,6 +74,7 @@ struct LogEntry {
 };
 
 struct Context {
+  bool inspecting = false, inspect_denied = false, inspect_failed = false;
   LogEntry logs[64];
   uint32_t log_count = 0, log_bytes = 0, log_sequence = 0;
   int32_t log_frame = -1;
@@ -285,6 +287,26 @@ uint32_t integer_value(lua_State *state, int index) {
       static_cast<int32_t>(luaL_checknumber(state, index)));
 }
 
+bool deny_inspection(lua_State *state) {
+  Context *context = context_from_lua(state);
+  if (context == nullptr || !context->inspecting) return false;
+  context->inspect_denied = true;
+  luaL_error(state,"operation unavailable during debug execution");
+  return true;
+}
+int p8_coroutine_yield(lua_State *state) {
+  if (deny_inspection(state)) return 0;
+  return lua_yield(state,lua_gettop(state));
+}
+int p8_guarded_external(lua_State *state) {
+  if (deny_inspection(state)) return 0;
+  const int count = lua_gettop(state);
+  lua_pushvalue(state,lua_upvalueindex(1));
+  lua_insert(state,1);
+  lua_call(state,count,LUA_MULTRET);
+  return lua_gettop(state);
+}
+
 int p8_peek(lua_State *state) {
   Context *context = context_from_lua(state);
   const uint32_t address = logical_address(state, 1);
@@ -399,6 +421,10 @@ int p8_host_call(lua_State *state) {
   auto *descriptor = static_cast<const P8wHostBindingDescriptor *>(
       lua_touserdata(state, lua_upvalueindex(1)));
   if (descriptor == nullptr) return luaL_error(state, "host binding invariant failed");
+  if (std::strcmp(descriptor->guest_name,"dset") == 0 || std::strcmp(descriptor->guest_name,"cartdata") == 0 ||
+      std::strcmp(descriptor->guest_name,"reset") == 0 || std::strcmp(descriptor->guest_name,"extcmd") == 0) {
+    if (deny_inspection(state)) return 0;
+  }
   P8wHostCallFrame frame = {};
   frame.byte_size = sizeof(frame);
   frame.operation_id = descriptor->operation_id;
@@ -623,6 +649,7 @@ bool copy_control_bytes(lua_State *state, int argument, Context *context) {
 }
 
 int p8_run(lua_State *state) {
+  if (deny_inspection(state)) return 0;
   Context *context = context_from_lua(state);
   if (state != context->active) {
     context->nested_suspend_attempt = true;
@@ -634,6 +661,7 @@ int p8_run(lua_State *state) {
 }
 
 int p8_stop(lua_State *state) {
+  if (deny_inspection(state)) return 0;
   Context *context = context_from_lua(state);
   if (state != context->active) {
     context->nested_suspend_attempt = true;
@@ -703,6 +731,7 @@ int p8_stat(lua_State *state) {
 }
 
 int p8_flip(lua_State *state) {
+  if (deny_inspection(state)) return 0;
   Context *context = context_from_lua(state);
   if (state != context->active) {
     context->nested_suspend_attempt = true;
@@ -746,6 +775,7 @@ int cart_data_continuation(lua_State *state) {
 }
 
 int p8_load(lua_State *state) {
+  if (deny_inspection(state)) return 0;
   constexpr uint8_t kMagic[4] = {'P', '8', 'W', 'L'};
   constexpr size_t kHeaderBytes = 16;
   constexpr size_t kMaxRefBytes = 256;
@@ -815,6 +845,7 @@ int p8_load(lua_State *state) {
 }
 
 int p8_external_cart_data(lua_State *state) {
+  if (deny_inspection(state)) return 0;
   // The existing no-ref call remains a synchronous PicoApiHost operation.
   if (lua_isnoneornil(state, 4)) return p8_host_call(state);
 
@@ -891,6 +922,7 @@ int p8_external_cart_data(lua_State *state) {
 }
 
 int p8_probe_host_request(lua_State *state) {
+  if (deny_inspection(state)) return 0;
   Context *context = context_from_lua(state);
   size_t length = 0;
   const char *bytes = luaL_checklstring(state, 1, &length);
@@ -984,8 +1016,14 @@ void open_guest_environment(lua_State *state) {
   register_function(state, "flip", p8_flip);
   register_function(state, "printh", p8_printh);
   p8w::open_pico8_compat(state, context_from_lua(state)->ram);
+  lua_getglobal(state,"extcmd");
+  lua_pushcclosure(state,p8_guarded_external,1);
+  lua_setglobal(state,"extcmd");
   // Phase 0E-only control-flow probe. It is deliberately not a PICO-8 API.
   register_function(state, "__p8w_probe_host_request", p8_probe_host_request);
+  lua_getglobal(state,LUA_COLIBNAME);
+  lua_pushcfunction(state,p8_coroutine_yield);
+  lua_setfield(state,-2,"yield"); lua_pop(state,1);
   alias_coroutine_function(state, "create", "cocreate");
   alias_coroutine_function(state, "resume", "coresume");
   alias_coroutine_function(state, "status", "costatus");
@@ -998,6 +1036,7 @@ void open_guest_environment(lua_State *state) {
 void instruction_hook(lua_State *state, lua_Debug *) {
   Context *context = context_from_lua(state);
   if (context == nullptr) return;
+  if (context->inspect_denied) { luaL_error(state,"debug operation denied"); return; }
   if (context->nested_suspend_attempt) {
     luaL_error(state, "%s", kNestedSentinel);
     return;
@@ -1054,7 +1093,7 @@ bool begin_budget(Context *context, uint32_t budget, bool continuation) {
 }
 
 bool at_menu_boundary(const Context *context) {
-  if (context->pending_request || context->state == P8W_STATE_WAITING_HOST) {
+  if (context->inspect_failed || context->pending_request || context->state == P8W_STATE_WAITING_HOST) {
     return false;
   }
   if (context->state == P8W_STATE_CALLBACK_LOOP) {
@@ -1309,6 +1348,130 @@ void create_runtime_thread(lua_State *main, void *user_data) {
   created->reference = luaL_ref(main, LUA_REGISTRYINDEX);
 }
 
+// Bounded, raw value snapshots. No Lua value or pointer crosses the ABI.
+struct InspectOutput {
+  char *bytes;
+  uint32_t size = 0;
+  bool overflow = false;
+  uint32_t entries = 0;
+  const void *ancestors[4] = {};
+  void append(const char *text) {
+    const size_t length = std::strlen(text);
+    if (overflow || size + length >= 16384) { overflow = true; return; }
+    std::memcpy(bytes + size, text, length); size += length; bytes[size] = 0;
+  }
+  void string(const char *text, size_t length) {
+    append("\"");
+    for (size_t i = 0; i < length && !overflow; ++i) {
+      const uint8_t c = static_cast<uint8_t>(text[i]);
+      char encoded[8] = {};
+      if (c < 32 || c >= 127) std::snprintf(encoded, sizeof(encoded), "\\u%04x", c);
+      else if (c == '\\' || c == '"') { encoded[0] = '\\'; encoded[1] = c; }
+      else encoded[0] = c;
+      append(encoded);
+    }
+    append("\"");
+  }
+  void value(lua_State *state, int index, uint32_t depth = 0) {
+    index = lua_absindex(state, index);
+    if (!lua_checkstack(state, 8)) luaL_error(state, "inspection stack limit");
+    switch (lua_type(state, index)) {
+      case LUA_TNIL: append("{\"type\":\"nil\"}"); break;
+      case LUA_TBOOLEAN: append(lua_toboolean(state,index) ? "true" : "false"); break;
+      case LUA_TNUMBER: {
+        char number[64];
+        std::snprintf(number, sizeof(number), "%.17g", static_cast<double>(lua_tonumber(state,index).bits()) / 65536.0);
+        append(number); break;
+      }
+      case LUA_TSTRING: {
+        size_t length = 0; const char *text = lua_tolstring(state,index,&length);
+        string(text,length); break;
+      }
+      case LUA_TTABLE: {
+        const void *identity = lua_topointer(state,index);
+        for (uint32_t i=0;i<depth;i++) if (ancestors[i] == identity) {
+          append("{\"type\":\"cycle\"}"); return;
+        }
+        if (depth == 4) { append("{\"type\":\"truncated\",\"reason\":\"depth\"}"); return; }
+        ancestors[depth] = identity;
+        append("{\"type\":\"table\",\"entries\":[");
+        bool first = true, truncated = false;
+        lua_pushnil(state);
+        while (lua_next(state,index) != 0) {
+          if (entries == 512 || overflow) { truncated = true; lua_pop(state,2); break; }
+          ++entries;
+          if (!first) append(","); first = false;
+          append("{\"key\":"); value(state,-2,depth+1);
+          append(",\"value\":"); value(state,-1,depth+1); append("}");
+          lua_pop(state,1);
+        }
+        append(truncated ? "],\"truncated\":\"entries\"}" : "]}");
+        break;
+      }
+      default: append("{\"type\":"); string(lua_typename(state,lua_type(state,index)),std::strlen(lua_typename(state,lua_type(state,index)))); append("}");
+    }
+  }
+};
+struct InspectRequest {
+  const uint8_t *input; uint32_t length; uint32_t offset = 0;
+  InspectOutput *output; bool debug; bool executed = false;
+  uint32_t word(lua_State *state) {
+    if (offset + 4 > length) luaL_error(state,"invalid inspection path encoding");
+    uint32_t value = 0;
+    for (uint32_t i=0;i<4;i++) value |= static_cast<uint32_t>(input[offset++]) << (8*i);
+    return value;
+  }
+};
+int inspect_entry(lua_State *state) {
+  auto &request = *static_cast<InspectRequest *>(lua_touserdata(state,lua_upvalueindex(1)));
+  auto &output = *request.output;
+  output.append(request.debug ? "{\"ok\":true,\"executed\":true,\"values\":[" : "{\"ok\":true,\"executed\":false,\"values\":[");
+  if (request.debug) {
+    const int base = lua_gettop(state);
+    const int parsed = luaL_loadbufferx(state,reinterpret_cast<const char *>(request.input),request.length,"@debug","t");
+    if (parsed != LUA_OK) lua_error(state);
+    request.executed = true;
+    lua_call(state,0,LUA_MULTRET);
+    const int top = lua_gettop(state);
+    for (int i=base+1;i<=top;i++) {
+      if (i>base+1) output.append(",");
+      if (i>base+16) { output.append("{\"type\":\"truncated\",\"reason\":\"returns\"}"); break; }
+      output.value(state,i);
+    }
+  } else {
+    const uint32_t count = request.word(state);
+    if (count == 0 || count > 16) luaL_error(state,"read needs 1-16 paths");
+    for (uint32_t p=0;p<count;p++) {
+      const uint32_t segments = request.word(state);
+      if (segments == 0 || segments > 16) luaL_error(state,"path needs 1-16 segments");
+      lua_pushglobaltable(state);
+      for (uint32_t i=0;i<segments;i++) {
+        const uint32_t tag = request.word(state), payload = request.word(state);
+        if (tag == 0) {
+          if (payload > 128 || request.offset + payload > request.length) luaL_error(state,"invalid path key");
+          lua_pushlstring(state,reinterpret_cast<const char *>(request.input+request.offset),payload);
+          request.offset += payload;
+        } else if (tag == 1 && i != 0 && static_cast<int32_t>(payload) >= -32768 && static_cast<int32_t>(payload) <= 32767) {
+          lua_pushinteger(state,static_cast<int32_t>(payload));
+        } else luaL_error(state,"invalid path key type");
+        if (lua_istable(state,-2)) { lua_rawget(state,-2); lua_remove(state,-2); }
+        else { lua_pop(state,2); lua_pushnil(state); }
+      }
+      if (p) output.append(",");
+      output.value(state,-1); lua_pop(state,1);
+    }
+    if (request.offset != request.length) luaL_error(state,"trailing path data");
+  }
+  output.append("]}");
+  return 0;
+}
+void inspect_protected(lua_State *state, void *opaque) {
+  lua_pushlightuserdata(state,opaque);
+  lua_pushcclosure(state,inspect_entry,1);
+  const int status = lua_pcall(state,0,0,0);
+  if (status != LUA_OK) lua_error(state);
+}
+
 }  // namespace
 
 extern "C" {
@@ -1361,6 +1524,66 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_destroy(uint32_t handle) {
   lua_close(context->main);
   delete context;
   g_slots[slot_index].context = nullptr;
+  return P8W_STATUS_OK;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t p8w_inspect(uint32_t handle, uint32_t debug,
+    const uint8_t *input, uint32_t length, char *destination, uint32_t capacity) {
+  Context *context = context_from_handle(handle);
+  if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  if (!at_menu_boundary(context)) return P8W_STATUS_INVALID_STATE;
+  if (debug > 1 || input == nullptr || length == 0 || length > 4096 || destination == nullptr || capacity < 16384)
+    return P8W_STATUS_BAD_ARGUMENT;
+  lua_State *main = context->main;
+  const int top = lua_gettop(main);
+  const bool gc_running = lua_gc(main,LUA_GCISRUNNING,0) != 0;
+  lua_gc(main,LUA_GCSTOP,0);
+  const auto saved_kind = context->active_kind;
+  const auto saved_phase = context->phase;
+  const bool saved_host_oom = context->host_oom;
+  const bool saved_host_api_failed = context->host_api_failed;
+  lua_State *saved_active = context->active;
+  const uint32_t saved_budget = context->remaining_budget;
+  const bool saved_poisoned = context->budget_poisoned, saved_denied = context->allocations.denied;
+  context->inspecting = debug != 0;
+  context->inspect_denied = false;
+  context->active_kind = ActiveKind::None;
+  context->active = main;
+  context->remaining_budget = 50000;
+  context->budget_poisoned = false;
+  context->allocations.denied = false;
+  context->host_oom = false;
+  context->host_api_failed = false;
+  destination[0] = 0;
+  InspectOutput output{destination};
+  InspectRequest request{input,length,0,&output,debug != 0};
+  const int status = luaD_rawrunprotected(main,inspect_protected,&request);
+  const bool failed = status != LUA_OK || context->budget_poisoned || context->inspect_denied ||
+      context->allocations.denied || context->host_oom || context->host_api_failed;
+  if (failed) {
+    output.size = 0; output.overflow = false;
+    output.append("{\"ok\":false,\"executed\":"); output.append(request.executed ? "true" : "false");
+    output.append(",\"values\":[],\"error\":");
+    if (context->budget_poisoned) output.string("debug instruction budget exceeded",33);
+    else if (context->inspect_denied) output.string("operation unavailable during debug execution",std::strlen("operation unavailable during debug execution"));
+    else if (context->allocations.denied || context->host_oom) output.string("inspection memory limit exceeded",32);
+    else if (lua_type(main,-1) == LUA_TSTRING) {
+      size_t n=0;const char *message=lua_tolstring(main,-1,&n);output.string(message,n>512?512:n);
+    } else output.string("inspection failed",17);
+    output.append("}");
+    context->inspect_failed = request.executed;
+  } else if (output.overflow) {
+    std::strcpy(destination, debug ? "{\"ok\":true,\"executed\":true,\"values\":[],\"truncated\":\"bytes\"}" : "{\"ok\":true,\"executed\":false,\"values\":[],\"truncated\":\"bytes\"}");
+  }
+  lua_settop(main,top);
+  context->active = saved_active; context->active_kind = saved_kind;
+  context->phase = saved_phase;
+  context->host_oom = saved_host_oom;
+  context->host_api_failed = saved_host_api_failed;
+  context->remaining_budget = saved_budget; context->budget_poisoned = saved_poisoned;
+  context->allocations.denied = saved_denied;
+  context->inspecting = false; context->inspect_denied = false;
+  if (gc_running) lua_gc(main,LUA_GCRESTART,0);
   return P8W_STATUS_OK;
 }
 
@@ -1491,6 +1714,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t p8w_step(uint32_t handle,
                                       int32_t time_raw) {
   Context *context = context_from_handle(handle);
   if (context == nullptr) return P8W_STATUS_INVALID_HANDLE;
+  if (context->inspect_failed) return P8W_STATUS_INVALID_STATE;
   if (context->state != P8W_STATE_CALLBACK_LOOP &&
       context->state != P8W_STATE_CUSTOM_LOOP)
     return P8W_STATUS_INVALID_STATE;

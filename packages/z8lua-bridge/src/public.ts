@@ -3,6 +3,7 @@ import {
   type PicoMemoryLease,
 } from "@pico8-web/contracts";
 import type {
+  PreparedInspection, InspectionResult,
   VmLogSnapshot,
   FrameVmMode,
   FrameVmPort,
@@ -87,6 +88,7 @@ export interface FrameRuntimeModule {
     isError: number,
     budget: number,
   ): number;
+  _p8w_inspect(handle: number, debug: number, input: number, length: number, destination: number, capacity: number): number;
   _p8w_log_snapshot(handle: number, destination: number, capacity: number): number;
   _p8w_menu_snapshot(handle: number, destination: number, capacity: number): number;
   _p8w_menu_invoke(
@@ -128,7 +130,7 @@ export interface Z8LuaFrameVmOptions {
   readonly luaHeapLimit?: number;
 }
 
-const FRAME_ABI_VERSION = 0x0001_0005;
+const FRAME_ABI_VERSION = 0x0001_0006;
 const STATUS_OK = 0;
 const STATUS_YIELDED = 1;
 const STATUS_INVALID_HANDLE = 2;
@@ -627,6 +629,25 @@ export class Z8LuaFrameVm implements FrameVmPort {
       ),
     );
     return this.#outcome(status, "complete-host");
+  }
+
+  inspect(request: PreparedInspection): InspectionResult {
+    this.#assertLive();
+    if (!["read","debug"].includes(request.mode) || !(request.payload instanceof Uint8Array) || request.payload.length < 1 || request.payload.length > 4096) throw new TypeError("invalid prepared inspection");
+    const size = 4096 + 16384;
+    const pointer = this.#module._p8w_alloc(size) >>> 0;
+    if (pointer === 0) throw new Error("unable to allocate inspection buffer");
+    try {
+      this.#module.HEAPU8.set(request.payload,pointer);
+      const status = this.#module._p8w_inspect(this.#handle, request.mode === "debug" ? 1 : 0, pointer, request.payload.length, pointer+4096, 16384);
+      if (status !== STATUS_OK) throw new Error(`inspection rejected: p8w status ${status}; reset after a failed debug execution`);
+      const bytes = this.#module.HEAPU8.subarray(pointer+4096,pointer+size);
+      const end = bytes.indexOf(0);
+      if (end < 0) throw new Error("unterminated inspection response");
+      const result = JSON.parse(textDecoder.decode(bytes.subarray(0,end))) as InspectionResult;
+      if (typeof result.ok !== "boolean" || typeof result.executed !== "boolean" || !Array.isArray(result.values)) throw new Error("invalid inspection result");
+      return result;
+    } finally { this.#module._p8w_free(pointer); }
   }
 
   snapshotLogs(): VmLogSnapshot {
